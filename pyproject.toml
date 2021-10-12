@@ -1,16 +1,15 @@
 [tool.poetry]
-name = "ScanNLS"
+name = "scannls"
 version = "0.0.1"
 description = "ScanNLS"
 authors = ["Ting-You Wang <tywang@umn.edu>"]
 license = "MIT"
-readme = "README.rst"
+readme = "README.md"
 homepage = "https://github.com/ylab-hi/ScanNLS"
 repository = "https://github.com/ylab-hi/ScanNLS"
-documentation = "https://ScanNLS.readthedocs.io"
+# documentation = "https://ScanNLS.readthedocs.io"
 classifiers = [
     "Development Status :: 1 - Planning",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -20,8 +19,15 @@ classifiers = [
 Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
-click = "^8.0.1"
+python = "^3.7"
+biopython = "^1.79"
+align = {git = "https://github.com/brentp/align.git"}
+scikit-bio = "^0.5.6"
+HTSeq = "^0.13.5"
+pysam = "^0.17.0"
+pyfaidx = "^0.6.2"
+pynvim = "^0.4.3"
+psutil = "^5.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
@@ -48,18 +54,7 @@ sphinx-click = "^3.0.1"
 Pygments = "^2.9.0"
 
 [tool.poetry.scripts]
-ScanNLS = "ScanNLS.__main__:main"
-
-[tool.coverage.paths]
-source = ["src", "*/site-packages"]
-
-[tool.coverage.run]
-branch = true
-source = ["ScanNLS"]
-
-[tool.coverage.report]
-show_missing = true
-fail_under = 100
+ScanNLS = "scannls.ScanNLS:main"
 
 [tool.mypy]
 strict = true
