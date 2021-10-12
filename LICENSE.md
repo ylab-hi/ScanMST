@@ -1,5 +1,4 @@
-MIT License
-===========
+# MIT License
 
 Copyright © 2021 Ting-You Wang
 

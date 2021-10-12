@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ===========================================================
-from typing import Iterable
-from pyfaidx import Fasta
 import argparse
 import re
 
+
 class Path(object):
-    '''store chimeirc reads as nodes in a path (directed acyclic graph)
+    """store chimeirc reads as nodes in a path (directed acyclic graph)
     :param nodes: a list of Read as nodes
     :type nodes: Read
     :param sms: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length)
@@ -20,13 +19,9 @@ class Path(object):
         We have to pay attention on 'sms':
             * every path only have keep one 'sms' value (per path instead of per node).
             * once new node added to the path, update the value of 'sms' using the summed 'sms' value from the function 'test_is_connected'
-    '''
-    __slots__ = (
-        "nodes",
-        "sms",
-        "nm",
-        "mode"
-    )
+    """
+
+    __slots__ = ("nodes", "sms", "nm", "mode")
 
     def __init__(self) -> None:
         self.nodes = []
@@ -35,14 +30,12 @@ class Path(object):
         self.mode = {}
 
     def add(self, read) -> None:
-        ''' add one chimeric read to the path
-        '''
+        """add one chimeric read to the path"""
         self.nodes.append(read)
         self.nm = self.nm + read.nm
 
     def add_mode(self, read_pair_dict) -> None:
-        ''' add read-pair=> mode to the path
-        '''
+        """add read-pair=> mode to the path"""
         self.mode.update(read_pair_dict)
 
     def __len__(self) -> int:
@@ -52,13 +45,13 @@ class Path(object):
         return len(self.nodes) < len(other.nodes)
 
     def __repr__(self) -> str:
-        return ";".join( map(str, self.nodes) )
+        return ";".join(map(str, self.nodes))
 
     def __hash__(self) -> int:
-        return hash( ";".join( map(str, self.nodes) ) )
+        return hash(";".join(map(str, self.nodes)))
 
     def __eq__(self, other) -> bool:
-        return ";".join( map(str, self.nodes) ) == ";".join( map(str, other.nodes) )
+        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
 
 
 class Read(object):
@@ -113,10 +106,27 @@ class Read(object):
         "indel_size",
         "cigartuples_without_soft",
         "cigartuples",
-        "query_length"
+        "query_length",
     )
 
-    def __init__(self, chrom, position, strand, cigar_str, mapq, nm, query_seq, lt_soft_len, rt_soft_len, read_match_size, reference_match_size, indel_size, cigar_without_soft, query_length, cigartuples) -> None:
+    def __init__(
+        self,
+        chrom,
+        position,
+        strand,
+        cigar_str,
+        mapq,
+        nm,
+        query_seq,
+        lt_soft_len,
+        rt_soft_len,
+        read_match_size,
+        reference_match_size,
+        indel_size,
+        cigar_without_soft,
+        query_length,
+        cigartuples,
+    ) -> None:
         self.chrom = chrom
         self.ref_start = position
         self.strand = strand
@@ -136,30 +146,40 @@ class Read(object):
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Read):
-            if self.chrom == other.chrom and self.ref_start == other.ref_start \
-                    and self.ref_end == other.ref_end and self.strand == other.strand \
-                    and self.mapq == other.mapq and self.nm == other.nm:
+            if (
+                self.chrom == other.chrom
+                and self.ref_start == other.ref_start
+                and self.ref_end == other.ref_end
+                and self.strand == other.strand
+                and self.mapq == other.mapq
+                and self.nm == other.nm
+            ):
                 return True
         return False
 
     def __hash__(self) -> int:
-        return hash(self.chrom) ^ hash(self.ref_start) ^ hash(self.ref_end) ^ hash(self.strand) ^ hash(self.mapq) ^ hash(self.nm)
+        return (
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.strand)
+            ^ hash(self.mapq)
+            ^ hash(self.nm)
+        )
 
     def __lt__(self, other) -> bool:
         if self.chrom == other.chorm:
             return self.ref_start < other.ref_start
         else:
-            chrm_dict = {'chrM':0, 'MT':0, 'chrX':23, 'chrY':24, 'X':23, 'Y':24}
-            for i in range(1,23):
-                chrm_dict.update({f'chr{i}':i})
-                chrm_dict.update({f'{i}':i})
+            chrm_dict = {"chrM": 0, "MT": 0, "chrX": 23, "chrY": 24, "X": 23, "Y": 24}
+            for i in range(1, 23):
+                chrm_dict.update({f"chr{i}": i})
+                chrm_dict.update({f"{i}": i})
             return chrm_dict[self.chrom] < chrm_dict[other.chrom]
 
     # for debug purpose
     def __repr__(self) -> str:
-        return (
-            fr"Read({self.chrom}, {self.ref_start}, {self.ref_end}, {self.strand}, {self.mapq}, {self.nm})"
-        )
+        return fr"Read({self.chrom}, {self.ref_start}, {self.ref_end}, {self.strand}, {self.mapq}, {self.nm})"
 
     def __str__(self) -> str:
         return ",".join(
@@ -172,19 +192,18 @@ class Read(object):
                     self.strand,
                     self.mapq,
                     self.nm,
-                    f'{self.lt_soft_len}:{self.read_match_size}:{self.rt_soft_len}'
+                    f"{self.lt_soft_len}:{self.read_match_size}:{self.rt_soft_len}",
                 ],
             ),
         )
 
-
     @classmethod
     def init(cls, chrom, position, strand, cigar_str, mapq, nm, query_seq):
-        cigar_char_dict = {'M':0,'I':1,'D':2,'N':3,'S':4,'H':5}
+        cigar_char_dict = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5}
         # 'length', 'operation char'
-        len_type_tuple = re.findall(r'(\d+)(\w)', cigar_str)
+        len_type_tuple = re.findall(r"(\d+)(\w)", cigar_str)
         # (operation code, length)
-        cigartuples = [(cigar_char_dict[j], int(i)) for i,j in len_type_tuple]
+        cigartuples = [(cigar_char_dict[j], int(i)) for i, j in len_type_tuple]
 
         query_length = 0
         indel_size = 0
@@ -192,25 +211,25 @@ class Read(object):
         read_match_size = 0
         cigar_without_soft = []
         for op_code, _len_ in cigartuples:
-            if op_code == 0:# M
+            if op_code == 0:  # M
                 reference_match_size += _len_
                 read_match_size += _len_
                 query_length += _len_
                 cigar_without_soft.append([0, _len_])
-            elif op_code == 1:# I
+            elif op_code == 1:  # I
                 indel_size += -_len_
                 read_match_size += _len_
                 query_length += _len_
                 cigar_without_soft.append([1, _len_])
-            elif op_code == 2:# D
+            elif op_code == 2:  # D
                 indel_size += _len_
                 reference_match_size += _len_
                 cigar_without_soft.append([2, _len_])
-            elif op_code == 3:# N
+            elif op_code == 3:  # N
                 indel_size += _len_
                 reference_match_size += _len_
                 cigar_without_soft.append([3, _len_])
-            elif op_code == 4:# S
+            elif op_code == 4:  # S
                 query_length += _len_
 
         lt_soft_len = 0
@@ -221,8 +240,23 @@ class Read(object):
             lt_soft_len = lt_len
         if rt_op == 4:
             rt_soft_len = rt_len
-        return cls(chrom, position, strand, cigar_str, mapq, nm, query_seq, lt_soft_len, rt_soft_len, read_match_size, reference_match_size, indel_size, cigar_without_soft, query_length, cigartuples)
-
+        return cls(
+            chrom,
+            position,
+            strand,
+            cigar_str,
+            mapq,
+            nm,
+            query_seq,
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigar_without_soft,
+            query_length,
+            cigartuples,
+        )
 
     @property
     def ref_end(self) -> int:
@@ -230,47 +264,45 @@ class Read(object):
 
     @property
     def reference_span(self) -> int:
-        ''' M+N+D
-        '''
+        """M+N+D"""
         return self.reference_match_size
 
     @property
     def sms(self) -> tuple:
-        #return f'{self.lt_soft_len}\t{self.read_match_size}\t{self.rt_soft_len}'
+        # return f'{self.lt_soft_len}\t{self.read_match_size}\t{self.rt_soft_len}'
         return (self.lt_soft_len, self.read_match_size, self.rt_soft_len)
 
     def add_path(self, path) -> None:
-        '''path is an instance of Path class
-        '''
+        """path is an instance of Path class"""
         self.linked_paths.append(path)
 
     def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
-        ''' check whether the fraction of canonical splice site usage in read reference matched part is bigger than 'fraction_cutoff' or not
+        """check whether the fraction of canonical splice site usage in read reference matched part is bigger than 'fraction_cutoff' or not
         :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
         :param fraction_cutoff: fraction of canonical splice sites used in the putative introns inferred from the CIGAR
         :type genome_fasta: pyfaidx.Fasta
         :type fraction_cutoff: float
         :return: using canonical splice sites OR not
         :rtype: bool
-        '''
+        """
         exons = []
         current_pos = self.ref_start
         start_pos = self.ref_start
         for op_code, _len_ in self.cigartuples_without_soft:
-            if op_code in {0, 2}: # M, D
+            if op_code in {0, 2}:  # M, D
                 current_pos = current_pos + _len_
-            elif op_code == 3:# N
-                exons.append((start_pos,  current_pos))
+            elif op_code == 3:  # N
+                exons.append((start_pos, current_pos))
                 current_pos = current_pos + _len_
                 start_pos = current_pos
-        exons.append((start_pos,  current_pos))
+        exons.append((start_pos, current_pos))
 
         # No 'N' in the cigar
         if len(exons) == 1:
             return True
         elif len(exons) > 1:
             _positions = []
-            for i,j in exons:
+            for i, j in exons:
                 _positions.extend([i, j])
             _positions.sort()
             _positions.pop(0)
@@ -279,26 +311,30 @@ class Read(object):
 
             intron_count = 0
             can_count = 0
-            can_sites = {'GT-AG','GC-AG','AT-AC'}
-            for start,end in intron_positions:
+            can_sites = {"GT-AG", "GC-AG", "AT-AC"}
+            for start, end in intron_positions:
                 if end - start >= 10:
                     intron_count += 1
-                    if self.strand == '-':
-                        left_site = genome_fasta[self.chrom][end-2:end].reverse.complement.seq
-                        right_site = genome_fasta[self.chrom][start:start+2].reverse.complement.seq
+                    if self.strand == "-":
+                        left_site = genome_fasta[self.chrom][
+                            end - 2 : end
+                        ].reverse.complement.seq
+                        right_site = genome_fasta[self.chrom][
+                            start : start + 2
+                        ].reverse.complement.seq
                     else:
-                        left_site = genome_fasta[self.chrom][start:start+2].seq
-                        right_site = genome_fasta[self.chrom][end-2:end].seq
-                    if f'{left_site}-{right_site}' in can_sites:
+                        left_site = genome_fasta[self.chrom][start : start + 2].seq
+                        right_site = genome_fasta[self.chrom][end - 2 : end].seq
+                    if f"{left_site}-{right_site}" in can_sites:
                         can_count += 1
-            if can_count/intron_count >= fraction_cutoff:
+            if can_count / intron_count >= fraction_cutoff:
                 return True
             else:
                 return False
+
 
 class LengthAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         if values <= 0:
             parser.error("Minimum length for {0} is 1".format(option_string))
         setattr(namespace, self.dest, values)
-

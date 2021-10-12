@@ -1,70 +1,90 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ===========================================================
-'''
+"""
 2021-10-01:
 detect_sv_from_cigar output a list of putative NLS events
 modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
 
-'''
-import sys
-import os
-import time
-import subprocess
+"""
 import argparse
-import re
-import glob
-import random
-import math
-import logging
 import copy
+import glob
+import logging
+import math
+import os
+import random
+import re
+import subprocess
+import sys
 import textwrap
+import time
+from collections import defaultdict
+from collections import OrderedDict
 from typing import Iterable
+
+from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
 from pyfaidx import Fasta
-from align import aligner
-from collections import OrderedDict,defaultdict
 
 from . import __version__
-from .classes import Path, Read, LengthAction
-from .common import remove, remove_files, status_message
-from .externals import gfClient_query, psl2sam, blat_mapq_calculator, softclipped_seq2SA_tag, gfserver_tester, start_gfServer, stop_gfServer, external_tool_checking, checkIfProcessRunning
-
-from .utils import extract_splice_sites, gene_annotation, splicing_confirmation, update_breakpoints, \
-     output_bedpe_file, aggregate_candidates, similar_hit
-
-from .utils import test_is_connected, chimeric_aln_order_finder, short_TDUP_or_not
 from .call import sv_scan
+from .classes import LengthAction
+from .classes import Path
+from .classes import Read
+from .common import remove
+from .common import remove_files
+from .common import status_message
+from .externals import blat_mapq_calculator
+from .externals import checkIfProcessRunning
+from .externals import external_tool_checking
+from .externals import gfClient_query
+from .externals import gfserver_tester
+from .externals import psl2sam
+from .externals import softclipped_seq2SA_tag
+from .externals import start_gfServer
+from .externals import stop_gfServer
+from .utils import aggregate_candidates
+from .utils import chimeric_aln_order_finder
+from .utils import extract_splice_sites
+from .utils import gene_annotation
+from .utils import output_bedpe_file
+from .utils import short_TDUP_or_not
+from .utils import similar_hit
+from .utils import splicing_confirmation
+from .utils import test_is_connected
+from .utils import update_breakpoints
 
 try:
     import pysam
 except:
-    sys.exit('pysam module not found.\nPlease install it before.')
+    sys.exit("pysam module not found.\nPlease install it before.")
 try:
     import numpy as np
 except:
-    sys.exit('numpy module not found.\nPlease install it before.')
+    sys.exit("numpy module not found.\nPlease install it before.")
 try:
     import HTSeq
 except:
-    sys.exit('HTSeq module not found.\nPlease install it before.')
+    sys.exit("HTSeq module not found.\nPlease install it before.")
 try:
     import skbio
 except:
-    sys.exit('scikit-bio module not found.\nPlease install it before.')
+    sys.exit("scikit-bio module not found.\nPlease install it before.")
 
 
 def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
-    '''
+    """
     return: NLS_type(TDUP/INV), exon_boundary(0/1/2/3), canonical_or_not (1/0), [position, size, rep_aln_mode, sup_aln_mode], [++]
             TRA, canonical_or_not (1/0), [position, sup_position, rep_aln_mode, sup_aln_mode], [+-]
             e.g., INV,1,43947377,181934993,1,1,++
                   TRA,1,160289623,chr17:17189212,1,1,+-
     updated return: a list of putative NLS events
-    '''
+    """
+
     def format_sa_tag(in_str):
-        '''
+        """
         To keep read.reference_start and start position of SA alignment consistent, start position of SA alignment need to substract 1
         :param in_str: string of supplementary read item in the SA tag
         :type in_str: str
@@ -72,15 +92,15 @@ def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
         :rtype: tuple
         .. note::
              pos_sa, mapq_sa and nm_sa are integral variables now.
-        '''
-        chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = in_str.split(',')
+        """
+        chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = in_str.split(",")
         pos_sa = int(pos_sa) - 1
         mapq_sa = int(mapq_sa)
         nm_sa = int(nm_sa)
         return chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
 
     def obtain_sa_query_seq_from_ra(query_seq_ra, strand_ra, strand_sa):
-        ''' a helper function to define query_seq for the supplementary alignment
+        """a helper function to define query_seq for the supplementary alignment
         :param query_seq_ra: query sequence of representative alignment
         :type query_seq_ra: str
         :param strand_ra: direction of representative read (-|+)
@@ -89,22 +109,21 @@ def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
         :type strand_sa: str
         :return: query sequence of supplementary alignment
         :rtype: str
-        '''
+        """
         if strand_ra == strand_sa:
             return query_seq_ra
         else:
             __seq = Seq(query_seq_ra)
             return str(__seq.reverse_complement())
 
-
-    if read.has_tag('SV'):
+    if read.has_tag("SV"):
         return [], {}
 
     if read.is_supplementary:
         return [], {}
 
     try:
-        chimeric_aln = read.get_tag('SA')[:-1].split(';')
+        chimeric_aln = read.get_tag("SA")[:-1].split(";")
     except KeyError:
         return [], {}
 
@@ -115,38 +134,46 @@ def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
     chrm_ra = read.reference_name
     pos_ra = read.reference_start
     if read.is_reverse:
-        strand_ra = '-'
+        strand_ra = "-"
     else:
-        strand_ra = '+'
+        strand_ra = "+"
     cigar_ra = read.cigarstring
     mapq_ra = read.mapping_quality
-    nm_ra = read.get_tag('NM')
+    nm_ra = read.get_tag("NM")
     seq_ra = read.query_sequence
 
     if mapq_ra > mapq_cutoff:
-        chimeric_aln_list.append(Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra))
+        chimeric_aln_list.append(
+            Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
+        )
 
     for sa_string in chimeric_aln:
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
         if mapq_sa > mapq_cutoff:
-            chimeric_aln_list.append(Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa))
+            chimeric_aln_list.append(
+                Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa)
+            )
 
-    #for i in chimeric_aln_list:
+    # for i in chimeric_aln_list:
     #    print(i, '*', i.reference_match_size,'|', i.sms)
 
     if not chimeric_aln_list:
         return [], {}
     else:
-        read_to_read_chains, reads_pair_mode_dict = chimeric_aln_order_finder(chimeric_aln_list)
+        read_to_read_chains, reads_pair_mode_dict = chimeric_aln_order_finder(
+            chimeric_aln_list
+        )
 
         # print(read_to_read_chains, reads_pair_mode_dict)
 
         return read_to_read_chains, reads_pair_mode_dict
 
 
-def detect_sv_from_cigar(chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg, gene_iv, motif_required) -> list:
-    '''
+def detect_sv_from_cigar(
+    chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg, gene_iv, motif_required
+) -> list:
+    """
     :param chrm: chromosome
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
@@ -165,8 +192,10 @@ def detect_sv_from_cigar(chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg,
     :type motif_required: bool
     :return: event groups in a list, every group is also a list
     :rtype: list (list of lists)
-    '''
-    read_to_read_chains, reads_pair_mode_dict = detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff)
+    """
+    read_to_read_chains, reads_pair_mode_dict = detect_read_read_connections_from_cigar(
+        chrm, read, mapq_cutoff
+    )
 
     event_groups = []
     if read_to_read_chains:
@@ -180,10 +209,28 @@ def detect_sv_from_cigar(chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg,
                 elif (_rt, _lt) in reads_pair_mode_dict:
                     _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
 
-
-                nls_type, _anno, _canonical, positions, strands, genes = infer_sv_from_connected_reads(_lt, _rt, _lt_mode, _rt_mode, splice_bin, genome_fasta, cvg, gene_iv, motif_required)
-                if nls_type != 'NA':
-                    event_list.append( (nls_type, _anno, _canonical, positions, strands, genes) )
+                (
+                    nls_type,
+                    _anno,
+                    _canonical,
+                    positions,
+                    strands,
+                    genes,
+                ) = infer_sv_from_connected_reads(
+                    _lt,
+                    _rt,
+                    _lt_mode,
+                    _rt_mode,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    gene_iv,
+                    motif_required,
+                )
+                if nls_type != "NA":
+                    event_list.append(
+                        (nls_type, _anno, _canonical, positions, strands, genes)
+                    )
             if event_list:
                 event_groups.append(event_list)
     for group in event_groups:
@@ -191,10 +238,21 @@ def detect_sv_from_cigar(chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg,
             print(i)
     return event_groups
 
-def infer_sv_from_connected_reads(read_lt, read_rt, lt_mode, rt_mode, splice_bin, genome_fasta, cvg, gene_iv, motif_required) -> tuple:
-    #if abs(rep_mapped_length - sup_matched_soft_len) > match_difference or abs(sup_mapped_length - rep_matched_soft_len) > match_difference:
+
+def infer_sv_from_connected_reads(
+    read_lt,
+    read_rt,
+    lt_mode,
+    rt_mode,
+    splice_bin,
+    genome_fasta,
+    cvg,
+    gene_iv,
+    motif_required,
+) -> tuple:
+    # if abs(rep_mapped_length - sup_matched_soft_len) > match_difference or abs(sup_mapped_length - rep_matched_soft_len) > match_difference:
     #    return 'NA', 0, 0, [], [], []
-    '''
+    """
     :param read_lt: Read 1
     :param read_rt: Read 2
     :param lt_mode: mode of Read 1
@@ -224,10 +282,10 @@ def infer_sv_from_connected_reads(read_lt, read_rt, lt_mode, rt_mode, splice_bin
        2(10) => one breakpoint overlap with coding exons boundary
        1(01) => one breakpoint overlap with coding exons boundary
        0(00) => none breakpoint overlap with coding exons boundary
-    '''
+    """
 
     def obtain_ins_seq_from_softclipped_part_read(read, mode, indel_size) -> str:
-        '''
+        """
         :param read: a chimeirc read
         :param mode: mode for the chimeirc read
         :param indel_size: indel size infered from 'query_offset - target_offset'
@@ -236,20 +294,34 @@ def infer_sv_from_connected_reads(read_lt, read_rt, lt_mode, rt_mode, splice_bin
         :type indel_size: int
         :return: putative insertion sequence from the read
         :rtype: str
-        '''
+        """
         read_seq = read.query_sequence
-        ins_seq_in_read = ''
-        if mode == 2:# SM
-            ins_seq_in_read = read_seq[:read.lt_soft_len][-indel_size:]
-        elif mode == 1:# MS
-            ins_seq_in_read = read_seq[-read.rt_soft_len:][:indel_size]
+        ins_seq_in_read = ""
+        if mode == 2:  # SM
+            ins_seq_in_read = read_seq[: read.lt_soft_len][-indel_size:]
+        elif mode == 1:  # MS
+            ins_seq_in_read = read_seq[-read.rt_soft_len :][:indel_size]
         return ins_seq_in_read
 
     if lt_mode == 3 or rt_mode == 3:
-        return 'NA', 0, 0, [], [], []
+        return "NA", 0, 0, [], [], []
 
-    lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = read_lt.chrom, read_lt.strand, read_lt.ref_start, read_lt.ref_end, read_lt.cigartuples, read_lt.cigarstring
-    rt_chrm, rt_strand, rt_start, rt_end, rt_cigartuples, rt_cigarstring = read_rt.chrom, read_rt.strand, read_rt.ref_start, read_rt.ref_end, read_rt.cigartuples, read_rt.cigarstring
+    lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (
+        read_lt.chrom,
+        read_lt.strand,
+        read_lt.ref_start,
+        read_lt.ref_end,
+        read_lt.cigartuples,
+        read_lt.cigarstring,
+    )
+    rt_chrm, rt_strand, rt_start, rt_end, rt_cigartuples, rt_cigarstring = (
+        read_rt.chrom,
+        read_rt.strand,
+        read_rt.ref_start,
+        read_rt.ref_end,
+        read_rt.cigartuples,
+        read_rt.cigarstring,
+    )
 
     target_start = 0
     target_end = 0
@@ -259,41 +331,114 @@ def infer_sv_from_connected_reads(read_lt, read_rt, lt_mode, rt_mode, splice_bin
                 target_start = read_rt.ref_start
                 target_end = read_lt.ref_end
                 target_offset = target_end - target_start
-                query_offset = read_lt.query_length - read_rt.lt_soft_len - \
-                    read_lt.rt_soft_len + read_lt.indel_size + read_rt.indel_size
+                query_offset = (
+                    read_lt.query_length
+                    - read_rt.lt_soft_len
+                    - read_lt.rt_soft_len
+                    + read_lt.indel_size
+                    + read_rt.indel_size
+                )
                 indel_size = query_offset - target_offset
                 if indel_size == 0:  # micro-inversion
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
                 elif indel_size < 0:  # deletion
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
                 elif indel_size >= query_offset:  # large tandem duplication
                     chrm_start = lt_chrm
                     junc_start = read_lt.ref_start
                     chrm_end = lt_chrm
                     junc_end = junc_start + indel_size
-                    _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, False, motif_required)
-                    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
-                    #print(read.reference_start, junc_start)
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        False,
+                        motif_required,
+                    )
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
+                    # print(read.reference_start, junc_start)
                     if _nls:
                         if _can == 1:
-                            new_junc_start, new_junc_end = update_breakpoints(lt_chrm, junc_start, lt_chrm, junc_end, lt_strand, rt_strand, 2, 1, splice_bin, genome_fasta)
-                            #print('OLD: ', junc_start, junc_end)
-                            #print('NEW: ', new_junc_start, new_junc_end)
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                lt_chrm,
+                                junc_start,
+                                lt_chrm,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                2,
+                                1,
+                                splice_bin,
+                                genome_fasta,
+                            )
+                            # print('OLD: ', junc_start, junc_end)
+                            # print('NEW: ', new_junc_start, new_junc_end)
                             if not new_junc_start and not new_junc_end:
-                                return 'TDUP', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    0,
+                                    [
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ],
+                                    [lt_strand, rt_strand],
+                                    [*_genes],
+                                )
                             else:
-                                return 'TDUP', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{lt_chrm}:{new_junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    1,
+                                    [
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{lt_chrm}:{new_junc_end}",
+                                        2,
+                                        1,
+                                    ],
+                                    [lt_strand, rt_strand],
+                                    [*_genes],
+                                )
                         else:
-                            return 'TDUP', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TDUP",
+                                _anno,
+                                _can,
+                                [
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{lt_chrm}:{junc_end}",
+                                    2,
+                                    1,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                     else:
-                        return 'NA', 0, 0, [], [], []
-                else: # read length > tandem duplication size
+                        return "NA", 0, 0, [], [], []
+                else:  # read length > tandem duplication size
                     ins_start = read_lt.ref_start
                     ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
-                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(read_lt, lt_mode, indel_size)
+                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                        read_lt, lt_mode, indel_size
+                    )
 
                     is_DUP = None
-                    if short_TDUP_or_not(lt_chrm, lt_mode, rt_start, rt_end, ins_seq_in_read, genome_fasta):
+                    if short_TDUP_or_not(
+                        lt_chrm,
+                        lt_mode,
+                        rt_start,
+                        rt_end,
+                        ins_seq_in_read,
+                        genome_fasta,
+                    ):
                         is_DUP = True
                     else:
                         is_DUP = False
@@ -302,67 +447,208 @@ def infer_sv_from_connected_reads(read_lt, read_rt, lt_mode, rt_mode, splice_bin
                         junc_start = read_lt.ref_start
                         chrm_end = lt_chrm
                         junc_end = junc_start + indel_size
-                        _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, False, motif_required)
-                        _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                        _nls, _anno, _can = splicing_confirmation(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            False,
+                            motif_required,
+                        )
+                        _genes = gene_annotation(
+                            chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                        )
                         if _nls:
                             if _can == 1:
-                                new_junc_start, new_junc_end = update_breakpoints(lt_chrm, junc_start, lt_chrm, junc_end, lt_strand, rt_strand, 2, 1, splice_bin, genome_fasta)
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    lt_strand,
+                                    rt_strand,
+                                    2,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
+                                )
                                 if not new_junc_start and not new_junc_end:
-                                    return 'TDUP', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        0,
+                                        [
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ],
+                                        [lt_strand, rt_strand],
+                                        [*_genes],
+                                    )
                                 else:
-                                    return 'TDUP', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{lt_chrm}:{new_junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        [
+                                            f"{lt_chrm}:{new_junc_start}",
+                                            f"{lt_chrm}:{new_junc_end}",
+                                            2,
+                                            1,
+                                        ],
+                                        [lt_strand, rt_strand],
+                                        [*_genes],
+                                    )
                             else:
-                                return 'TDUP', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    _can,
+                                    [
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ],
+                                    [lt_strand, rt_strand],
+                                    [*_genes],
+                                )
                         else:
-                            return 'NA', 0, 0, [], [], []
-                    else:# it's a short insertion
-                        _genes = gene_annotation(lt_chrm, ins_start, lt_chrm, ins_start, gene_iv)
-                        return 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 2, 1], [lt_strand, rt_strand], [*_genes]
+                            return "NA", 0, 0, [], [], []
+                    else:  # it's a short insertion
+                        _genes = gene_annotation(
+                            lt_chrm, ins_start, lt_chrm, ins_start, gene_iv
+                        )
+                        return (
+                            "INS",
+                            ref_allele,
+                            ins_seq_in_read,
+                            [ins_start, len(ins_seq_in_read), 2, 1],
+                            [lt_strand, rt_strand],
+                            [*_genes],
+                        )
             elif lt_mode == 1 and rt_mode == 2:
                 target_start = read_lt.ref_start
                 target_end = read_rt.ref_start + read_rt.reference_match_size
                 target_offset = target_end - target_start
-                query_offset = read_lt.query_length - read_rt.rt_soft_len - \
-                    read_lt.lt_soft_len + read_lt.indel_size + read_rt.indel_size
+                query_offset = (
+                    read_lt.query_length
+                    - read_rt.rt_soft_len
+                    - read_lt.lt_soft_len
+                    + read_lt.indel_size
+                    + read_rt.indel_size
+                )
                 indel_size = query_offset - target_offset
-                #print('indel_size: ', indel_size)
-                #print('query_offset: ', query_offset)
-                if indel_size == 0: # micro-inversion
-                    return 'NA', 0, 0, [], [], []
-                elif indel_size < 0: # deletion
-                    return 'NA', 0, 0, [], [], []
+                # print('indel_size: ', indel_size)
+                # print('query_offset: ', query_offset)
+                if indel_size == 0:  # micro-inversion
+                    return "NA", 0, 0, [], [], []
+                elif indel_size < 0:  # deletion
+                    return "NA", 0, 0, [], [], []
                 elif indel_size >= query_offset:
                     chrm_start = rt_chrm
                     junc_start = read_rt.ref_start
                     chrm_end = rt_chrm
                     junc_end = junc_start + indel_size
-                    #print('junc_start: ', junc_start)
-                    #print('junc_end: ', junc_end)
-                    _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, False, motif_required)
-                    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                    # print('junc_start: ', junc_start)
+                    # print('junc_end: ', junc_end)
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        False,
+                        motif_required,
+                    )
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
                     if _nls:
                         if _can == 1:
-                            new_junc_start, new_junc_end = update_breakpoints(lt_chrm, junc_start, lt_chrm, junc_end, rt_strand, lt_strand, 2, 1, splice_bin, genome_fasta)
-                            #print('OLD: ', junc_start, junc_end)
-                            #print('NEW: ', new_junc_start, new_junc_end)
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                lt_chrm,
+                                junc_start,
+                                lt_chrm,
+                                junc_end,
+                                rt_strand,
+                                lt_strand,
+                                2,
+                                1,
+                                splice_bin,
+                                genome_fasta,
+                            )
+                            # print('OLD: ', junc_start, junc_end)
+                            # print('NEW: ', new_junc_start, new_junc_end)
 
                             if not new_junc_start and not new_junc_end:
-                                return 'TDUP', _anno, 0, [f'{rt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    0,
+                                    [
+                                        f"{rt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        1,
+                                        2,
+                                    ],
+                                    [lt_strand, rt_strand],
+                                    [*_genes],
+                                )
                             else:
-                                return 'TDUP', _anno, 1, [f'{rt_chrm}:{new_junc_start}', f'{rt_chrm}:{new_junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    1,
+                                    [
+                                        f"{rt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        1,
+                                        2,
+                                    ],
+                                    [lt_strand, rt_strand],
+                                    [*_genes],
+                                )
                         else:
-                            return 'TDUP', _anno, _can, [f'{rt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TDUP",
+                                _anno,
+                                _can,
+                                [
+                                    f"{rt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    1,
+                                    2,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                     else:
-                        return 'NA', 0, 0, [], [], []
+                        return "NA", 0, 0, [], [], []
                 # indel_size < query_offset
                 else:
                     ins_start = read_lt.ref_start + read_lt.reference_match_size
                     ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
-                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(read_lt, lt_mode, indel_size)
+                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                        read_lt, lt_mode, indel_size
+                    )
 
                     is_DUP = None
 
-                    if short_TDUP_or_not(lt_chrm, lt_mode, rt_start, rt_end, ins_seq_in_read, genome_fasta):
+                    if short_TDUP_or_not(
+                        lt_chrm,
+                        lt_mode,
+                        rt_start,
+                        rt_end,
+                        ins_seq_in_read,
+                        genome_fasta,
+                    ):
                         is_DUP = True
                     else:
                         is_DUP = False
@@ -371,203 +657,625 @@ def infer_sv_from_connected_reads(read_lt, read_rt, lt_mode, rt_mode, splice_bin
                         junc_start = rt_start
                         chrm_end = rt_chrm
                         junc_end = junc_start + indel_size
-                        _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, False, motif_required)
-                        _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                        _nls, _anno, _can = splicing_confirmation(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            False,
+                            motif_required,
+                        )
+                        _genes = gene_annotation(
+                            chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                        )
                         if _nls:
                             if _can == 1:
-                                new_junc_start, new_junc_end = update_breakpoints(rt_chrm, junc_start, rt_chrm, junc_end, rt_strand, lt_strand, 2, 1, splice_bin, genome_fasta)
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    rt_chrm,
+                                    junc_start,
+                                    rt_chrm,
+                                    junc_end,
+                                    rt_strand,
+                                    lt_strand,
+                                    2,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
+                                )
                                 if not new_junc_start and not new_junc_end:
-                                    return 'TDUP', _anno, 0, [f'{rt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        0,
+                                        [
+                                            f"{rt_chrm}:{junc_start}",
+                                            f"{rt_chrm}:{junc_end}",
+                                            1,
+                                            2,
+                                        ],
+                                        [lt_strand, rt_strand],
+                                        [*_genes],
+                                    )
                                 else:
-                                    return 'TDUP', _anno, 1, [f'{rt_chrm}:{new_junc_start}', f'{rt_chrm}:{new_junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        [
+                                            f"{rt_chrm}:{new_junc_start}",
+                                            f"{rt_chrm}:{new_junc_end}",
+                                            1,
+                                            2,
+                                        ],
+                                        [lt_strand, rt_strand],
+                                        [*_genes],
+                                    )
                             else:
-                                return 'TDUP', _anno, _can, [f'{rt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    _can,
+                                    [
+                                        f"{rt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        1,
+                                        2,
+                                    ],
+                                    [lt_strand, rt_strand],
+                                    [*_genes],
+                                )
                         else:
-                            return 'NA', 0, 0, [], [], []
+                            return "NA", 0, 0, [], [], []
                     # it is a short insertion
                     else:
-                        _genes = gene_annotation(rt_chrm, ins_start, rt_chrm, ins_start, gene_iv)
-                        return 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
+                        _genes = gene_annotation(
+                            rt_chrm, ins_start, rt_chrm, ins_start, gene_iv
+                        )
+                        return (
+                            "INS",
+                            ref_allele,
+                            ins_seq_in_read,
+                            [ins_start, len(ins_seq_in_read), 1, 2],
+                            [lt_strand, rt_strand],
+                            [*_genes],
+                        )
             else:
-                return 'NA', 0, 0, [], [], []
-        else:# lt_strand != rt_strand
+                return "NA", 0, 0, [], [], []
+        else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 ra_bp = read_lt.ref_start + read_lt.reference_match_size
                 sa_bp = read_rt.ref_start + read_rt.reference_match_size
                 if ra_bp == sa_bp:
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
                     chrm_end = lt_chrm
-                    junc_end = junc_start + abs(ra_bp-sa_bp)
-                    _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, True, motif_required)
+                    junc_end = junc_start + abs(ra_bp - sa_bp)
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        True,
+                        motif_required,
+                    )
 
                     if junc_start == ra_bp:
                         strands = (lt_strand, rt_strand)
                     elif junc_start == sa_bp:
                         strands = (rt_strand, lt_strand)
-                    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
                     if _nls:
                         # check whether the chimeric alignments uses canonical splice sites or not (60% fraction by default)
-                        if read_lt.splice_site_checker(genome_fasta) and read_rt.splice_site_checker(genome_fasta):
+                        if read_lt.splice_site_checker(
+                            genome_fasta
+                        ) and read_rt.splice_site_checker(genome_fasta):
                             if _can == 1:
                                 strand_l, strand_r = strands
-                                new_junc_start, new_junc_end = update_breakpoints(lt_chrm, junc_start, lt_chrm, junc_end, strand_l, strand_r, 1, 1, splice_bin, genome_fasta)
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    strand_l,
+                                    strand_r,
+                                    1,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
+                                )
                                 if not new_junc_start and not new_junc_end:
-                                    return 'INV', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 1, 1], [*strands], [*_genes]
+                                    return (
+                                        "INV",
+                                        _anno,
+                                        0,
+                                        [
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            1,
+                                            1,
+                                        ],
+                                        [*strands],
+                                        [*_genes],
+                                    )
                                 else:
-                                    return 'INV', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{lt_chrm}:{new_junc_end}', 1, 1], [*strands], [*_genes]
+                                    return (
+                                        "INV",
+                                        _anno,
+                                        1,
+                                        [
+                                            f"{lt_chrm}:{new_junc_start}",
+                                            f"{lt_chrm}:{new_junc_end}",
+                                            1,
+                                            1,
+                                        ],
+                                        [*strands],
+                                        [*_genes],
+                                    )
                             else:
-                                return 'INV', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 1, 1], [*strands], [*_genes]
+                                return (
+                                    "INV",
+                                    _anno,
+                                    _can,
+                                    [
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        1,
+                                        1,
+                                    ],
+                                    [*strands],
+                                    [*_genes],
+                                )
                         else:
-                            return 'NA', 0, 0, [], [], []
+                            return "NA", 0, 0, [], [], []
                     else:
-                        return 'NA', 0, 0, [], [], []
+                        return "NA", 0, 0, [], [], []
             elif lt_mode == rt_mode == 2:  # inversion
                 ra_bp = read_lt.ref_start
                 sa_bp = read_rt.ref_start
                 if ra_bp == sa_bp:
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
                     chrm_end = lt_chrm
-                    junc_end = junc_start + abs(ra_bp-sa_bp)
-                    _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, True, motif_required)
+                    junc_end = junc_start + abs(ra_bp - sa_bp)
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        True,
+                        motif_required,
+                    )
                     if junc_start == ra_bp:
                         strands = (lt_strand, rt_strand)
                     elif junc_start == sa_bp:
                         strands = (rt_strand, lt_strand)
-                    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
                     if _nls:
                         # check whether the chimeric alignments uses canonical splice sites or not (60% fraction by default)
-                        if read_lt.splice_site_checker(genome_fasta) and read_rt.splice_site_checker(genome_fasta):
+                        if read_lt.splice_site_checker(
+                            genome_fasta
+                        ) and read_rt.splice_site_checker(genome_fasta):
                             if _can == 1:
                                 strand_l, strand_r = strands
-                                new_junc_start, new_junc_end = update_breakpoints(lt_chrm, junc_start, lt_chrm, junc_end, strand_l, strand_r, 2, 2, splice_bin, genome_fasta)
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    strand_l,
+                                    strand_r,
+                                    2,
+                                    2,
+                                    splice_bin,
+                                    genome_fasta,
+                                )
                                 if not new_junc_start and not new_junc_end:
-                                    return 'INV', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 2, 2], [*strands], [*_genes]
+                                    return (
+                                        "INV",
+                                        _anno,
+                                        0,
+                                        [
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            2,
+                                            2,
+                                        ],
+                                        [*strands],
+                                        [*_genes],
+                                    )
                                 else:
-                                    return 'INV', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{lt_chrm}:{new_junc_end}', 2, 2], [*strands], [*_genes]
+                                    return (
+                                        "INV",
+                                        _anno,
+                                        1,
+                                        [
+                                            f"{lt_chrm}:{new_junc_start}",
+                                            f"{lt_chrm}:{new_junc_end}",
+                                            2,
+                                            2,
+                                        ],
+                                        [*strands],
+                                        [*_genes],
+                                    )
                             else:
-                                return 'INV', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{lt_chrm}:{junc_end}', 2, 2], [*strands], [*_genes]
+                                return (
+                                    "INV",
+                                    _anno,
+                                    _can,
+                                    [
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        2,
+                                        2,
+                                    ],
+                                    [*strands],
+                                    [*_genes],
+                                )
                         else:
-                            return 'NA', 0, 0, [], [], []
+                            return "NA", 0, 0, [], [], []
                     else:
-                        return 'NA', 0, 0, [], [], []
+                        return "NA", 0, 0, [], [], []
             else:
-                return 'NA', 0, 0, [], [], []
-    else: # lt_chrm != rt_chrm
+                return "NA", 0, 0, [], [], []
+    else:  # lt_chrm != rt_chrm
         if lt_strand == rt_strand:
             if lt_mode == 1 and rt_mode == 2:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start + read_lt.reference_match_size
                 chrm_end = rt_chrm
-                #junc_end = int(pos_sa) read_rt.ref_start + 1
+                # junc_end = int(pos_sa) read_rt.ref_start + 1
                 junc_end = read_rt.ref_start
-                _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, False, motif_required)
-                _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    False,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(chrm_start, junc_start, chrm_end, junc_end, lt_strand, rt_strand, 1, 2, splice_bin, genome_fasta)
+                        new_junc_start, new_junc_end = update_breakpoints(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            lt_strand,
+                            rt_strand,
+                            1,
+                            2,
+                            splice_bin,
+                            genome_fasta,
+                        )
                         if not new_junc_start and not new_junc_end:
-                            return 'TRA', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                0,
+                                [
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    1,
+                                    2,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                         else:
-                            return 'TRA', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{rt_chrm}:{new_junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                [
+                                    f"{lt_chrm}:{new_junc_start}",
+                                    f"{rt_chrm}:{new_junc_end}",
+                                    1,
+                                    2,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                     else:
-                        return 'TRA', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 2], [lt_strand, rt_strand], [*_genes]
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 2],
+                            [lt_strand, rt_strand],
+                            [*_genes],
+                        )
                 else:
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
             elif lt_mode == 2 and rt_mode == 1:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start + read_rt.reference_match_size
-                _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, False, motif_required)
-                _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    False,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(chrm_start, junc_start, chrm_end, junc_end, lt_strand, rt_strand, 2, 1, splice_bin, genome_fasta)
+                        new_junc_start, new_junc_end = update_breakpoints(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            lt_strand,
+                            rt_strand,
+                            2,
+                            1,
+                            splice_bin,
+                            genome_fasta,
+                        )
                         if not new_junc_start and not new_junc_end:
-                            return 'TRA', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                0,
+                                [
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    2,
+                                    1,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                         else:
-                            return 'TRA', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{rt_chrm}:{new_junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                [
+                                    f"{lt_chrm}:{new_junc_start}",
+                                    f"{rt_chrm}:{new_junc_end}",
+                                    2,
+                                    1,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                     else:
-                        return 'TRA', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 2, 1], [lt_strand, rt_strand], [*_genes]
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 1],
+                            [lt_strand, rt_strand],
+                            [*_genes],
+                        )
                 else:
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
             else:
-                return 'NA', 0, 0, [], [], []
-        else:# lt_strand != rt_strand
+                return "NA", 0, 0, [], [], []
+        else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start + read_lt.reference_match_size
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start + read_rt.reference_match_size
-                _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, True, motif_required)
-                _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    True,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(chrm_start, junc_start, chrm_end, junc_end, lt_strand, rt_strand, 1, 1, splice_bin, genome_fasta)
+                        new_junc_start, new_junc_end = update_breakpoints(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            lt_strand,
+                            rt_strand,
+                            1,
+                            1,
+                            splice_bin,
+                            genome_fasta,
+                        )
                         if not new_junc_start and not new_junc_end:
-                            return 'TRA', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 1], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                0,
+                                [
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    1,
+                                    1,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                         else:
-                            return 'TRA', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{rt_chrm}:{new_junc_end}', 1, 1], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                [
+                                    f"{lt_chrm}:{new_junc_start}",
+                                    f"{rt_chrm}:{new_junc_end}",
+                                    1,
+                                    1,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                     else:
-                        return 'TRA', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 1, 1], [lt_strand, rt_strand], [*_genes]
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 1],
+                            [lt_strand, rt_strand],
+                            [*_genes],
+                        )
                 else:
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
             elif lt_mode == rt_mode == 2:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start
-                _nls, _anno, _can = splicing_confirmation(chrm_start, junc_start, chrm_end, junc_end, splice_bin, genome_fasta, cvg, True, motif_required)
-                _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    True,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(chrm_start, junc_start, chrm_end, junc_end, lt_strand, rt_strand, 2, 2, splice_bin, genome_fasta)
+                        new_junc_start, new_junc_end = update_breakpoints(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            lt_strand,
+                            rt_strand,
+                            2,
+                            2,
+                            splice_bin,
+                            genome_fasta,
+                        )
                         if not new_junc_start and not new_junc_end:
-                            return 'TRA', _anno, 0, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 2, 2], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                0,
+                                [
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    2,
+                                    2,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                         else:
-                            return 'TRA', _anno, 1, [f'{lt_chrm}:{new_junc_start}', f'{rt_chrm}:{new_junc_end}', 2, 2], [lt_strand, rt_strand], [*_genes]
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                [
+                                    f"{lt_chrm}:{new_junc_start}",
+                                    f"{rt_chrm}:{new_junc_end}",
+                                    2,
+                                    2,
+                                ],
+                                [lt_strand, rt_strand],
+                                [*_genes],
+                            )
                     else:
-                        return 'TRA', _anno, _can, [f'{lt_chrm}:{junc_start}', f'{rt_chrm}:{junc_end}', 2, 2], [lt_strand, rt_strand], [*_genes]
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 2],
+                            [lt_strand, rt_strand],
+                            [*_genes],
+                        )
                 else:
-                    return 'NA', 0, 0, [], [], []
+                    return "NA", 0, 0, [], [], []
             else:
-                return 'NA', 0, 0, [], [], []
+                return "NA", 0, 0, [], [], []
 
 
-def softclipping_realignment(mapq_cutoff, input_bam, output, ref_genome, gtf, splice_bin, ref_2bit, motif_required=True, blat=False, port=88888, output_dir='/tmp', blat_ident_pct_cutoff=0.9, max_allowed_nm=50, min_soft_seg_len=200, match_difference=10):
-    in_bam = pysam.AlignmentFile(input_bam, 'rb')
-    output_bam = pysam.AlignmentFile('{}'.format(output), 'wb', template=in_bam)
+def softclipping_realignment(
+    mapq_cutoff,
+    input_bam,
+    output,
+    ref_genome,
+    gtf,
+    splice_bin,
+    ref_2bit,
+    motif_required=True,
+    blat=False,
+    port=88888,
+    output_dir="/tmp",
+    blat_ident_pct_cutoff=0.9,
+    max_allowed_nm=50,
+    min_soft_seg_len=200,
+    match_difference=10,
+):
+    in_bam = pysam.AlignmentFile(input_bam, "rb")
+    output_bam = pysam.AlignmentFile("{}".format(output), "wb", template=in_bam)
     group_counter = 0
     candidate_regions = set()
     candidate_ao_dict = defaultdict(int)
     candidate_group_dict = {}
-    if '~' in ref_genome:
+    if "~" in ref_genome:
         ref_genome = os.path.expanduser(ref_genome)
-    if '~' in gtf:
+    if "~" in gtf:
         gtf = os.path.expanduser(gtf)
     try:
         genome_fasta = Fasta(ref_genome, sequence_always_upper=True)
     except FastaNotFoundError as e:
-        print('read reference genome ' + ref_genome + ' error!', e)
+        print("read reference genome " + ref_genome + " error!", e)
         sys.exit(1)
     try:
         cvg, gene_iv = extract_splice_sites(gtf, splice_bin)
     except IOError as e:
-        print('read GTF file ' + gtf + ' error!', e)
+        print("read GTF file " + gtf + " error!", e)
         sys.exit(1)
 
     ## supplementary alignment cigarstring extraction
     # key: read.query_name + left H + right H
     # value: supplementary cigarstring with "H" was substituted by "S"
     representative_alignments_new_cigar = {}
-    pat_left_H = re.compile(r'^(\d+)H')
-    pat_right_H = re.compile(r'(\d+)H$')
+    pat_left_H = re.compile(r"^(\d+)H")
+    pat_right_H = re.compile(r"(\d+)H$")
     try:
         for read in in_bam.fetch(until_eof=True):
             if read.is_supplementary:
@@ -577,63 +1285,97 @@ def softclipping_realignment(mapq_cutoff, input_bam, output, ref_genome, gtf, sp
                 if left_mat:
                     l_H_len = left_mat.group(1)
                 else:
-                    l_H_len = ''
+                    l_H_len = ""
                 if right_mat:
                     r_H_len = right_mat.group(1)
                 else:
-                    r_H_len = ''
-                representative_alignments_new_cigar['{}\t{}\t{}'.format(read.qname, l_H_len, r_H_len)] = sup_aln_cigar.replace('H', 'S')
+                    r_H_len = ""
+                representative_alignments_new_cigar[
+                    "{}\t{}\t{}".format(read.qname, l_H_len, r_H_len)
+                ] = sup_aln_cigar.replace("H", "S")
     except ValueError as e:
-        print('BAM index file is not found in supplementary alignments!\n', e, file=sys.stderr)
+        print(
+            "BAM index file is not found in supplementary alignments!\n",
+            e,
+            file=sys.stderr,
+        )
         sys.exit(1)
-    #print(representative_alignments_new_cigar)
+    # print(representative_alignments_new_cigar)
 
     ## update SA tags and iterate the BAM file
-    pat_left_S = re.compile(r'^(\d+)S')
-    pat_right_S = re.compile(r'(\d+)S$')
-    in_bam = pysam.AlignmentFile(input_bam, 'rb')
+    pat_left_S = re.compile(r"^(\d+)S")
+    pat_right_S = re.compile(r"(\d+)S$")
+    in_bam = pysam.AlignmentFile(input_bam, "rb")
     try:
         for read in in_bam.fetch(until_eof=True):
-            if read.mapq >= mapq_cutoff and not read.is_secondary and not read.has_tag('XA') and not read.is_unmapped:
+            if (
+                read.mapq >= mapq_cutoff
+                and not read.is_secondary
+                and not read.has_tag("XA")
+                and not read.is_unmapped
+            ):
                 chrm = read.reference_name
                 # update SA tag of representative alignments (START)
-                if read.has_tag('SA') and not read.is_supplementary:
+                if read.has_tag("SA") and not read.is_supplementary:
                     updated_chimeric_alns = []
-                    chimeric_alns = read.get_tag('SA')[:-1].split(';')
-                    #print(read.get_tag('SA'))
-                    #one representative alignment could have multiple corresponding supplementary alignments
+                    chimeric_alns = read.get_tag("SA")[:-1].split(";")
+                    # print(read.get_tag('SA'))
+                    # one representative alignment could have multiple corresponding supplementary alignments
                     for _aln in chimeric_alns:
-                        __chr_sa, __pos_sa, __strand_sa, __cigar_sa, __mapq_sa, __nm_sa = _aln.split(',')
+                        (
+                            __chr_sa,
+                            __pos_sa,
+                            __strand_sa,
+                            __cigar_sa,
+                            __mapq_sa,
+                            __nm_sa,
+                        ) = _aln.split(",")
                         left_mat = pat_left_S.search(__cigar_sa)
                         right_mat = pat_right_S.search(__cigar_sa)
                         if left_mat:
                             l_S_len = left_mat.group(1)
                         else:
-                            l_S_len = ''
+                            l_S_len = ""
                         if right_mat:
                             r_S_len = right_mat.group(1)
                         else:
-                            r_S_len = ''
-                        tgt_key = '{}\t{}\t{}'.format(read.qname, l_S_len, r_S_len)
+                            r_S_len = ""
+                        tgt_key = "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
                         if tgt_key in representative_alignments_new_cigar:
-                            __updated_cigar = representative_alignments_new_cigar[tgt_key]
+                            __updated_cigar = representative_alignments_new_cigar[
+                                tgt_key
+                            ]
                             # discard supplementary alignments with too many mismatches or lower MAPQ
-                            if not ( int(__nm_sa) > max_allowed_nm or int(__mapq_sa) < mapq_cutoff ):
-                                updated_chimeric_alns.append('{},{},{},{},{},{}'.format(__chr_sa, __pos_sa, __strand_sa, __updated_cigar, __mapq_sa, __nm_sa))
+                            if not (
+                                int(__nm_sa) > max_allowed_nm
+                                or int(__mapq_sa) < mapq_cutoff
+                            ):
+                                updated_chimeric_alns.append(
+                                    "{},{},{},{},{},{}".format(
+                                        __chr_sa,
+                                        __pos_sa,
+                                        __strand_sa,
+                                        __updated_cigar,
+                                        __mapq_sa,
+                                        __nm_sa,
+                                    )
+                                )
                     if len(updated_chimeric_alns) == 0:
-                        read.set_tag('SA', None)
+                        read.set_tag("SA", None)
                     else:
-                        read.set_tag('SA', '{};'.format(';'.join(updated_chimeric_alns)))
+                        read.set_tag(
+                            "SA", "{};".format(";".join(updated_chimeric_alns))
+                        )
                     # remove SA tags of representative alignments with too much mismatches
                 # update SA tag of representative alignments (END)
 
                 # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
                 if blat:
-                    if not read.has_tag('SA') and not read.is_supplementary:
+                    if not read.has_tag("SA") and not read.is_supplementary:
                         if read.is_reverse:
-                            read_strand = '-'
+                            read_strand = "-"
                         else:
-                            read_strand = '+'
+                            read_strand = "+"
                         read_length = int(read.query_length)
                         # assert read.cigarstring, f"{read.query_name}" # TEST
                         _, _soft_seq, _, read_mode = get_softclip_length(read)
@@ -642,16 +1384,39 @@ def softclipping_realignment(mapq_cutoff, input_bam, output, ref_genome, gtf, sp
                             soft_seq_ori = str(__soft_seq.reverse_complement())
                         else:
                             soft_seq_ori = str(__soft_seq)
-                        if read_mode in {1,2} and soft_seq_ori and len(soft_seq_ori) >= min_soft_seg_len:
-                            chimeric_aln_str = softclipped_seq2SA_tag(soft_seq_ori, read_length, read_strand, read_mode, ref_2bit, port, mapq_cutoff, max_allowed_nm, output_dir, blat_ident_pct_cutoff)
+                        if (
+                            read_mode in {1, 2}
+                            and soft_seq_ori
+                            and len(soft_seq_ori) >= min_soft_seg_len
+                        ):
+                            chimeric_aln_str = softclipped_seq2SA_tag(
+                                soft_seq_ori,
+                                read_length,
+                                read_strand,
+                                read_mode,
+                                ref_2bit,
+                                port,
+                                mapq_cutoff,
+                                max_allowed_nm,
+                                output_dir,
+                                blat_ident_pct_cutoff,
+                            )
                             if chimeric_aln_str:
-                                read.set_tag('SA', chimeric_aln_str)
+                                read.set_tag("SA", chimeric_aln_str)
                 # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);newpos=[pos, size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
                 # select reads with SA tags (original or newly-added), ignore supplementary alignment
-                if read.has_tag('SA') and not read.is_supplementary:
+                if read.has_tag("SA") and not read.is_supplementary:
                     event_groups = detect_sv_from_cigar(
-                        chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg, gene_iv, motif_required)
+                        chrm,
+                        read,
+                        mapq_cutoff,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        gene_iv,
+                        motif_required,
+                    )
 
                     sv_tag_list = []
                     ot_tag_list = []
@@ -659,103 +1424,327 @@ def softclipping_realignment(mapq_cutoff, input_bam, output, ref_genome, gtf, sp
                         group_counter += 1
                         for event in group:
                             _type, _anno, _canonical, _positions, strands, genes = event
-                            _bp1, _bp2, _mode1, _mode2  = _positions
+                            _bp1, _bp2, _mode1, _mode2 = _positions
                             _strand1, _strand2 = strands
                             _gene1, _gene2 = genes
-                            if _type in {'TDUP','INV', 'TRA'}:
-                                _chrm1, _pos1 = _bp1.split(':')
-                                _chrm2, _pos2 = _bp2.split(':')
-                                sv_tag_list.append(f'{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1)+1},{_chrm2}:{int(_pos2)+1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};')
-                                candidate_ao_dict[f'{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}'] += 1
-                                candidate_group_dict[f'{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}'] = group_counter
-                            elif _type in {'INS'}:
+                            if _type in {"TDUP", "INV", "TRA"}:
+                                _chrm1, _pos1 = _bp1.split(":")
+                                _chrm2, _pos2 = _bp2.split(":")
+                                sv_tag_list.append(
+                                    f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1)+1},{_chrm2}:{int(_pos2)+1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                                )
+                                candidate_ao_dict[
+                                    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
+                                ] += 1
+                                candidate_group_dict[
+                                    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
+                                ] = group_counter
+                            elif _type in {"INS"}:
                                 _end_pos = int(_bp1) + int(_bp2)
                                 # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
-                                ot_tag_list.append(f'{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};')
-                                candidate_ao_dict[f'{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}'] += 1
-                                candidate_group_dict[f'{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}'] = group_counter
+                                ot_tag_list.append(
+                                    f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                                )
+                                candidate_ao_dict[
+                                    f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
+                                ] += 1
+                                candidate_group_dict[
+                                    f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
+                                ] = group_counter
 
                     if sv_tag_list:
-                        read.set_tag('SV', ''.join(sv_tag_list))
+                        read.set_tag("SV", "".join(sv_tag_list))
                     if ot_tag_list:
-                        read.set_tag('OT', ''.join(ot_tag_list))
+                        read.set_tag("OT", "".join(ot_tag_list))
 
             output_bam.write(read)
     except ValueError as e:
-        print('BAM index file is not found!', e, file=sys.stderr)
-        #sys.exit(1)
+        print("BAM index file is not found!", e, file=sys.stderr)
+        # sys.exit(1)
     in_bam.close()
     output_bam.close()
 
-
     # remove temporary BAM file
-    #remove('{}.temp.bam'.format(output))
+    # remove('{}.temp.bam'.format(output))
 
-    #remove('{}'.format(input))
-    #remove('{}.bai'.format(input))
+    # remove('{}'.format(input))
+    # remove('{}.bai'.format(input))
 
     subprocess.check_call("samtools index {}".format(output), shell=True)
 
-    #output_candidates = aggregate_candidates(candidate_ao_dict, len_cutoff=0)
-    prefix = output.split('.')[0]
+    # output_candidates = aggregate_candidates(candidate_ao_dict, len_cutoff=0)
+    prefix = output.split(".")[0]
     output_bedpe_file(candidate_ao_dict, candidate_group_dict, prefix, splice_bin)
-
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic long-reads data",
-        epilog=textwrap.dedent('''Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021'''))
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s {}'.format(__version__))
-    sub_parsers = parser.add_subparsers(help = "sub-command help", dest = "sub_command")
+        epilog=textwrap.dedent(
+            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
+        ),
+    )
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s {}".format(__version__)
+    )
+    sub_parsers = parser.add_subparsers(help="sub-command help", dest="sub_command")
 
-    build_parser = sub_parsers.add_parser("build", help = "add additional tags to build.BAM",
-        description = "%(prog)s -i input_bam_file -o output_bam_file -r ref_genome_fasta -g gtf_file [opts]",
-        epilog=textwrap.dedent('''Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021'''))
+    build_parser = sub_parsers.add_parser(
+        "build",
+        help="add additional tags to build.BAM",
+        description="%(prog)s -i input_bam_file -o output_bam_file -r ref_genome_fasta -g gtf_file [opts]",
+        epilog=textwrap.dedent(
+            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
+        ),
+    )
 
-    build_parser.add_argument('-i', '--input', action='store', dest='input', help="Input BAM file", required=True)
-    build_parser.add_argument('-r', '--ref', action='store', dest='ref', help="reference genome in FASTA format (with fai index)", required=True)
-    build_parser.add_argument('-g', '--gtf', action='store', dest='gtf', help="gene annotations in GTF format", required=True)
-    build_parser.add_argument('-o', '--output', action='store', dest='output', help="output BAM file", required=True)
-    build_parser.add_argument('-s','--splice_bin', action='store', dest='splice_bin', type=int, help="minimal observation count for ITD (default: %(default)s)", default=5)
-    build_parser.add_argument('-m','--mapq', action='store', dest='mapq', type=int, help="minimal MAPQ in BAM for calling NLS (default: %(default)s)", default=0)
-    build_parser.add_argument('-n','--noncanonical', action="store_true", dest='noncanonical', default=False, help="Considering Non-canonical spliced sites")
-    build_parser.add_argument('-b','--blat', action='store_true', dest='blat', default=False, help="Using BLAT to remap softclipped reads (default: %(default)s)")
-    build_parser.add_argument('--2bit', action='store', dest='two_bit', help="reference genome in 2bit format")
-    build_parser.add_argument('-p','--port', action='store', dest='port', type=int, help="port for BLAT server (default: %(default)s)", default=88888)
-    build_parser.add_argument('--min_soft_seg_len', action='store', dest='min_soft_seg_len', type=int, help="minimum softclipped segement length to trigger BLAT alignment (default: %(default)s)", default=200)
-    build_parser.add_argument('--max_allowed_nm', action='store', dest='max_allowed_nm', type=int, help="Maximum allowed NM to keep AS tag (default: %(default)s)", default=100)
-    build_parser.add_argument('--match_difference', action='store', dest='match_difference', type=int, help="Maximum allowed difference between representative and supplementary alignments (default: %(default)s)", default=10)
-    build_parser.add_argument('--identity', action='store', dest='ident_cutoff', type=float, help="blat_ident_pct_cutoff (default: %(default)s)", default=0.95)
-    build_parser.add_argument('--tmp', action='store', dest='tmp_dir', type=str, help="BLAT temporary directory (default: %(default)s)", default='/tmp')
+    build_parser.add_argument(
+        "-i",
+        "--input",
+        action="store",
+        dest="input",
+        help="Input BAM file",
+        required=True,
+    )
+    build_parser.add_argument(
+        "-r",
+        "--ref",
+        action="store",
+        dest="ref",
+        help="reference genome in FASTA format (with fai index)",
+        required=True,
+    )
+    build_parser.add_argument(
+        "-g",
+        "--gtf",
+        action="store",
+        dest="gtf",
+        help="gene annotations in GTF format",
+        required=True,
+    )
+    build_parser.add_argument(
+        "-o",
+        "--output",
+        action="store",
+        dest="output",
+        help="output BAM file",
+        required=True,
+    )
+    build_parser.add_argument(
+        "-s",
+        "--splice_bin",
+        action="store",
+        dest="splice_bin",
+        type=int,
+        help="minimal observation count for ITD (default: %(default)s)",
+        default=5,
+    )
+    build_parser.add_argument(
+        "-m",
+        "--mapq",
+        action="store",
+        dest="mapq",
+        type=int,
+        help="minimal MAPQ in BAM for calling NLS (default: %(default)s)",
+        default=0,
+    )
+    build_parser.add_argument(
+        "-n",
+        "--noncanonical",
+        action="store_true",
+        dest="noncanonical",
+        default=False,
+        help="Considering Non-canonical spliced sites",
+    )
+    build_parser.add_argument(
+        "-b",
+        "--blat",
+        action="store_true",
+        dest="blat",
+        default=False,
+        help="Using BLAT to remap softclipped reads (default: %(default)s)",
+    )
+    build_parser.add_argument(
+        "--2bit", action="store", dest="two_bit", help="reference genome in 2bit format"
+    )
+    build_parser.add_argument(
+        "-p",
+        "--port",
+        action="store",
+        dest="port",
+        type=int,
+        help="port for BLAT server (default: %(default)s)",
+        default=88888,
+    )
+    build_parser.add_argument(
+        "--min_soft_seg_len",
+        action="store",
+        dest="min_soft_seg_len",
+        type=int,
+        help="minimum softclipped segement length to trigger BLAT alignment (default: %(default)s)",
+        default=200,
+    )
+    build_parser.add_argument(
+        "--max_allowed_nm",
+        action="store",
+        dest="max_allowed_nm",
+        type=int,
+        help="Maximum allowed NM to keep AS tag (default: %(default)s)",
+        default=100,
+    )
+    build_parser.add_argument(
+        "--match_difference",
+        action="store",
+        dest="match_difference",
+        type=int,
+        help="Maximum allowed difference between representative and supplementary alignments (default: %(default)s)",
+        default=10,
+    )
+    build_parser.add_argument(
+        "--identity",
+        action="store",
+        dest="ident_cutoff",
+        type=float,
+        help="blat_ident_pct_cutoff (default: %(default)s)",
+        default=0.95,
+    )
+    build_parser.add_argument(
+        "--tmp",
+        action="store",
+        dest="tmp_dir",
+        type=str,
+        help="BLAT temporary directory (default: %(default)s)",
+        default="/tmp",
+    )
 
-    call_parser = sub_parsers.add_parser("call", help = "call NLS events from build.BAM",
-        description = "%(prog)s -i input_bam_file_from_ScanNLS_build -o output_vcf_file_prefix [opts]",
-        epilog=textwrap.dedent('''Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021'''))
+    call_parser = sub_parsers.add_parser(
+        "call",
+        help="call NLS events from build.BAM",
+        description="%(prog)s -i input_bam_file_from_ScanNLS_build -o output_vcf_file_prefix [opts]",
+        epilog=textwrap.dedent(
+            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
+        ),
+    )
 
-    call_parser.add_argument('-i', '--input', action='store', dest='input', help="Input BAM file", required=True)
-    call_parser.add_argument('-o', '--output', action='store', dest='output', help="output file prefix", required=True)
-    call_parser.add_argument('-a', '--alignment_fraction', action='store', dest='alignment_fraction', type=float, help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)", default=0.8)
-    call_parser.add_argument('-c', '--sr', action='store', dest='sr', type=int, help="minimal observation supporting reads for SV (default: %(default)s)", default=4)
-    call_parser.add_argument('-d', '--depth', action='store', dest='depth', type=int, help="minimal depth to call SV (default: %(default)s)", default=10)
-    call_parser.add_argument('-p', '--pso', action='store', dest='pso', type=float, help="minimal variant allele frequency (default: %(default)s)", default=0.1)
-    call_parser.add_argument('-l', '--length', action=LengthAction, dest='length', type=int, help="minimal length (>=1) of SV to report (default: %(default)s)", default=1000)
-    call_parser.add_argument('-m', '--mapq', action='store', dest='mapq', type=int, help="minimal MAPQ of read from BAM file to call NLS (default: %(default)s)", default=15)
-    call_parser.add_argument('-n', action='store', dest='mismatch', type=int, help="maximum mismatch bases of pairwise local alignment (default: %(default)s)", default=3)
-    call_parser.add_argument('-s', '--seed', action='store', dest='seed', type=int, help="maximum seed observation (reads with SV tags) count of SV (default: %(default)s)", default=4)
-    call_parser.add_argument('--soft_len', action='store', dest='soft_len', type=int, help="Minimal soft-clipped length to be count (default: %(default)s)", default=5)
-    call_parser.add_argument('-t', action='store', dest='region', help="Limit analysis to targets listed in the BEDPE-format FILE")
+    call_parser.add_argument(
+        "-i",
+        "--input",
+        action="store",
+        dest="input",
+        help="Input BAM file",
+        required=True,
+    )
+    call_parser.add_argument(
+        "-o",
+        "--output",
+        action="store",
+        dest="output",
+        help="output file prefix",
+        required=True,
+    )
+    call_parser.add_argument(
+        "-a",
+        "--alignment_fraction",
+        action="store",
+        dest="alignment_fraction",
+        type=float,
+        help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
+        default=0.8,
+    )
+    call_parser.add_argument(
+        "-c",
+        "--sr",
+        action="store",
+        dest="sr",
+        type=int,
+        help="minimal observation supporting reads for SV (default: %(default)s)",
+        default=4,
+    )
+    call_parser.add_argument(
+        "-d",
+        "--depth",
+        action="store",
+        dest="depth",
+        type=int,
+        help="minimal depth to call SV (default: %(default)s)",
+        default=10,
+    )
+    call_parser.add_argument(
+        "-p",
+        "--pso",
+        action="store",
+        dest="pso",
+        type=float,
+        help="minimal variant allele frequency (default: %(default)s)",
+        default=0.1,
+    )
+    call_parser.add_argument(
+        "-l",
+        "--length",
+        action=LengthAction,
+        dest="length",
+        type=int,
+        help="minimal length (>=1) of SV to report (default: %(default)s)",
+        default=1000,
+    )
+    call_parser.add_argument(
+        "-m",
+        "--mapq",
+        action="store",
+        dest="mapq",
+        type=int,
+        help="minimal MAPQ of read from BAM file to call NLS (default: %(default)s)",
+        default=15,
+    )
+    call_parser.add_argument(
+        "-n",
+        action="store",
+        dest="mismatch",
+        type=int,
+        help="maximum mismatch bases of pairwise local alignment (default: %(default)s)",
+        default=3,
+    )
+    call_parser.add_argument(
+        "-s",
+        "--seed",
+        action="store",
+        dest="seed",
+        type=int,
+        help="maximum seed observation (reads with SV tags) count of SV (default: %(default)s)",
+        default=4,
+    )
+    call_parser.add_argument(
+        "--soft_len",
+        action="store",
+        dest="soft_len",
+        type=int,
+        help="Minimal soft-clipped length to be count (default: %(default)s)",
+        default=5,
+    )
+    call_parser.add_argument(
+        "-t",
+        action="store",
+        dest="region",
+        help="Limit analysis to targets listed in the BEDPE-format FILE",
+    )
 
-    infer_parser = sub_parsers.add_parser("infer", help = "infer NLS isoforms using built BAM and called VCF",
-        description = "%(prog)s -i input_bam_file_from_ScanNLS_build -o output_vcf_file_prefix [opts]",
-        epilog=textwrap.dedent('''Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021'''))
+    infer_parser = sub_parsers.add_parser(
+        "infer",
+        help="infer NLS isoforms using built BAM and called VCF",
+        description="%(prog)s -i input_bam_file_from_ScanNLS_build -o output_vcf_file_prefix [opts]",
+        epilog=textwrap.dedent(
+            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
+        ),
+    )
 
     return parser
 
 
 def main():
-    if sys.version_info < (3,7):
-        sys.exit('Sorry, this code need Python 3.7 or higher. Please update. Aborting...')
+    if sys.version_info < (3, 7):
+        sys.exit(
+            "Sorry, this code need Python 3.7 or higher. Please update. Aborting..."
+        )
     parser = parse_args()
 
     if len(sys.argv[1:]) < 1:
@@ -764,26 +1753,43 @@ def main():
     else:
         options = parser.parse_args()
 
-    if options.sub_command == 'build':
+    if options.sub_command == "build":
         use_blat = options.blat
         # check external tools used
         external_tool_checking(blat=use_blat)
 
-        print('ScanNLS build starts running: ' + time.strftime("%Y-%m-%d %H:%M:%S"))
+        print("ScanNLS build starts running: " + time.strftime("%Y-%m-%d %H:%M:%S"))
         start = time.time()
 
         if use_blat:
             # start gfserver
-            print('starting gfserver\n')
-            if not checkIfProcessRunning('gfServer'):
-                start_gfServer(ref_2bit=options.two_bit, port=options.port, output_dir=options.tmp_dir)
+            print("starting gfserver\n")
+            if not checkIfProcessRunning("gfServer"):
+                start_gfServer(
+                    ref_2bit=options.two_bit,
+                    port=options.port,
+                    output_dir=options.tmp_dir,
+                )
 
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
-        softclipping_realignment(mapq_cutoff=options.mapq, input_bam=options.input, output=options.output,
-            ref_genome=options.ref, gtf=options.gtf, splice_bin=options.splice_bin, ref_2bit=options.two_bit, motif_required=motif_required,
-            blat=use_blat, port=options.port, output_dir=options.tmp_dir, blat_ident_pct_cutoff=options.ident_cutoff,
-            max_allowed_nm=options.max_allowed_nm, min_soft_seg_len=options.min_soft_seg_len, match_difference=options.match_difference)
+        softclipping_realignment(
+            mapq_cutoff=options.mapq,
+            input_bam=options.input,
+            output=options.output,
+            ref_genome=options.ref,
+            gtf=options.gtf,
+            splice_bin=options.splice_bin,
+            ref_2bit=options.two_bit,
+            motif_required=motif_required,
+            blat=use_blat,
+            port=options.port,
+            output_dir=options.tmp_dir,
+            blat_ident_pct_cutoff=options.ident_cutoff,
+            max_allowed_nm=options.max_allowed_nm,
+            min_soft_seg_len=options.min_soft_seg_len,
+            match_difference=options.match_difference,
+        )
 
         if use_blat:
             # stop gfserver
@@ -791,21 +1797,40 @@ def main():
 
         print("ScanNLS build running done: " + time.strftime("%Y-%m-%d %H:%M:%S"))
         end = time.time()
-        print('ScanNLS build takes ' + str(end - start) + ' seconds.')
+        print("ScanNLS build takes " + str(end - start) + " seconds.")
 
-    elif options.sub_command == 'call':
-        print('ScanNLS calling NLS events starts running: ' + time.strftime("%Y-%m-%d %H:%M:%S"))
+    elif options.sub_command == "call":
+        print(
+            "ScanNLS calling NLS events starts running: "
+            + time.strftime("%Y-%m-%d %H:%M:%S")
+        )
         start = time.time()
-        event_dict = sv_scan(options.input, options.output, options.sr, options.depth, options.pso, options.length, options.soft_len,
-            options.region, options.mapq, options.mismatch, options.alignment_fraction, options.seed)
-        print("ScanNLS calling NLS events running done: " + time.strftime("%Y-%m-%d %H:%M:%S"))
+        event_dict = sv_scan(
+            options.input,
+            options.output,
+            options.sr,
+            options.depth,
+            options.pso,
+            options.length,
+            options.soft_len,
+            options.region,
+            options.mapq,
+            options.mismatch,
+            options.alignment_fraction,
+            options.seed,
+        )
+        print(
+            "ScanNLS calling NLS events running done: "
+            + time.strftime("%Y-%m-%d %H:%M:%S")
+        )
         end = time.time()
-        print('ScanNLS calling NLS events takes ' + str(end - start) + ' seconds.')
+        print("ScanNLS calling NLS events takes " + str(end - start) + " seconds.")
     # infer transcript forms (GTF) and the corresponding sequences (FASTA)
-    elif options.sub_command == 'infer':
+    elif options.sub_command == "infer":
         pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
