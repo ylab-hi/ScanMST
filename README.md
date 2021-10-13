@@ -10,22 +10,16 @@
 [![Status](https://img.shields.io/pypi/status/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "Status")
 [![Python Version](https://img.shields.io/pypi/pyversions/ScanNLS)](https://pypi.org/project/ScanNLS "Python Version")
 [![License](https://img.shields.io/pypi/l/ScanNLS)](https://opensource.org/licenses/MIT "License")
-
-.. |Read the Docs| image:: https://img.shields.io/readthedocs/ScanNLS/latest.svg?label=Read%20the%20Docs
-:target: https://ScanNLS.readthedocs.io/
-:alt: Read the documentation at https://ScanNLS.readthedocs.io/
+[![Read the Docs](https://img.shields.io/readthedocs/ScanNLS/latest.svg?label=Read%20the%20Docs)](https://ScanNLS.readthedocs.io/ "Read the documentation at https://ScanNLS.readthedocs.io/")
 .. |Tests| image:: https://github.com/ylab-hi/ScanNLS/workflows/Tests/badge.svg
 :target: https://github.com/ylab-hi/ScanNLS/actions?workflow=Tests
 :alt: Tests
 .. |Codecov| image:: https://codecov.io/gh/ylab-hi/ScanNLS/branch/main/graph/badge.svg
 :target: https://codecov.io/gh/ylab-hi/ScanNLS
 :alt: Codecov
-.. |pre-commit| image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
-:target: https://github.com/pre-commit/pre-commit
-:alt: pre-commit
-.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-:target: https://github.com/psf/black
-:alt: Black
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit "pre-commit")
+[![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black "Black")
 
 ## Features
 
@@ -41,7 +35,9 @@ You can install _ScanNLS_ via pip* from PyPI*:
 
 .. code:: console
 
+```bash
 $ pip install ScanNLS
+```
 
 ## Usage
 

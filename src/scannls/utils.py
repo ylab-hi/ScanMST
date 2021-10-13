@@ -15,7 +15,6 @@ from collections import defaultdict
 from collections import OrderedDict
 from typing import Iterable
 
-import psutil
 from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
@@ -37,9 +36,20 @@ try:
 except:
     sys.exit("HTSeq module not found.\nPlease install it before.")
 
+__funcs__ = {"extract_splice_sites", "junc_site_checker"}
 
-def extract_splice_sites(file, bin):
-    gtf_file = HTSeq.GFF_Reader(file)
+
+def extract_splice_sites(in_file, bin_size) -> tuple:
+    """Extract splice sites and gene regions from input GTF file
+    :param in_file: gene annotation file (GTF file)
+    :param bin_size: bin size to search splice site
+    :type in_file: str
+    :type bin_size: int
+    :return: annotated splice sites (HTSeq.GenomicArrayOfSets) and annotated gene regions (HTSeq.GenomicArrayOfSets)
+    :rtype: tuple
+    """
+    # todo using real splice sites from reference genome
+    gtf_file = HTSeq.GFF_Reader(in_file)
     cvg = HTSeq.GenomicArrayOfSets("auto", stranded=False)
     gene_iv = HTSeq.GenomicArrayOfSets("auto", stranded=False)
     trx_to_exon = defaultdict(list)
@@ -54,13 +64,11 @@ def extract_splice_sites(file, bin):
                 gene_iv[
                     HTSeq.GenomicInterval(
                         feature.iv.chrom,
-                        feature.iv.start - bin,
-                        feature.iv.end + bin,
+                        feature.iv.start - bin_size,
+                        feature.iv.end + bin_size,
                         ".",
                     )
                 ] += str(gene_name)
-        # if feature.type == 'gene':
-        #    gene_iv[HTSeq.GenomicInterval(feature.iv.chrom, feature.iv.start-bin, feature.iv.end+bin, '.')] += f'{gene_name}:{biotype}'
 
     for trx_id in trx_to_exon:
         exonList = trx_to_exon[trx_id]
@@ -73,14 +81,17 @@ def extract_splice_sites(file, bin):
             cvg[
                 HTSeq.GenomicInterval(
                     first_exon.chrom,
-                    first_exon.start - bin,
-                    first_exon.start + bin,
+                    first_exon.start - bin_size,
+                    first_exon.start + bin_size,
                     ".",
                 )
             ] += "XX"
             cvg[
                 HTSeq.GenomicInterval(
-                    first_exon.chrom, first_exon.end - bin, first_exon.end + bin, "."
+                    first_exon.chrom,
+                    first_exon.end - bin_size,
+                    first_exon.end + bin_size,
+                    ".",
                 )
             ] += "XX"
         elif exon_num == 2:
@@ -88,129 +99,142 @@ def extract_splice_sites(file, bin):
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.start - bin,
-                        first_exon.start + bin,
+                        first_exon.start - bin_size,
+                        first_exon.start + bin_size,
                         ".",
                     )
                 ] += "XX"
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.end - bin,
-                        first_exon.end + bin,
+                        first_exon.end - bin_size,
+                        first_exon.end + bin_size,
                         ".",
                     )
                 ] += "GT"
                 cvg[
                     HTSeq.GenomicInterval(
                         last_exon.chrom,
-                        last_exon.start - bin,
-                        last_exon.start + bin,
+                        last_exon.start - bin_size,
+                        last_exon.start + bin_size,
                         ".",
                     )
                 ] += "AG"
                 cvg[
                     HTSeq.GenomicInterval(
-                        last_exon.chrom, last_exon.end - bin, last_exon.end + bin, "."
+                        last_exon.chrom,
+                        last_exon.end - bin_size,
+                        last_exon.end + bin_size,
+                        ".",
                     )
                 ] += "XX"
             elif strand == "-":
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.start - bin,
-                        first_exon.start + bin,
+                        first_exon.start - bin_size,
+                        first_exon.start + bin_size,
                         ".",
                     )
                 ] += "XX"
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.end - bin,
-                        first_exon.end + bin,
+                        first_exon.end - bin_size,
+                        first_exon.end + bin_size,
                         ".",
                     )
                 ] += "CT"
                 cvg[
                     HTSeq.GenomicInterval(
                         last_exon.chrom,
-                        last_exon.start - bin,
-                        last_exon.start + bin,
+                        last_exon.start - bin_size,
+                        last_exon.start + bin_size,
                         ".",
                     )
                 ] += "AC"
                 cvg[
                     HTSeq.GenomicInterval(
-                        last_exon.chrom, last_exon.end - bin, last_exon.end + bin, "."
+                        last_exon.chrom,
+                        last_exon.end - bin_size,
+                        last_exon.end + bin_size,
+                        ".",
                     )
                 ] += "XX"
+        # exon_num > 2
         else:
             if strand == "+":
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.start - bin,
-                        first_exon.start + bin,
+                        first_exon.start - bin_size,
+                        first_exon.start + bin_size,
                         ".",
                     )
                 ] += "XX"
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.end - bin,
-                        first_exon.end + bin,
+                        first_exon.end - bin_size,
+                        first_exon.end + bin_size,
                         ".",
                     )
                 ] += "GT"
                 cvg[
                     HTSeq.GenomicInterval(
                         last_exon.chrom,
-                        last_exon.start - bin,
-                        last_exon.start + bin,
+                        last_exon.start - bin_size,
+                        last_exon.start + bin_size,
                         ".",
                     )
                 ] += "AG"
                 cvg[
                     HTSeq.GenomicInterval(
-                        last_exon.chrom, last_exon.end - bin, last_exon.end + bin, "."
+                        last_exon.chrom,
+                        last_exon.end - bin_size,
+                        last_exon.end + bin_size,
+                        ".",
                     )
                 ] += "XX"
             elif strand == "-":
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.start - bin,
-                        first_exon.start + bin,
+                        first_exon.start - bin_size,
+                        first_exon.start + bin_size,
                         ".",
                     )
                 ] += "XX"
                 cvg[
                     HTSeq.GenomicInterval(
                         first_exon.chrom,
-                        first_exon.end - bin,
-                        first_exon.end + bin,
+                        first_exon.end - bin_size,
+                        first_exon.end + bin_size,
                         ".",
                     )
                 ] += "CT"
                 cvg[
                     HTSeq.GenomicInterval(
                         last_exon.chrom,
-                        last_exon.start - bin,
-                        last_exon.start + bin,
+                        last_exon.start - bin_size,
+                        last_exon.start + bin_size,
                         ".",
                     )
                 ] += "AC"
                 cvg[
                     HTSeq.GenomicInterval(
-                        last_exon.chrom, last_exon.end - bin, last_exon.end + bin, "."
+                        last_exon.chrom,
+                        last_exon.end - bin_size,
+                        last_exon.end + bin_size,
+                        ".",
                     )
                 ] += "XX"
             for _exon in exonList[1:-1]:
                 iv1 = HTSeq.GenomicInterval(
-                    _exon.chrom, _exon.start - bin, _exon.start + bin, "."
+                    _exon.chrom, _exon.start - bin_size, _exon.start + bin_size, "."
                 )
                 iv2 = HTSeq.GenomicInterval(
-                    _exon.chrom, _exon.end - bin, _exon.end + bin, "."
+                    _exon.chrom, _exon.end - bin_size, _exon.end + bin_size, "."
                 )
                 if strand == "+":
                     cvg[iv1] += "AG"
@@ -218,27 +242,25 @@ def extract_splice_sites(file, bin):
                 elif strand == "-":
                     cvg[iv1] += "AC"
                     cvg[iv2] += "CT"
-    sys.stdout.write("{} is fully loaded!\n".format(file))
+    sys.stdout.write("{} is fully loaded!\n".format(in_file))
     return cvg, gene_iv
 
 
-def junc_site_checker(junc_seq):
-    sites = ["GT", "AG", "CT", "AC"]
-    matches = list((i in junc_seq for i in sites))
-    if True in matches:
-        posInA = matches.index(True)
-        tgt_site = sites[posInA]
-        return tgt_site
-    else:
-        return False
-
-
-def gene_annotation(chrm1, pos1, chrm2, pos2, gene_iv):
-    """breakpoints gene annotations"""
-    # print(chrm1, pos1, type(chrm1), type(pos1))
-    # print(chrm2, pos2, type(chrm2), type(pos2))
-    # print(gene_iv[HTSeq.GenomicPosition(chrm1, pos1)])
-    # print(gene_iv[HTSeq.GenomicPosition(chrm2, pos2)])
+def gene_annotation(chrm1, pos1, chrm2, pos2, gene_iv) -> tuple:
+    """obtain gene annotations for breakpoints
+    :param chrm1: chromosome for breakpoint1
+    :param chrm2: chromosome for breakpoint2
+    :param pos1: position for breakpoint1
+    :param pos2: position for breakpoint2
+    :param gene_iv: gene annotations in HTSeq.GenomicArrayOfSets
+    :type chrm1: str
+    :type chrm2: str
+    :type pos1: int
+    :type pos2: int
+    :type gene_iv: HTSeq.GenomicArrayOfSets
+    :return: overlapped genes for breakpoints
+    :rtype: tuple
+    """
     try:
         gene1 = "&".join(list(gene_iv[HTSeq.GenomicPosition(chrm1, pos1)]))
     except IndexError:
@@ -265,20 +287,73 @@ def splicing_confirmation(
     chrm2,
     pos2,
     splice_bin,
-    fastafile,
+    genome_fasta,
     cvg,
     strand_changed,
     motif_required=True,
-):
+) -> tuple:
+    """Judge whether the breakpoints are NLS events or not
+    if motif_required is ON: it will only report NLS events with 'canonical splice sites';
+    otherwise: it will report NLS events whatever the splice sites they used
+    :param chrm1: chromosome for breakpoint1
+    :param chrm2: chromosome for breakpoint2
+    :param pos1: position for breakpoint1
+    :param pos2: position for breakpoint2
+    :param splice_bin: bin size for splice sites searching
+    :param genome_fasta: reference genome (pyfaidx.Fasta object)
+    :param cvg: splice site annotations (HTSeq.GenomicArrayOfSets)
+    :param strand_changed: whether breakpoint1 and breakpoint2 use the same strand or not
+    :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
+    :type chrm1: str
+    :type chrm2: str
+    :type pos1: int
+    :type pos2: int
+    :type splice_bin: int
+    :type genome_fasta: pyfaidx.Fasta
+    :type cvg: HTSeq.GenomicArrayOfSets
+    :type strand_changed: bool
+    :type motif_required: bool
+    :return: report/not report, overlapping boundary in bits, canonical splice site/noncanonical splice site
+    :rtype: tuple
 
-    """motif_required = True  => considering canonical splice sites only
-    motif_required = False => considering canonical and noncanonical splice sites both
-
-    True,  3(11), 1 => reported, both breakpoints overlap with coding exons boundary, using canonical splice motif
-    True,  2(10), 0 => reported, one breakpoint overlap with coding exons boundary, using noncanonical splice motif
-    True,  1(01), 0 => reported, one breakpoint overlap with coding exons boundary, using noncanonical splice motif
-    False, 0(00), 0 => not reported, none breakpoint overlap with coding exons boundary, using noncanonical splice motif
+    .. note::
+        Possible output scenarios
+        * True,  3(11), 1 => reported, both breakpoints overlap with annotated coding exons boundary, using canonical splice motif
+        * True,  2(10), 0 => reported, one breakpoint overlap with annotated coding exons boundary, using noncanonical splice motif
+        * True,  1(01), 0 => reported, one breakpoint overlap with annotated coding exons boundary, using noncanonical splice motif
+        * False, 0(00), 0 => not reported, none breakpoint overlap with annotated coding exons boundary, using noncanonical splice motif
     """
+
+    def canonical_site_finder(in_seq) -> list:
+        """find canonical splice sites in the input sequence
+        :param in_seq: input sequence (usually sequence nearby the breakpoints)
+        :type in_seq: str
+        :return: a list of canonical splice sites in the input sequence, it can be a empty list
+        :rtype: list
+        """
+        candidate_sites = ["GT", "AG", "CT", "AC"]
+        matches = (i in in_seq for i in candidate_sites)
+        hit_sites = [j for i, j in zip(matches, candidate_sites) if i]
+        return hit_sites
+
+    def splice_paired_checker(hit_sites, pair_seq, splice_motif_dict) -> bool:
+        """find canonical splice sites in the input sequence
+        :param hit_sites: canonical splice site at one end
+        :param pair_seq: sequence at the other pair end
+        :param splice_motif_dict: paired splice sites (same strand or different strand)
+        :type hit_sites: list
+        :type pair_seq: str
+        :type splice_motif_dict: dict
+        :return: canonical splice sites are paired or not
+        :rtype: bool
+        """
+        paired = False
+        for site in hit_sites:
+            if site in splice_motif_dict and splice_motif_dict[site] in pair_seq:
+                paired = True
+                break
+        return paired
+
     if strand_changed:
         splice_motif_dict = {"GT": "CT", "AG": "AC", "CT": "GT", "AC": "AG"}
     else:
@@ -293,16 +368,16 @@ def splicing_confirmation(
         junc2 = ""
     # Non-annotated coding exon boundary
     if junc1 not in splice_motif_dict and junc2 not in splice_motif_dict:
-        junc_seq1 = fastafile[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
-        junc_seq2 = fastafile[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
-        _junc1 = junc_site_checker(junc_seq1)
-        _junc2 = junc_site_checker(junc_seq2)
-        if _junc1 and splice_motif_dict[_junc1] in junc_seq2:
+        junc_seq1 = genome_fasta[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
+        junc_seq2 = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
+        _junc1 = canonical_site_finder(junc_seq1)
+        _junc2 = canonical_site_finder(junc_seq2)
+        if splice_paired_checker(_junc1, junc_seq2, splice_motif_dict):
             if motif_required:
                 return True, 0, 1
             else:
                 return True, 0, 1
-        elif _junc2 and splice_motif_dict[_junc2] in junc_seq1:
+        elif splice_paired_checker(_junc2, junc_seq1, splice_motif_dict):
             if motif_required:
                 return True, 0, 1
             else:
@@ -314,7 +389,7 @@ def splicing_confirmation(
                 return True, 0, 0
     # pos1 in annotated coding exon boundary, pos2 not.
     elif junc1 in splice_motif_dict and junc2 not in splice_motif_dict:
-        junc_seq = fastafile[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
+        junc_seq = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
         if splice_motif_dict[junc1] in junc_seq:
             if motif_required:
                 return True, 2, 1
@@ -328,7 +403,7 @@ def splicing_confirmation(
 
     # pos2 in annotated coding exon boundary, pos1 not.
     elif junc1 not in splice_motif_dict and junc2 in splice_motif_dict:
-        junc_seq = fastafile[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
+        junc_seq = genome_fasta[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
         if splice_motif_dict[junc2] in junc_seq:
             if motif_required:
                 return True, 1, 1
@@ -366,42 +441,162 @@ def update_breakpoints(
     bp2_mode,
     splice_bin,
     genome_fasta,
-):
+) -> tuple:
     """
-    update the breakpoints of NLS events with canonical splice sites
-    keep NLS events with noncanonical splice sites unchanged
-    GT-AG;GC-AG;AT-AC
+    Update the breakpoints of NLS events with canonical splice sites
+    keep NLS events with noncanonical splice sites unchanged (GT-AG;GC-AG;AT-AC)
+    :param bp1_chrm: chromosome for breakpoint1
+    :param bp1_pos: position for breakpoint1
+    :param bp2_chrm: chromosome for breakpoint2
+    :param bp2_pos: position for breakpoint2
+    :param bp1_strand: strand for breakpoint1
+    :param bp2_strand: strand for breakpoint2
+    :param bp1_mode: mode for breakpoint1
+    :param bp2_mode: mode for breakpoint2
+    :param splice_bin: bin size for splice site searching
+    :param genome_fasta: reference genome (pyfaidx.Fasta)
+    :type bp1_chrm: str
+    :type bp1_pos: int
+    :type bp2_chrm: str
+    :type bp2_pos: int
+    :type bp1_strand: str (-/+)
+    :type bp2_strand: str (-/+)
+    :type bp1_mode: int (1/2)
+    :type bp2_mode: int (1/2)
+    :type splice_bin: int
+    :type genome_fasta: pyfaidx.Fasta object
+    :return: updated position for breakpoint1 and updated position for breakpoint2
+    :rtype: tuple
+    ..note :
+        mode moving rules:
+        * mode (SM) [2]: breakpoint move to right
+        * mode (MS) [1]: breakpoint move to left
     """
+
+    def splice_site_search(in_str, s_site, splice_bin, for_acceptor=True):
+        """search for 's_site' in 'in_str';
+        searching for acceptor site (searching from left to right [==>> ...XXX])
+        searching for donor site (searching from right to left [XXX... <<==])
+        :param in_str: nearby sequence of breakpoints
+        :param s_site: splice site
+        :param splice_bin: bin size for splice site searching
+        :param for_acceptor: searching for acceptor site [True] OR donor site[False]
+        :type in_str: str
+        :type s_site: str
+        :type splice_bin: int
+        :type for_acceptor: bool
+        :return:
+        :rtype: int
+        ..note ::
+             assert splice_site_search('AGXXAGTXPX', 'AG', 5, True) == 5
+             assert splice_site_search('AGXXAGTXPX', 'GT', 5, False) == 4
+        """
+        shift_positions = []
+        if for_acceptor:  # ==>>
+            for i in range(len(in_str) - 1):
+                _motif = in_str[i : i + 2]
+                if _motif == s_site:
+                    shift_positions.append(i)
+        else:  # <<==
+            for i in range(len(in_str) - 1):
+                if i == 0:
+                    _motif = in_str[-i - 2 :]
+                else:
+                    _motif = in_str[-i - 2 : -i]
+                if _motif == s_site:
+                    shift_positions.append(i)
+        # No found canonical splice site
+        if len(shift_positions) == 0:
+            return -1
+        else:
+            # select position closest to the center point of the 'in_str'
+            ordered_shift_positions = sorted(
+                shift_positions, key=lambda k: abs(k - (splice_bin - 1))
+            )
+            return ordered_shift_positions[0] + 1
+
+    def obtain_bps_shift_len(bp1_dict, bp2_dict, bp1_upstream=True):
+        """bp1_upstream: breakpoint 1 locates at the upstream half of the transcript
+        :param bp1_dict:
+        :param bp2_dict:
+        :param bp1_upstream:
+        :type bp1_dict: dict
+        :type bp2_dict: dict
+        :type bp1_upstream: bool
+        """
+        if bp1_upstream:
+            if (
+                "GT" in bp1_dict
+                and "AG" in bp2_dict
+                and bp1_dict["GT"] != -1
+                and bp2_dict["AG"] != -1
+            ):
+                return bp1_dict["GT"], bp2_dict["AG"]
+            elif (
+                "GC" in bp1_dict
+                and "AG" in bp2_dict
+                and bp1_dict["GC"] != -1
+                and bp2_dict["AG"] != -1
+            ):
+                return bp1_dict["GC"], bp2_dict["AG"]
+            elif (
+                "AT" in bp1_dict
+                and "AC" in bp2_dict
+                and bp1_dict["AT"] != -1
+                and bp2_dict["AC"] != -1
+            ):
+                return bp1_dict["AT"], bp2_dict["AC"]
+            else:
+                # No splice site found
+                return True, True
+        else:
+            if (
+                "GT" in bp2_dict
+                and "AG" in bp1_dict
+                and bp2_dict["GT"] != -1
+                and bp1_dict["AG"] != -1
+            ):
+                return bp1_dict["AG"], bp2_dict["GT"]
+            elif (
+                "GC" in bp2_dict
+                and "AG" in bp1_dict
+                and bp2_dict["GC"] != -1
+                and bp1_dict["AG"] != -1
+            ):
+                return bp1_dict["AG"], bp2_dict["GC"]
+            elif (
+                "AT" in bp2_dict
+                and "AC" in bp1_dict
+                and bp2_dict["AT"] != -1
+                and bp1_dict["AC"] != -1
+            ):
+                return bp1_dict["AC"], bp2_dict["AT"]
+            else:
+                # No splice site found
+                return True, True
+
     tgt_motifs = {
         1: {"+": {"GT", "GC", "AT"}, "-": {"AG", "AC"}},
         2: {"+": {"AG", "AC"}, "-": {"GT", "GC", "AT"}},
     }
 
-    # SM: breakpoint move to right
-    # MS: breakpoint move to left
-    # boundary_seq1
-    # print(bp1_chrm, bp1_pos, splice_bin, bp1_mode, bp1_strand)
-    # print(bp2_chrm, bp2_pos, splice_bin, bp2_mode, bp2_strand)
     bp1_pos_dict = {}
     if bp1_mode == 2:
         if bp1_strand == "+":
             boundary_seq1 = genome_fasta[bp1_chrm][
                 bp1_pos - splice_bin : bp1_pos + splice_bin
             ].seq
-            # left to right: AG, AC
+            # acceptor site: AG/AC
             bp1_pos_dict["AG"] = splice_site_search(boundary_seq1, "AG", splice_bin)
             bp1_pos_dict["AC"] = splice_site_search(boundary_seq1, "AC", splice_bin)
         elif bp1_strand == "-":
             boundary_seq1 = genome_fasta[bp1_chrm][
                 bp1_pos - splice_bin : bp1_pos + splice_bin
             ].reverse.complement.seq
-            # right to left: GT, GC, AT
-            # print(boundary_seq1)
+            # donor site: GT/GC/AT
             bp1_pos_dict["GT"] = splice_site_search(
                 boundary_seq1, "GT", splice_bin, False
             )
-            # print(bp1_pos_dict)
-
             bp1_pos_dict["GC"] = splice_site_search(
                 boundary_seq1, "GC", splice_bin, False
             )
@@ -413,7 +608,7 @@ def update_breakpoints(
             boundary_seq1 = genome_fasta[bp1_chrm][
                 bp1_pos - splice_bin : bp1_pos + splice_bin
             ].seq
-            # right to left: GT, GC, AT
+            # donor site: GT/GC/AT
             bp1_pos_dict["GT"] = splice_site_search(
                 boundary_seq1, "GT", splice_bin, False
             )
@@ -427,30 +622,24 @@ def update_breakpoints(
             boundary_seq1 = genome_fasta[bp1_chrm][
                 bp1_pos - splice_bin : bp1_pos + splice_bin
             ].reverse.complement.seq
-            # left to right: AG, AC
+            # acceptor site: AG/AC
             bp1_pos_dict["AG"] = splice_site_search(boundary_seq1, "AG", splice_bin)
             bp1_pos_dict["AC"] = splice_site_search(boundary_seq1, "AC", splice_bin)
-    # boundary_seq2
+
     bp2_pos_dict = {}
     if bp2_mode == 2:
         if bp2_strand == "+":
-            # if TRA:
-            #    boundary_seq2 = genome_fasta[bp2_chrm][bp2_pos-1-splice_bin:bp2_pos-1+splice_bin].seq
-            # else:
             boundary_seq2 = genome_fasta[bp2_chrm][
                 bp2_pos - splice_bin : bp2_pos + splice_bin
             ].seq
-            # left to right: AG, AC
+            # acceptor site: AG/AC
             bp2_pos_dict["AG"] = splice_site_search(boundary_seq2, "AG", splice_bin)
             bp2_pos_dict["AC"] = splice_site_search(boundary_seq2, "AC", splice_bin)
         elif bp2_strand == "-":
-            # if TRA:
-            #    boundary_seq2 = genome_fasta[bp2_chrm][bp2_pos-1-splice_bin:bp2_pos-1+splice_bin].reverse.complement.seq
-            # else:
             boundary_seq2 = genome_fasta[bp2_chrm][
                 bp2_pos - splice_bin : bp2_pos + splice_bin
             ].reverse.complement.seq
-            # right to left: GT, GC, AT
+            # donor site: GT/GC/AT
             bp2_pos_dict["GT"] = splice_site_search(
                 boundary_seq2, "GT", splice_bin, False
             )
@@ -462,13 +651,10 @@ def update_breakpoints(
             )
     elif bp2_mode == 1:
         if bp2_strand == "+":
-            # if TRA:
-            #    boundary_seq2 = genome_fasta[bp2_chrm][bp2_pos-1-splice_bin:bp2_pos-1+splice_bin].seq
-            # else:
             boundary_seq2 = genome_fasta[bp2_chrm][
                 bp2_pos - splice_bin : bp2_pos + splice_bin
             ].seq
-            # right to left: GT, GC, AT
+            # donor site: GT/GC/AT
             bp2_pos_dict["GT"] = splice_site_search(
                 boundary_seq2, "GT", splice_bin, False
             )
@@ -479,13 +665,10 @@ def update_breakpoints(
                 boundary_seq2, "AT", splice_bin, False
             )
         elif bp2_strand == "-":
-            # if TRA:
-            #    boundary_seq2 = genome_fasta[bp2_chrm][bp2_pos-1-splice_bin:bp2_pos-1+splice_bin].reverse.complement.seq
-            # else:
             boundary_seq2 = genome_fasta[bp2_chrm][
                 bp2_pos - splice_bin : bp2_pos + splice_bin
             ].reverse.complement.seq
-            # left to right: AG, AC
+            # acceptor site: AG/AC
             bp2_pos_dict["AG"] = splice_site_search(boundary_seq2, "AG", splice_bin)
             bp2_pos_dict["AC"] = splice_site_search(boundary_seq2, "AC", splice_bin)
 
@@ -538,89 +721,6 @@ def update_breakpoints(
 
     # print('new_bp1: ',new_bp1_pos, 'new_bp2: ',new_bp2_pos)
     return new_bp1_pos, new_bp2_pos
-
-
-def obtain_bps_shift_len(bp1_dict, bp2_dict, bp1_upstream=True):
-    """bp1_upstream: breakpoint 1 locates at the upstream half of the transcript"""
-    if bp1_upstream:
-        if (
-            "GT" in bp1_dict
-            and "AG" in bp2_dict
-            and bp1_dict["GT"] != -1
-            and bp2_dict["AG"] != -1
-        ):
-            return bp1_dict["GT"], bp2_dict["AG"]
-        elif (
-            "GC" in bp1_dict
-            and "AG" in bp2_dict
-            and bp1_dict["GC"] != -1
-            and bp2_dict["AG"] != -1
-        ):
-            return bp1_dict["GC"], bp2_dict["AG"]
-        elif (
-            "AT" in bp1_dict
-            and "AC" in bp2_dict
-            and bp1_dict["AT"] != -1
-            and bp2_dict["AC"] != -1
-        ):
-            return bp1_dict["AT"], bp2_dict["AC"]
-        else:
-            # No splice site found
-            return True, True
-    else:
-        if (
-            "GT" in bp2_dict
-            and "AG" in bp1_dict
-            and bp2_dict["GT"] != -1
-            and bp1_dict["AG"] != -1
-        ):
-            return bp1_dict["AG"], bp2_dict["GT"]
-        elif (
-            "GC" in bp2_dict
-            and "AG" in bp1_dict
-            and bp2_dict["GC"] != -1
-            and bp1_dict["AG"] != -1
-        ):
-            return bp1_dict["AG"], bp2_dict["GC"]
-        elif (
-            "AT" in bp2_dict
-            and "AC" in bp1_dict
-            and bp2_dict["AT"] != -1
-            and bp1_dict["AC"] != -1
-        ):
-            return bp1_dict["AC"], bp2_dict["AT"]
-        else:
-            # No splice site found
-            return True, True
-
-
-def splice_site_search(in_str, s_site, splice_bin, to_right=True):
-    """search for 's_site' in 'in_str'
-    search for donor site: from right to left
-    search for acceptor site: from left to right
-    """
-    shift_list = []
-    # from left to right searching
-    if to_right:
-        for i in range(len(in_str) - 1):
-            _motif = in_str[i : i + 2]
-            if _motif == s_site:
-                shift_list.append(i)
-
-    # from right to left searching
-    else:
-        for i in range(len(in_str) - 1):
-            if i == 0:
-                _motif = in_str[-i - 2 :]
-            else:
-                _motif = in_str[-i - 2 : -i]
-            if _motif == s_site:
-                shift_list.append(i)
-    if len(shift_list) == 0:
-        return -1
-    else:
-        ordered_shift_list = sorted(shift_list, key=lambda k: abs(k - (splice_bin - 1)))
-        return ordered_shift_list[0] + 1
 
 
 def cigar_validity(cigar_str):
@@ -904,7 +1004,22 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
         if len(a) == 0 or len(b) == 0:
             return []
         for i in range(len(a)):
-            if a[i] == b[overlap_len]:
+            try:
+                _X = a[i]
+            except IndexError:
+                print(a, i)
+            else:
+                pass
+
+            try:
+                _Y = b[overlap_len]
+            except IndexError:
+                print(b, overlap_len)
+            else:
+                pass
+
+            # if a[i] == b[overlap_len]:
+            if _X == _Y:
                 overlap_len += 1
                 if count == 0:
                     first_hit_index_a = i
