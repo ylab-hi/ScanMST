@@ -861,20 +861,20 @@ def short_TDUP_or_not(
         return False
 
 
-def test_is_connected(sms_read1, sms_read2, len_cutoff=30) -> tuple:
+def test_is_connected(sms_read1, sms_read2, allowed_difference=30) -> tuple:
     """Test whether two SMS tuples of chimeric reads can be connected or not.
     :param sms_read1: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read1 OR path
     :type sms_read1: tuple
     :param sms_read2: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read2 OR path
     :type sms_read2: tuple
-    :param len_cutoff: length cutoff to determine the S-M match
-    :type len_cutoff: int
+    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
+    :type allowed_difference: int
     :return: is_connected flag, summed 'SMS' value, mode for read1 and read2
     :rtype: tuple
     """
 
-    def propinquity(a, b, len_cutoff) -> bool:
-        if abs(a - b) <= len_cutoff:
+    def propinquity(a, b, allowed_difference) -> bool:
+        if abs(a - b) <= allowed_difference:
             return True
         else:
             return False
@@ -898,28 +898,28 @@ def test_is_connected(sms_read1, sms_read2, len_cutoff=30) -> tuple:
     out_lt_len = 0
     out_rt_len = 0
     out_read_match = 0
-    if propinquity(_read_match_r1, _lt_len_r2, len_cutoff):
+    if propinquity(_read_match_r1, _lt_len_r2, allowed_difference):
         out_lt_len = 0
         out_read_match = _lt_len_r2 + _read_match_r2
         out_rt_len = _rt_len_r2
         mode_r2 = 2
         is_connected = True
 
-    elif propinquity(_read_match_r1, _rt_len_r2, len_cutoff):
+    elif propinquity(_read_match_r1, _rt_len_r2, allowed_difference):
         out_lt_len = _lt_len_r2
         out_read_match = _read_match_r2 + _rt_len_r2
         out_rt_len = 0
         mode_r2 = 1
         is_connected = True
 
-    elif propinquity(_read_match_r2, _lt_len_r1, len_cutoff):
+    elif propinquity(_read_match_r2, _lt_len_r1, allowed_difference):
         out_lt_len = 0
         out_read_match = _lt_len_r1 + _read_match_r1
         out_rt_len = _rt_len_r1
         mode_r1 = 2
         is_connected = True
 
-    elif propinquity(_read_match_r2, _rt_len_r1, len_cutoff):
+    elif propinquity(_read_match_r2, _rt_len_r1, allowed_difference):
         out_lt_len = _rt_len_r1
         out_read_match = _read_match_r1 + _rt_len_r1
         out_rt_len = 0
@@ -935,10 +935,16 @@ def test_is_connected(sms_read1, sms_read2, len_cutoff=30) -> tuple:
     return is_connected, (out_lt_len, out_read_match, out_rt_len), (mode_r1, mode_r2)
 
 
-def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
+def chimeric_aln_order_finder(
+    aln_list, allowed_difference=30, soft_len_cutoff=30
+) -> tuple:
     """
     :param aln_list: list of Read object
     :type aln_list: list
+    :param soft_len_cutoff: softclipped segment length cutoff to determine 'two starting reads'
+    :type soft_len_cutoff: int
+    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
+    :type allowed_difference: int
     :return: Read-to-Read chain, a dictionary of Read-pair(Read1, Read2) => mode-of-Read1, mode-of-Read2
     :rtype: tuple
     .. note::
@@ -1077,7 +1083,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
         # print('len(start_nodes) == 2')
         if len(candidate_nodes) == 0:
             _is_connected, _, _mode = test_is_connected(
-                start_nodes[0].sms, start_nodes[1].sms
+                start_nodes[0].sms, start_nodes[1].sms, allowed_difference
             )
             if _is_connected:
                 reads_pair_mode_dict[(start_nodes[0], start_nodes[1])] = _mode
@@ -1085,7 +1091,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
         elif len(candidate_nodes) == 1:
             for _node in start_nodes:
                 _is_connected, _, _mode = test_is_connected(
-                    _node.sms, candidate_nodes[0].sms
+                    _node.sms, candidate_nodes[0].sms, allowed_difference
                 )
                 if _is_connected:
                     reads_pair_mode_dict[(_node, candidate_nodes[0])] = _mode
@@ -1113,7 +1119,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
                 for _node in candidate_nodes:
                     if count < len(candidate_nodes):
                         _is_connected, _sum_sms, _mode = test_is_connected(
-                            tgt_node.sms, _node.sms
+                            tgt_node.sms, _node.sms, allowed_difference
                         )
                         if _is_connected:
                             stop_signal = False
@@ -1142,7 +1148,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
                         for path in tgt_node.linked_paths:
                             # print(path.sms, _node.sms)
                             _is_connected, _sum_sms, _mode = test_is_connected(
-                                path.sms, _node.sms
+                                path.sms, _node.sms, allowed_difference
                             )
                             if _is_connected:
                                 if path.nodes[-1] != _node:
@@ -1167,7 +1173,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
                 for _node in candidate_nodes:
                     if count < len(candidate_nodes):
                         _is_connected, _sum_sms, _mode = test_is_connected(
-                            tgt_node.sms, _node.sms
+                            tgt_node.sms, _node.sms, allowed_difference
                         )
                         if _is_connected:
                             stop_signal = False
@@ -1195,7 +1201,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
                     else:
                         for path in tgt_node.linked_paths:
                             _is_connected, _sum_sms, _mode = test_is_connected(
-                                path.sms, _node.sms
+                                path.sms, _node.sms, allowed_difference
                             )
                             if _is_connected:
                                 if path.nodes[-1] != _node:

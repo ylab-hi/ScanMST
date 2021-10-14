@@ -74,13 +74,34 @@ except:
     sys.exit("scikit-bio module not found.\nPlease install it before.")
 
 
-def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
-    """
-    return: NLS_type(TDUP/INV), exon_boundary(0/1/2/3), canonical_or_not (1/0), [position, size, rep_aln_mode, sup_aln_mode], [++]
-            TRA, canonical_or_not (1/0), [position, sup_position, rep_aln_mode, sup_aln_mode], [+-]
-            e.g., INV,1,43947377,181934993,1,1,++
-                  TRA,1,160289623,chr17:17189212,1,1,+-
-    updated return: a list of putative NLS events
+def detect_read_read_connections_from_cigar(
+    chrm, read, mapq_cutoff, allowed_difference
+) -> tuple:
+    """Detecting read-read connections with chimeric alignments CIGAR string
+
+    :param chrm: chromosome of input read
+    :param read: read of pysam.AlignedSegment object, expecting representative read with SA tag
+    :param mapq_cutoff: MAPQ cutoff
+    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
+    :type chrm: str
+    :type read: pysam.AlignedSegment object
+    :type mapq_cutoff: int
+    :type allowed_difference: int
+    :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) => mode-of-Read1, mode-of-Read2
+    :rtype: tuple
+    .. note::
+        Read-to-Read chain scenarios
+        * [[Read1, Read2, Read3]]
+        * [[Read1, Read2, Read3],[Read4,Read5]]
+
+        Dictionary of Read-pair scenarios
+        * (Read1, Read2) => mode-of-Read1, mode-of-Read2
+        * (Read2, Read1) => mode-of-Read2, mode-of-Read1
+
+    #return: NLS_type(TDUP/INV), exon_boundary(0/1/2/3), canonical_or_not (1/0), [position, size, rep_aln_mode, sup_aln_mode], [++]
+    #        TRA, canonical_or_not (1/0), [position, sup_position, rep_aln_mode, sup_aln_mode], [+-]
+    #        e.g., INV,1,43947377,181934993,1,1,++
+    #              TRA,1,160289623,chr17:17189212,1,1,+-
     """
 
     def format_sa_tag(in_str):
@@ -162,7 +183,7 @@ def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
         return [], {}
     else:
         read_to_read_chains, reads_pair_mode_dict = chimeric_aln_order_finder(
-            chimeric_aln_list
+            chimeric_aln_list, allowed_difference
         )
 
         # print(read_to_read_chains, reads_pair_mode_dict)
@@ -171,13 +192,22 @@ def detect_read_read_connections_from_cigar(chrm, read, mapq_cutoff) -> tuple:
 
 
 def detect_sv_from_cigar(
-    chrm, read, mapq_cutoff, splice_bin, genome_fasta, cvg, gene_iv, motif_required
+    chrm,
+    read,
+    mapq_cutoff,
+    splice_bin,
+    allowed_difference,
+    genome_fasta,
+    cvg,
+    gene_iv,
+    motif_required,
 ) -> list:
     """
     :param chrm: chromosome
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param splice_bin: a small bin for splice site searching
+    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
     :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
@@ -185,7 +215,8 @@ def detect_sv_from_cigar(
     :type chrm: str
     :type read: pysam.AlignedSegment
     :type mapq_cutoff: int
-    :type splice_bin : int
+    :type splice_bin: int
+    :type allowed_difference: int
     :type genome_fasta: pyfaidx.Fasta
     :type cvg: HTSeq.GenomicArrayOfSets
     :type gene_iv: HTSeq.GenomicArrayOfSets
@@ -194,7 +225,7 @@ def detect_sv_from_cigar(
     :rtype: list (list of lists)
     """
     read_to_read_chains, reads_pair_mode_dict = detect_read_read_connections_from_cigar(
-        chrm, read, mapq_cutoff
+        chrm, read, mapq_cutoff, allowed_difference
     )
 
     event_groups = []
@@ -1233,8 +1264,8 @@ def infer_sv_from_connected_reads(
 
 
 def softclipping_realignment(
-    mapq_cutoff,
     input_bam,
+    mapq_cutoff,
     output,
     ref_genome,
     gtf,
@@ -1247,10 +1278,49 @@ def softclipping_realignment(
     blat_ident_pct_cutoff=0.9,
     max_allowed_nm=50,
     min_soft_seg_len=200,
-    match_difference=10,
+    allowed_difference=30,
 ):
+    """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
+       (2) add SA tag for reads with long length of softclipped segment using BLAT (Optional)
+       (3) identify putative regions of NLS events using connected chimeric reads
+       (4) add putative regions of NLS events to SV tag of primary alignment
+       (5) output regions of NLS events in BEDPE file
+
+    :param input_bam: Transcriptomic long-read sorted BAM file
+    :param mapq_cutoff: MAPQ cutoff
+    :param output: file full name for output rebuild BAM file
+    :param ref_genome: reference genome (FASTA file)
+    :param gtf: reference gene annotations (GTF file)
+    :param splice_bin: bin size for splice site searching
+    :param ref_2bit: reference 2bit file for BLAT
+    :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
+    :param blat: use BLAT OR not
+    :param port: BLAT server port
+    :param output_dir: BLAT output directory for psl files
+    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
+    :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
+    :param min_soft_seg_len: minium softclipped segement length to trigger BLAT for reads with softcliping but no SA tag
+    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
+    :type input_bam: str (BAM filename)
+    :type mapq_cutoff: int
+    :type output: str
+    :type ref_genome: str
+    :type gtf: str
+    :type splice_bin: int
+    :type ref_2bit: str
+    :type motif_required: bool
+    :type blat: bool
+    :type port: int
+    :type output_dir: str
+    :type blat_ident_pct_cutoff: float
+    :type max_allowed_nm: int
+    :type min_soft_seg_len: int
+    :type allowed_difference: int
+    :return: No returns
+    :rtype: None
+    """
     in_bam = pysam.AlignmentFile(input_bam, "rb")
-    output_bam = pysam.AlignmentFile("{}".format(output), "wb", template=in_bam)
+    output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
     group_counter = 0
     candidate_regions = set()
     candidate_ao_dict = defaultdict(int)
@@ -1277,7 +1347,7 @@ def softclipping_realignment(
     pat_left_H = re.compile(r"^(\d+)H")
     pat_right_H = re.compile(r"(\d+)H$")
     try:
-        for read in in_bam.fetch(until_eof=True):
+        for read in in_bam.fetch(until_eof=False):
             if read.is_supplementary:
                 sup_aln_cigar = read.cigarstring
                 left_mat = pat_left_H.search(sup_aln_cigar)
@@ -1412,6 +1482,7 @@ def softclipping_realignment(
                         read,
                         mapq_cutoff,
                         splice_bin,
+                        allowed_difference,
                         genome_fasta,
                         cvg,
                         gene_iv,
@@ -1464,17 +1535,12 @@ def softclipping_realignment(
     in_bam.close()
     output_bam.close()
 
-    # remove temporary BAM file
-    # remove('{}.temp.bam'.format(output))
-
-    # remove('{}'.format(input))
-    # remove('{}.bai'.format(input))
-
     subprocess.check_call("samtools index {}".format(output), shell=True)
 
     # output_candidates = aggregate_candidates(candidate_ao_dict, len_cutoff=0)
     prefix = output.split(".")[0]
     output_bedpe_file(candidate_ao_dict, candidate_group_dict, prefix, splice_bin)
+    return None
 
 
 def parse_args():
@@ -1593,12 +1659,12 @@ def parse_args():
         default=100,
     )
     build_parser.add_argument(
-        "--match_difference",
+        "--allowed_difference",
         action="store",
-        dest="match_difference",
+        dest="allowed_difference",
         type=int,
-        help="Maximum allowed difference between representative and supplementary alignments (default: %(default)s)",
-        default=10,
+        help="Maximum allowed difference in length between one read matched part and other read softclipped part (default: %(default)s)",
+        default=30,
     )
     build_parser.add_argument(
         "--identity",
@@ -1774,8 +1840,8 @@ def main():
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
         softclipping_realignment(
-            mapq_cutoff=options.mapq,
             input_bam=options.input,
+            mapq_cutoff=options.mapq,
             output=options.output,
             ref_genome=options.ref,
             gtf=options.gtf,
@@ -1788,7 +1854,7 @@ def main():
             blat_ident_pct_cutoff=options.ident_cutoff,
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
-            match_difference=options.match_difference,
+            allowed_difference=options.allowed_difference,
         )
 
         if use_blat:
