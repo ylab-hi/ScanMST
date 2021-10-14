@@ -265,6 +265,10 @@ def blat_mapq_calculator(hsps, query_len, blat_ident_pct_cutoff=0.95):
 def cigar_validity(cigar_str):
     """
     40M25N5M then cigartuple is [('40', 'M'), ('25', 'N'), ('5', 'M')]
+    :param cigar_str: BLAT generated cigarstring from 'softclipped_seq2SA_tag'
+    :type cigar_str: str
+    :return: valid cigarstring
+    :rtype: str
     """
     cigartuple = list(map(list, re.findall(r"(\d+)(\w)", cigar_str)))
     if cigartuple[0][1] == cigartuple[1][1]:

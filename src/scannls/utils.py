@@ -22,6 +22,7 @@ from pyfaidx import Fasta
 
 from . import __version__
 from .classes import Path
+from .common import transcript_upstream_part_determiner
 
 try:
     import pysam
@@ -485,9 +486,13 @@ def update_breakpoints(
         :type s_site: str
         :type splice_bin: int
         :type for_acceptor: bool
-        :return:
+        :return: optimal splice site position in 'in_str'; not found(-1)
         :rtype: int
         ..note ::
+             For donor, splice position will be ZXXXXGTYYY
+                                                |||||^
+             For acceptor, splice position will be ZXXXAGTYYY
+                                                        ^||||
              assert splice_site_search('AGXXAGTXPX', 'AG', 5, True) == 5
              assert splice_site_search('AGXXAGTXPX', 'GT', 5, False) == 4
         """
@@ -515,16 +520,20 @@ def update_breakpoints(
             )
             return ordered_shift_positions[0] + 1
 
-    def obtain_bps_shift_len(bp1_dict, bp2_dict, bp1_upstream=True):
-        """bp1_upstream: breakpoint 1 locates at the upstream half of the transcript
-        :param bp1_dict:
-        :param bp2_dict:
-        :param bp1_upstream:
+    def obtain_bps_shift_len(bp1_dict, bp2_dict, bp1_is_upstream=True) -> tuple:
+        """obtain shift length for breakpoint1 and breakpoint2 according to putative canonical splice
+        site positions in 'bp1_dict' and 'bp2_dict'
+        In order to find the correct breakpoint pair, canonical splice site matches is needed (GT-AG, GC-AG, AT-AC)
+        :param bp1_dict: breakpoint1 splice site positions
+        :param bp2_dict: breakpoint2 splice site positions
+        :param bp1_is_upstream: wheather sequence at breakpoint1 is the upstream segment of the transcript
         :type bp1_dict: dict
         :type bp2_dict: dict
-        :type bp1_upstream: bool
+        :type bp1_is_upstream: bool
+        :return: shift length for breakpoint1, shift length for breakpoint2
+        :rtype: tuple
         """
-        if bp1_upstream:
+        if bp1_is_upstream:
             if (
                 "GT" in bp1_dict
                 and "AG" in bp2_dict
@@ -573,12 +582,7 @@ def update_breakpoints(
                 return bp1_dict["AC"], bp2_dict["AT"]
             else:
                 # No splice site found
-                return True, True
-
-    tgt_motifs = {
-        1: {"+": {"GT", "GC", "AT"}, "-": {"AG", "AC"}},
-        2: {"+": {"AG", "AC"}, "-": {"GT", "GC", "AT"}},
-    }
+                return None, None
 
     bp1_pos_dict = {}
     if bp1_mode == 2:
@@ -672,43 +676,21 @@ def update_breakpoints(
             bp2_pos_dict["AG"] = splice_site_search(boundary_seq2, "AG", splice_bin)
             bp2_pos_dict["AC"] = splice_site_search(boundary_seq2, "AC", splice_bin)
 
-    # print(f'bp1_pos_dict: {bp1_pos_dict}', f'bp2_pos_dict: {bp2_pos_dict}')
-    # print('bp1_mode: {}, bp2_mode: {}'.format(bp1_mode, bp2_mode))
-    # print('bp1_seq: {}, bp2_seq: {}, bp1: {}:{}, bp2: {}:{}'.format(boundary_seq1, boundary_seq2, bp1_chrm, bp1_pos, bp2_chrm, bp2_pos))
-    ####
     shift1 = 0
     shift2 = 0
-    if bp1_strand == "+" and bp2_strand == "-":
-        if bp1_mode == 1 and bp2_mode == 1:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, True)
-        elif bp1_mode == 2 and bp2_mode == 2:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, False)
-    elif bp1_strand == "-" and bp2_strand == "+":
-        if bp1_mode == 1 and bp2_mode == 1:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, False)
-        elif bp1_mode == 2 and bp2_mode == 2:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, True)
+    bp1_is_upstream = transcript_upstream_part_determiner(
+        bp1_strand, bp2_strand, bp1_mode, bp2_mode
+    )
+    shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, bp1_is_upstream)
 
-    elif bp1_strand == "+" and bp2_strand == "+":
-        if bp1_mode == 1 and bp2_mode == 2:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, True)
-        elif bp1_mode == 2 and bp2_mode == 1:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, False)
-    elif bp1_strand == "-" and bp2_strand == "-":
-        if bp1_mode == 1 and bp2_mode == 2:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, False)
-        elif bp1_mode == 2 and bp2_mode == 1:
-            shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, True)
-
-    # print(bp1_pos, bp2_pos, shift1, shift2)
-
-    # No canonical splice sites found, so change it to noncanonical label
-    if shift1 == True and shift2 == True:
+    # No canonical splice sites found, so change the annotation to noncanonical splice site
+    if shift1 == None and shift2 == None:
         return 0, 0
 
     new_bp1_pos = bp1_pos
     new_bp2_pos = bp2_pos
-
+    # [SM:2] breakpoint move to right
+    # [MS:1] breakpoint move to left
     if bp1_mode == 2:
         new_bp1_pos = bp1_pos + (shift1 - splice_bin + 2) - 1
     elif bp1_mode == 1:
@@ -721,25 +703,6 @@ def update_breakpoints(
 
     # print('new_bp1: ',new_bp1_pos, 'new_bp2: ',new_bp2_pos)
     return new_bp1_pos, new_bp2_pos
-
-
-def cigar_validity(cigar_str):
-    """
-    40M25N5M then cigartuple is [('40', 'M'), ('25', 'N'), ('5', 'M')]
-    """
-    cigartuple = list(map(list, re.findall(r"(\d+)(\w)", cigar_str)))
-    if cigartuple[0][1] == cigartuple[1][1]:
-        cigartuple[1][0] = str(int(cigartuple[0][0]) + int(cigartuple[1][0]))
-        del cigartuple[0]
-
-    elif cigartuple[-1][1] == cigartuple[-2][1]:
-        cigartuple[-2][0] = str(int(cigartuple[-1][0]) + int(cigartuple[-2][0]))
-        del cigartuple[-1]
-
-    valid_cigar = ""
-    for i in cigartuple:
-        valid_cigar = valid_cigar + i[0] + i[1]
-    return valid_cigar
 
 
 def closest(a, b, tgt):
@@ -1004,22 +967,7 @@ def chimeric_aln_order_finder(aln_list, soft_len_cutoff=30) -> tuple:
         if len(a) == 0 or len(b) == 0:
             return []
         for i in range(len(a)):
-            try:
-                _X = a[i]
-            except IndexError:
-                print(a, i)
-            else:
-                pass
-
-            try:
-                _Y = b[overlap_len]
-            except IndexError:
-                print(b, overlap_len)
-            else:
-                pass
-
-            # if a[i] == b[overlap_len]:
-            if _X == _Y:
+            if overlap_len < len(b) and a[i] == b[overlap_len]:
                 overlap_len += 1
                 if count == 0:
                     first_hit_index_a = i
