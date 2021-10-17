@@ -1007,7 +1007,7 @@ def chimeric_aln_order_finder(
         if min_nm_max_len_path:
             return [node] + min_nm_max_len_path.nodes, min_nm_max_len_path.mode
 
-    def optimal_path_selector(lt_node, rt_node, lt_paths, rt_paths) -> list:
+    def optimal_path_selector(lt_node, rt_node, lt_paths, rt_paths) -> tuple:
         """
         :param lt_node: start node (left side)
         :param rt_node: start node (right side)
@@ -1017,8 +1017,8 @@ def chimeric_aln_order_finder(
         :type rt_node: Read
         :type lt_paths: list
         :type rt_paths: list
-        :return: end-to-end chains
-        :rtype: list (list of lists)
+        :return: end-to-end chains (list of lists) and a dict of reads-pair mode
+        :rtype: tuple
         """
         end_to_end_chain = []
         reads_pair_mode_dict = {}
@@ -1153,8 +1153,8 @@ def chimeric_aln_order_finder(
                             if _is_connected:
                                 if path.nodes[-1] != _node:
                                     stop_signal = False
-                                    path.add(_node)
                                     path.add_mode({(path.nodes[-1], _node): _mode})
+                                    path.add(_node)
                                     path.sms = _sum_sms
                                     # reads_pair_mode_dict[(path.nodes[-1], _node)] = _mode
                     count += 1
@@ -1206,10 +1206,9 @@ def chimeric_aln_order_finder(
                             if _is_connected:
                                 if path.nodes[-1] != _node:
                                     stop_signal = False
-                                    path.add(_node)
                                     path.add_mode({(path.nodes[-1], _node): _mode})
+                                    path.add(_node)
                                     path.sms = _sum_sms
-                                    # reads_pair_mode_dict[(path.nodes[-1], _node)] = _mode
 
                     count += 1
                 if stop_signal:
@@ -1218,8 +1217,11 @@ def chimeric_aln_order_finder(
             rt_node = tgt_node
             # print(lt_node)
             # print(rt_node)
-            # print(lt_candidate_paths)
-            # print(rt_candidate_paths)
+            # print('lt_candidate_paths: ', lt_candidate_paths)
+            # print('rt_candidate_paths: ',rt_candidate_paths)
+            # print('lt_candidate_paths: modes: ',lt_candidate_paths[0].mode)
+            # print('rt_candidate_paths: modes: ',rt_candidate_paths[0].mode)
+            print("######################")
             end_to_end_chain, reads_pair_mode_dict = optimal_path_selector(
                 lt_node, rt_node, lt_candidate_paths, rt_candidate_paths
             )

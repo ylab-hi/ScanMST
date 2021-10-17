@@ -187,7 +187,7 @@ def detect_read_read_connections_from_cigar(
         )
 
         # print(read_to_read_chains, reads_pair_mode_dict)
-
+        # print('Read-to-Read chain: ',read_to_read_chains)
         return read_to_read_chains, reads_pair_mode_dict
 
 
@@ -227,6 +227,9 @@ def detect_sv_from_cigar(
     read_to_read_chains, reads_pair_mode_dict = detect_read_read_connections_from_cigar(
         chrm, read, mapq_cutoff, allowed_difference
     )
+
+    # print('Read-to-Read chain: ',read_to_read_chains)
+    # print('Read-to-Read pair modes: ',reads_pair_mode_dict)
 
     event_groups = []
     if read_to_read_chains:
@@ -281,8 +284,6 @@ def infer_sv_from_connected_reads(
     gene_iv,
     motif_required,
 ) -> tuple:
-    # if abs(rep_mapped_length - sup_matched_soft_len) > match_difference or abs(sup_mapped_length - rep_matched_soft_len) > match_difference:
-    #    return 'NA', 0, 0, [], [], []
     """
     :param read_lt: Read 1
     :param read_rt: Read 2
@@ -1318,6 +1319,9 @@ def softclipping_realignment(
     :type allowed_difference: int
     :return: No returns
     :rtype: None
+    ..note ::
+        SV tag uses the same genomic corrdinate as SA tag,
+        So position should be always add 1
     """
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
@@ -1501,6 +1505,8 @@ def softclipping_realignment(
                             if _type in {"TDUP", "INV", "TRA"}:
                                 _chrm1, _pos1 = _bp1.split(":")
                                 _chrm2, _pos2 = _bp2.split(":")
+                                # SV tag uses SA tag corrdinate system (start with 1)
+                                # So, position should always add 1
                                 sv_tag_list.append(
                                     f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1)+1},{_chrm2}:{int(_pos2)+1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                                 )
@@ -1612,7 +1618,7 @@ def parse_args():
         dest="mapq",
         type=int,
         help="minimal MAPQ in BAM for calling NLS (default: %(default)s)",
-        default=0,
+        default=15,
     )
     build_parser.add_argument(
         "-n",
