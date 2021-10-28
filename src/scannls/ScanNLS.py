@@ -29,10 +29,10 @@ from Bio.Seq import Seq
 from pyfaidx import Fasta
 
 from . import __version__
-from .call import sv_scan
 from .classes import LengthAction
 from .classes import Path
 from .classes import Read
+from .classes import Sequence
 from .common import remove
 from .common import remove_files
 from .common import status_message
@@ -55,6 +55,8 @@ from .utils import similar_hit
 from .utils import splicing_confirmation
 from .utils import test_is_connected
 from .utils import update_breakpoints
+
+# from .call import sv_scan
 
 try:
     import pysam
@@ -97,6 +99,9 @@ def detect_read_read_connections_from_cigar(
         Dictionary of Read-pair scenarios
         * (Read1, Read2) => mode-of-Read1, mode-of-Read2
         * (Read2, Read1) => mode-of-Read2, mode-of-Read1
+
+    .. important::
+        If no 'SA' tag is found in this read, read-to-read chain and the read-pair => mode dictionary will become empty.
 
     #return: NLS_type(TDUP/INV), exon_boundary(0/1/2/3), canonical_or_not (1/0), [position, size, rep_aln_mode, sup_aln_mode], [++]
     #        TRA, canonical_or_not (1/0), [position, sup_position, rep_aln_mode, sup_aln_mode], [+-]
@@ -143,6 +148,7 @@ def detect_read_read_connections_from_cigar(
     if read.is_supplementary:
         return [], {}
 
+    # if no 'SA' tag was found, read-to-read chain will be empty
     try:
         chimeric_aln = read.get_tag("SA")[:-1].split(";")
     except KeyError:
@@ -307,8 +313,8 @@ def infer_sv_from_connected_reads(
     :rtype: tuple
     .. note::
         putative event examples:
-            * 'NA', 0, 0, [], [], []
-            * 'TDUP', annotation, canonical/noncanonical, ['chrm1:pos1', 'chrm2:pos2', mode1, mode2], [strand1, strand2], [gene1, gene2]
+            * 'NA', 0, 0, (), (), ()
+            * 'TDUP', annotation, canonical/noncanonical, ('chrm1:pos1', 'chrm2:pos2', mode1, mode2), (strand1, strand2), (gene1, gene2)
        annotation explanation:
        3(11) => both breakpoints overlap with coding exons boundary
        2(10) => one breakpoint overlap with coding exons boundary
@@ -336,7 +342,7 @@ def infer_sv_from_connected_reads(
         return ins_seq_in_read
 
     if lt_mode == 3 or rt_mode == 3:
-        return "NA", 0, 0, [], [], []
+        return "NA", 0, 0, (), (), ()
 
     lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (
         read_lt.chrom,
@@ -372,9 +378,9 @@ def infer_sv_from_connected_reads(
                 )
                 indel_size = query_offset - target_offset
                 if indel_size == 0:  # micro-inversion
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
                 elif indel_size < 0:  # deletion
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
                 elif indel_size >= query_offset:  # large tandem duplication
                     chrm_start = lt_chrm
                     junc_start = read_lt.ref_start
@@ -416,45 +422,45 @@ def infer_sv_from_connected_reads(
                                     "TDUP",
                                     _anno,
                                     0,
-                                    [
+                                    (
                                         f"{lt_chrm}:{junc_start}",
                                         f"{lt_chrm}:{junc_end}",
                                         2,
                                         1,
-                                    ],
-                                    [lt_strand, rt_strand],
-                                    [*_genes],
+                                    ),
+                                    (lt_strand, rt_strand),
+                                    (*_genes),
                                 )
                             else:
                                 return (
                                     "TDUP",
                                     _anno,
                                     1,
-                                    [
+                                    (
                                         f"{lt_chrm}:{new_junc_start}",
                                         f"{lt_chrm}:{new_junc_end}",
                                         2,
                                         1,
-                                    ],
-                                    [lt_strand, rt_strand],
-                                    [*_genes],
+                                    ),
+                                    (lt_strand, rt_strand),
+                                    (*_genes),
                                 )
                         else:
                             return (
                                 "TDUP",
                                 _anno,
                                 _can,
-                                [
+                                (
                                     f"{lt_chrm}:{junc_start}",
                                     f"{lt_chrm}:{junc_end}",
                                     2,
                                     1,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                     else:
-                        return "NA", 0, 0, [], [], []
+                        return "NA", 0, 0, (), (), ()
                 else:  # read length > tandem duplication size
                     ins_start = read_lt.ref_start
                     ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
@@ -512,45 +518,45 @@ def infer_sv_from_connected_reads(
                                         "TDUP",
                                         _anno,
                                         0,
-                                        [
+                                        (
                                             f"{lt_chrm}:{junc_start}",
                                             f"{lt_chrm}:{junc_end}",
                                             2,
                                             1,
-                                        ],
-                                        [lt_strand, rt_strand],
-                                        [*_genes],
+                                        ),
+                                        (lt_strand, rt_strand),
+                                        (*_genes),
                                     )
                                 else:
                                     return (
                                         "TDUP",
                                         _anno,
                                         1,
-                                        [
+                                        (
                                             f"{lt_chrm}:{new_junc_start}",
                                             f"{lt_chrm}:{new_junc_end}",
                                             2,
                                             1,
-                                        ],
-                                        [lt_strand, rt_strand],
-                                        [*_genes],
+                                        ),
+                                        (lt_strand, rt_strand),
+                                        (*_genes),
                                     )
                             else:
                                 return (
                                     "TDUP",
                                     _anno,
                                     _can,
-                                    [
+                                    (
                                         f"{lt_chrm}:{junc_start}",
                                         f"{lt_chrm}:{junc_end}",
                                         2,
                                         1,
-                                    ],
-                                    [lt_strand, rt_strand],
-                                    [*_genes],
+                                    ),
+                                    (lt_strand, rt_strand),
+                                    (*_genes),
                                 )
                         else:
-                            return "NA", 0, 0, [], [], []
+                            return "NA", 0, 0, (), (), ()
                     else:  # it's a short insertion
                         _genes = gene_annotation(
                             lt_chrm, ins_start, lt_chrm, ins_start, gene_iv
@@ -559,9 +565,9 @@ def infer_sv_from_connected_reads(
                             "INS",
                             ref_allele,
                             ins_seq_in_read,
-                            [ins_start, len(ins_seq_in_read), 2, 1],
-                            [lt_strand, rt_strand],
-                            [*_genes],
+                            (ins_start, len(ins_seq_in_read), 2, 1),
+                            (lt_strand, rt_strand),
+                            (*_genes),
                         )
             elif lt_mode == 1 and rt_mode == 2:
                 target_start = read_lt.ref_start
@@ -578,9 +584,9 @@ def infer_sv_from_connected_reads(
                 # print('indel_size: ', indel_size)
                 # print('query_offset: ', query_offset)
                 if indel_size == 0:  # micro-inversion
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
                 elif indel_size < 0:  # deletion
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
                 elif indel_size >= query_offset:
                     chrm_start = rt_chrm
                     junc_start = read_rt.ref_start
@@ -624,45 +630,45 @@ def infer_sv_from_connected_reads(
                                     "TDUP",
                                     _anno,
                                     0,
-                                    [
+                                    (
                                         f"{rt_chrm}:{junc_start}",
                                         f"{rt_chrm}:{junc_end}",
                                         1,
                                         2,
-                                    ],
-                                    [lt_strand, rt_strand],
-                                    [*_genes],
+                                    ),
+                                    (lt_strand, rt_strand),
+                                    (*_genes),
                                 )
                             else:
                                 return (
                                     "TDUP",
                                     _anno,
                                     1,
-                                    [
+                                    (
                                         f"{rt_chrm}:{new_junc_start}",
                                         f"{rt_chrm}:{new_junc_end}",
                                         1,
                                         2,
-                                    ],
-                                    [lt_strand, rt_strand],
-                                    [*_genes],
+                                    ),
+                                    (lt_strand, rt_strand),
+                                    (*_genes),
                                 )
                         else:
                             return (
                                 "TDUP",
                                 _anno,
                                 _can,
-                                [
+                                (
                                     f"{rt_chrm}:{junc_start}",
                                     f"{rt_chrm}:{junc_end}",
                                     1,
                                     2,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                     else:
-                        return "NA", 0, 0, [], [], []
+                        return "NA", 0, 0, (), (), ()
                 # indel_size < query_offset
                 else:
                     ins_start = read_lt.ref_start + read_lt.reference_match_size
@@ -722,45 +728,45 @@ def infer_sv_from_connected_reads(
                                         "TDUP",
                                         _anno,
                                         0,
-                                        [
+                                        (
                                             f"{rt_chrm}:{junc_start}",
                                             f"{rt_chrm}:{junc_end}",
                                             1,
                                             2,
-                                        ],
-                                        [lt_strand, rt_strand],
-                                        [*_genes],
+                                        ),
+                                        (lt_strand, rt_strand),
+                                        (*_genes),
                                     )
                                 else:
                                     return (
                                         "TDUP",
                                         _anno,
                                         1,
-                                        [
+                                        (
                                             f"{rt_chrm}:{new_junc_start}",
                                             f"{rt_chrm}:{new_junc_end}",
                                             1,
                                             2,
-                                        ],
-                                        [lt_strand, rt_strand],
-                                        [*_genes],
+                                        ),
+                                        (lt_strand, rt_strand),
+                                        (*_genes),
                                     )
                             else:
                                 return (
                                     "TDUP",
                                     _anno,
                                     _can,
-                                    [
+                                    (
                                         f"{rt_chrm}:{junc_start}",
                                         f"{rt_chrm}:{junc_end}",
                                         1,
                                         2,
-                                    ],
-                                    [lt_strand, rt_strand],
-                                    [*_genes],
+                                    ),
+                                    (lt_strand, rt_strand),
+                                    (*_genes),
                                 )
                         else:
-                            return "NA", 0, 0, [], [], []
+                            return "NA", 0, 0, (), (), ()
                     # it is a short insertion
                     else:
                         _genes = gene_annotation(
@@ -770,18 +776,18 @@ def infer_sv_from_connected_reads(
                             "INS",
                             ref_allele,
                             ins_seq_in_read,
-                            [ins_start, len(ins_seq_in_read), 1, 2],
-                            [lt_strand, rt_strand],
-                            [*_genes],
+                            (ins_start, len(ins_seq_in_read), 1, 2),
+                            (lt_strand, rt_strand),
+                            (*_genes),
                         )
             else:
-                return "NA", 0, 0, [], [], []
+                return "NA", 0, 0, (), (), ()
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 ra_bp = read_lt.ref_start + read_lt.reference_match_size
                 sa_bp = read_rt.ref_start + read_rt.reference_match_size
                 if ra_bp == sa_bp:
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -830,52 +836,52 @@ def infer_sv_from_connected_reads(
                                         "INV",
                                         _anno,
                                         0,
-                                        [
+                                        (
                                             f"{lt_chrm}:{junc_start}",
                                             f"{lt_chrm}:{junc_end}",
                                             1,
                                             1,
-                                        ],
-                                        [*strands],
-                                        [*_genes],
+                                        ),
+                                        (*strands),
+                                        (*_genes),
                                     )
                                 else:
                                     return (
                                         "INV",
                                         _anno,
                                         1,
-                                        [
+                                        (
                                             f"{lt_chrm}:{new_junc_start}",
                                             f"{lt_chrm}:{new_junc_end}",
                                             1,
                                             1,
-                                        ],
-                                        [*strands],
-                                        [*_genes],
+                                        ),
+                                        (*strands),
+                                        (*_genes),
                                     )
                             else:
                                 return (
                                     "INV",
                                     _anno,
                                     _can,
-                                    [
+                                    (
                                         f"{lt_chrm}:{junc_start}",
                                         f"{lt_chrm}:{junc_end}",
                                         1,
                                         1,
-                                    ],
-                                    [*strands],
-                                    [*_genes],
+                                    ),
+                                    (*strands),
+                                    (*_genes),
                                 )
                         else:
-                            return "NA", 0, 0, [], [], []
+                            return "NA", 0, 0, (), (), ()
                     else:
-                        return "NA", 0, 0, [], [], []
+                        return "NA", 0, 0, (), (), ()
             elif lt_mode == rt_mode == 2:  # inversion
                 ra_bp = read_lt.ref_start
                 sa_bp = read_rt.ref_start
                 if ra_bp == sa_bp:
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -923,49 +929,49 @@ def infer_sv_from_connected_reads(
                                         "INV",
                                         _anno,
                                         0,
-                                        [
+                                        (
                                             f"{lt_chrm}:{junc_start}",
                                             f"{lt_chrm}:{junc_end}",
                                             2,
                                             2,
-                                        ],
-                                        [*strands],
-                                        [*_genes],
+                                        ),
+                                        (*strands),
+                                        (*_genes),
                                     )
                                 else:
                                     return (
                                         "INV",
                                         _anno,
                                         1,
-                                        [
+                                        (
                                             f"{lt_chrm}:{new_junc_start}",
                                             f"{lt_chrm}:{new_junc_end}",
                                             2,
                                             2,
-                                        ],
-                                        [*strands],
-                                        [*_genes],
+                                        ),
+                                        (*strands),
+                                        (*_genes),
                                     )
                             else:
                                 return (
                                     "INV",
                                     _anno,
                                     _can,
-                                    [
+                                    (
                                         f"{lt_chrm}:{junc_start}",
                                         f"{lt_chrm}:{junc_end}",
                                         2,
                                         2,
-                                    ],
-                                    [*strands],
-                                    [*_genes],
+                                    ),
+                                    (*strands),
+                                    (*_genes),
                                 )
                         else:
-                            return "NA", 0, 0, [], [], []
+                            return "NA", 0, 0, (), (), ()
                     else:
-                        return "NA", 0, 0, [], [], []
+                        return "NA", 0, 0, (), (), ()
             else:
-                return "NA", 0, 0, [], [], []
+                return "NA", 0, 0, (), (), ()
     else:  # lt_chrm != rt_chrm
         if lt_strand == rt_strand:
             if lt_mode == 1 and rt_mode == 2:
@@ -1007,40 +1013,40 @@ def infer_sv_from_connected_reads(
                                 "TRA",
                                 _anno,
                                 0,
-                                [
+                                (
                                     f"{lt_chrm}:{junc_start}",
                                     f"{rt_chrm}:{junc_end}",
                                     1,
                                     2,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
-                                [
+                                (
                                     f"{lt_chrm}:{new_junc_start}",
                                     f"{rt_chrm}:{new_junc_end}",
                                     1,
                                     2,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                     else:
                         return (
                             "TRA",
                             _anno,
                             _can,
-                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 2],
-                            [lt_strand, rt_strand],
-                            [*_genes],
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 2),
+                            (lt_strand, rt_strand),
+                            (*_genes),
                         )
                 else:
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
             elif lt_mode == 2 and rt_mode == 1:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -1079,42 +1085,42 @@ def infer_sv_from_connected_reads(
                                 "TRA",
                                 _anno,
                                 0,
-                                [
+                                (
                                     f"{lt_chrm}:{junc_start}",
                                     f"{rt_chrm}:{junc_end}",
                                     2,
                                     1,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
-                                [
+                                (
                                     f"{lt_chrm}:{new_junc_start}",
                                     f"{rt_chrm}:{new_junc_end}",
                                     2,
                                     1,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                     else:
                         return (
                             "TRA",
                             _anno,
                             _can,
-                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 1],
-                            [lt_strand, rt_strand],
-                            [*_genes],
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 1),
+                            (lt_strand, rt_strand),
+                            (*_genes),
                         )
                 else:
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
             else:
-                return "NA", 0, 0, [], [], []
+                return "NA", 0, 0, (), (), ()
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 chrm_start = lt_chrm
@@ -1154,40 +1160,40 @@ def infer_sv_from_connected_reads(
                                 "TRA",
                                 _anno,
                                 0,
-                                [
+                                (
                                     f"{lt_chrm}:{junc_start}",
                                     f"{rt_chrm}:{junc_end}",
                                     1,
                                     1,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
-                                [
+                                (
                                     f"{lt_chrm}:{new_junc_start}",
                                     f"{rt_chrm}:{new_junc_end}",
                                     1,
                                     1,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                     else:
                         return (
                             "TRA",
                             _anno,
                             _can,
-                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 1],
-                            [lt_strand, rt_strand],
-                            [*_genes],
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 1),
+                            (lt_strand, rt_strand),
+                            (*_genes),
                         )
                 else:
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
             elif lt_mode == rt_mode == 2:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -1226,42 +1232,42 @@ def infer_sv_from_connected_reads(
                                 "TRA",
                                 _anno,
                                 0,
-                                [
+                                (
                                     f"{lt_chrm}:{junc_start}",
                                     f"{rt_chrm}:{junc_end}",
                                     2,
                                     2,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
-                                [
+                                (
                                     f"{lt_chrm}:{new_junc_start}",
                                     f"{rt_chrm}:{new_junc_end}",
                                     2,
                                     2,
-                                ],
-                                [lt_strand, rt_strand],
-                                [*_genes],
+                                ),
+                                (lt_strand, rt_strand),
+                                (*_genes),
                             )
                     else:
                         return (
                             "TRA",
                             _anno,
                             _can,
-                            [f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 2],
-                            [lt_strand, rt_strand],
-                            [*_genes],
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 2),
+                            (lt_strand, rt_strand),
+                            (*_genes),
                         )
                 else:
-                    return "NA", 0, 0, [], [], []
+                    return "NA", 0, 0, (), (), ()
             else:
-                return "NA", 0, 0, [], [], []
+                return "NA", 0, 0, (), (), ()
 
 
 def softclipping_realignment(
@@ -1492,11 +1498,11 @@ def softclipping_realignment(
                         gene_iv,
                         motif_required,
                     )
-
+                    # TODO
                     sv_tag_list = []
                     ot_tag_list = []
                     for group in event_groups:
-                        group_counter += 1
+                        # group_counter += 1
                         for event in group:
                             _type, _anno, _canonical, _positions, strands, genes = event
                             _bp1, _bp2, _mode1, _mode2 = _positions
@@ -1510,24 +1516,30 @@ def softclipping_realignment(
                                 sv_tag_list.append(
                                     f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1)+1},{_chrm2}:{int(_pos2)+1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                                 )
-                                candidate_ao_dict[
-                                    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
-                                ] += 1
-                                candidate_group_dict[
-                                    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
-                                ] = group_counter
+
+                                event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
+                                reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2)+1}\t{_chrm1}:{int(_pos1)+1}\t{_strand2}{_strand1}"
+                                if event_key in candidate_ao_dict:
+                                    candidate_ao_dict[event_key] += 1
+                                elif reversed_event_key in candidate_ao_dict:
+                                    candidate_ao_dict[reversed_event_key] += 1
+
+                                # candidate_group_dict[
+                                #    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
+                                # ] = group_counter
                             elif _type in {"INS"}:
                                 _end_pos = int(_bp1) + int(_bp2)
                                 # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
                                 ot_tag_list.append(
                                     f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                                 )
+
                                 candidate_ao_dict[
                                     f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
                                 ] += 1
-                                candidate_group_dict[
-                                    f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
-                                ] = group_counter
+                                # candidate_group_dict[
+                                #    f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
+                                # ] = group_counter
 
                     if sv_tag_list:
                         read.set_tag("SV", "".join(sv_tag_list))
