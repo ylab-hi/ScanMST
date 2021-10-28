@@ -824,7 +824,7 @@ def short_TDUP_or_not(
     chrm, ra_mode, sa_start, sa_end, ins_seq_in_read, fastafile
 ) -> bool:
     """judge the ins_seq_in_read is a TDUP (TDUP size < reads length) OR novel sequence insertion using
-    reference sequence infered from chimeirc alignment start position and indel_size from 'query_offset - target_offset'
+    reference sequence infered from chimeric alignment start position and indel_size from 'query_offset - target_offset'
     :param chrm: the chromosome
     :param ra_mode: representative alignment mode
     :param sa_start: supplementary alignment reference start position
@@ -938,7 +938,8 @@ def test_is_connected(sms_read1, sms_read2, allowed_difference=30) -> tuple:
 def chimeric_aln_order_finder(
     aln_list, allowed_difference=30, soft_len_cutoff=30
 ) -> tuple:
-    """
+    """Find the best connected paths for a list of chimeric alignments
+
     :param aln_list: list of Read object
     :type aln_list: list
     :param soft_len_cutoff: softclipped segment length cutoff to determine 'two starting reads'
@@ -1232,7 +1233,7 @@ def chimeric_aln_order_finder(
 def output_bedpe_file(sr_dict, group_dict, prefix, splice_bin):
     """
     :param sr_dict: sv candidate to number of supporting reads(SR) dictionary
-    :param group_dict: sv candidate to group of events dictionary, connected chimeirc reads are included in one group
+    :param group_dict: sv candidate to group of events dictionary, connected chimeric reads are included in one group
     :param prefix: output file prefix
     :param splice_bin: bin size for splice site searching
     :type sr_dict: dict
