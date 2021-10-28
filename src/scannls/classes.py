@@ -338,3 +338,181 @@ class LengthAction(argparse.Action):
         if values <= 0:
             parser.error("Minimum length for {0} is 1".format(option_string))
         setattr(namespace, self.dest, values)
+
+
+class Node(object):
+    """build a breakpoint node class for storing information of every breakpoint
+    :param prev_bp: breakpoint for the previous breakpoints connections
+    :type prev_bp: str
+    :param next_bp: breakpoint for the next breakpoints connections
+    :type next_bp: str
+    :param strand: direction of chimeric read (-|+)
+    :type strand: str
+    :param sv_type: one of the SV types (TDUP/INV/TRA)
+    :type sv_type: str
+    :param annot: gene annotation code
+    :type annot: int
+    :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
+    :type canonical: int
+    :param modes: read modes of connected breakpoints
+    :type modes: tuple
+    :param genes: overlapped genes of connected breakpoints
+    :type genes: tuple
+
+    .. note::
+        connection-level fields:
+        * sv_type
+        * modes
+        * genes
+        * annotation_code
+        * splicing_code
+    """
+
+    __slots__ = (
+        "next_breakpoint",
+        "prev_breakpoint",
+        "strand",
+        "sv_type",
+        "modes",
+        "genes",
+        "annotation_code",
+        "splicing_code",
+        "sr",
+    )
+
+    def __init__(
+        self,
+        prev_bp=None,
+        next_bp=None,
+        strand=None,
+        sv_type=None,
+        annot=None,
+        canonical=None,
+        modes=None,
+        genes=None,
+    ) -> None:
+        self.prev_breakpoint = prev_bp
+        self.next_breakpoint = next_bp
+        self.strand = strand
+        self.sv_type = sv_type
+        self.modes = modes
+        self.genes = genes
+        self.annotation_code = annot
+        self.splicing_code = canonical
+        self.sr = sr
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Node):
+            if (
+                self.sv_type == other.sv_type
+                and self.prev_breakpoint == other.prev_breakpoint
+                and self.next_breakpoint == other.next_breakpoint
+                and self.strand == other.strand
+            ):
+                return True
+        return False
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.sv_type)
+            ^ hash(self.prev_breakpoint)
+            ^ hash(self.next_breakpoint)
+            ^ hash(self.strand)
+        )
+
+    # for debug purpose
+    def __repr__(self) -> str:
+        return fr"Node({self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}, {self.strand})"
+
+    def __str__(self) -> str:
+        return fr"Node({self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}, {self.strand})"
+
+    def is_next_node(self, other) -> bool:
+        if self.next_breakpoint == other.prev_breakpoint:
+            return True
+        else:
+            return False
+
+    def is_previous_node(self, other) -> bool:
+        if self.prev_breakpoint == other.next_breakpoint:
+            return True
+        else:
+            return False
+
+    @classmethod
+    def create_nodes(cls, number):
+        return [cls() for i in range(number)]
+
+
+class Sequence(object):
+    """construct a sequence of Nodes for storing information of connected breakpoints
+    :param nodes: sequence of Nodes
+    :type nodes: list
+
+    .. note::
+    """
+
+    __slots__ = ("nodes",)
+
+    def __init__(self) -> None:
+        self.nodes = []
+
+    def init(self, event_list) -> None:
+        """add event list as Node to self.nodes"""
+        # ('TDUP', 0, 1, ['chr1:15777169', 'chr1:15876678', 2, 1], ['+', '+'], ['INTERGENIC', 'INTERGENIC'])
+        # ('TRA', 0, 1, ['chr1:15872815', 'chr17:7702552', 2, 1], ['+', '+'], ['INTERGENIC', 'INTERGENIC'])
+        # ('TDUP', 0, 1, ['chr17:7701656', 'chr17:7708250', 2, 1], ['+', '+'], ['INTERGENIC', 'INTERGENIC'])
+        hop_number = len(event_list)
+        self.nodes = Node.create_nodes(hop_number + 1)
+
+        for i in range(hop_number):
+            sv_type, annot, canonical, _positions, strands, genes = event_list[i]
+            _bp1 = _positions[0]
+            _bp2 = _positions[1]
+            _mode1 = _positions[2]
+            _mode2 = _positions[3]
+            _strand1 = strands[0]
+            _strand2 = strands[1]
+            self.nodes[i].next_breakpoint = _bp1
+            self.nodes[i + 1].prev_breakpoint = _bp2
+            self.nodes[i].strand = _strand1
+            self.nodes[i + 1].strand = _strand2
+            self.nodes[i].sv_type = sv_type
+            self.nodes[i].annotation_code = annot
+            self.nodes[i].splicing_code = canonical
+            self.nodes[i].modes = (_mode1, _mode2)
+            self.nodes[i].genes = tuple(genes)
+
+    def __hash__(self) -> int:
+        return hash(";".join(map(str, self.nodes)))
+
+    def __eq__(self, other) -> bool:
+        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
+
+    # def __hash__(self) -> int:
+    #    hash_val = 0
+    #    for i in self.nodes:
+    #        hash_val ^= hash(i)
+    #    return hash_val
+
+    def __len__(self) -> int:
+        return len(self.nodes)
+
+    def __lt__(self, other) -> bool:
+        return len(self.nodes) < len(other.nodes)
+
+    def __repr__(self) -> str:
+        return ";".join(map(str, self.nodes))
+
+    def reversed(self) -> None:
+        """reverse the sequence of Nodes"""
+        self.nodes = self.nodes[::-1]
+
+    def decompose(self) -> list:
+        """Decompose the sequence of Nodes into Nodes pair"""
+        paired_breakpoints = []
+        for i, j in zip(self.nodes[::1], self.nodes[1::1]):
+            paired_breakpoints.append(
+                f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
+            )
+        return paired_breakpoints
