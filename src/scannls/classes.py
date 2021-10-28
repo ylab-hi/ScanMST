@@ -459,9 +459,9 @@ class Sequence(object):
 
     def init(self, event_list) -> None:
         """add event list as Node to self.nodes"""
-        # ('TDUP', 0, 1, ['chr1:15777169', 'chr1:15876678', 2, 1], ['+', '+'], ['INTERGENIC', 'INTERGENIC'])
-        # ('TRA', 0, 1, ['chr1:15872815', 'chr17:7702552', 2, 1], ['+', '+'], ['INTERGENIC', 'INTERGENIC'])
-        # ('TDUP', 0, 1, ['chr17:7701656', 'chr17:7708250', 2, 1], ['+', '+'], ['INTERGENIC', 'INTERGENIC'])
+        # ('TDUP', 0, 1, ('chr1:15777169', 'chr1:15876678', 2, 1), ('+', '+'), ('INTERGENIC', 'INTERGENIC'))
+        # ('TRA', 0, 1, ('chr1:15872815', 'chr17:7702552', 2, 1), ('+', '+'), ('INTERGENIC', 'INTERGENIC'))
+        # ('TDUP', 0, 1, ('chr17:7701656', 'chr17:7708250', 2, 1), ('+', '+'), ('INTERGENIC', 'INTERGENIC'))
         hop_number = len(event_list)
         self.nodes = Node.create_nodes(hop_number + 1)
 
