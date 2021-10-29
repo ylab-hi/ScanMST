@@ -390,6 +390,7 @@ class Node(object):
         canonical=None,
         modes=None,
         genes=None,
+        sr=None,
     ) -> None:
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
@@ -444,12 +445,25 @@ class Node(object):
         return [cls() for i in range(number)]
 
 
-class Sequence(object):
+class Series(object):
     """construct a sequence of Nodes for storing information of connected breakpoints
     :param nodes: sequence of Nodes
     :type nodes: list
 
     .. note::
+        [('TDUP', 0, 1, ('chr17:7708250', 'chr17:7701656', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
+        ('TRA', 0, 1, ('chr17:7702552', 'chr1:15872815', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
+        ('TDUP', 0, 1, ('chr1:15876678', 'chr1:15777169', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC'])]
+
+        Node(TDUP, None, chr17:7708250, +);Node(TRA, chr17:7701656, chr17:7702552, +);Node(TDUP, chr1:15872815, chr1:15876678, +);Node(None, chr1:15777169, None, +)
+
+
+                         bp1               bp2  bp3                bp4
+                ---------|------    -------|----|------    --------|---------
+                       Node1                 Node2                Node3
+    prev_breakpoint:   None                 bp2                   bp4
+    next_breakpoint:    bp1                 bp3                   None
+    sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
     """
 
     __slots__ = ("nodes",)
@@ -459,9 +473,7 @@ class Sequence(object):
 
     def init(self, event_list) -> None:
         """add event list as Node to self.nodes"""
-        # ('TDUP', 0, 1, ('chr1:15777169', 'chr1:15876678', 2, 1), ('+', '+'), ('INTERGENIC', 'INTERGENIC'))
-        # ('TRA', 0, 1, ('chr1:15872815', 'chr17:7702552', 2, 1), ('+', '+'), ('INTERGENIC', 'INTERGENIC'))
-        # ('TDUP', 0, 1, ('chr17:7701656', 'chr17:7708250', 2, 1), ('+', '+'), ('INTERGENIC', 'INTERGENIC'))
+        event_list = self.order_events_by_trancription_direction(event_list)
         hop_number = len(event_list)
         self.nodes = Node.create_nodes(hop_number + 1)
 
@@ -481,7 +493,107 @@ class Sequence(object):
             self.nodes[i].annotation_code = annot
             self.nodes[i].splicing_code = canonical
             self.nodes[i].modes = (_mode1, _mode2)
-            self.nodes[i].genes = tuple(genes)
+            self.nodes[i].genes = genes
+
+    @staticmethod
+    def reorder_event(event):
+        """
+        order breakpoints pairs following the transcription direction using information of reads 'mode' and 'strand'
+        +1;-1 => up;down
+        +2;-2 => down;up
+        """
+        sv_type, annot, canonical, _positions, strands, genes = event
+        bp1 = _positions[0]
+        bp2 = _positions[1]
+        mode1 = _positions[2]
+        mode2 = _positions[3]
+        strand1 = strands[0]
+        strand2 = strands[1]
+        if strand1 == "+" and strand2 == "-":
+            if mode1 == 1 and mode2 == 1:
+                is_bp1_upstream = True
+            elif mode1 == 2 and mode2 == 2:
+                is_bp1_upstream = False
+        elif strand1 == "-" and strand2 == "+":
+            if mode1 == 1 and mode2 == 1:
+                is_bp1_upstream = False
+            elif mode1 == 2 and mode2 == 2:
+                is_bp1_upstream = True
+        elif strand1 == "+" and strand2 == "+":
+            if mode1 == 1 and mode2 == 2:
+                is_bp1_upstream = True
+            elif mode1 == 2 and mode2 == 1:
+                is_bp1_upstream = False
+        elif strand1 == "-" and strand2 == "-":
+            if mode1 == 1 and mode2 == 2:
+                is_bp1_upstream = False
+            elif mode1 == 2 and mode2 == 1:
+                is_bp1_upstream = True
+
+        if not is_bp1_upstream:
+            if annot == 1:
+                annot = 2
+            elif annot == 2:
+                annot = 1
+            _positions = (bp2, bp1, mode2, mode1)
+            strands = (strand2, strand1)
+            genes = list(reversed(genes))
+            return sv_type, annot, canonical, _positions, strands, genes
+        else:
+            return event
+
+    def order_events_by_trancription_direction(self, event_list):
+        """
+        construct breakpoints order following transcription direction for multiple-hop events or one-hop events
+                bp1                bp2   bp3               bp4
+        ---------|------    -------|----|------    --------|---------
+              Node1                 Node2                Node3
+        ..note ::
+               requirements
+               * bp2 and bp3 at the same chromosome
+               * if strand(+): bp3 > bp2
+                 if strand(-): bp3 < bp2
+        """
+        kept_right_pos = None
+        kept_right_chrm = None
+        kept_right_strand = None
+
+        keep_event_list_order = True
+        output_event_list = []
+        for evt in event_list:
+            ordered_evt = Series.reorder_event(evt)
+            output_event_list.append(ordered_evt)
+            sv_type, annot, canonical, _positions, strands, genes = ordered_evt
+            chrm1, _pos1 = _positions[0].split(":")
+            chrm2, _pos2 = _positions[1].split(":")
+            pos1 = int(_pos1)
+            pos2 = int(_pos2)
+            strand1 = strands[0]
+            strand2 = strands[1]
+            if not kept_right_pos:
+                kept_right_pos = pos2
+                kept_right_chrm = chrm2
+                kept_right_strand = strand2
+            else:
+                if chrm1 == kept_right_chrm and strand1 == kept_right_strand:
+                    if strand1 == "+" and pos1 > kept_right_pos:
+                        kept_right_pos = pos2
+                        kept_right_chrm = chrm2
+                        kept_right_strand = strand2
+                    elif strand1 == "-" and pos1 < kept_right_pos:
+                        kept_right_pos = pos2
+                        kept_right_chrm = chrm2
+                        kept_right_strand = strand2
+                    else:
+                        keep_event_list_order = False
+                        break
+                else:
+                    keep_event_list_order = False
+                    break
+        if not keep_event_list_order:
+            output_event_list = list(reversed(output_event_list))
+
+        return output_event_list
 
     def __hash__(self) -> int:
         return hash(";".join(map(str, self.nodes)))
@@ -504,9 +616,9 @@ class Sequence(object):
     def __repr__(self) -> str:
         return ";".join(map(str, self.nodes))
 
-    def reversed(self) -> None:
-        """reverse the sequence of Nodes"""
-        self.nodes = self.nodes[::-1]
+    # def reversed(self) -> None:
+    #    """reverse the sequence of Nodes"""
+    #    self.nodes = self.nodes[::-1]
 
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""
