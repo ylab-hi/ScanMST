@@ -276,14 +276,10 @@ class Read(object):
         """path is an instance of Path class"""
         self.linked_paths.append(path)
 
-    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
-        """check whether the fraction of canonical splice site usage in read reference matched part is bigger than 'fraction_cutoff' or not
-        :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
-        :param fraction_cutoff: fraction of canonical splice sites used in the putative introns inferred from the CIGAR
-        :type genome_fasta: pyfaidx.Fasta
-        :type fraction_cutoff: float
-        :return: using canonical splice sites OR not
-        :rtype: bool
+    def get_exons_and_introns(self) -> tuple:
+        """get the coordiantes for reads matched part (without softclipping)
+        :return: exons coordiantes and introns coordiantes
+        :rtype: tuple
         """
         exons = []
         current_pos = self.ref_start
@@ -299,7 +295,7 @@ class Read(object):
 
         # No 'N' in the cigar
         if len(exons) == 1:
-            return True
+            introns = []
         elif len(exons) > 1:
             _positions = []
             for i, j in exons:
@@ -307,30 +303,42 @@ class Read(object):
             _positions.sort()
             _positions.pop(0)
             _positions.pop(-1)
-            intron_positions = zip(_positions[::2], _positions[1::2])
+            introns = list(zip(_positions[::2], _positions[1::2]))
+        return exons, introns
 
-            intron_count = 0
-            can_count = 0
-            can_sites = {"GT-AG", "GC-AG", "AT-AC"}
-            for start, end in intron_positions:
-                if end - start >= 10:
-                    intron_count += 1
-                    if self.strand == "-":
-                        left_site = genome_fasta[self.chrom][
-                            end - 2 : end
-                        ].reverse.complement.seq
-                        right_site = genome_fasta[self.chrom][
-                            start : start + 2
-                        ].reverse.complement.seq
-                    else:
-                        left_site = genome_fasta[self.chrom][start : start + 2].seq
-                        right_site = genome_fasta[self.chrom][end - 2 : end].seq
-                    if f"{left_site}-{right_site}" in can_sites:
-                        can_count += 1
-            if can_count / intron_count >= fraction_cutoff:
-                return True
-            else:
-                return False
+    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
+        """check whether the fraction of canonical splice site usage in read reference matched part is bigger than 'fraction_cutoff' or not
+        :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
+        :param fraction_cutoff: fraction of canonical splice sites used in the putative introns inferred from the CIGAR
+        :type genome_fasta: pyfaidx.Fasta
+        :type fraction_cutoff: float
+        :return: using canonical splice sites OR not
+        :rtype: bool
+        """
+        exons, introns = self.get_exons_and_introns()
+
+        intron_count = 0
+        can_count = 0
+        can_sites = {"GT-AG", "GC-AG", "AT-AC"}
+        for start, end in introns:
+            if end - start >= 10:
+                intron_count += 1
+                if self.strand == "-":
+                    left_site = genome_fasta[self.chrom][
+                        end - 2 : end
+                    ].reverse.complement.seq
+                    right_site = genome_fasta[self.chrom][
+                        start : start + 2
+                    ].reverse.complement.seq
+                else:
+                    left_site = genome_fasta[self.chrom][start : start + 2].seq
+                    right_site = genome_fasta[self.chrom][end - 2 : end].seq
+                if f"{left_site}-{right_site}" in can_sites:
+                    can_count += 1
+        if can_count / intron_count >= fraction_cutoff:
+            return True
+        else:
+            return False
 
 
 class LengthAction(argparse.Action):
@@ -348,6 +356,14 @@ class Node(object):
     :type next_bp: str
     :param strand: direction of chimeric read (-|+)
     :type strand: str
+    :param chrom: chromosome
+    :type chrom: str
+    :param ref_start: reference start position
+    :type ref_start: int
+    :param ref_end: reference end position
+    :type ref_end: int
+    :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
+    :type exons: list of tuple
     :param sv_type: one of the SV types (TDUP/INV/TRA)
     :type sv_type: str
     :param annot: gene annotation code
@@ -372,6 +388,10 @@ class Node(object):
         "next_breakpoint",
         "prev_breakpoint",
         "strand",
+        "chrom",
+        "ref_start",
+        "ref_end",
+        "exons",
         "sv_type",
         "modes",
         "genes",
@@ -385,6 +405,10 @@ class Node(object):
         prev_bp=None,
         next_bp=None,
         strand=None,
+        chrom=None,
+        ref_start=None,
+        ref_end=None,
+        exons=None,
         sv_type=None,
         annot=None,
         canonical=None,
@@ -395,6 +419,9 @@ class Node(object):
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
         self.strand = strand
+        self.ref_start = ref_start
+        self.ref_end = ref_end
+        self.exons = exons
         self.sv_type = sv_type
         self.modes = modes
         self.genes = genes
@@ -405,7 +432,10 @@ class Node(object):
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
             if (
-                self.sv_type == other.sv_type
+                self.chrom == other.chrom
+                and self.ref_start == other.ref_start
+                and self.ref_end == other.ref_end
+                and self.sv_type == other.sv_type
                 and self.prev_breakpoint == other.prev_breakpoint
                 and self.next_breakpoint == other.next_breakpoint
                 and self.strand == other.strand
@@ -415,7 +445,10 @@ class Node(object):
 
     def __hash__(self) -> int:
         return (
-            hash(self.sv_type)
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.sv_type)
             ^ hash(self.prev_breakpoint)
             ^ hash(self.next_breakpoint)
             ^ hash(self.strand)
@@ -423,10 +456,10 @@ class Node(object):
 
     # for debug purpose
     def __repr__(self) -> str:
-        return fr"Node({self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}, {self.strand})"
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
 
     def __str__(self) -> str:
-        return fr"Node({self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}, {self.strand})"
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
 
     def is_next_node(self, other) -> bool:
         if self.next_breakpoint == other.prev_breakpoint:
@@ -449,6 +482,8 @@ class Series(object):
     """construct a sequence of Nodes for storing information of connected breakpoints
     :param nodes: sequence of Nodes
     :type nodes: list
+    :param assemblied: The series is from assembly of reads (True) or a single read (False)
+    :type assemblied: bool
 
     .. note::
         [('TDUP', 0, 1, ('chr17:7708250', 'chr17:7701656', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
@@ -466,10 +501,11 @@ class Series(object):
     sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
     """
 
-    __slots__ = ("nodes",)
+    __slots__ = ("nodes", "assemblied")
 
     def __init__(self) -> None:
         self.nodes = []
+        self.assemblied = None
 
     def init(self, event_list) -> None:
         """add event list as Node to self.nodes"""
@@ -478,17 +514,45 @@ class Series(object):
         self.nodes = Node.create_nodes(hop_number + 1)
 
         for i in range(hop_number):
-            sv_type, annot, canonical, _positions, strands, genes = event_list[i]
+            (
+                sv_type,
+                annot,
+                canonical,
+                _positions,
+                read1_info,
+                read2_info,
+                strands,
+                genes,
+            ) = event_list[i]
             _bp1 = _positions[0]
             _bp2 = _positions[1]
+            _chrm1 = _bp1.split(":")[0]
+            _chrm2 = _bp2.split(":")[0]
             _mode1 = _positions[2]
             _mode2 = _positions[3]
             _strand1 = strands[0]
             _strand2 = strands[1]
+            read1_ref_start, read1_ref_end, read1_exons = read1_info
+            read2_ref_start, read2_ref_end, read2_exons = read2_info
+
             self.nodes[i].next_breakpoint = _bp1
             self.nodes[i + 1].prev_breakpoint = _bp2
+
             self.nodes[i].strand = _strand1
             self.nodes[i + 1].strand = _strand2
+
+            self.nodes[i].chrom = _chrm1
+            self.nodes[i + 1].chrom = _chrm2
+
+            self.nodes[i].ref_start = read1_ref_start
+            self.nodes[i + 1].ref_start = read2_ref_start
+
+            self.nodes[i].ref_end = read1_ref_end
+            self.nodes[i + 1].ref_end = read2_ref_end
+
+            self.nodes[i].exons = read1_exons
+            self.nodes[i + 1].exons = read2_exons
+
             self.nodes[i].sv_type = sv_type
             self.nodes[i].annotation_code = annot
             self.nodes[i].splicing_code = canonical
