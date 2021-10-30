@@ -1266,7 +1266,7 @@ def infer_sv_from_connected_reads(
         putative event examples:
             * 'NA', 0, 0, (), (), (), (), []
             * 'TDUP', annotation, canonical/noncanonical, ('chrm1:pos1', 'chrm2:pos2', mode1, mode2),
-            (read1_ref_start, read1_ref_end), (read2_ref_start, read2_ref_end), (strand1, strand2), [gene1, gene2]
+            (read1_ref_start, read1_ref_end, read1_exons), (read2_ref_start, read2_ref_end, read2_exons), (strand1, strand2), [gene1, gene2]
        annotation explanation:
        3(11) => both breakpoints overlap with coding exons boundary
        2(10) => one breakpoint overlap with coding exons boundary
@@ -1312,6 +1312,9 @@ def infer_sv_from_connected_reads(
         read_rt.cigartuples,
         read_rt.cigarstring,
     )
+
+    lt_exons, lt_introns = read_lt.get_exons_and_introns()
+    rt_exons, rt_introns = read_rt.get_exons_and_introns()
 
     target_start = 0
     target_end = 0
@@ -1380,8 +1383,8 @@ def infer_sv_from_connected_reads(
                                         2,
                                         1,
                                     ),
-                                    (lt_start, lt_end),
-                                    (rt_start, rt_end),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1396,8 +1399,8 @@ def infer_sv_from_connected_reads(
                                         2,
                                         1,
                                     ),
-                                    (lt_start, lt_end),
-                                    (rt_start, rt_end),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1412,8 +1415,8 @@ def infer_sv_from_connected_reads(
                                     2,
                                     1,
                                 ),
-                                (lt_start, lt_end),
-                                (rt_start, rt_end),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -1482,8 +1485,8 @@ def infer_sv_from_connected_reads(
                                             2,
                                             1,
                                         ),
-                                        (lt_start, lt_end),
-                                        (rt_start, rt_end),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -1498,8 +1501,8 @@ def infer_sv_from_connected_reads(
                                             2,
                                             1,
                                         ),
-                                        (lt_start, lt_end),
-                                        (rt_start, rt_end),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -1514,8 +1517,8 @@ def infer_sv_from_connected_reads(
                                         2,
                                         1,
                                     ),
-                                    (lt_start, lt_end),
-                                    (rt_start, rt_end),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1530,8 +1533,8 @@ def infer_sv_from_connected_reads(
                             ref_allele,
                             ins_seq_in_read,
                             (ins_start, len(ins_seq_in_read), 2, 1),
-                            (lt_start, lt_end),
-                            (rt_start, rt_end),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
@@ -1602,8 +1605,8 @@ def infer_sv_from_connected_reads(
                                         1,
                                         2,
                                     ),
-                                    (lt_start, lt_end),
-                                    (rt_start, rt_end),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1618,8 +1621,8 @@ def infer_sv_from_connected_reads(
                                         1,
                                         2,
                                     ),
-                                    (lt_start, lt_end),
-                                    (rt_start, rt_end),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1634,8 +1637,8 @@ def infer_sv_from_connected_reads(
                                     1,
                                     2,
                                 ),
-                                (lt_start, lt_end),
-                                (rt_start, rt_end),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -1706,8 +1709,8 @@ def infer_sv_from_connected_reads(
                                             1,
                                             2,
                                         ),
-                                        (lt_start, lt_end),
-                                        (rt_start, rt_end),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -1722,8 +1725,8 @@ def infer_sv_from_connected_reads(
                                             1,
                                             2,
                                         ),
-                                        (lt_start, lt_end),
-                                        (rt_start, rt_end),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -1738,8 +1741,8 @@ def infer_sv_from_connected_reads(
                                         1,
                                         2,
                                     ),
-                                    (lt_start, lt_end),
-                                    (rt_start, rt_end),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1755,8 +1758,8 @@ def infer_sv_from_connected_reads(
                             ref_allele,
                             ins_seq_in_read,
                             (ins_start, len(ins_seq_in_read), 1, 2),
-                            (lt_start, lt_end),
-                            (rt_start, rt_end),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
@@ -1787,12 +1790,12 @@ def infer_sv_from_connected_reads(
 
                     if junc_start == ra_bp:
                         strands = (lt_strand, rt_strand)
-                        lt_start_end = (lt_start, lt_end)
-                        rt_start_end = (rt_start, rt_end)
+                        lt_start_end_exons = (lt_start, lt_end, lt_exons)
+                        rt_start_end_exons = (rt_start, rt_end, rt_exons)
                     elif junc_start == sa_bp:
                         strands = (rt_strand, lt_strand)
-                        lt_start_end = (rt_start, rt_end)
-                        rt_start_end = (lt_start, lt_end)
+                        lt_start_end_exons = (rt_start, rt_end, rt_exons)
+                        rt_start_end_exons = (lt_start, lt_end, lt_exons)
                     _genes = gene_annotation(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
@@ -1826,8 +1829,8 @@ def infer_sv_from_connected_reads(
                                             1,
                                             1,
                                         ),
-                                        # (lt_start, lt_end),
-                                        # (rt_start, rt_end),
+                                        lt_start_end_exons,
+                                        rt_start_end_exons,
                                         tuple([*strands]),
                                         [*_genes],
                                     )
@@ -1842,6 +1845,8 @@ def infer_sv_from_connected_reads(
                                             1,
                                             1,
                                         ),
+                                        lt_start_end_exons,
+                                        rt_start_end_exons,
                                         tuple([*strands]),
                                         [*_genes],
                                     )
@@ -1856,18 +1861,20 @@ def infer_sv_from_connected_reads(
                                         1,
                                         1,
                                     ),
+                                    lt_start_end_exons,
+                                    rt_start_end_exons,
                                     tuple([*strands]),
                                     [*_genes],
                                 )
                         else:
-                            return "NA", 0, 0, (), (), []
+                            return "NA", 0, 0, (), (), (), (), []
                     else:
-                        return "NA", 0, 0, (), (), []
+                        return "NA", 0, 0, (), (), (), (), []
             elif lt_mode == rt_mode == 2:  # inversion
                 ra_bp = read_lt.ref_start
                 sa_bp = read_rt.ref_start
                 if ra_bp == sa_bp:
-                    return "NA", 0, 0, (), (), []
+                    return "NA", 0, 0, (), (), (), (), []
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -1886,8 +1893,12 @@ def infer_sv_from_connected_reads(
                     )
                     if junc_start == ra_bp:
                         strands = (lt_strand, rt_strand)
+                        lt_start_end_exons = (lt_start, lt_end, lt_exons)
+                        rt_start_end_exons = (rt_start, rt_end, rt_exons)
                     elif junc_start == sa_bp:
                         strands = (rt_strand, lt_strand)
+                        lt_start_end_exons = (rt_start, rt_end, rt_exons)
+                        rt_start_end_exons = (lt_start, lt_end, lt_exons)
                     _genes = gene_annotation(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
@@ -1921,6 +1932,8 @@ def infer_sv_from_connected_reads(
                                             2,
                                             2,
                                         ),
+                                        lt_start_end_exons,
+                                        rt_start_end_exons,
                                         tuple([*strands]),
                                         [*_genes],
                                     )
@@ -1935,6 +1948,8 @@ def infer_sv_from_connected_reads(
                                             2,
                                             2,
                                         ),
+                                        lt_start_end_exons,
+                                        rt_start_end_exons,
                                         tuple([*strands]),
                                         [*_genes],
                                     )
@@ -1949,15 +1964,17 @@ def infer_sv_from_connected_reads(
                                         2,
                                         2,
                                     ),
+                                    lt_start_end_exons,
+                                    rt_start_end_exons,
                                     tuple([*strands]),
                                     [*_genes],
                                 )
                         else:
-                            return "NA", 0, 0, (), (), []
+                            return "NA", 0, 0, (), (), (), (), []
                     else:
-                        return "NA", 0, 0, (), (), []
+                        return "NA", 0, 0, (), (), (), (), []
             else:
-                return "NA", 0, 0, (), (), []
+                return "NA", 0, 0, (), (), (), (), []
     else:  # lt_chrm != rt_chrm
         if lt_strand == rt_strand:
             if lt_mode == 1 and rt_mode == 2:
@@ -2004,6 +2021,8 @@ def infer_sv_from_connected_reads(
                                     1,
                                     2,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2018,6 +2037,8 @@ def infer_sv_from_connected_reads(
                                     1,
                                     2,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2027,11 +2048,13 @@ def infer_sv_from_connected_reads(
                             _anno,
                             _can,
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 2),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), []
+                    return "NA", 0, 0, (), (), (), (), []
             elif lt_mode == 2 and rt_mode == 1:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -2076,6 +2099,8 @@ def infer_sv_from_connected_reads(
                                     2,
                                     1,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2090,6 +2115,8 @@ def infer_sv_from_connected_reads(
                                     2,
                                     1,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2099,13 +2126,15 @@ def infer_sv_from_connected_reads(
                             _anno,
                             _can,
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 1),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), []
+                    return "NA", 0, 0, (), (), (), (), []
             else:
-                return "NA", 0, 0, (), (), []
+                return "NA", 0, 0, (), (), (), (), []
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 chrm_start = lt_chrm
@@ -2151,6 +2180,8 @@ def infer_sv_from_connected_reads(
                                     1,
                                     1,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2165,6 +2196,8 @@ def infer_sv_from_connected_reads(
                                     1,
                                     1,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2174,11 +2207,13 @@ def infer_sv_from_connected_reads(
                             _anno,
                             _can,
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 1),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), []
+                    return "NA", 0, 0, (), (), (), (), []
             elif lt_mode == rt_mode == 2:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -2223,6 +2258,8 @@ def infer_sv_from_connected_reads(
                                     2,
                                     2,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2237,6 +2274,8 @@ def infer_sv_from_connected_reads(
                                     2,
                                     2,
                                 ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -2246,13 +2285,15 @@ def infer_sv_from_connected_reads(
                             _anno,
                             _can,
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 2),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), []
+                    return "NA", 0, 0, (), (), (), (), []
             else:
-                return "NA", 0, 0, (), (), []
+                return "NA", 0, 0, (), (), (), (), []
 
 
 def merge_nls_forms(nls_src_forms):
