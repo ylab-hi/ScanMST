@@ -32,7 +32,7 @@ from . import __version__
 from .classes import LengthAction
 from .classes import Path
 from .classes import Read
-from .classes import Sequence
+from .classes import Series
 from .common import remove
 from .common import remove_files
 from .common import status_message
@@ -255,6 +255,8 @@ def detect_sv_from_cigar(
                     _anno,
                     _canonical,
                     positions,
+                    lt_info,
+                    rt_info,
                     strands,
                     genes,
                 ) = infer_sv_from_connected_reads(
@@ -268,15 +270,25 @@ def detect_sv_from_cigar(
                     gene_iv,
                     motif_required,
                 )
+
                 if nls_type != "NA":
                     event_list.append(
-                        (nls_type, _anno, _canonical, positions, strands, genes)
+                        (
+                            nls_type,
+                            _anno,
+                            _canonical,
+                            positions,
+                            lt_info,
+                            rt_info,
+                            strands,
+                            genes,
+                        )
                     )
             if event_list:
                 event_groups.append(event_list)
-    for group in event_groups:
-        for i in group:
-            print(i)
+    # for group in event_groups:
+    #    for i in group:
+    #        print(i)
     return event_groups
 
 
@@ -341,10 +353,11 @@ def softclipping_realignment(
     """
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
-    group_counter = 0
+
     candidate_regions = set()
     candidate_ao_dict = defaultdict(int)
-    candidate_group_dict = {}
+    nls_src_forms_list = []
+
     if "~" in ref_genome:
         ref_genome = os.path.expanduser(ref_genome)
     if "~" in gtf:
@@ -361,28 +374,28 @@ def softclipping_realignment(
         sys.exit(1)
 
     ## supplementary alignment cigarstring extraction
-    # key: read.query_name + left H + right H
-    # value: supplementary cigarstring with "H" was substituted by "S"
+    # key: read.query_name + left S + right S
+    # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
     representative_alignments_new_cigar = {}
-    pat_left_H = re.compile(r"^(\d+)H")
-    pat_right_H = re.compile(r"(\d+)H$")
+    pat_left_S = re.compile(r"^(\d+)S")
+    pat_right_S = re.compile(r"(\d+)S$")
     try:
         for read in in_bam.fetch(until_eof=False):
             if read.is_supplementary:
                 sup_aln_cigar = read.cigarstring
-                left_mat = pat_left_H.search(sup_aln_cigar)
-                right_mat = pat_right_H.search(sup_aln_cigar)
+                left_mat = pat_left_S.search(sup_aln_cigar)
+                right_mat = pat_right_S.search(sup_aln_cigar)
                 if left_mat:
-                    l_H_len = left_mat.group(1)
+                    l_S_len = left_mat.group(1)
                 else:
-                    l_H_len = ""
+                    l_S_len = ""
                 if right_mat:
-                    r_H_len = right_mat.group(1)
+                    r_S_len = right_mat.group(1)
                 else:
-                    r_H_len = ""
+                    r_S_len = ""
                 representative_alignments_new_cigar[
-                    "{}\t{}\t{}".format(read.qname, l_H_len, r_H_len)
-                ] = sup_aln_cigar.replace("H", "S")
+                    "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
+                ] = sup_aln_cigar
     except ValueError as e:
         print(
             "BAM index file is not found in supplementary alignments!\n",
@@ -393,8 +406,6 @@ def softclipping_realignment(
     # print(representative_alignments_new_cigar)
 
     ## update SA tags and iterate the BAM file
-    pat_left_S = re.compile(r"^(\d+)S")
-    pat_right_S = re.compile(r"(\d+)S$")
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     try:
         for read in in_bam.fetch(until_eof=True):
@@ -512,9 +523,18 @@ def softclipping_realignment(
                     sv_tag_list = []
                     ot_tag_list = []
                     for group in event_groups:
-                        # group_counter += 1
+                        nls_event_list = []
                         for event in group:
-                            _type, _anno, _canonical, _positions, strands, genes = event
+                            (
+                                _type,
+                                _anno,
+                                _canonical,
+                                _positions,
+                                read1_info,
+                                read2_info,
+                                strands,
+                                genes,
+                            ) = event
                             _bp1, _bp2, _mode1, _mode2 = _positions
                             _strand1, _strand2 = strands
                             _gene1, _gene2 = genes
@@ -526,6 +546,7 @@ def softclipping_realignment(
                                 sv_tag_list.append(
                                     f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1)+1},{_chrm2}:{int(_pos2)+1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                                 )
+                                nls_event_list.append(event)
 
                                 event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
                                 reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2)+1}\t{_chrm1}:{int(_pos1)+1}\t{_strand2}{_strand1}"
@@ -547,9 +568,12 @@ def softclipping_realignment(
                                 candidate_ao_dict[
                                     f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
                                 ] += 1
-                                # candidate_group_dict[
-                                #    f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
-                                # ] = group_counter
+
+                        if nls_event_list:
+                            print("nls_event_list: ", len(nls_event_list))
+                            bp_series = Series()
+                            bp_series.init(nls_event_list)
+                            nls_src_forms_list.append(bp_series)
 
                     if sv_tag_list:
                         read.set_tag("SV", "".join(sv_tag_list))
@@ -564,10 +588,10 @@ def softclipping_realignment(
     output_bam.close()
 
     subprocess.check_call("samtools index {}".format(output), shell=True)
-
+    print("NLS Src forms: ", nls_src_forms_list)
     # output_candidates = aggregate_candidates(candidate_ao_dict, len_cutoff=0)
     prefix = output.split(".")[0]
-    output_bedpe_file(candidate_ao_dict, candidate_group_dict, prefix, splice_bin)
+    # output_bedpe_file(candidate_ao_dict, candidate_group_dict, prefix, splice_bin)
     return None
 
 
