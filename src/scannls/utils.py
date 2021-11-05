@@ -861,7 +861,7 @@ def short_TDUP_or_not(
         return False
 
 
-def test_is_connected(sms_read1, sms_read2, allowed_difference=30) -> tuple:
+def test_is_connected(sms_read1, sms_read2, allowed_difference=80) -> tuple:
     """Test whether two SMS tuples of chimeric reads can be connected or not.
     :param sms_read1: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read1 OR path
     :type sms_read1: tuple
@@ -936,7 +936,7 @@ def test_is_connected(sms_read1, sms_read2, allowed_difference=30) -> tuple:
 
 
 def chimeric_aln_order_finder(
-    aln_list, allowed_difference=30, soft_len_cutoff=30
+    aln_list, allowed_difference=80, soft_len_cutoff=30
 ) -> tuple:
     """Find the best connected paths for a list of chimeric alignments
 
@@ -1602,12 +1602,12 @@ def infer_sv_from_connected_reads(
                                     (
                                         f"{rt_chrm}:{junc_start}",
                                         f"{rt_chrm}:{junc_end}",
-                                        1,
                                         2,
+                                        1,
                                     ),
-                                    (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
-                                    (lt_strand, rt_strand),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_strand, lt_strand),
                                     [*_genes],
                                 )
                             else:
@@ -1618,12 +1618,12 @@ def infer_sv_from_connected_reads(
                                     (
                                         f"{rt_chrm}:{new_junc_start}",
                                         f"{rt_chrm}:{new_junc_end}",
-                                        1,
                                         2,
+                                        1,
                                     ),
-                                    (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
-                                    (lt_strand, rt_strand),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_strand, lt_strand),
                                     [*_genes],
                                 )
                         else:
@@ -1634,12 +1634,12 @@ def infer_sv_from_connected_reads(
                                 (
                                     f"{rt_chrm}:{junc_start}",
                                     f"{rt_chrm}:{junc_end}",
-                                    1,
                                     2,
+                                    1,
                                 ),
-                                (lt_start, lt_end, lt_exons),
                                 (rt_start, rt_end, rt_exons),
-                                (lt_strand, rt_strand),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_strand, lt_strand),
                                 [*_genes],
                             )
                     else:
@@ -1706,12 +1706,12 @@ def infer_sv_from_connected_reads(
                                         (
                                             f"{rt_chrm}:{junc_start}",
                                             f"{rt_chrm}:{junc_end}",
-                                            1,
                                             2,
+                                            1,
                                         ),
-                                        (lt_start, lt_end, lt_exons),
                                         (rt_start, rt_end, rt_exons),
-                                        (lt_strand, rt_strand),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
                                         [*_genes],
                                     )
                                 else:
@@ -1722,12 +1722,12 @@ def infer_sv_from_connected_reads(
                                         (
                                             f"{rt_chrm}:{new_junc_start}",
                                             f"{rt_chrm}:{new_junc_end}",
-                                            1,
                                             2,
+                                            1,
                                         ),
-                                        (lt_start, lt_end, lt_exons),
                                         (rt_start, rt_end, rt_exons),
-                                        (lt_strand, rt_strand),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
                                         [*_genes],
                                     )
                             else:
@@ -1738,12 +1738,12 @@ def infer_sv_from_connected_reads(
                                     (
                                         f"{rt_chrm}:{junc_start}",
                                         f"{rt_chrm}:{junc_end}",
-                                        1,
                                         2,
+                                        1,
                                     ),
-                                    (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
-                                    (lt_strand, rt_strand),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_strand, lt_strand),
                                     [*_genes],
                                 )
                         else:
@@ -1758,9 +1758,9 @@ def infer_sv_from_connected_reads(
                             ref_allele,
                             ins_seq_in_read,
                             (ins_start, len(ins_seq_in_read), 1, 2),
-                            (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
-                            (lt_strand, rt_strand),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_strand, lt_strand),
                             [*_genes],
                         )
             else:
@@ -2294,6 +2294,36 @@ def infer_sv_from_connected_reads(
                     return "NA", 0, 0, (), (), (), (), []
             else:
                 return "NA", 0, 0, (), (), (), (), []
+
+
+def nls_series_assembly(nls_series_list, overlap_len_cutoff):
+    """assemble overlapped NLS series
+    A->-B->-C and C->-D => A->-B->-C->-D
+    """
+
+    def is_connected_series(series_A, series_B, overlap_len_cutoff):
+        """find two series with one overlapping node and return the merged series
+        series_A: A->-B; series_B: B->-C
+        merged_series: A->-B->-C
+        """
+        merged_series = copy.deepcopy(series_A)
+        last_of_A = series_A[-1]
+        first_of_B = series_B[0]
+        if (
+            last_of_A.strand == first_of_B.strand
+            and last_of_A.ref_start <= first_of_B.ref_start
+            and last_of_A.ref_end <= first_of_B.ref_end
+            and last_of_A.ref_end - first_of_B.ref_start > overlap_len_cutoff
+            and last_of_A.introns == first_of_B.introns
+        ):
+            merged_series[-1].next_breakpoint = first_of_B.next_breakpoint
+            merged_series[-1].exons[0][0] = last_of_A.ref_start
+            merged_series[-1].exons[-1][1] = first_of_B.ref_end
+            for i in series_B[1:]:
+                merged_series.append(i)
+            return merged_series
+        else:
+            return None
 
 
 def merge_nls_forms(nls_src_forms):
