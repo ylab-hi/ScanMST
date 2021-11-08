@@ -15,7 +15,6 @@ from collections import defaultdict
 from collections import OrderedDict
 from typing import Iterable
 
-import psutil
 from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
@@ -23,6 +22,7 @@ from pyfaidx import Fasta
 
 from . import __version__
 from .classes import Path
+from .common import get_softclip_length
 from .utils import vcf_header
 
 try:
@@ -37,6 +37,194 @@ try:
     import HTSeq
 except:
     sys.exit("HTSeq module not found.\nPlease install it before.")
+
+
+def scan_region(bam_object, in_region, mapq_cutoff, soft_len_cutoff):
+    """Scan candidate region to find soft-clipped segment that can aligned to the anchor soft-clipped segment in reads with SV tag.
+
+    :param bam_object: pysam parsed SV-tag added BAM
+    :param in_region: one candidate region from BEDPE file
+    :param mapq_cutoff: MAPQ cutoff
+    :param soft_len_cutoff: minimum length of soft-clipped segments considered to be align to anchor soft-clipped segment in reads with SV tag
+    :type bam_object: pysam.libcalignmentfile.AlignmentFile object
+    :type in_region: str (chrm:start-end)
+    :type mapq_cutoff: int
+    :type soft_len_cutoff: int
+    :return: dictionary of SV => SR
+    :rtype: dict
+
+    ..note ::
+
+    """
+    for col in bam_object.pileup(
+        region=in_region, truncate=True, stepper="nofilter", min_base_quality=0
+    ):
+        chrm = col.reference_name
+        ao_dict = {}
+        sv_seq_dict = defaultdict(set)
+        sr_list = {1: [], 2: []}
+        sv_soft_mode = 0
+        for read in col.pileups:
+            # read is an instance of pysam.PileupRead
+            aln_read = read.alignment
+            query_position = read.query_position
+            if aln_read.mapq >= mapq_cutoff and query_position != None:
+                # the read has soft-clipped part but no SV tag
+                if not aln_read.has_tag("SV"):
+                    if "S" in aln_read.cigarstring:
+                        # print(read.alignment.query_name)
+                        soft_len, soft_seq, soft_pos, soft_mode = get_softclip_length(
+                            aln_read
+                        )
+                        # print(soft_mode, read.alignment.query_name)
+                        # only consider soft_seq without undetermined (N) bases
+                        if "N" not in soft_seq:
+                            if soft_len >= soft_len_cutoff:
+                                if soft_mode == 1:
+                                    if (
+                                        abs(
+                                            len(
+                                                aln_read.query_sequence[
+                                                    query_position + 1 :
+                                                ]
+                                            )
+                                            - soft_len
+                                        )
+                                        < 20
+                                    ):
+                                        sr_list[1].append(
+                                            aln_read.query_sequence[
+                                                query_position + 1 :
+                                            ]
+                                        )
+                                elif soft_mode == 2:
+                                    if (
+                                        abs(
+                                            len(
+                                                aln_read.query_sequence[:query_position]
+                                            )
+                                            - soft_len
+                                        )
+                                        < 20
+                                    ):
+                                        sr_list[2].append(
+                                            aln_read.query_sequence[:query_position]
+                                        )
+                # the read has SV tag, it must be a representive alignment
+                else:
+                    if sv_checker(read, col.reference_pos, mapq_cutoff, sv_len_cutoff):
+                        _, _, _, sv_soft_mode = get_softclip_length(read.alignment)
+                        (
+                            sv_type,
+                            _anno_can,
+                            _position,
+                            size_or_sup_position,
+                            rep_aln_mode,
+                            sup_aln_mode,
+                            strands,
+                            genes,
+                        ) = read.alignment.get_tag("SV")[:-1].split(",")
+                        # store gene information
+                        _gene1, _gene2 = genes.split("|")
+                        # bp1 and bp2 modes determination
+                        if ":" in size_or_sup_position:
+                            _chrm2, _bp2_pos = size_or_sup_position.split(":")
+                        else:
+                            _bp2_pos = int(size_or_sup_position) + int(_position)
+                            _chrm2 = chrm
+                        if "_" in _chrm2 or "_" in chrm:
+                            continue
+                        # breakpoint with small chrm as the bp1, breakpoint with small position as the bp1
+                        if is_bps_order_changed(
+                            f"{chrm}:{_position}", f"{_chrm2}:{_bp2_pos}"
+                        ):
+                            if _anno_can[0] == "1":
+                                _anno_can = f"2{_anno_can[1]}"
+                            elif _anno_can[0] == "2":
+                                _anno_can = f"1{_anno_can[1]}"
+                                sv_id = "{},{},{},{},{}:{}".format(
+                                    sv_type,
+                                    _anno_can,
+                                    _chrm2,
+                                    _bp2_pos,
+                                    chrm,
+                                    _position,
+                                )
+                                strand_dict[sv_id] = (strands[1], strands[0])
+                                gene_dict[sv_id] = (_gene2, _gene1)
+                            if abs(int(_position) - col.reference_pos) < abs(
+                                int(_bp2_pos) - col.reference_pos
+                            ):
+                                mode_dict[sv_id] = (
+                                    int(sup_aln_mode),
+                                    int(rep_aln_mode),
+                                )
+                            else:
+                                mode_dict[sv_id] = (
+                                    int(rep_aln_mode),
+                                    int(sup_aln_mode),
+                                )
+                        else:
+                            # sv_id = '{},{},{},{},{}'.format(sv_type, _anno_can, chrm, _position, size_or_sup_position)
+                            sv_id = "{},{},{},{},{}:{}".format(
+                                sv_type, _anno_can, chrm, _position, _chrm2, _bp2_pos
+                            )
+                            strand_dict[sv_id] = (strands[0], strands[1])
+                            gene_dict[sv_id] = (_gene1, _gene2)
+                            if abs(int(_position) - col.reference_pos) < abs(
+                                int(_bp2_pos) - col.reference_pos
+                            ):
+                                mode_dict[sv_id] = (
+                                    int(rep_aln_mode),
+                                    int(sup_aln_mode),
+                                )
+                            else:
+                                mode_dict[sv_id] = (
+                                    int(sup_aln_mode),
+                                    int(rep_aln_mode),
+                                )
+
+                                # MS mode (representive alignment)
+                            if int(rep_aln_mode) == 1:
+                                sv_seq_dict[sv_id].add(
+                                    read.alignment.query_sequence[
+                                        read.query_position + 1 :
+                                    ]
+                                )
+                            # SM mode (representive alignment)
+                            else:
+                                sv_seq_dict[sv_id].add(
+                                    read.alignment.query_sequence[: read.query_position]
+                                )
+
+                        if not sv_id in ao_dict:
+                            ao_dict[sv_id] = 1
+                        else:
+                            ao_dict[sv_id] += 1
+                    for (
+                        sv_id
+                    ) in ao_dict:  # only consider one event per genomic position
+                        if sv_id in sv_set:
+                            continue
+                        ao = ao_dict[sv_id]
+                        if ao < seed_ao_cutoff:
+                            continue
+                        # print(sr_list)
+                        if sv_soft_mode in sr_list:
+                            for sr_read in sr_list[sv_soft_mode]:
+                                # print(sr_read, sv_seq_dict[sv_id])
+                                if (
+                                    mismatch_count(
+                                        sr_read,
+                                        sv_seq_dict[sv_id],
+                                        alignment_frac,
+                                        sv_soft_mode,
+                                    )
+                                    <= mismatch_cutoff
+                                ):
+                                    ao += 1
+                        # print('Left AO:', ao)
+                        ao_total_dict[sv_id] = ao
 
 
 def sv_scan(
