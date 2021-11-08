@@ -235,8 +235,8 @@ def detect_sv_from_cigar(
         chrm, read, mapq_cutoff, allowed_difference
     )
 
-    # print('Read-to-Read chain: ',read_to_read_chains)
-    # print('Read-to-Read pair modes: ',reads_pair_mode_dict)
+    print("Read-to-Read chain: ", read_to_read_chains)
+    print("Read-to-Read pair modes: ", reads_pair_mode_dict)
 
     event_groups = []
     if read_to_read_chains:
@@ -245,11 +245,12 @@ def detect_sv_from_cigar(
         for chain in read_to_read_chains:
             event_list = []
             for _lt, _rt in zip(chain[::1], chain[1::1]):
+                # print(_lt, _rt)
                 if (_lt, _rt) in reads_pair_mode_dict:
                     _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
                 elif (_rt, _lt) in reads_pair_mode_dict:
                     _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
-
+                # print(_lt_mode, _rt_mode)
                 (
                     nls_type,
                     _anno,
@@ -286,9 +287,9 @@ def detect_sv_from_cigar(
                     )
             if event_list:
                 event_groups.append(event_list)
-    # for group in event_groups:
-    #    for i in group:
-    #        print(i)
+    for group in event_groups:
+        for i in group:
+            print(i)
     return event_groups
 
 
@@ -570,7 +571,7 @@ def softclipping_realignment(
                                 ] += 1
 
                         if nls_event_list:
-                            print("nls_event_list: ", len(nls_event_list))
+                            # print("nls_event_list: ", len(nls_event_list))
                             bp_series = Series()
                             bp_series.init(nls_event_list)
                             nls_src_forms_list.append(bp_series)
@@ -716,7 +717,7 @@ def parse_args():
         dest="allowed_difference",
         type=int,
         help="Maximum allowed difference in length between one read matched part and other read softclipped part (default: %(default)s)",
-        default=30,
+        default=80,
     )
     build_parser.add_argument(
         "--identity",
