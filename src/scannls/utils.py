@@ -861,15 +861,23 @@ def short_TDUP_or_not(
         return False
 
 
-def test_is_connected(sms_read1, sms_read2, allowed_difference=80) -> tuple:
+def test_is_connected(
+    sms_read1, sms_read2, seq_read1, seq_read2, allowed_difference=80, SM_align=False
+) -> tuple:
     """Test whether two SMS tuples of chimeric reads can be connected or not.
     :param sms_read1: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read1 OR path
     :type sms_read1: tuple
     :param sms_read2: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read2 OR path
     :type sms_read2: tuple
+    :param seq_read1: reads sequence (as it is stored in the BAM file) of read2 OR path
+    :type seq_read1: str
+    :param seq_read2: reads sequence (as it is stored in the BAM file) of read2 OR path
+    :type seq_read2: str
     :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
     :type allowed_difference: int
-    :return: is_connected flag, summed 'SMS' value, mode for read1 and read2
+    :param SM_align: whether use the alignment of softclipped segment of one read and matched segment of another read
+    :type SM_align: bool
+    :return: is_connected flag, summed 'SMS' value, summed 'Reads' sequence, mode for read1 and read2
     :rtype: tuple
     """
 
@@ -888,8 +896,46 @@ def test_is_connected(sms_read1, sms_read2, allowed_difference=80) -> tuple:
         else:
             return 1
 
+    def SM_alignment(query_seq, target_seq, same_strand=True) -> bool:
+        """matched segment of read1 align to softclipped segment of read2
+        solve the problem that the length of the left softclipped segment and the right softclipped segment may be quite similar, eliminate the ambiguity of connected reads
+        :param query_seq: matched segment of read1
+        :param target_seq: softclipped segment of read2
+        :param same_strand: read1 and read2 one the same strand or not
+        :type query_seq: str
+        :type target_seq: str
+        :type same_strand: bool
+        """
+        if not same_strand:
+            target_seq = str(Seq(target_seq).reverse_complement())
+        allowed_mismatches = abs(len(target_seq) - len(query_seq))
+        # print('allowed_mismatches:', allowed_mismatches)
+        alignment_result = aligner(query_seq, target_seq, method="glocal")[0]
+        _query_seq = alignment_result.seq1.decode("utf-8")
+        _target_seq = alignment_result.seq2.decode("utf-8")
+        _query_seq_len = len(_query_seq)
+        _target_seq_len = len(_target_seq)
+        _query_start, _query_end = alignment_result.start1, alignment_result.end1 - 1
+        _target_start, _target_end = alignment_result.start2, alignment_result.end2 - 1
+        aln_len = _query_end - _query_start + 1
+        total_mismatches = len(_query_seq) - aln_len + alignment_result.n_mismatches
+
+        # print('query_seq :', query_seq,  'target_seq :', target_seq)
+        # print('total_mismatches :', total_mismatches, _query_seq, _target_seq)
+
+        if total_mismatches <= allowed_mismatches:
+            return True
+        else:
+            return False
+
     _lt_len_r1, _read_match_r1, _rt_len_r1 = sms_read1
     _lt_len_r2, _read_match_r2, _rt_len_r2 = sms_read2
+
+    same_strand = None
+    if seq_read1 == seq_read2:
+        same_strand = True
+    else:
+        same_strand = False
 
     mode_r1 = init_mode_judge(sms_read1)
     mode_r2 = init_mode_judge(sms_read2)
@@ -898,41 +944,98 @@ def test_is_connected(sms_read1, sms_read2, allowed_difference=80) -> tuple:
     out_lt_len = 0
     out_rt_len = 0
     out_read_match = 0
+    out_seq = ""
+
     if propinquity(_read_match_r1, _lt_len_r2, allowed_difference):
-        out_lt_len = 0
-        out_read_match = _lt_len_r2 + _read_match_r2
-        out_rt_len = _rt_len_r2
-        mode_r2 = 2
-        is_connected = True
+        if SM_align:
+            if SM_alignment(
+                seq_read1[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
+                seq_read2[:_lt_len_r2],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = 0
+                out_read_match = _lt_len_r2 + _read_match_r2
+                out_rt_len = _rt_len_r2
+                mode_r2 = 2
+                out_seq = seq_read2
+        else:
+            is_connected = True
+            out_lt_len = 0
+            out_read_match = _lt_len_r2 + _read_match_r2
+            out_rt_len = _rt_len_r2
+            mode_r2 = 2
+            out_seq = seq_read2
 
-    elif propinquity(_read_match_r1, _rt_len_r2, allowed_difference):
-        out_lt_len = _lt_len_r2
-        out_read_match = _read_match_r2 + _rt_len_r2
-        out_rt_len = 0
-        mode_r2 = 1
-        is_connected = True
+    if propinquity(_read_match_r1, _rt_len_r2, allowed_difference):
+        if SM_align:
+            if SM_alignment(
+                seq_read1[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
+                seq_read2[-_rt_len_r2:],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = _lt_len_r2
+                out_read_match = _read_match_r2 + _rt_len_r2
+                out_rt_len = 0
+                mode_r2 = 1
+                out_seq = seq_read2
+        else:
+            is_connected = True
+            out_lt_len = _lt_len_r2
+            out_read_match = _read_match_r2 + _rt_len_r2
+            out_rt_len = 0
+            mode_r2 = 1
+            out_seq = seq_read2
 
-    elif propinquity(_read_match_r2, _lt_len_r1, allowed_difference):
-        out_lt_len = 0
-        out_read_match = _lt_len_r1 + _read_match_r1
-        out_rt_len = _rt_len_r1
-        mode_r1 = 2
-        is_connected = True
+    if propinquity(_read_match_r2, _lt_len_r1, allowed_difference):
+        if SM_align:
+            if SM_alignment(
+                seq_read2[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
+                seq_read1[:_lt_len_r1],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = 0
+                out_read_match = _lt_len_r1 + _read_match_r1
+                out_rt_len = _rt_len_r1
+                mode_r1 = 2
+                out_seq = seq_read1
+        else:
+            is_connected = True
+            out_lt_len = 0
+            out_read_match = _lt_len_r1 + _read_match_r1
+            out_rt_len = _rt_len_r1
+            mode_r1 = 2
+            out_seq = seq_read1
 
-    elif propinquity(_read_match_r2, _rt_len_r1, allowed_difference):
-        out_lt_len = _rt_len_r1
-        out_read_match = _read_match_r1 + _rt_len_r1
-        out_rt_len = 0
-        mode_r1 = 1
-        is_connected = True
+    if propinquity(_read_match_r2, _rt_len_r1, allowed_difference):
+        if SM_align:
+            if SM_alignment(
+                seq_read2[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
+                seq_read1[-_rt_len_r1:],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = _rt_len_r1
+                out_read_match = _read_match_r1 + _rt_len_r1
+                out_rt_len = 0
+                mode_r1 = 1
+                out_seq = seq_read1
+        else:
+            is_connected = True
+            out_lt_len = _rt_len_r1
+            out_read_match = _read_match_r1 + _rt_len_r1
+            out_rt_len = 0
+            mode_r1 = 1
+            out_seq = seq_read1
 
-    else:
-        out_lt_len = 0
-        out_read_match = 0
-        out_rt_len = 0
-        is_connected = False
-
-    return is_connected, (out_lt_len, out_read_match, out_rt_len), (mode_r1, mode_r2)
+    return (
+        is_connected,
+        (out_lt_len, out_read_match, out_rt_len),
+        out_seq,
+        (mode_r1, mode_r2),
+    )
 
 
 def chimeric_aln_order_finder(
@@ -985,7 +1088,7 @@ def chimeric_aln_order_finder(
         return merged_list
 
     def select_path_for_one_node(node, paths) -> tuple:
-        """
+        """If one read has multiple paths, select one with higest length and lowest number of mismatches
         :param node: start node
         :param paths: linked paths (list of Path) for node
         :type node: Read
@@ -1083,16 +1186,26 @@ def chimeric_aln_order_finder(
     if len(start_nodes) == 2:
         # print('len(start_nodes) == 2')
         if len(candidate_nodes) == 0:
-            _is_connected, _, _mode = test_is_connected(
-                start_nodes[0].sms, start_nodes[1].sms, allowed_difference
+            _is_connected, _, _, _mode = test_is_connected(
+                start_nodes[0].sms,
+                start_nodes[1].sms,
+                start_nodes[0].query_sequence,
+                start_nodes[1].query_sequence,
+                allowed_difference,
+                SM_align=False,
             )
             if _is_connected:
                 reads_pair_mode_dict[(start_nodes[0], start_nodes[1])] = _mode
                 end_to_end_chain.append(start_nodes)
         elif len(candidate_nodes) == 1:
             for _node in start_nodes:
-                _is_connected, _, _mode = test_is_connected(
-                    _node.sms, candidate_nodes[0].sms, allowed_difference
+                _is_connected, _sum_sms, _sum_seq, _mode = test_is_connected(
+                    _node.sms,
+                    candidate_nodes[0].sms,
+                    _node.query_sequence,
+                    candidate_nodes[0].query_sequence,
+                    allowed_difference,
+                    SM_align=True,
                 )
                 if _is_connected:
                     reads_pair_mode_dict[(_node, candidate_nodes[0])] = _mode
@@ -1119,8 +1232,13 @@ def chimeric_aln_order_finder(
                 stop_signal = True
                 for _node in candidate_nodes:
                     if count < len(candidate_nodes):
-                        _is_connected, _sum_sms, _mode = test_is_connected(
-                            tgt_node.sms, _node.sms, allowed_difference
+                        _is_connected, _sum_sms, _sum_seq, _mode = test_is_connected(
+                            tgt_node.sms,
+                            _node.sms,
+                            tgt_node.query_sequence,
+                            _node.query_sequence,
+                            allowed_difference,
+                            SM_align=True,
                         )
                         if _is_connected:
                             stop_signal = False
@@ -1130,6 +1248,7 @@ def chimeric_aln_order_finder(
                                 tmp_path.add(_node)
                                 tmp_path.add_mode({(tgt_node, _node): _mode})
                                 tmp_path.sms = _sum_sms
+                                tmp_path.sequence = _sum_seq
                                 tgt_node.add_path(tmp_path)
                             else:
                                 # check if _node was already the last node in any of the existing path
@@ -1143,13 +1262,24 @@ def chimeric_aln_order_finder(
                                     tmp_path.add(_node)
                                     tmp_path.add_mode({(tgt_node, _node): _mode})
                                     tmp_path.sms = _sum_sms
+                                    tmp_path.sequence = _sum_seq
                                     tgt_node.add_path(tmp_path)
                     else:
                         # print(tgt_node.linked_paths)
                         for path in tgt_node.linked_paths:
                             # print(path.sms, _node.sms)
-                            _is_connected, _sum_sms, _mode = test_is_connected(
-                                path.sms, _node.sms, allowed_difference
+                            (
+                                _is_connected,
+                                _sum_sms,
+                                _sum_seq,
+                                _mode,
+                            ) = test_is_connected(
+                                path.sms,
+                                _node.sms,
+                                path.sequence,
+                                _node.query_sequence,
+                                allowed_difference,
+                                SM_align=True,
                             )
                             if _is_connected:
                                 if path.nodes[-1] != _node:
@@ -1157,6 +1287,7 @@ def chimeric_aln_order_finder(
                                     path.add_mode({(path.nodes[-1], _node): _mode})
                                     path.add(_node)
                                     path.sms = _sum_sms
+                                    path.sequence = _sum_seq
                                     # reads_pair_mode_dict[(path.nodes[-1], _node)] = _mode
                     count += 1
                 if stop_signal:
@@ -1173,8 +1304,13 @@ def chimeric_aln_order_finder(
                 stop_signal = True
                 for _node in candidate_nodes:
                     if count < len(candidate_nodes):
-                        _is_connected, _sum_sms, _mode = test_is_connected(
-                            tgt_node.sms, _node.sms, allowed_difference
+                        _is_connected, _sum_sms, _sum_seq, _mode = test_is_connected(
+                            tgt_node.sms,
+                            _node.sms,
+                            tgt_node.query_sequence,
+                            _node.query_sequence,
+                            allowed_difference,
+                            SM_align=True,
                         )
                         if _is_connected:
                             stop_signal = False
@@ -1184,6 +1320,7 @@ def chimeric_aln_order_finder(
                                 tmp_path.add(_node)
                                 tmp_path.add_mode({(tgt_node, _node): _mode})
                                 tmp_path.sms = _sum_sms
+                                tmp_path.sequence = _sum_seq
                                 tgt_node.add_path(tmp_path)
                             else:
                                 # check if _node was already the last node in any of the existing path
@@ -1197,12 +1334,23 @@ def chimeric_aln_order_finder(
                                     tmp_path.add(_node)
                                     tmp_path.add_mode({(tgt_node, _node): _mode})
                                     tmp_path.sms = _sum_sms
+                                    tmp_path.sequence = _sum_seq
                                     tgt_node.add_path(tmp_path)
 
                     else:
                         for path in tgt_node.linked_paths:
-                            _is_connected, _sum_sms, _mode = test_is_connected(
-                                path.sms, _node.sms, allowed_difference
+                            (
+                                _is_connected,
+                                _sum_sms,
+                                _sum_seq,
+                                _mode,
+                            ) = test_is_connected(
+                                path.sms,
+                                _node.sms,
+                                path.sequence,
+                                _node.query_sequence,
+                                allowed_difference,
+                                SM_align=True,
                             )
                             if _is_connected:
                                 if path.nodes[-1] != _node:
@@ -1210,6 +1358,7 @@ def chimeric_aln_order_finder(
                                     path.add_mode({(path.nodes[-1], _node): _mode})
                                     path.add(_node)
                                     path.sms = _sum_sms
+                                    path.sequence = _sum_seq
 
                     count += 1
                 if stop_signal:
