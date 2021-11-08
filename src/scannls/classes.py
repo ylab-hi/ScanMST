@@ -11,21 +11,26 @@ class Path(object):
     :type nodes: Read
     :param sms: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length)
     :type sms: tuple
+    :param sequence: reads sequence of last added read
+    :type sequence: str
     :param nm: summation of number-of-mismatches of Reads in the path
     :type nm: int
     :param mode: a dictionary of Reads-pair to mode in the path
     :type mode: dict
     .. note::
         We have to pay attention on 'sms':
-            * every path only have keep one 'sms' value (per path instead of per node).
+            * every path only keep one 'sms' value (per path instead of per node).
+            * every path only keep one 'sequence' value (per path).
             * once new node added to the path, update the value of 'sms' using the summed 'sms' value from the function 'test_is_connected'
+            * once new node added to the path, update the value of 'sequence' using the summed 'sequence' value from the function 'test_is_connected'
     """
 
-    __slots__ = ("nodes", "sms", "nm", "mode")
+    __slots__ = ("nodes", "sms", "sequence", "nm", "mode")
 
     def __init__(self) -> None:
         self.nodes = []
         self.sms = None
+        self.sequence = None
         self.nm = 0
         self.mode = {}
 
@@ -317,6 +322,9 @@ class Read(object):
         """
         exons, introns = self.get_exons_and_introns()
 
+        if len(introns) == 0:
+            return True
+
         intron_count = 0
         can_count = 0
         can_sites = {"GT-AG", "GC-AG", "AT-AC"}
@@ -456,10 +464,12 @@ class Node(object):
 
     # for debug purpose
     def __repr__(self) -> str:
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
 
     def __str__(self) -> str:
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
 
     def is_next_node(self, other) -> bool:
         if self.next_breakpoint == other.prev_breakpoint:
@@ -511,6 +521,7 @@ class Series(object):
         """add event list as Node to self.nodes"""
         event_list = self.order_events_by_trancription_direction(event_list)
         hop_number = len(event_list)
+        # print('hop_number:', hop_number)
         self.nodes = Node.create_nodes(hop_number + 1)
 
         for i in range(hop_number):
@@ -566,7 +577,16 @@ class Series(object):
         +1;-1 => up;down
         +2;-2 => down;up
         """
-        sv_type, annot, canonical, _positions, strands, genes = event
+        (
+            sv_type,
+            annot,
+            canonical,
+            _positions,
+            read1_info,
+            read2_info,
+            strands,
+            genes,
+        ) = event
         bp1 = _positions[0]
         bp2 = _positions[1]
         mode1 = _positions[2]
@@ -602,7 +622,16 @@ class Series(object):
             _positions = (bp2, bp1, mode2, mode1)
             strands = (strand2, strand1)
             genes = list(reversed(genes))
-            return sv_type, annot, canonical, _positions, strands, genes
+            return (
+                sv_type,
+                annot,
+                canonical,
+                _positions,
+                read2_info,
+                read1_info,
+                strands,
+                genes,
+            )
         else:
             return event
 
@@ -627,7 +656,16 @@ class Series(object):
         for evt in event_list:
             ordered_evt = Series.reorder_event(evt)
             output_event_list.append(ordered_evt)
-            sv_type, annot, canonical, _positions, strands, genes = ordered_evt
+            (
+                sv_type,
+                annot,
+                canonical,
+                _positions,
+                read1_info,
+                read2_info,
+                strands,
+                genes,
+            ) = ordered_evt
             chrm1, _pos1 = _positions[0].split(":")
             chrm2, _pos2 = _positions[1].split(":")
             pos1 = int(_pos1)
@@ -650,14 +688,16 @@ class Series(object):
                         kept_right_strand = strand2
                     else:
                         keep_event_list_order = False
-                        break
                 else:
                     keep_event_list_order = False
-                    break
+
         if not keep_event_list_order:
             output_event_list = list(reversed(output_event_list))
 
         return output_event_list
+
+    def __getitem__(self, index):
+        return self.nodes[index]
 
     def __hash__(self) -> int:
         return hash(";".join(map(str, self.nodes)))
@@ -692,3 +732,16 @@ class Series(object):
                 f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
             )
         return paired_breakpoints
+
+    @property
+    def introns(self):
+        if len(self.exons) <= 1:
+            return []
+        else:
+            _positions = []
+            for i, j in self.exons:
+                _positions.extend([i, j])
+            _positions.pop(0)
+            _positions.pop(-1)
+            _introns = list(zip(_positions[::2], _positions[1::2]))
+            return _introns
