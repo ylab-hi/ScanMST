@@ -26,18 +26,13 @@ from .common import transcript_upstream_part_determiner
 
 try:
     import pysam
-except:
-    sys.exit("pysam module not found.\nPlease install it before.")
-try:
     import numpy as np
-except:
-    sys.exit("numpy module not found.\nPlease install it before.")
-try:
     import HTSeq
-except:
-    sys.exit("HTSeq module not found.\nPlease install it before.")
+except ModuleNotFoundError as e:
+    raise SystemExit(e.msg)
 
 __funcs__ = {"extract_splice_sites", "junc_site_checker"}
+
 
 
 def extract_splice_sites(in_file, bin_size) -> tuple:

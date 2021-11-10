@@ -6,7 +6,7 @@ import re
 
 
 class Path(object):
-    """store chimeirc reads as nodes in a path (directed acyclic graph)
+    """store chimeric reads as nodes in a path (directed acyclic graph)
     :param nodes: a list of Read as nodes
     :type nodes: Read
     :param sms: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length)
