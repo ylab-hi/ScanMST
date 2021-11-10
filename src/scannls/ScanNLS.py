@@ -407,9 +407,9 @@ def softclipping_realignment(
     # print(representative_alignments_new_cigar)
 
     ## update SA tags and iterate the BAM file
-    in_bam = pysam.AlignmentFile(input_bam, "rb")
+    # in_bam = pysam.AlignmentFile(input_bam, "rb")
     try:
-        for read in in_bam.fetch(until_eof=True):
+        for read in in_bam.fetch(until_eof=False):
             if (
                 read.mapq >= mapq_cutoff
                 and not read.is_secondary
