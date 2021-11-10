@@ -1038,6 +1038,190 @@ def test_is_connected(
     )
 
 
+def test_is_connected2(
+    sms_read1, sms_read2, seq_read1, seq_read2, strand1, strand2, SM_align=False
+) -> tuple:
+    """Test whether two SMS tuples of chimeric reads can be connected or not.
+    :param sms_read1: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read1 OR path
+    :type sms_read1: tuple
+    :param sms_read2: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read2 OR path
+    :type sms_read2: tuple
+    :param seq_read1: reads sequence (as it is stored in the BAM file) of read2 OR path
+    :type seq_read1: str
+    :param seq_read2: reads sequence (as it is stored in the BAM file) of read2 OR path
+    :type seq_read2: str
+    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
+    :type allowed_difference: int
+    :param SM_align: whether use the alignment of softclipped segment of one read and matched segment of another read
+    :type SM_align: bool
+    :return: is_connected flag, summed 'SMS' value, summed 'Reads' sequence, mode for read1 and read2
+    :rtype: tuple
+    ..note:
+       ------>    ---------->     ---------->    ---------->
+       MMMMMM VS. SSSSSSSSSS   => MMMMMM      OR     MMMMMM
+                                  SSSSSSSSSS     SSSSSSSSSS
+       <------    <----------     <----------    <----------
+        MMMMMM VS. SSSSSSSSSS   =>     MMMMMM OR  MMMMMM
+                                   SSSSSSSSSS     SSSSSSSSSS
+    """
+
+    def propinquity(a, b, allowed_difference) -> bool:
+        if abs(a - b) <= allowed_difference:
+            return True
+        else:
+            return False
+
+    def init_mode_judge(sms) -> int:
+        _lt, _read_match, _rt = sms
+        # SM
+        if _lt > _rt:
+            return 2
+        # MS
+        else:
+            return 1
+
+    def SM_alignment(query_seq, target_seq, same_strand=True) -> bool:
+        """matched segment of read1 align to softclipped segment of read2
+        solve the problem that the length of the left softclipped segment and the right softclipped segment may be quite similar, eliminate the ambiguity of connected reads
+        :param query_seq: matched segment of read1 (M)
+        :param target_seq: softclipped segment of read2 (S)
+        :param same_strand: read1 and read2 one the same strand or not
+        :type query_seq: str
+        :type target_seq: str
+        :type same_strand: bool
+        """
+        if not same_strand:
+            target_seq = str(Seq(target_seq).reverse_complement())
+
+        allowed_mismatches = abs(len(target_seq) - len(query_seq))
+        # print('allowed_mismatches:', allowed_mismatches)
+        alignment_result = aligner(query_seq, target_seq, method="glocal")[0]
+        _query_seq = alignment_result.seq1.decode("utf-8")
+        _target_seq = alignment_result.seq2.decode("utf-8")
+        _query_seq_len = len(_query_seq)
+        _target_seq_len = len(_target_seq)
+        _query_start, _query_end = alignment_result.start1, alignment_result.end1 - 1
+        _target_start, _target_end = alignment_result.start2, alignment_result.end2 - 1
+        aln_len = _query_end - _query_start + 1
+        total_mismatches = len(_query_seq) - aln_len + alignment_result.n_mismatches
+
+        # print('query_seq :', query_seq,  'target_seq :', target_seq)
+        # print('total_mismatches :', total_mismatches, _query_seq, _target_seq)
+
+        if total_mismatches <= allowed_mismatches:
+            return True
+        else:
+            return False
+
+    _lt_len_r1, _read_match_r1, _rt_len_r1 = sms_read1
+    _lt_len_r2, _read_match_r2, _rt_len_r2 = sms_read2
+
+    same_strand = None
+    if seq_read1 == seq_read2:
+        same_strand = True
+    else:
+        same_strand = False
+
+    mode_r1 = init_mode_judge(sms_read1)
+    mode_r2 = init_mode_judge(sms_read2)
+
+    is_connected = False
+    out_lt_len = 0
+    out_rt_len = 0
+    out_read_match = 0
+    out_seq = ""
+
+    if SM_align:
+        if SM_alignment(
+            seq_read1[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
+            seq_read2[:_lt_len_r2],
+            same_strand,
+        ):
+            is_connected = True
+            out_lt_len = 0
+            out_read_match = _lt_len_r2 + _read_match_r2
+            out_rt_len = _rt_len_r2
+            mode_r2 = 2
+            out_seq = seq_read2
+        else:
+            is_connected = True
+            out_lt_len = 0
+            out_read_match = _lt_len_r2 + _read_match_r2
+            out_rt_len = _rt_len_r2
+            mode_r2 = 2
+            out_seq = seq_read2
+
+    if propinquity(_read_match_r1, _rt_len_r2, allowed_difference):
+        if SM_align:
+            if SM_alignment(
+                seq_read1[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
+                seq_read2[-_rt_len_r2:],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = _lt_len_r2
+                out_read_match = _read_match_r2 + _rt_len_r2
+                out_rt_len = 0
+                mode_r2 = 1
+                out_seq = seq_read2
+        else:
+            is_connected = True
+            out_lt_len = _lt_len_r2
+            out_read_match = _read_match_r2 + _rt_len_r2
+            out_rt_len = 0
+            mode_r2 = 1
+            out_seq = seq_read2
+
+    if propinquity(_read_match_r2, _lt_len_r1, allowed_difference):
+        if SM_align:
+            if SM_alignment(
+                seq_read2[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
+                seq_read1[:_lt_len_r1],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = 0
+                out_read_match = _lt_len_r1 + _read_match_r1
+                out_rt_len = _rt_len_r1
+                mode_r1 = 2
+                out_seq = seq_read1
+        else:
+            is_connected = True
+            out_lt_len = 0
+            out_read_match = _lt_len_r1 + _read_match_r1
+            out_rt_len = _rt_len_r1
+            mode_r1 = 2
+            out_seq = seq_read1
+
+    if propinquity(_read_match_r2, _rt_len_r1, allowed_difference):
+        if SM_align:
+            if SM_alignment(
+                seq_read2[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
+                seq_read1[-_rt_len_r1:],
+                same_strand,
+            ):
+                is_connected = True
+                out_lt_len = _rt_len_r1
+                out_read_match = _read_match_r1 + _rt_len_r1
+                out_rt_len = 0
+                mode_r1 = 1
+                out_seq = seq_read1
+        else:
+            is_connected = True
+            out_lt_len = _rt_len_r1
+            out_read_match = _read_match_r1 + _rt_len_r1
+            out_rt_len = 0
+            mode_r1 = 1
+            out_seq = seq_read1
+
+    return (
+        is_connected,
+        (out_lt_len, out_read_match, out_rt_len),
+        out_seq,
+        (mode_r1, mode_r2),
+    )
+
+
 def chimeric_aln_order_finder(
     aln_list, allowed_difference=80, soft_len_cutoff=30
 ) -> tuple:
@@ -1186,7 +1370,7 @@ def chimeric_aln_order_finder(
     if len(start_nodes) == 2:
         # print('len(start_nodes) == 2')
         if len(candidate_nodes) == 0:
-            _is_connected, _, _, _mode = test_is_connected(
+            _is_connected, _sum_sms, _sum_seq, _mode = test_is_connected(
                 start_nodes[0].sms,
                 start_nodes[1].sms,
                 start_nodes[0].query_sequence,
