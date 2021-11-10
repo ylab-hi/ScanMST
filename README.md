@@ -1,23 +1,12 @@
 # ScanNLS
 
-|PyPI| |Status| |Python Version| |License|
-
-|Read the Docs| |Tests| |Codecov|
-
-|pre-commit| |Black|
-
 [![PyPI](https://img.shields.io/pypi/v/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "PyPI")
 [![Status](https://img.shields.io/pypi/status/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "Status")
 [![Python Version](https://img.shields.io/pypi/pyversions/ScanNLS)](https://pypi.org/project/ScanNLS "Python Version")
 [![License](https://img.shields.io/pypi/l/ScanNLS)](https://opensource.org/licenses/MIT "License")
 [![Read the Docs](https://img.shields.io/readthedocs/ScanNLS/latest.svg?label=Read%20the%20Docs)](https://ScanNLS.readthedocs.io/ "Read the documentation at https://ScanNLS.readthedocs.io/")
-.. |Tests| image:: https://github.com/ylab-hi/ScanNLS/workflows/Tests/badge.svg
-:target: https://github.com/ylab-hi/ScanNLS/actions?workflow=Tests
-:alt: Tests
-.. |Codecov| image:: https://codecov.io/gh/ylab-hi/ScanNLS/branch/main/graph/badge.svg
-:target: https://codecov.io/gh/ylab-hi/ScanNLS
-:alt: Codecov
-
+[![Tests](https://github.com/ylab-hi/ScanNLS/workflows/Tests/badge.svg)](https://github.com/ylab-hi/ScanNLS/actions?workflow=Tests "Tests")
+[![Codecov](https://codecov.io/gh/ylab-hi/ScanNLS/branch/main/graph/badge.svg)](https://codecov.io/gh/ylab-hi/ScanNLS "Codecov")
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit "pre-commit")
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black "Black")
 
@@ -27,7 +16,9 @@
 
 ## Requirements
 
-- TODO
+- Python3.7 and above
+- [align (https://github.com/brentp/align)](https://github.com/brentp/align)
+- Biopython
 
 ## Installation
 
