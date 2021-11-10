@@ -63,8 +63,8 @@ class Read(object):
     """build a read class for storing information of every junction read
     :param chrom: chromosome of genome
     :type chrom: str
-    :param position: start position of chimeric read
-    :type start: int
+    :param ref_start: start position of chimeric read
+    :type ref_start: int
     :param strand: direction of chimeric read (-|+)
     :type strand: str
     :param cigar_str: cigar string of chimeric read (-|+)
