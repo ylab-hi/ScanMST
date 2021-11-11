@@ -83,7 +83,7 @@ def get_softclip_length(read):
             else:
                 return (
                     read.cigartuples[-1][1],
-                    read.query_sequence[read.query_length - read.cigartuples[-1][1]:],
+                    read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
                     read.ref_end - 1,
                     1,
                 )
@@ -99,7 +99,7 @@ def get_softclip_length(read):
     elif read.cigartuples[-1][0] == 4:
         return (
             read.cigartuples[-1][1],
-            read.query_sequence[read.query_length - read.cigartuples[-1][1]:],
+            read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
             read.ref_end - 1,
             1,
         )

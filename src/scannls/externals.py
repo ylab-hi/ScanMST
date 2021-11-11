@@ -248,7 +248,7 @@ def blat_mapq_calculator(hsps, query_len, blat_ident_pct_cutoff=0.95) -> int:
     """MAPQ calculation using BLAT HSPs
 
     :param hsps: BLAT HSPs
-    :param query_len: query sequence length (softclipped segment length)
+    :param query_len: query sequence length
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :type hsps: list (BLAT HSPs)
     :type query_len: int

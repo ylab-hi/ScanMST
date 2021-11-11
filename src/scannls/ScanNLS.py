@@ -17,14 +17,16 @@ import time
 from collections import defaultdict
 
 from Bio.Seq import Seq
-from pyfaidx import Fasta, FastaNotFoundError
+from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
 from . import __version__
 from .classes import LengthAction
 from .classes import Path
 from .classes import Read
 from .classes import Series
-from .common import remove, get_softclip_length
+from .common import get_softclip_length
+from .common import remove
 from .common import remove_files
 from .common import status_message
 from .externals import blat_mapq_calculator

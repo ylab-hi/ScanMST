@@ -10,7 +10,7 @@
 /src/*.egg-info/
 __pycache__/
 
-# editor 
+# editor
 .idea/
-# jupyter notebook 
+# jupyter notebook
 *.ipynb
