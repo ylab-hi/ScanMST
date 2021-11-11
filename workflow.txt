@@ -1,0 +1,10 @@
+#1
+a) ScanNLS.detect_read_read_connections_from_cigar => ScanNLS.detect_sv_from_cigar => ScanNLS.softclipping_realignment
+b) utils.infer_sv_from_connected_reads
+
+#2
+utils.test_is_connected => utils.chimeric_aln_order_finder => ScanNLS.detect_read_read_connections_from_cigar
+
+#3
+a) utils.short_TDUP_or_not => utils.infer_sv_from_connected_reads
+b) update_breakpoints
