@@ -1,39 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import copy
 import glob
-import logging
-import math
 import os
-import random
-import re
 import subprocess
 import sys
-import time
-from collections import defaultdict
-from collections import OrderedDict
-from typing import Iterable
-
-import psutil
-from align import aligner
-from Bio import SearchIO
-from Bio.Seq import Seq
-from pyfaidx import Fasta
-
 
 try:
     import pysam
-except:
-    sys.exit("pysam module not found.\nPlease install it before.")
-try:
     import numpy as np
-except:
-    sys.exit("numpy module not found.\nPlease install it before.")
-try:
     import HTSeq
-except:
-    sys.exit("HTSeq module not found.\nPlease install it before.")
+except ModuleNotFoundError as e:
+    raise SystemExit(e.msg)
 
 
 def remove(infile):
@@ -106,7 +83,7 @@ def get_softclip_length(read):
             else:
                 return (
                     read.cigartuples[-1][1],
-                    read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
+                    read.query_sequence[read.query_length - read.cigartuples[-1][1]:],
                     read.ref_end - 1,
                     1,
                 )
@@ -122,7 +99,7 @@ def get_softclip_length(read):
     elif read.cigartuples[-1][0] == 4:
         return (
             read.cigartuples[-1][1],
-            read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
+            read.query_sequence[read.query_length - read.cigartuples[-1][1]:],
             read.ref_end - 1,
             1,
         )
