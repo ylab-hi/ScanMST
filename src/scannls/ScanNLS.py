@@ -8,31 +8,24 @@ modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
 
 """
 import argparse
-import copy
-import glob
-import logging
-import math
 import os
-import random
 import re
 import subprocess
 import sys
 import textwrap
 import time
 from collections import defaultdict
-from collections import OrderedDict
-from typing import Iterable
 
-from align import aligner
-from Bio import SearchIO
 from Bio.Seq import Seq
 from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
 from . import __version__
 from .classes import LengthAction
 from .classes import Path
 from .classes import Read
 from .classes import Series
+from .common import get_softclip_length
 from .common import remove
 from .common import remove_files
 from .common import status_message
@@ -59,22 +52,14 @@ from .utils import update_breakpoints
 
 # from .call import sv_scan
 
+
 try:
     import pysam
-except:
-    sys.exit("pysam module not found.\nPlease install it before.")
-try:
     import numpy as np
-except:
-    sys.exit("numpy module not found.\nPlease install it before.")
-try:
     import HTSeq
-except:
-    sys.exit("HTSeq module not found.\nPlease install it before.")
-try:
     import skbio
-except:
-    sys.exit("scikit-bio module not found.\nPlease install it before.")
+except ModuleNotFoundError as e:
+    raise SystemExit(e.msg)
 
 
 def detect_read_read_connections_from_cigar(
@@ -483,7 +468,7 @@ def softclipping_realignment(
                         read_length = int(read.query_length)
                         # assert read.cigarstring, f"{read.query_name}" # TEST
                         _, _soft_seq, _, read_mode = get_softclip_length(read)
-                        soft_seq = Seq(_soft_seq)
+                        __soft_seq = Seq(_soft_seq)
                         if read.is_reverse:
                             soft_seq_ori = str(__soft_seq.reverse_complement())
                         else:
@@ -956,6 +941,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         # stop gfserver
-        stop_gfServer(port=options.port, output_dir=options.tmp_dir)
         sys.stderr.write("User interrupt me ^_^ \n")
         sys.exit(1)

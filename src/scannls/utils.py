@@ -1,24 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
 import copy
-import glob
-import logging
-import math
-import os
-import random
 import re
-import subprocess
 import sys
-import time
 from collections import defaultdict
-from collections import OrderedDict
-from typing import Iterable
 
 from align import aligner
-from Bio import SearchIO
 from Bio.Seq import Seq
-from pyfaidx import Fasta
 
 from . import __version__
 from .classes import Path
@@ -26,16 +14,10 @@ from .common import transcript_upstream_part_determiner
 
 try:
     import pysam
-except:
-    sys.exit("pysam module not found.\nPlease install it before.")
-try:
     import numpy as np
-except:
-    sys.exit("numpy module not found.\nPlease install it before.")
-try:
     import HTSeq
-except:
-    sys.exit("HTSeq module not found.\nPlease install it before.")
+except ModuleNotFoundError as e:
+    raise SystemExit(e.msg)
 
 __funcs__ = {"extract_splice_sites", "junc_site_checker"}
 
@@ -959,190 +941,6 @@ def test_is_connected(
                 out_rt_len = _rt_len_r2
                 mode_r2 = 2
                 out_seq = seq_read2
-        else:
-            is_connected = True
-            out_lt_len = 0
-            out_read_match = _lt_len_r2 + _read_match_r2
-            out_rt_len = _rt_len_r2
-            mode_r2 = 2
-            out_seq = seq_read2
-
-    if propinquity(_read_match_r1, _rt_len_r2, allowed_difference):
-        if SM_align:
-            if SM_alignment(
-                seq_read1[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
-                seq_read2[-_rt_len_r2:],
-                same_strand,
-            ):
-                is_connected = True
-                out_lt_len = _lt_len_r2
-                out_read_match = _read_match_r2 + _rt_len_r2
-                out_rt_len = 0
-                mode_r2 = 1
-                out_seq = seq_read2
-        else:
-            is_connected = True
-            out_lt_len = _lt_len_r2
-            out_read_match = _read_match_r2 + _rt_len_r2
-            out_rt_len = 0
-            mode_r2 = 1
-            out_seq = seq_read2
-
-    if propinquity(_read_match_r2, _lt_len_r1, allowed_difference):
-        if SM_align:
-            if SM_alignment(
-                seq_read2[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
-                seq_read1[:_lt_len_r1],
-                same_strand,
-            ):
-                is_connected = True
-                out_lt_len = 0
-                out_read_match = _lt_len_r1 + _read_match_r1
-                out_rt_len = _rt_len_r1
-                mode_r1 = 2
-                out_seq = seq_read1
-        else:
-            is_connected = True
-            out_lt_len = 0
-            out_read_match = _lt_len_r1 + _read_match_r1
-            out_rt_len = _rt_len_r1
-            mode_r1 = 2
-            out_seq = seq_read1
-
-    if propinquity(_read_match_r2, _rt_len_r1, allowed_difference):
-        if SM_align:
-            if SM_alignment(
-                seq_read2[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
-                seq_read1[-_rt_len_r1:],
-                same_strand,
-            ):
-                is_connected = True
-                out_lt_len = _rt_len_r1
-                out_read_match = _read_match_r1 + _rt_len_r1
-                out_rt_len = 0
-                mode_r1 = 1
-                out_seq = seq_read1
-        else:
-            is_connected = True
-            out_lt_len = _rt_len_r1
-            out_read_match = _read_match_r1 + _rt_len_r1
-            out_rt_len = 0
-            mode_r1 = 1
-            out_seq = seq_read1
-
-    return (
-        is_connected,
-        (out_lt_len, out_read_match, out_rt_len),
-        out_seq,
-        (mode_r1, mode_r2),
-    )
-
-
-def test_is_connected2(
-    sms_read1, sms_read2, seq_read1, seq_read2, strand1, strand2, SM_align=False
-) -> tuple:
-    """Test whether two SMS tuples of chimeric reads can be connected or not.
-    :param sms_read1: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read1 OR path
-    :type sms_read1: tuple
-    :param sms_read2: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length) of read2 OR path
-    :type sms_read2: tuple
-    :param seq_read1: reads sequence (as it is stored in the BAM file) of read2 OR path
-    :type seq_read1: str
-    :param seq_read2: reads sequence (as it is stored in the BAM file) of read2 OR path
-    :type seq_read2: str
-    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
-    :type allowed_difference: int
-    :param SM_align: whether use the alignment of softclipped segment of one read and matched segment of another read
-    :type SM_align: bool
-    :return: is_connected flag, summed 'SMS' value, summed 'Reads' sequence, mode for read1 and read2
-    :rtype: tuple
-    ..note:
-       ------>    ---------->     ---------->    ---------->
-       MMMMMM VS. SSSSSSSSSS   => MMMMMM      OR     MMMMMM
-                                  SSSSSSSSSS     SSSSSSSSSS
-       <------    <----------     <----------    <----------
-        MMMMMM VS. SSSSSSSSSS   =>     MMMMMM OR  MMMMMM
-                                   SSSSSSSSSS     SSSSSSSSSS
-    """
-
-    def propinquity(a, b, allowed_difference) -> bool:
-        if abs(a - b) <= allowed_difference:
-            return True
-        else:
-            return False
-
-    def init_mode_judge(sms) -> int:
-        _lt, _read_match, _rt = sms
-        # SM
-        if _lt > _rt:
-            return 2
-        # MS
-        else:
-            return 1
-
-    def SM_alignment(query_seq, target_seq, same_strand=True) -> bool:
-        """matched segment of read1 align to softclipped segment of read2
-        solve the problem that the length of the left softclipped segment and the right softclipped segment may be quite similar, eliminate the ambiguity of connected reads
-        :param query_seq: matched segment of read1 (M)
-        :param target_seq: softclipped segment of read2 (S)
-        :param same_strand: read1 and read2 one the same strand or not
-        :type query_seq: str
-        :type target_seq: str
-        :type same_strand: bool
-        """
-        if not same_strand:
-            target_seq = str(Seq(target_seq).reverse_complement())
-
-        allowed_mismatches = abs(len(target_seq) - len(query_seq))
-        # print('allowed_mismatches:', allowed_mismatches)
-        alignment_result = aligner(query_seq, target_seq, method="glocal")[0]
-        _query_seq = alignment_result.seq1.decode("utf-8")
-        _target_seq = alignment_result.seq2.decode("utf-8")
-        _query_seq_len = len(_query_seq)
-        _target_seq_len = len(_target_seq)
-        _query_start, _query_end = alignment_result.start1, alignment_result.end1 - 1
-        _target_start, _target_end = alignment_result.start2, alignment_result.end2 - 1
-        aln_len = _query_end - _query_start + 1
-        total_mismatches = len(_query_seq) - aln_len + alignment_result.n_mismatches
-
-        # print('query_seq :', query_seq,  'target_seq :', target_seq)
-        # print('total_mismatches :', total_mismatches, _query_seq, _target_seq)
-
-        if total_mismatches <= allowed_mismatches:
-            return True
-        else:
-            return False
-
-    _lt_len_r1, _read_match_r1, _rt_len_r1 = sms_read1
-    _lt_len_r2, _read_match_r2, _rt_len_r2 = sms_read2
-
-    same_strand = None
-    if seq_read1 == seq_read2:
-        same_strand = True
-    else:
-        same_strand = False
-
-    mode_r1 = init_mode_judge(sms_read1)
-    mode_r2 = init_mode_judge(sms_read2)
-
-    is_connected = False
-    out_lt_len = 0
-    out_rt_len = 0
-    out_read_match = 0
-    out_seq = ""
-
-    if SM_align:
-        if SM_alignment(
-            seq_read1[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
-            seq_read2[:_lt_len_r2],
-            same_strand,
-        ):
-            is_connected = True
-            out_lt_len = 0
-            out_read_match = _lt_len_r2 + _read_match_r2
-            out_rt_len = _rt_len_r2
-            mode_r2 = 2
-            out_seq = seq_read2
         else:
             is_connected = True
             out_lt_len = 0
@@ -2880,7 +2678,7 @@ def output_bedpe_file(sr_dict, group_dict, prefix, splice_bin):
         pos2 = int(pos2)
         if pos1 - splice_bin > 0 and pos2 - splice_bin > 0:
             output.write(
-                f"{chrm1}\t{pos1-splice_bin}\t{pos1+splice_bin}\t{chrm2}\t{pos2-splice_bin}\t{pos2+splice_bin}\tgroup_{num_of_group}\t{sr}\t{strand1}\t{strand2}\n"
+                f"{chrm1}\t{pos1 - splice_bin}\t{pos1 + splice_bin}\t{chrm2}\t{pos2 - splice_bin}\t{pos2 + splice_bin}\tgroup_{num_of_group}\t{sr}\t{strand1}\t{strand2}\n"
             )
     output.close()
     return output

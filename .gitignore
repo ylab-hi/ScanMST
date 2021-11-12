@@ -9,3 +9,8 @@
 /docs/_build/
 /src/*.egg-info/
 __pycache__/
+
+# editor
+.idea/
+# jupyter notebook
+*.ipynb
