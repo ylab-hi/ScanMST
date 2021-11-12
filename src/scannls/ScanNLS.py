@@ -208,6 +208,7 @@ def detect_sv_from_cigar(
     cvg,
     gene_iv,
     motif_required,
+    update_bps=False,
 ) -> list:
     """
     :param chrm: chromosome
@@ -270,6 +271,7 @@ def detect_sv_from_cigar(
                     cvg,
                     gene_iv,
                     motif_required,
+                    update_bps,
                 )
 
                 if nls_type != "NA":
