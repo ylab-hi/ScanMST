@@ -21,7 +21,7 @@ from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from . import __version__
-from .classes import LengthAction
+from .classes import LengthAction, ReadsConnecter
 from .classes import Path
 from .classes import Read
 from .classes import Series
@@ -39,7 +39,6 @@ from .externals import softclipped_seq2SA_tag
 from .externals import start_gfServer
 from .externals import stop_gfServer
 from .utils import aggregate_candidates
-from .utils import chimeric_aln_order_finder
 from .utils import extract_splice_sites
 from .utils import gene_annotation
 from .utils import infer_sv_from_connected_reads
@@ -47,7 +46,6 @@ from .utils import output_bedpe_file
 from .utils import short_TDUP_or_not
 from .utils import similar_hit
 from .utils import splicing_confirmation
-from .utils import test_is_connected
 from .utils import update_breakpoints
 
 # from .call import sv_scan
@@ -63,18 +61,15 @@ except ModuleNotFoundError as e:
 
 
 def detect_read_read_connections_from_cigar(
-    chrm, read, mapq_cutoff, allowed_difference
+        read, mapq_cutoff, ref_2bit, port=88888
 ) -> tuple:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
-    :param chrm: chromosome of input read
-    :param read: read of pysam.AlignedSegment object, expecting representative read with SA tag
+    :param ref_2bit:
+    :param port:
     :param mapq_cutoff: MAPQ cutoff
-    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
-    :type chrm: str
     :type read: pysam.AlignedSegment object
     :type mapq_cutoff: int
-    :type allowed_difference: int
     :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) => mode-of-Read1, mode-of-Read2
     :rtype: tuple
     .. note::
@@ -168,38 +163,36 @@ def detect_read_read_connections_from_cigar(
                 Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa)
             )
 
-    # for i in chimeric_aln_list:
-    #    print(i, '*', i.reference_match_size,'|', i.sms)
-
     if not chimeric_aln_list:
         return [], {}
     else:
-        read_to_read_chains, reads_pair_mode_dict = chimeric_aln_order_finder(
-            chimeric_aln_list, allowed_difference
-        )
+        read_connecter = ReadsConnecter(aln_list=chimeric_aln_list,
+                                        ref_2bit=ref_2bit,
+                                        port=port)
+        read_connecter.run()
 
-        # print(read_to_read_chains, reads_pair_mode_dict)
-        # print('Read-to-Read chain: ',read_to_read_chains)
-        return read_to_read_chains, reads_pair_mode_dict
+        return read_connecter.reads_chain, read_connecter.read_pair_mode_dict, read_connecter.insertion_dict
 
 
 def detect_sv_from_cigar(
-    chrm,
-    read,
-    mapq_cutoff,
-    splice_bin,
-    allowed_difference,
-    genome_fasta,
-    cvg,
-    gene_iv,
-    motif_required,
+        chrm,
+        read,
+        mapq_cutoff,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        gene_iv,
+        motif_required,
+        ref_2bit,
+        port=88888,
 ) -> list:
     """
+    :param port:
+    :param ref_2bit:
     :param chrm: chromosome
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param splice_bin: a small bin for splice site searching
-    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
     :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
@@ -208,7 +201,6 @@ def detect_sv_from_cigar(
     :type read: pysam.AlignedSegment
     :type mapq_cutoff: int
     :type splice_bin: int
-    :type allowed_difference: int
     :type genome_fasta: pyfaidx.Fasta
     :type cvg: HTSeq.GenomicArrayOfSets
     :type gene_iv: HTSeq.GenomicArrayOfSets
@@ -216,9 +208,10 @@ def detect_sv_from_cigar(
     :return: event groups in a list, every group is also a list
     :rtype: list (list of lists)
     """
-    read_to_read_chains, reads_pair_mode_dict = detect_read_read_connections_from_cigar(
-        chrm, read, mapq_cutoff, allowed_difference
+    read_to_read_chains, reads_pair_mode_dict, insertion_dict = detect_read_read_connections_from_cigar(
+        read, mapq_cutoff, ref_2bit, port
     )
+    read_to_read_chains = [read_to_read_chains]
 
     print("Read-to-Read chain: ", read_to_read_chains)
     print("Read-to-Read pair modes: ", reads_pair_mode_dict)
@@ -279,21 +272,20 @@ def detect_sv_from_cigar(
 
 
 def softclipping_realignment(
-    input_bam,
-    mapq_cutoff,
-    output,
-    ref_genome,
-    gtf,
-    splice_bin,
-    ref_2bit,
-    motif_required=True,
-    blat=False,
-    port=88888,
-    output_dir="/tmp",
-    blat_ident_pct_cutoff=0.9,
-    max_allowed_nm=50,
-    min_soft_seg_len=200,
-    allowed_difference=30,
+        input_bam,
+        mapq_cutoff,
+        output,
+        ref_genome,
+        gtf,
+        splice_bin,
+        ref_2bit,
+        motif_required=True,
+        blat=False,
+        port=88888,
+        output_dir="/tmp",
+        blat_ident_pct_cutoff=0.9,
+        max_allowed_nm=50,
+        min_soft_seg_len=200,
 ):
     """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
        (2) add SA tag for reads with long length of softclipped segment using BLAT (Optional)
@@ -359,7 +351,7 @@ def softclipping_realignment(
         print("read GTF file " + gtf + " error!", e)
         sys.exit(1)
 
-    ## supplementary alignment cigarstring extraction
+    # supplementary alignment cigarstring extraction
     # key: read.query_name + left S + right S
     # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
     representative_alignments_new_cigar = {}
@@ -389,17 +381,16 @@ def softclipping_realignment(
             file=sys.stderr,
         )
         sys.exit(1)
-    # print(representative_alignments_new_cigar)
 
-    ## update SA tags and iterate the BAM file
+    # update SA tags and iterate the BAM file
     # in_bam = pysam.AlignmentFile(input_bam, "rb")
     try:
         for read in in_bam.fetch(until_eof=False):
             if (
-                read.mapq >= mapq_cutoff
-                and not read.is_secondary
-                and not read.has_tag("XA")
-                and not read.is_unmapped
+                    read.mapq >= mapq_cutoff
+                    and not read.is_secondary
+                    and not read.has_tag("XA")
+                    and not read.is_unmapped
             ):
                 chrm = read.reference_name
                 # update SA tag of representative alignments (START)
@@ -434,8 +425,8 @@ def softclipping_realignment(
                             ]
                             # discard supplementary alignments with too many mismatches or lower MAPQ
                             if not (
-                                int(__nm_sa) > max_allowed_nm
-                                or int(__mapq_sa) < mapq_cutoff
+                                    int(__nm_sa) > max_allowed_nm
+                                    or int(__mapq_sa) < mapq_cutoff
                             ):
                                 updated_chimeric_alns.append(
                                     "{},{},{},{},{},{}".format(
@@ -472,9 +463,9 @@ def softclipping_realignment(
                         else:
                             soft_seq_ori = str(__soft_seq)
                         if (
-                            read_mode in {1, 2}
-                            and soft_seq_ori
-                            and len(soft_seq_ori) >= min_soft_seg_len
+                                read_mode in {1, 2}
+                                and soft_seq_ori
+                                and len(soft_seq_ori) >= min_soft_seg_len
                         ):
                             chimeric_aln_str = softclipped_seq2SA_tag(
                                 soft_seq_ori,
@@ -499,11 +490,12 @@ def softclipping_realignment(
                         read,
                         mapq_cutoff,
                         splice_bin,
-                        allowed_difference,
                         genome_fasta,
                         cvg,
                         gene_iv,
                         motif_required,
+                        ref_2bit,
+                        port
                     )
                     # TODO
                     sv_tag_list = []
@@ -530,12 +522,12 @@ def softclipping_realignment(
                                 # SV tag uses SA tag corrdinate system (start with 1)
                                 # So, position should always add 1
                                 sv_tag_list.append(
-                                    f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1)+1},{_chrm2}:{int(_pos2)+1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                                    f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                                 )
                                 nls_event_list.append(event)
 
-                                event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
-                                reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2)+1}\t{_chrm1}:{int(_pos1)+1}\t{_strand2}{_strand1}"
+                                event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:{int(_pos2) + 1}\t{_strand1}{_strand2}"
+                                reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t{_strand2}{_strand1}"
                                 if event_key in candidate_ao_dict:
                                     candidate_ao_dict[event_key] += 1
                                 elif reversed_event_key in candidate_ao_dict:
@@ -665,7 +657,7 @@ def parse_args():
         "--blat",
         action="store_true",
         dest="blat",
-        default=False,
+        default=True,
         help="Using BLAT to remap softclipped reads (default: %(default)s)",
     )
     build_parser.add_argument(
@@ -868,15 +860,18 @@ def main():
         if use_blat:
             # start gfserver
             print("starting gfserver\n")
+
             if not checkIfProcessRunning("gfServer"):
-                start_gfServer(
-                    ref_2bit=options.two_bit,
-                    port=options.port,
-                    output_dir=options.tmp_dir,
-                )
+                pass
+                # start_gfServer(
+                #     ref_2bit=options.two_bit,
+                #     port=options.port,
+                #     output_dir=options.tmp_dir,
+                # )
 
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
+
         softclipping_realignment(
             input_bam=options.input,
             mapq_cutoff=options.mapq,
@@ -892,12 +887,12 @@ def main():
             blat_ident_pct_cutoff=options.ident_cutoff,
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
-            allowed_difference=options.allowed_difference,
         )
 
         if use_blat:
-            # stop gfserver
-            stop_gfServer(port=options.port, output_dir=options.tmp_dir)
+            pass
+            # # stop gfserver
+            # stop_gfServer(port=options.port, output_dir=options.tmp_dir)
 
         print("ScanNLS build running done: " + time.strftime("%Y-%m-%d %H:%M:%S"))
         end = time.time()

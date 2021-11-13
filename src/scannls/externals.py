@@ -10,10 +10,8 @@ import time
 import psutil
 from Bio import SearchIO
 
-from . import __version__
 from .common import remove
 from .common import remove_files
-
 
 try:
     import pysam
@@ -41,6 +39,7 @@ def checkIfProcessRunning(processName):
 def start_gfServer(ref_2bit, timeout=300, port=88888, output_dir="/tmp"):
     """gfServer should run at the directory where gfServer, gfClient and hg38.2bit located"""
     sys.stderr.write("Starting BLAT gfServer\n")
+
     if ref_2bit.startswith("~"):
         abs_2bit = os.path.join(os.path.expanduser("~"), ref_2bit.replace("~/", ""))
         ref_dir = os.path.dirname(abs_2bit)
@@ -49,13 +48,17 @@ def start_gfServer(ref_2bit, timeout=300, port=88888, output_dir="/tmp"):
         abs_2bit = os.path.abspath(ref_2bit)
         ref_dir = os.path.dirname(abs_2bit)
         base_2bit = os.path.basename(abs_2bit)
+
     cwd = os.path.abspath(os.getcwd())
+
     sys.stderr.write("BLAT 2bit file location: {}\n".format(ref_dir))
     sys.stderr.write("Current directory: {}\n".format(cwd))
+
     if os.path.isabs(output_dir):
         log_dir = output_dir
     else:
         log_dir = os.path.join(cwd, output_dir)
+
     # change to blat directory
     os.chdir(ref_dir)
     sys.stderr.write("Current directory: {}\n".format(os.getcwd()))
@@ -108,9 +111,11 @@ def stop_gfServer(port=88888, output_dir="/tmp"):
     remove_files("{}/*.temp.log".format(output_dir))
 
 
-def gfClient_query(in_seq, ref_2bit, port=88888, output_dir="/tmp") -> str:
+def gfClient_query(in_seq, ref_2bit,  port=88888, output_dir="/tmp", miniIdentity=90) -> str:
     """Using gfClient to query 'in_seq' to generate alignment file (in PSL format).
 
+    :param miniIdentity: the threshold of the identity for aligning
+    :type miniIdentity: int
     :param in_seq: sequence of softclipped segment
     :type in_seq: str
     :param ref_2bit: reference genome (in 2bit format)
@@ -147,10 +152,10 @@ def gfClient_query(in_seq, ref_2bit, port=88888, output_dir="/tmp") -> str:
         log_dir = os.path.join(cwd, output_dir)
 
     os.chdir(ref_dir)
-    # print(os.getcwd())
+
     try:
-        cmd = "gfClient -minScore=20 -minIdentity=0 localhost {} {} {} {} > /dev/null".format(
-            port, ref_dir, in_fasta, out_psl
+        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} {} {} {} > /dev/null".format(
+            miniIdentity, port, ref_dir, in_fasta, out_psl
         )
         # print(in_seq, in_fasta)
         ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
@@ -163,9 +168,7 @@ def gfClient_query(in_seq, ref_2bit, port=88888, output_dir="/tmp") -> str:
         )
         sys.exit(1)
     os.chdir(cwd)
-    # print(os.getcwd())
     remove(in_fasta)
-    # remove(out_psl)
     return out_psl
 
 
@@ -266,8 +269,8 @@ def blat_mapq_calculator(hsps, query_len, blat_ident_pct_cutoff=0.95) -> int:
     num_of_locations = 0
     for hsp in hsps:
         if (
-            hsp.ident_pct / 100 >= blat_ident_pct_cutoff
-            and hsp.query_span / query_len >= blat_ident_pct_cutoff
+                hsp.ident_pct / 100 >= blat_ident_pct_cutoff
+                and hsp.query_span / query_len >= blat_ident_pct_cutoff
         ):
             num_of_locations += 1
     if num_of_locations == 1:
@@ -310,16 +313,16 @@ def cigar_validity(cigar_str) -> str:
 
 
 def softclipped_seq2SA_tag(
-    in_seq,
-    read_length,
-    read_strand,
-    read_mode,
-    ref_2bit,
-    port,
-    mapq_cutoff,
-    max_allowed_nm,
-    output_dir="/tmp",
-    blat_ident_pct_cutoff=0.95,
+        in_seq,
+        read_length,
+        read_strand,
+        read_mode,
+        ref_2bit,
+        port,
+        mapq_cutoff,
+        max_allowed_nm,
+        output_dir="/tmp",
+        blat_ident_pct_cutoff=0.95,
 ) -> str:
     """
     create chimeric alignments from the alignments which has a long softclipped segment but without SA tag
@@ -348,7 +351,8 @@ def softclipped_seq2SA_tag(
     :rtype: str
     """
     in_seq_len = len(in_seq)
-    psl_file = gfClient_query(in_seq, ref_2bit, port, output_dir)
+    psl_file = gfClient_query(in_seq=in_seq, ref_2bit=ref_2bit,  port=port,
+                              output_dir="/tmp")
     chimeric_aln_str = ""
     try:
         blat = SearchIO.read(psl_file, "blat-psl")
@@ -361,8 +365,8 @@ def softclipped_seq2SA_tag(
         remove(psl_file)
         __mapq = blat_mapq_calculator(hsps, in_seq_len, blat_ident_pct_cutoff)
         if (
-            top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
-            and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
+                top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
+                and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
         ):
             __chrm_sa, __pos_sa, __strand_sa, __cigar_sa_partial, __nm_sa = psl2sam(
                 top_hsp, in_seq_len
