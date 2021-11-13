@@ -2,13 +2,22 @@
 # -*- coding: utf-8 -*-
 # ===========================================================
 import argparse
+import os
+import random
 import re
+import subprocess
+import sys
+import time
 from collections import namedtuple
+from multiprocessing import Process
+from pathlib import Path
 
+import psutil
 from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
 
+from scannls.common import remove_files
 from scannls.externals import gfClient_query
 
 
@@ -762,7 +771,126 @@ class Series(object):
 
 
 class Blat:
-    pass
+    def __init__(self, port, ref_2bit, output_dir="/tmp"):
+        self.port, self.ref_2bit = port, ref_2bit
+        self.output_dir = output_dir
+        self.ran_id = random.getrandbits(30)
+
+    @property
+    def ref_dir(self):
+        if self.ref_2bit.startswith("~"):
+            abs_2bit = os.path.join(
+                os.path.expanduser("~"), self.ref_2bit.replace("~/", "")
+            )
+            ref_dir = os.path.dirname(abs_2bit)
+        else:
+            abs_2bit = os.path.abspath(self.ref_2bit)
+            ref_dir = os.path.dirname(abs_2bit)
+        return ref_dir
+
+    @property
+    def log_file(self):
+        return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
+
+    def is_ready(self) -> bool:
+        with open(self.log_file) as f:
+            for line in f:
+                return True if "Server ready" in line else False
+
+    def is_running(self) -> bool:
+        return True if self._search_processing() else False
+
+    def _search_processing(self):
+        result = []
+        for proc in psutil.process_iter(["pid", "name"]):
+            if "gfServer".lower() == proc.name().lower():
+                if proc.cmdline():
+                    result.append(proc)
+        return result
+
+    def _run_cmd(self, cmd):
+        subprocess.run(cmd.split(), check=True)
+
+    def _start_server(self):
+        """gfServer should run at the directory where gfServer, gfClient and hg38.2bit located"""
+
+        cwd = os.path.abspath(os.getcwd())
+
+        # change to blat directory
+        os.chdir(self.ref_dir)
+
+        if os.path.exists(self.log_file):
+            os.remove(self.log_file)
+
+        cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {self.ref_2bit}"
+
+        process = Process(target=self._run_cmd, args=[cmd])
+        process.start()
+        os.chdir(cwd)
+        return process
+
+    def start_server(self):
+        running_flag = self.is_running()
+        if not running_flag:
+            self._start_server()
+
+    def stop_server(self):
+        procs = self._search_processing()
+
+        for proc in procs:
+            proc.kill()
+
+    def _query(self, in_seq, miniIdentity=90) -> str:
+        """Using gfClient to query 'in_seq' to generate alignment file (in PSL format).
+
+        :param miniIdentity: the threshold of the identity for aligning
+        :type miniIdentity: int
+        :param in_seq: sequence of softclipped segment
+        :type in_seq: str
+        :return: PSL file
+        :rtype: str
+        """
+
+        ran_id = random.getrandbits(30)
+        in_fasta = os.path.join(self.output_dir, "{}.fasta".format(ran_id))
+        with open(in_fasta, "w", buffering=1) as fasta_file:
+            fasta_file.write(">{}\n".format(ran_id))
+            fasta_file.write("{}\n".format(in_seq))
+
+        out_psl = os.path.join(self.output_dir, "{}.psl".format(ran_id))
+
+        cwd = os.path.abspath(os.getcwd())
+
+        os.chdir(self.ref_dir)
+        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} {} {} {} > /dev/null".format(
+            miniIdentity, self.port, self.ref_dir, in_fasta, out_psl
+        )
+        try:
+            ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as err:
+            raise SystemExit(f"{err} {err.output}")
+
+        os.chdir(cwd)
+        if os.path.exists(in_fasta):
+            os.remove(in_fasta)
+        return out_psl
+
+    def _wait_ready(self, interval=30):
+        while not self.is_ready():
+            time.sleep(interval)
+
+    def query(self, in_seq, miniIdentity=90):
+
+        if self.is_ready():
+
+            out_psl = self._query(in_seq, miniIdentity)
+
+        else:
+
+            self._wait_ready()
+            out_psl = self._query(in_seq, miniIdentity)
+
+        return out_psl
 
 
 class ReadsConnecter:
