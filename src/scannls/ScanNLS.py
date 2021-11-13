@@ -175,16 +175,18 @@ def detect_read_read_connections_from_cigar(
 
 
 def detect_sv_from_cigar(
-        chrm,
-        read,
-        mapq_cutoff,
-        splice_bin,
-        genome_fasta,
-        cvg,
-        gene_iv,
-        motif_required,
-        ref_2bit,
-        port=88888,
+    chrm,
+    read,
+    mapq_cutoff,
+    splice_bin,
+    allowed_difference,
+    genome_fasta,
+    cvg,
+    gene_iv,
+    motif_required,
+    ref_2bit,
+    update_bps=False,
+    port=88888,
 ) -> list:
     """
     :param port:
@@ -248,6 +250,7 @@ def detect_sv_from_cigar(
                     cvg,
                     gene_iv,
                     motif_required,
+                    update_bps,
                 )
 
                 if nls_type != "NA":

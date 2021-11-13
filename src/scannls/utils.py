@@ -847,15 +847,16 @@ def short_TDUP_or_not(
 
 
 def infer_sv_from_connected_reads(
-        read_lt,
-        read_rt,
-        lt_mode,
-        rt_mode,
-        splice_bin,
-        genome_fasta,
-        cvg,
-        gene_iv,
-        motif_required,
+    read_lt,
+    read_rt,
+    lt_mode,
+    rt_mode,
+    splice_bin,
+    genome_fasta,
+    cvg,
+    gene_iv,
+    motif_required,
+    update_bps=False,
 ) -> tuple:
     """
     :param read_lt: Read 1
@@ -867,6 +868,7 @@ def infer_sv_from_connected_reads(
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
+    :param update_bps: if canonical splice sites, update breakpoints to fit the splice sites
     :type read_lt: Read
     :type read_rt: Read
     :type lt_mode: int
@@ -876,6 +878,7 @@ def infer_sv_from_connected_reads(
     :type cvg: HTSeq.GenomicArrayOfSets
     :type gene_iv: HTSeq.GenomicArrayOfSets
     :type motif_required: bool
+    :type update_bps: bool
     :return: putative event from reads-pair
     :rtype: tuple
     .. note::
@@ -889,7 +892,7 @@ def infer_sv_from_connected_reads(
        1(01) => one breakpoint overlap with coding exons boundary
        0(00) => none breakpoint overlap with coding exons boundary
     """
-
+    # TODO add insertion information from connected reads
     def obtain_ins_seq_from_softclipped_part_read(read, mode, indel_size) -> str:
         """
         :param read: a chimeirc read
@@ -971,47 +974,61 @@ def infer_sv_from_connected_reads(
                     _genes = gene_annotation(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
-                    # print(read.reference_start, junc_start)
                     if _nls:
                         if _can == 1:
-                            new_junc_start, new_junc_end = update_breakpoints(
-                                lt_chrm,
-                                junc_start,
-                                lt_chrm,
-                                junc_end,
-                                lt_strand,
-                                rt_strand,
-                                2,
-                                1,
-                                splice_bin,
-                                genome_fasta,
-                            )
-                            # print('OLD: ', junc_start, junc_end)
-                            # print('NEW: ', new_junc_start, new_junc_end)
-                            if not new_junc_start and not new_junc_end:
-                                return (
-                                    "TDUP",
-                                    _anno,
-                                    0,
-                                    (
-                                        f"{lt_chrm}:{junc_start}",
-                                        f"{lt_chrm}:{junc_end}",
-                                        2,
-                                        1,
-                                    ),
-                                    (lt_start, lt_end, lt_exons),
-                                    (rt_start, rt_end, rt_exons),
-                                    (lt_strand, rt_strand),
-                                    [*_genes],
+                            if update_bps:
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    lt_strand,
+                                    rt_strand,
+                                    2,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
                                 )
+                                if not new_junc_start and not new_junc_end:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        0,
+                                        (
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_strand, rt_strand),
+                                        [*_genes],
+                                    )
+                                else:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{lt_chrm}:{new_junc_start}",
+                                            f"{lt_chrm}:{new_junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_strand, rt_strand),
+                                        [*_genes],
+                                    )
                             else:
                                 return (
                                     "TDUP",
                                     _anno,
                                     1,
                                     (
-                                        f"{lt_chrm}:{new_junc_start}",
-                                        f"{lt_chrm}:{new_junc_end}",
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
                                         2,
                                         1,
                                     ),
@@ -1078,42 +1095,59 @@ def infer_sv_from_connected_reads(
                         )
                         if _nls:
                             if _can == 1:
-                                new_junc_start, new_junc_end = update_breakpoints(
-                                    lt_chrm,
-                                    junc_start,
-                                    lt_chrm,
-                                    junc_end,
-                                    lt_strand,
-                                    rt_strand,
-                                    2,
-                                    1,
-                                    splice_bin,
-                                    genome_fasta,
-                                )
-                                if not new_junc_start and not new_junc_end:
-                                    return (
-                                        "TDUP",
-                                        _anno,
-                                        0,
-                                        (
-                                            f"{lt_chrm}:{junc_start}",
-                                            f"{lt_chrm}:{junc_end}",
-                                            2,
-                                            1,
-                                        ),
-                                        (lt_start, lt_end, lt_exons),
-                                        (rt_start, rt_end, rt_exons),
-                                        (lt_strand, rt_strand),
-                                        [*_genes],
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        lt_chrm,
+                                        junc_start,
+                                        lt_chrm,
+                                        junc_end,
+                                        lt_strand,
+                                        rt_strand,
+                                        2,
+                                        1,
+                                        splice_bin,
+                                        genome_fasta,
                                     )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{lt_chrm}:{junc_start}",
+                                                f"{lt_chrm}:{junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_strand, rt_strand),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{lt_chrm}:{new_junc_start}",
+                                                f"{lt_chrm}:{new_junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_strand, rt_strand),
+                                            [*_genes],
+                                        )
                                 else:
                                     return (
                                         "TDUP",
                                         _anno,
                                         1,
                                         (
-                                            f"{lt_chrm}:{new_junc_start}",
-                                            f"{lt_chrm}:{new_junc_end}",
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
                                             2,
                                             1,
                                         ),
@@ -1195,45 +1229,60 @@ def infer_sv_from_connected_reads(
                     )
                     if _nls:
                         if _can == 1:
-                            new_junc_start, new_junc_end = update_breakpoints(
-                                lt_chrm,
-                                junc_start,
-                                lt_chrm,
-                                junc_end,
-                                rt_strand,
-                                lt_strand,
-                                2,
-                                1,
-                                splice_bin,
-                                genome_fasta,
-                            )
-                            # print('OLD: ', junc_start, junc_end)
-                            # print('NEW: ', new_junc_start, new_junc_end)
-
-                            if not new_junc_start and not new_junc_end:
-                                return (
-                                    "TDUP",
-                                    _anno,
-                                    0,
-                                    (
-                                        f"{rt_chrm}:{junc_start}",
-                                        f"{rt_chrm}:{junc_end}",
-                                        2,
-                                        1,
-                                    ),
-                                    (rt_start, rt_end, rt_exons),
-                                    (lt_start, lt_end, lt_exons),
-                                    (rt_strand, lt_strand),
-                                    [*_genes],
+                            if update_bps:
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    rt_strand,
+                                    lt_strand,
+                                    2,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
                                 )
+
+                                if not new_junc_start and not new_junc_end:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        0,
+                                        (
+                                            f"{rt_chrm}:{junc_start}",
+                                            f"{rt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
+                                        [*_genes],
+                                    )
+                                else:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{rt_chrm}:{new_junc_start}",
+                                            f"{rt_chrm}:{new_junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
+                                        [*_genes],
+                                    )
                             else:
                                 return (
                                     "TDUP",
                                     _anno,
                                     1,
                                     (
-                                        f"{rt_chrm}:{new_junc_start}",
-                                        f"{rt_chrm}:{new_junc_end}",
+                                        f"{rt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
                                         2,
                                         1,
                                     ),
@@ -1302,42 +1351,59 @@ def infer_sv_from_connected_reads(
                         )
                         if _nls:
                             if _can == 1:
-                                new_junc_start, new_junc_end = update_breakpoints(
-                                    rt_chrm,
-                                    junc_start,
-                                    rt_chrm,
-                                    junc_end,
-                                    rt_strand,
-                                    lt_strand,
-                                    2,
-                                    1,
-                                    splice_bin,
-                                    genome_fasta,
-                                )
-                                if not new_junc_start and not new_junc_end:
-                                    return (
-                                        "TDUP",
-                                        _anno,
-                                        0,
-                                        (
-                                            f"{rt_chrm}:{junc_start}",
-                                            f"{rt_chrm}:{junc_end}",
-                                            2,
-                                            1,
-                                        ),
-                                        (rt_start, rt_end, rt_exons),
-                                        (lt_start, lt_end, lt_exons),
-                                        (rt_strand, lt_strand),
-                                        [*_genes],
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        rt_chrm,
+                                        junc_start,
+                                        rt_chrm,
+                                        junc_end,
+                                        rt_strand,
+                                        lt_strand,
+                                        2,
+                                        1,
+                                        splice_bin,
+                                        genome_fasta,
                                     )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{rt_chrm}:{junc_start}",
+                                                f"{rt_chrm}:{junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_strand, lt_strand),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{rt_chrm}:{new_junc_start}",
+                                                f"{rt_chrm}:{new_junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_strand, lt_strand),
+                                            [*_genes],
+                                        )
                                 else:
                                     return (
                                         "TDUP",
                                         _anno,
                                         1,
                                         (
-                                            f"{rt_chrm}:{new_junc_start}",
-                                            f"{rt_chrm}:{new_junc_end}",
+                                            f"{rt_chrm}:{junc_start}",
+                                            f"{rt_chrm}:{junc_end}",
                                             2,
                                             1,
                                         ),
@@ -1422,42 +1488,59 @@ def infer_sv_from_connected_reads(
                         ) and read_rt.splice_site_checker(genome_fasta):
                             if _can == 1:
                                 strand_l, strand_r = strands
-                                new_junc_start, new_junc_end = update_breakpoints(
-                                    lt_chrm,
-                                    junc_start,
-                                    lt_chrm,
-                                    junc_end,
-                                    strand_l,
-                                    strand_r,
-                                    1,
-                                    1,
-                                    splice_bin,
-                                    genome_fasta,
-                                )
-                                if not new_junc_start and not new_junc_end:
-                                    return (
-                                        "INV",
-                                        _anno,
-                                        0,
-                                        (
-                                            f"{lt_chrm}:{junc_start}",
-                                            f"{lt_chrm}:{junc_end}",
-                                            1,
-                                            1,
-                                        ),
-                                        lt_start_end_exons,
-                                        rt_start_end_exons,
-                                        tuple([*strands]),
-                                        [*_genes],
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        lt_chrm,
+                                        junc_start,
+                                        lt_chrm,
+                                        junc_end,
+                                        strand_l,
+                                        strand_r,
+                                        1,
+                                        1,
+                                        splice_bin,
+                                        genome_fasta,
                                     )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{lt_chrm}:{junc_start}",
+                                                f"{lt_chrm}:{junc_end}",
+                                                1,
+                                                1,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{lt_chrm}:{new_junc_start}",
+                                                f"{lt_chrm}:{new_junc_end}",
+                                                1,
+                                                1,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
                                 else:
                                     return (
                                         "INV",
                                         _anno,
                                         1,
                                         (
-                                            f"{lt_chrm}:{new_junc_start}",
-                                            f"{lt_chrm}:{new_junc_end}",
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
                                             1,
                                             1,
                                         ),
@@ -1524,43 +1607,61 @@ def infer_sv_from_connected_reads(
                                 genome_fasta
                         ) and read_rt.splice_site_checker(genome_fasta):
                             if _can == 1:
+
                                 strand_l, strand_r = strands
-                                new_junc_start, new_junc_end = update_breakpoints(
-                                    lt_chrm,
-                                    junc_start,
-                                    lt_chrm,
-                                    junc_end,
-                                    strand_l,
-                                    strand_r,
-                                    2,
-                                    2,
-                                    splice_bin,
-                                    genome_fasta,
-                                )
-                                if not new_junc_start and not new_junc_end:
-                                    return (
-                                        "INV",
-                                        _anno,
-                                        0,
-                                        (
-                                            f"{lt_chrm}:{junc_start}",
-                                            f"{lt_chrm}:{junc_end}",
-                                            2,
-                                            2,
-                                        ),
-                                        lt_start_end_exons,
-                                        rt_start_end_exons,
-                                        tuple([*strands]),
-                                        [*_genes],
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        lt_chrm,
+                                        junc_start,
+                                        lt_chrm,
+                                        junc_end,
+                                        strand_l,
+                                        strand_r,
+                                        2,
+                                        2,
+                                        splice_bin,
+                                        genome_fasta,
                                     )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{lt_chrm}:{junc_start}",
+                                                f"{lt_chrm}:{junc_end}",
+                                                2,
+                                                2,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{lt_chrm}:{new_junc_start}",
+                                                f"{lt_chrm}:{new_junc_end}",
+                                                2,
+                                                2,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
                                 else:
                                     return (
                                         "INV",
                                         _anno,
                                         1,
                                         (
-                                            f"{lt_chrm}:{new_junc_start}",
-                                            f"{lt_chrm}:{new_junc_end}",
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
                                             2,
                                             2,
                                         ),
@@ -1614,42 +1715,59 @@ def infer_sv_from_connected_reads(
                 )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(
-                            chrm_start,
-                            junc_start,
-                            chrm_end,
-                            junc_end,
-                            lt_strand,
-                            rt_strand,
-                            1,
-                            2,
-                            splice_bin,
-                            genome_fasta,
-                        )
-                        if not new_junc_start and not new_junc_end:
-                            return (
-                                "TRA",
-                                _anno,
-                                0,
-                                (
-                                    f"{lt_chrm}:{junc_start}",
-                                    f"{rt_chrm}:{junc_end}",
-                                    1,
-                                    2,
-                                ),
-                                (lt_start, lt_end, lt_exons),
-                                (rt_start, rt_end, rt_exons),
-                                (lt_strand, rt_strand),
-                                [*_genes],
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                1,
+                                2,
+                                splice_bin,
+                                genome_fasta,
                             )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        1,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        1,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
                                 (
-                                    f"{lt_chrm}:{new_junc_start}",
-                                    f"{rt_chrm}:{new_junc_end}",
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
                                     1,
                                     2,
                                 ),
@@ -1692,42 +1810,59 @@ def infer_sv_from_connected_reads(
                 )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(
-                            chrm_start,
-                            junc_start,
-                            chrm_end,
-                            junc_end,
-                            lt_strand,
-                            rt_strand,
-                            2,
-                            1,
-                            splice_bin,
-                            genome_fasta,
-                        )
-                        if not new_junc_start and not new_junc_end:
-                            return (
-                                "TRA",
-                                _anno,
-                                0,
-                                (
-                                    f"{lt_chrm}:{junc_start}",
-                                    f"{rt_chrm}:{junc_end}",
-                                    2,
-                                    1,
-                                ),
-                                (lt_start, lt_end, lt_exons),
-                                (rt_start, rt_end, rt_exons),
-                                (lt_strand, rt_strand),
-                                [*_genes],
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                2,
+                                1,
+                                splice_bin,
+                                genome_fasta,
                             )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
                                 (
-                                    f"{lt_chrm}:{new_junc_start}",
-                                    f"{rt_chrm}:{new_junc_end}",
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
                                     2,
                                     1,
                                 ),
@@ -1773,42 +1908,59 @@ def infer_sv_from_connected_reads(
                 )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(
-                            chrm_start,
-                            junc_start,
-                            chrm_end,
-                            junc_end,
-                            lt_strand,
-                            rt_strand,
-                            1,
-                            1,
-                            splice_bin,
-                            genome_fasta,
-                        )
-                        if not new_junc_start and not new_junc_end:
-                            return (
-                                "TRA",
-                                _anno,
-                                0,
-                                (
-                                    f"{lt_chrm}:{junc_start}",
-                                    f"{rt_chrm}:{junc_end}",
-                                    1,
-                                    1,
-                                ),
-                                (lt_start, lt_end, lt_exons),
-                                (rt_start, rt_end, rt_exons),
-                                (lt_strand, rt_strand),
-                                [*_genes],
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                1,
+                                1,
+                                splice_bin,
+                                genome_fasta,
                             )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        1,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        1,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
                                 (
-                                    f"{lt_chrm}:{new_junc_start}",
-                                    f"{rt_chrm}:{new_junc_end}",
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
                                     1,
                                     1,
                                 ),
@@ -1851,42 +2003,59 @@ def infer_sv_from_connected_reads(
                 )
                 if _nls:
                     if _can == 1:
-                        new_junc_start, new_junc_end = update_breakpoints(
-                            chrm_start,
-                            junc_start,
-                            chrm_end,
-                            junc_end,
-                            lt_strand,
-                            rt_strand,
-                            2,
-                            2,
-                            splice_bin,
-                            genome_fasta,
-                        )
-                        if not new_junc_start and not new_junc_end:
-                            return (
-                                "TRA",
-                                _anno,
-                                0,
-                                (
-                                    f"{lt_chrm}:{junc_start}",
-                                    f"{rt_chrm}:{junc_end}",
-                                    2,
-                                    2,
-                                ),
-                                (lt_start, lt_end, lt_exons),
-                                (rt_start, rt_end, rt_exons),
-                                (lt_strand, rt_strand),
-                                [*_genes],
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                2,
+                                2,
+                                splice_bin,
+                                genome_fasta,
                             )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        2,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        2,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
                         else:
                             return (
                                 "TRA",
                                 _anno,
                                 1,
                                 (
-                                    f"{lt_chrm}:{new_junc_start}",
-                                    f"{rt_chrm}:{new_junc_end}",
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
                                     2,
                                     2,
                                 ),
