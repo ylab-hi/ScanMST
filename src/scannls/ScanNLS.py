@@ -21,9 +21,10 @@ from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from . import __version__
-from .classes import LengthAction, ReadsConnecter
+from .classes import LengthAction
 from .classes import Path
 from .classes import Read
+from .classes import ReadsConnecter
 from .classes import Series
 from .common import get_softclip_length
 from .common import remove
@@ -61,7 +62,7 @@ except ModuleNotFoundError as e:
 
 
 def detect_read_read_connections_from_cigar(
-        read, mapq_cutoff, ref_2bit, port=88888
+    read, mapq_cutoff, ref_2bit, port=88888
 ) -> tuple:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
@@ -166,12 +167,16 @@ def detect_read_read_connections_from_cigar(
     if not chimeric_aln_list:
         return [], {}
     else:
-        read_connecter = ReadsConnecter(aln_list=chimeric_aln_list,
-                                        ref_2bit=ref_2bit,
-                                        port=port)
+        read_connecter = ReadsConnecter(
+            aln_list=chimeric_aln_list, ref_2bit=ref_2bit, port=port
+        )
         read_connecter.run()
 
-        return read_connecter.reads_chain, read_connecter.read_pair_mode_dict, read_connecter.insertion_dict
+        return (
+            read_connecter.reads_chain,
+            read_connecter.read_pair_mode_dict,
+            read_connecter.insertion_dict,
+        )
 
 
 def detect_sv_from_cigar(
@@ -210,9 +215,11 @@ def detect_sv_from_cigar(
     :return: event groups in a list, every group is also a list
     :rtype: list (list of lists)
     """
-    read_to_read_chains, reads_pair_mode_dict, insertion_dict = detect_read_read_connections_from_cigar(
-        read, mapq_cutoff, ref_2bit, port
-    )
+    (
+        read_to_read_chains,
+        reads_pair_mode_dict,
+        insertion_dict,
+    ) = detect_read_read_connections_from_cigar(read, mapq_cutoff, ref_2bit, port)
     read_to_read_chains = [read_to_read_chains]
 
     print("Read-to-Read chain: ", read_to_read_chains)
@@ -275,20 +282,20 @@ def detect_sv_from_cigar(
 
 
 def softclipping_realignment(
-        input_bam,
-        mapq_cutoff,
-        output,
-        ref_genome,
-        gtf,
-        splice_bin,
-        ref_2bit,
-        motif_required=True,
-        blat=False,
-        port=88888,
-        output_dir="/tmp",
-        blat_ident_pct_cutoff=0.9,
-        max_allowed_nm=50,
-        min_soft_seg_len=200,
+    input_bam,
+    mapq_cutoff,
+    output,
+    ref_genome,
+    gtf,
+    splice_bin,
+    ref_2bit,
+    motif_required=True,
+    blat=False,
+    port=88888,
+    output_dir="/tmp",
+    blat_ident_pct_cutoff=0.9,
+    max_allowed_nm=50,
+    min_soft_seg_len=200,
 ):
     """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
        (2) add SA tag for reads with long length of softclipped segment using BLAT (Optional)
@@ -390,10 +397,10 @@ def softclipping_realignment(
     try:
         for read in in_bam.fetch(until_eof=False):
             if (
-                    read.mapq >= mapq_cutoff
-                    and not read.is_secondary
-                    and not read.has_tag("XA")
-                    and not read.is_unmapped
+                read.mapq >= mapq_cutoff
+                and not read.is_secondary
+                and not read.has_tag("XA")
+                and not read.is_unmapped
             ):
                 chrm = read.reference_name
                 # update SA tag of representative alignments (START)
@@ -428,8 +435,8 @@ def softclipping_realignment(
                             ]
                             # discard supplementary alignments with too many mismatches or lower MAPQ
                             if not (
-                                    int(__nm_sa) > max_allowed_nm
-                                    or int(__mapq_sa) < mapq_cutoff
+                                int(__nm_sa) > max_allowed_nm
+                                or int(__mapq_sa) < mapq_cutoff
                             ):
                                 updated_chimeric_alns.append(
                                     "{},{},{},{},{},{}".format(
@@ -466,9 +473,9 @@ def softclipping_realignment(
                         else:
                             soft_seq_ori = str(__soft_seq)
                         if (
-                                read_mode in {1, 2}
-                                and soft_seq_ori
-                                and len(soft_seq_ori) >= min_soft_seg_len
+                            read_mode in {1, 2}
+                            and soft_seq_ori
+                            and len(soft_seq_ori) >= min_soft_seg_len
                         ):
                             chimeric_aln_str = softclipped_seq2SA_tag(
                                 soft_seq_ori,
@@ -498,7 +505,7 @@ def softclipping_realignment(
                         gene_iv,
                         motif_required,
                         ref_2bit,
-                        port
+                        port,
                     )
                     # TODO
                     sv_tag_list = []

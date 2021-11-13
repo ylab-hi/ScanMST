@@ -111,7 +111,9 @@ def stop_gfServer(port=88888, output_dir="/tmp"):
     remove_files("{}/*.temp.log".format(output_dir))
 
 
-def gfClient_query(in_seq, ref_2bit,  port=88888, output_dir="/tmp", miniIdentity=90) -> str:
+def gfClient_query(
+    in_seq, ref_2bit, port=88888, output_dir="/tmp", miniIdentity=90
+) -> str:
     """Using gfClient to query 'in_seq' to generate alignment file (in PSL format).
 
     :param miniIdentity: the threshold of the identity for aligning
@@ -269,8 +271,8 @@ def blat_mapq_calculator(hsps, query_len, blat_ident_pct_cutoff=0.95) -> int:
     num_of_locations = 0
     for hsp in hsps:
         if (
-                hsp.ident_pct / 100 >= blat_ident_pct_cutoff
-                and hsp.query_span / query_len >= blat_ident_pct_cutoff
+            hsp.ident_pct / 100 >= blat_ident_pct_cutoff
+            and hsp.query_span / query_len >= blat_ident_pct_cutoff
         ):
             num_of_locations += 1
     if num_of_locations == 1:
@@ -313,16 +315,16 @@ def cigar_validity(cigar_str) -> str:
 
 
 def softclipped_seq2SA_tag(
-        in_seq,
-        read_length,
-        read_strand,
-        read_mode,
-        ref_2bit,
-        port,
-        mapq_cutoff,
-        max_allowed_nm,
-        output_dir="/tmp",
-        blat_ident_pct_cutoff=0.95,
+    in_seq,
+    read_length,
+    read_strand,
+    read_mode,
+    ref_2bit,
+    port,
+    mapq_cutoff,
+    max_allowed_nm,
+    output_dir="/tmp",
+    blat_ident_pct_cutoff=0.95,
 ) -> str:
     """
     create chimeric alignments from the alignments which has a long softclipped segment but without SA tag
@@ -351,8 +353,9 @@ def softclipped_seq2SA_tag(
     :rtype: str
     """
     in_seq_len = len(in_seq)
-    psl_file = gfClient_query(in_seq=in_seq, ref_2bit=ref_2bit,  port=port,
-                              output_dir="/tmp")
+    psl_file = gfClient_query(
+        in_seq=in_seq, ref_2bit=ref_2bit, port=port, output_dir="/tmp"
+    )
     chimeric_aln_str = ""
     try:
         blat = SearchIO.read(psl_file, "blat-psl")
@@ -365,8 +368,8 @@ def softclipped_seq2SA_tag(
         remove(psl_file)
         __mapq = blat_mapq_calculator(hsps, in_seq_len, blat_ident_pct_cutoff)
         if (
-                top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
-                and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
+            top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
+            and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
         ):
             __chrm_sa, __pos_sa, __strand_sa, __cigar_sa_partial, __nm_sa = psl2sam(
                 top_hsp, in_seq_len

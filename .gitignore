@@ -17,6 +17,6 @@ __pycache__/
 *.ipynb
 # blat data dir
 blat/
-# bam 
+# bam
 *.bam
 *.sam

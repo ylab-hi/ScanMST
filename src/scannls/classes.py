@@ -5,9 +5,10 @@ import argparse
 import re
 from collections import namedtuple
 
+from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
-from align import aligner
+
 from scannls.externals import gfClient_query
 
 
@@ -124,22 +125,22 @@ class Read(object):
     )
 
     def __init__(
-            self,
-            chrom,
-            position,
-            strand,
-            cigar_str,
-            mapq,
-            nm,
-            query_seq,
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigar_without_soft,
-            query_length,
-            cigartuples,
+        self,
+        chrom,
+        position,
+        strand,
+        cigar_str,
+        mapq,
+        nm,
+        query_seq,
+        lt_soft_len,
+        rt_soft_len,
+        read_match_size,
+        reference_match_size,
+        indel_size,
+        cigar_without_soft,
+        query_length,
+        cigartuples,
     ) -> None:
         self.chrom = chrom
         self.ref_start = position
@@ -165,24 +166,24 @@ class Read(object):
     def __eq__(self, other) -> bool:
         if isinstance(other, Read):
             if (
-                    self.chrom == other.chrom
-                    and self.ref_start == other.ref_start
-                    and self.ref_end == other.ref_end
-                    and self.strand == other.strand
-                    and self.mapq == other.mapq
-                    and self.nm == other.nm
+                self.chrom == other.chrom
+                and self.ref_start == other.ref_start
+                and self.ref_end == other.ref_end
+                and self.strand == other.strand
+                and self.mapq == other.mapq
+                and self.nm == other.nm
             ):
                 return True
         return False
 
     def __hash__(self) -> int:
         return (
-                hash(self.chrom)
-                ^ hash(self.ref_start)
-                ^ hash(self.ref_end)
-                ^ hash(self.strand)
-                ^ hash(self.mapq)
-                ^ hash(self.nm)
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.strand)
+            ^ hash(self.mapq)
+            ^ hash(self.nm)
         )
 
     def __lt__(self, other) -> bool:
@@ -346,14 +347,14 @@ class Read(object):
                 intron_count += 1
                 if self.strand == "-":
                     left_site = genome_fasta[self.chrom][
-                                end - 2: end
-                                ].reverse.complement.seq
+                        end - 2 : end
+                    ].reverse.complement.seq
                     right_site = genome_fasta[self.chrom][
-                                 start: start + 2
-                                 ].reverse.complement.seq
+                        start : start + 2
+                    ].reverse.complement.seq
                 else:
-                    left_site = genome_fasta[self.chrom][start: start + 2].seq
-                    right_site = genome_fasta[self.chrom][end - 2: end].seq
+                    left_site = genome_fasta[self.chrom][start : start + 2].seq
+                    right_site = genome_fasta[self.chrom][end - 2 : end].seq
                 if f"{left_site}-{right_site}" in can_sites:
                     can_count += 1
         if can_count / intron_count >= fraction_cutoff:
@@ -422,20 +423,20 @@ class Node(object):
     )
 
     def __init__(
-            self,
-            prev_bp=None,
-            next_bp=None,
-            strand=None,
-            chrom=None,
-            ref_start=None,
-            ref_end=None,
-            exons=None,
-            sv_type=None,
-            annot=None,
-            canonical=None,
-            modes=None,
-            genes=None,
-            sr=None,
+        self,
+        prev_bp=None,
+        next_bp=None,
+        strand=None,
+        chrom=None,
+        ref_start=None,
+        ref_end=None,
+        exons=None,
+        sv_type=None,
+        annot=None,
+        canonical=None,
+        modes=None,
+        genes=None,
+        sr=None,
     ) -> None:
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
@@ -453,26 +454,26 @@ class Node(object):
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
             if (
-                    self.chrom == other.chrom
-                    and self.ref_start == other.ref_start
-                    and self.ref_end == other.ref_end
-                    and self.sv_type == other.sv_type
-                    and self.prev_breakpoint == other.prev_breakpoint
-                    and self.next_breakpoint == other.next_breakpoint
-                    and self.strand == other.strand
+                self.chrom == other.chrom
+                and self.ref_start == other.ref_start
+                and self.ref_end == other.ref_end
+                and self.sv_type == other.sv_type
+                and self.prev_breakpoint == other.prev_breakpoint
+                and self.next_breakpoint == other.next_breakpoint
+                and self.strand == other.strand
             ):
                 return True
         return False
 
     def __hash__(self) -> int:
         return (
-                hash(self.chrom)
-                ^ hash(self.ref_start)
-                ^ hash(self.ref_end)
-                ^ hash(self.sv_type)
-                ^ hash(self.prev_breakpoint)
-                ^ hash(self.next_breakpoint)
-                ^ hash(self.strand)
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.sv_type)
+            ^ hash(self.prev_breakpoint)
+            ^ hash(self.next_breakpoint)
+            ^ hash(self.strand)
         )
 
     # for debug purpose
@@ -765,7 +766,6 @@ class Blat:
 
 
 class ReadsConnecter:
-
     def __init__(self, aln_list, ref_2bit, soft_len_cutoff=30, port=88888):
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
@@ -787,7 +787,12 @@ class ReadsConnecter:
 
     @staticmethod
     def conduct_glocal_alignment_forMS(
-            query_seq, target_seq, same_strand, is_align, s_position, threshold=0.6,
+        query_seq,
+        target_seq,
+        same_strand,
+        is_align,
+        s_position,
+        threshold=0.6,
     ):
         """query_seq: M  target_seq: S"""
 
@@ -799,11 +804,18 @@ class ReadsConnecter:
 
             insert_len = len(target_seq) - len(query_seq)
 
-            insert_seq = target_seq[-insert_len:] if s_position == "left" else target_seq[:insert_len]
+            insert_seq = (
+                target_seq[-insert_len:]
+                if s_position == "left"
+                else target_seq[:insert_len]
+            )
 
-            local_alignment_result = aligner(insert_seq, query_seq, method='local')[0]
+            local_alignment_result = aligner(insert_seq, query_seq, method="local")[0]
 
-            if local_alignment_result.start2 == 0 or local_alignment_result.end2 == len(query_seq):
+            if (
+                local_alignment_result.start2 == 0
+                or local_alignment_result.end2 == len(query_seq)
+            ):
 
                 return True, None
 
@@ -822,40 +834,56 @@ class ReadsConnecter:
         insert_seq = None  # None means M is not consist with S
         match_flag = False
 
-        query_identity = 1 - (len(query_seq) - _query_seq_len + alignment_result.n_gaps1 +
-                              alignment_result.n_gaps2 + alignment_result.n_mismatches) / len(query_seq)
+        query_identity = 1 - (
+            len(query_seq)
+            - _query_seq_len
+            + alignment_result.n_gaps1
+            + alignment_result.n_gaps2
+            + alignment_result.n_mismatches
+        ) / len(query_seq)
         if query_identity > threshold:
             match_flag = True
 
-            if s_position == 'left':
+            if s_position == "left":
                 insert_len = len(_query_seq) - len(_query_seq.rstrip("-"))
             else:
                 insert_len = alignment_result.start2
 
             if insert_len > 0:
 
-                local_len = int(.25 * len(_query_seq.rstrip("-"))) + insert_len
-                local_query_seq = _query_seq[-insert_len - local_len:-insert_len]
+                local_len = int(0.25 * len(_query_seq.rstrip("-"))) + insert_len
+                local_query_seq = _query_seq[-insert_len - local_len : -insert_len]
                 local_target_seq = _target_seq[-local_len:]
-                local_alignment_result = aligner(local_query_seq, local_target_seq, method='local')
+                local_alignment_result = aligner(
+                    local_query_seq, local_target_seq, method="local"
+                )
                 if local_alignment_result[0].end2 < local_len:
-                    insert_seq = target_seq[:insert_len] if s_position == "left" else target_seq[-insert_len:]
+                    insert_seq = (
+                        target_seq[:insert_len]
+                        if s_position == "left"
+                        else target_seq[-insert_len:]
+                    )
 
         return match_flag, insert_seq
 
-    def map_with_blat_for_genome(self, insert_seq, threshold_identity=.99, top=3, align_len_threshold=20):
+    def map_with_blat_for_genome(
+        self, insert_seq, threshold_identity=0.99, top=3, align_len_threshold=20
+    ):
         # TODO: add blat class to replace
 
-        insertion_nametuple = namedtuple("insertion", ("start_end", "hit", "chrom",
-                                                       "strand", "seq"))
+        insertion_nametuple = namedtuple(
+            "insertion", ("start_end", "hit", "chrom", "strand", "seq")
+        )
         hit, start_end, chrom, strand, seq = 0, None, None, None, None
 
         if len(insert_seq) < align_len_threshold:
             return insertion_nametuple(start_end, hit, chrom, strand, seq)
 
-        out_blat = gfClient_query(in_seq=insert_seq, ref_2bit=self.ref_2bit, port=self.port)
+        out_blat = gfClient_query(
+            in_seq=insert_seq, ref_2bit=self.ref_2bit, port=self.port
+        )
         try:
-            blat = SearchIO.read(out_blat, 'blat-psl')
+            blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError as error:
             return insertion_nametuple(start_end, hit, chrom, strand)
 
@@ -873,7 +901,7 @@ class ReadsConnecter:
 
         if hit == 1:
             start_end = keep_hsp[0].hit_range_all
-            strand = '+' if keep_hsp[0].hit_strand_all[0] == 1 else '-'
+            strand = "+" if keep_hsp[0].hit_strand_all[0] == 1 else "-"
             chrom = keep_hsp[0].hit_id
 
         return insertion_nametuple(start_end, hit, chrom, strand, insert_seq)
@@ -888,11 +916,11 @@ class ReadsConnecter:
         # first case
 
         match_flag, insertion_1_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r1: _lt_len_r1 + _read_match_r1],
+            start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
             read.query_sequence[:_lt_len_r2],
             same_strand,
             is_align_for_ms,
-            "left"
+            "left",
         )
 
         if match_flag:  # may same
@@ -915,11 +943,11 @@ class ReadsConnecter:
 
         # second case
         match_flag, insertion_2_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r1: _lt_len_r1 + _read_match_r1],
+            start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
             read.query_sequence[-_rt_len_r2:],
             same_strand,
             is_align_for_ms,
-            "right"
+            "right",
         )
 
         if match_flag:
@@ -948,12 +976,11 @@ class ReadsConnecter:
 
         # third case
         match_flag, insertion_3_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r2: _lt_len_r2 + _read_match_r2],
+            start_read.adhocseq[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
             read.query_sequence[:_lt_len_r1],
             same_strand,
             is_align_for_ms,
-            "left"
-
+            "left",
         )
 
         if match_flag:
@@ -979,11 +1006,11 @@ class ReadsConnecter:
 
         # fourth case
         match_flag, insertion_4_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r2: _lt_len_r2 + _read_match_r2],
+            start_read.adhocseq[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
             read.query_sequence[-_rt_len_r1:],
             same_strand,
             is_align_for_ms,
-            "right"
+            "right",
         )
 
         if match_flag:
@@ -1013,9 +1040,9 @@ class ReadsConnecter:
 
         # fifth case
         start_s1, start_m, start_s2 = start_read.adhocsms
-        end_s1, end_m, end_s2  = read.sms
+        end_s1, end_m, end_s2 = read.sms
 
-        if start_m > (end_s1 + end_s2) and end_m > (start_s2+start_s1):
+        if start_m > (end_s1 + end_s2) and end_m > (start_s2 + start_s1):
             self.reads_chain.append(read)
 
             start_mode = 2 if start_s1 > start_s2 else 1
@@ -1025,24 +1052,25 @@ class ReadsConnecter:
 
             return True, read
 
-
-
     def run(self):
         """Find the best connected paths for a list of chimeric alignments
-          .. note::
-              Read-to-Read chain scenarios
-              * [[Read1, Read2, Read3]]
-              * [[Read1, Read2, Read3],[Read4,Read5]]
+        .. note::
+            Read-to-Read chain scenarios
+            * [[Read1, Read2, Read3]]
+            * [[Read1, Read2, Read3],[Read4,Read5]]
 
-              Dictionary of Read-pair scenarios
-              * (Read1, Read2) => mode-of-Read1, mode-of-Read2
-              * (Read2, Read1) => mode-of-Read2, mode-of-Read1
-          """
+            Dictionary of Read-pair scenarios
+            * (Read1, Read2) => mode-of-Read1, mode-of-Read2
+            * (Read2, Read1) => mode-of-Read2, mode-of-Read1
+        """
         start_nodes = []
 
         # find start node and end node
         for read in self.aln_list:
-            if read.lt_soft_len < self.soft_len_cutoff or read.rt_soft_len < self.soft_len_cutoff:
+            if (
+                read.lt_soft_len < self.soft_len_cutoff
+                or read.rt_soft_len < self.soft_len_cutoff
+            ):
                 start_nodes.append(read)
             else:
                 self.candidate_nodes.append(read)
@@ -1056,20 +1084,23 @@ class ReadsConnecter:
         self.reads_chain.append(start_read)
 
         if not self.candidate_nodes:  # []
-            start_read.mode, end_read.mode = ReadsConnecter.init_mode_judge(start_read.sms
-                                                                            ), ReadsConnecter.init_mode_judge(
-                end_read.sms)
+            start_read.mode, end_read.mode = (
+                ReadsConnecter.init_mode_judge(start_read.sms),
+                ReadsConnecter.init_mode_judge(end_read.sms),
+            )
 
             _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=False)
 
         else:
             for read in self.candidate_nodes:
-                start_read.mode, read.mode = ReadsConnecter.init_mode_judge(
-                    start_read.sms
-                ), ReadsConnecter.init_mode_judge(read.sms)
+                start_read.mode, read.mode = (
+                    ReadsConnecter.init_mode_judge(start_read.sms),
+                    ReadsConnecter.init_mode_judge(read.sms),
+                )
                 _, start_read = self.test_4case(start_read, read, is_align_for_ms=True)
 
-            start_read.mode, end_read.mode = ReadsConnecter.init_mode_judge(start_read.sms
-                                                                            ), ReadsConnecter.init_mode_judge(
-                end_read.sms)
+            start_read.mode, end_read.mode = (
+                ReadsConnecter.init_mode_judge(start_read.sms),
+                ReadsConnecter.init_mode_judge(end_read.sms),
+            )
             _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=True)
