@@ -885,7 +885,7 @@ class ReadsConnecter:
         try:
             blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError as error:
-            return insertion_nametuple(start_end, hit, chrom, strand)
+            return insertion_nametuple(start_end, hit, chrom, strand, seq)
 
         hsps = blat.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
@@ -1038,17 +1038,20 @@ class ReadsConnecter:
 
             return True, start_read
 
-        # fifth case
-        start_s1, start_m, start_s2 = start_read.adhocsms
-        end_s1, end_m, end_s2 = read.sms
+        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
+        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
 
-        if start_m > (end_s1 + end_s2) and end_m > (start_s2 + start_s1):
+        # fifth case
+
+        if _read_match_r1 > (_lt_len_r2 + _rt_len_r2) and _read_match_r2 > (
+            _rt_len_r1 + _lt_len_r1
+        ):
             self.reads_chain.append(read)
 
-            start_mode = 2 if start_s1 > start_s2 else 1
-            end_mode = 2 if end_s1 > end_s2 else 1
+            start_mode = 2 if _lt_len_r1 > _read_match_r1 else 1
+            read_mode = 2 if _lt_len_r2 > _read_match_r2 else 1
 
-            self.read_pair_mode_dict[(start_read, read)] = (start_mode, end_mode)
+            self.read_pair_mode_dict[(start_read, read)] = (start_mode, read_mode)
 
             return True, read
 

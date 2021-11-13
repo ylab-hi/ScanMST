@@ -22,32 +22,15 @@ from pyfaidx import FastaNotFoundError
 
 from . import __version__
 from .classes import LengthAction
-from .classes import Path
 from .classes import Read
 from .classes import ReadsConnecter
 from .classes import Series
 from .common import get_softclip_length
-from .common import remove
-from .common import remove_files
-from .common import status_message
-from .externals import blat_mapq_calculator
 from .externals import checkIfProcessRunning
 from .externals import external_tool_checking
-from .externals import gfClient_query
-from .externals import gfserver_tester
-from .externals import psl2sam
 from .externals import softclipped_seq2SA_tag
-from .externals import start_gfServer
-from .externals import stop_gfServer
-from .utils import aggregate_candidates
 from .utils import extract_splice_sites
-from .utils import gene_annotation
 from .utils import infer_sv_from_connected_reads
-from .utils import output_bedpe_file
-from .utils import short_TDUP_or_not
-from .utils import similar_hit
-from .utils import splicing_confirmation
-from .utils import update_breakpoints
 
 # from .call import sv_scan
 
@@ -180,11 +163,10 @@ def detect_read_read_connections_from_cigar(
 
 
 def detect_sv_from_cigar(
-    chrm,
+    *,
     read,
     mapq_cutoff,
     splice_bin,
-    allowed_difference,
     genome_fasta,
     cvg,
     gene_iv,
@@ -194,9 +176,10 @@ def detect_sv_from_cigar(
     port=88888,
 ) -> list:
     """
+    :param *:
+    :param update_bps:
     :param port:
     :param ref_2bit:
-    :param chrm: chromosome
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param splice_bin: a small bin for splice site searching
@@ -204,7 +187,6 @@ def detect_sv_from_cigar(
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
-    :type chrm: str
     :type read: pysam.AlignedSegment
     :type mapq_cutoff: int
     :type splice_bin: int
@@ -317,7 +299,6 @@ def softclipping_realignment(
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
     :param min_soft_seg_len: minium softclipped segement length to trigger BLAT for reads with softcliping but no SA tag
-    :param allowed_difference: the difference of read_match_size (Read1) and softclipped length (Read2) to determine the S-M match
     :type input_bam: str (BAM filename)
     :type mapq_cutoff: int
     :type output: str
@@ -332,7 +313,6 @@ def softclipping_realignment(
     :type blat_ident_pct_cutoff: float
     :type max_allowed_nm: int
     :type min_soft_seg_len: int
-    :type allowed_difference: int
     :return: No returns
     :rtype: None
     ..note ::
@@ -420,14 +400,10 @@ def softclipping_realignment(
                         ) = _aln.split(",")
                         left_mat = pat_left_S.search(__cigar_sa)
                         right_mat = pat_right_S.search(__cigar_sa)
-                        if left_mat:
-                            l_S_len = left_mat.group(1)
-                        else:
-                            l_S_len = ""
-                        if right_mat:
-                            r_S_len = right_mat.group(1)
-                        else:
-                            r_S_len = ""
+
+                        l_S_len = left_mat.group(1) if left_mat else ""
+                        r_S_len = right_mat.group(1) if right_mat else ""
+
                         tgt_key = "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
                         if tgt_key in representative_alignments_new_cigar:
                             __updated_cigar = representative_alignments_new_cigar[
@@ -460,18 +436,17 @@ def softclipping_realignment(
                 # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
                 if blat:
                     if not read.has_tag("SA") and not read.is_supplementary:
-                        if read.is_reverse:
-                            read_strand = "-"
-                        else:
-                            read_strand = "+"
+                        read_strand = "-" if read.is_reverse else "+"
                         read_length = int(read.query_length)
                         # assert read.cigarstring, f"{read.query_name}" # TEST
                         _, _soft_seq, _, read_mode = get_softclip_length(read)
                         __soft_seq = Seq(_soft_seq)
+
                         if read.is_reverse:
                             soft_seq_ori = str(__soft_seq.reverse_complement())
                         else:
                             soft_seq_ori = str(__soft_seq)
+
                         if (
                             read_mode in {1, 2}
                             and soft_seq_ori
@@ -496,18 +471,16 @@ def softclipping_realignment(
                 # select reads with SA tags (original or newly-added), ignore supplementary alignment
                 if read.has_tag("SA") and not read.is_supplementary:
                     event_groups = detect_sv_from_cigar(
-                        chrm,
-                        read,
-                        mapq_cutoff,
-                        splice_bin,
-                        genome_fasta,
-                        cvg,
-                        gene_iv,
-                        motif_required,
-                        ref_2bit,
-                        port,
+                        read=read,
+                        mapq_cutoff=mapq_cutoff,
+                        splice_bin=splice_bin,
+                        genome_fasta=genome_fasta,
+                        cvg=cvg,
+                        gene_iv=gene_iv,
+                        motif_required=motif_required,
+                        ref_2bit=ref_2bit,
+                        port=port,
                     )
-                    # TODO
                     sv_tag_list = []
                     ot_tag_list = []
                     for group in event_groups:

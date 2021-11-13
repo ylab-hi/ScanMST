@@ -2,15 +2,12 @@ import copy
 import re
 import sys
 from collections import defaultdict
-from collections import namedtuple
 
 from align import aligner
-from Bio import SearchIO
-from Bio.Seq import Seq
 
 from . import __version__
 from .common import transcript_upstream_part_determiner
-from .externals import gfClient_query
+from scannls.NLSISO import multiple_sa_tag_selector
 
 try:
     import pysam
