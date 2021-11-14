@@ -651,6 +651,14 @@ def parse_args():
         help="Using BLAT to remap softclipped reads (default: %(default)s)",
     )
     build_parser.add_argument(
+        "--log",
+        action="store",
+        dest="log",
+        choices=["INFO", "DEBUG"],
+        default="INFO",
+        help="set log level (default: %(default)s)",
+    )
+    build_parser.add_argument(
         "--2bit", action="store", dest="two_bit", help="reference genome in 2bit format"
     )
     build_parser.add_argument(
@@ -812,6 +820,14 @@ def parse_args():
         action="store",
         dest="region",
         help="Limit analysis to targets listed in the BEDPE-format FILE",
+    )
+    call_parser.add_argument(
+        "--log",
+        action="store",
+        dest="log",
+        choices=["INFO", "DEBUG"],
+        default="INFO",
+        help="set log level (default: %(default)s)",
     )
 
     infer_parser = sub_parsers.add_parser(
