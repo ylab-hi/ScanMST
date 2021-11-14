@@ -7,7 +7,8 @@ from align import aligner
 
 from . import __version__
 from .common import transcript_upstream_part_determiner
-from scannls.NLSISO import multiple_sa_tag_selector
+
+# from scannls.NLSISO import multiple_sa_tag_selector
 
 try:
     import pysam
@@ -2352,6 +2353,7 @@ def vcf_header(output_prefix, bam_header):
     return "\n".join(header)
 
 
+# TODO
 def sv_checker(read, ref_site, mapq_cutoff, sv_len_cutoff):
     """"""
     chimeric_aln = read.alignment.get_tag("SA")[:-1].split(";")

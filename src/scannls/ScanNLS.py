@@ -28,7 +28,6 @@ from .classes import Read
 from .classes import ReadsConnecter
 from .classes import Series
 from .common import get_softclip_length
-from .externals import checkIfProcessRunning
 from .externals import external_tool_checking
 from .externals import softclipped_seq2SA_tag
 from .utils import extract_splice_sites
