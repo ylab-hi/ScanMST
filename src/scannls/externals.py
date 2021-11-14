@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
-import random
 import re
 import subprocess
 import sys
-import time
 
 import psutil
 from Bio import SearchIO
 
 from .common import remove
-from .common import remove_files
 
 try:
     import pysam
@@ -19,159 +15,6 @@ try:
     import HTSeq
 except ModuleNotFoundError as e:
     raise SystemExit(e.msg)
-
-
-def checkIfProcessRunning(processName):
-    """
-    Check if there is any running process that contains the given name processName.
-    """
-    # Iterate over the all the running process
-    for proc in psutil.process_iter():
-        try:
-            # Check if process name contains the given name string.
-            if processName.lower() in proc.name().lower():
-                return True
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-    return False
-
-
-def start_gfServer(ref_2bit, timeout=300, port=88888, output_dir="/tmp"):
-    """gfServer should run at the directory where gfServer, gfClient and hg38.2bit located"""
-    sys.stderr.write("Starting BLAT gfServer\n")
-
-    if ref_2bit.startswith("~"):
-        abs_2bit = os.path.join(os.path.expanduser("~"), ref_2bit.replace("~/", ""))
-        ref_dir = os.path.dirname(abs_2bit)
-        base_2bit = os.path.basename(abs_2bit)
-    else:
-        abs_2bit = os.path.abspath(ref_2bit)
-        ref_dir = os.path.dirname(abs_2bit)
-        base_2bit = os.path.basename(abs_2bit)
-
-    cwd = os.path.abspath(os.getcwd())
-
-    sys.stderr.write("BLAT 2bit file location: {}\n".format(ref_dir))
-    sys.stderr.write("Current directory: {}\n".format(cwd))
-
-    if os.path.isabs(output_dir):
-        log_dir = output_dir
-    else:
-        log_dir = os.path.join(cwd, output_dir)
-
-    # change to blat directory
-    os.chdir(ref_dir)
-    sys.stderr.write("Current directory: {}\n".format(os.getcwd()))
-    try:
-        cmd = "gfServer -canStop -log={0}/gfserver.temp.log -stepSize=5 start localhost {1} {2} &".format(
-            log_dir, port, base_2bit
-        )
-        print(cmd)
-        start = time.time()
-        ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as err:
-        print(
-            "Execution failed for starting BLAT gfServer:",
-            err,
-            err.output,
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    else:
-        if not ret:
-            interval = 10
-            while not gfserver_tester(log_dir) and time.time() - start < timeout:
-                time.sleep(interval)
-            if gfserver_tester(log_dir):
-                sys.stdout.write("gfServer is ready for use.\n")
-                remove("{}/gfserver.temp.log".format(output_dir))
-            else:
-                sys.stdout.write("Timeout!\n")
-                stop_gfServer(port, output_dir)
-                sys.exit(1)
-        else:
-            sys.stderr.write(
-                "Something wrong in {0}/gfserver.temp.log\n".format(output_dir)
-            )
-    os.chdir(cwd)
-    sys.stderr.write("Current directory: {}\n".format(os.getcwd()))
-
-
-def stop_gfServer(port=88888, output_dir="/tmp"):
-    try:
-        subprocess.check_call(
-            "gfServer stop localhost {0}".format(port),
-            stderr=subprocess.STDOUT,
-            shell=True,
-        )
-        print("gfServer stop localhost {0}".format(port))
-    except subprocess.CalledProcessError as e:
-        print("Execution failed for stoping BLAT gfServer:", e.output, file=sys.stderr)
-        sys.exit(1)
-    remove_files("{}/*.temp.log".format(output_dir))
-
-
-def gfClient_query(
-    in_seq, ref_2bit, port=88888, output_dir="/tmp", miniIdentity=90
-) -> str:
-    """Using gfClient to query 'in_seq' to generate alignment file (in PSL format).
-
-    :param miniIdentity: the threshold of the identity for aligning
-    :type miniIdentity: int
-    :param in_seq: sequence of softclipped segment
-    :type in_seq: str
-    :param ref_2bit: reference genome (in 2bit format)
-    :type ref_2bit: str
-    :param port: BLAT server port
-    :type port: int
-    :param output_dir: BLAT output directory for psl files
-    :type output_dir: str
-    :return: PSL file
-    :rtype: str
-    """
-    ran_id = random.getrandbits(30)
-    in_fasta = os.path.join(output_dir, "{}.fasta".format(ran_id))
-
-    with open(in_fasta, "w", buffering=1) as fasta_file:
-        fasta_file.write(">{}\n".format(ran_id))
-        fasta_file.write("{}\n".format(in_seq))
-
-    out_psl = os.path.join(output_dir, "{}.psl".format(ran_id))
-
-    if ref_2bit.startswith("~"):
-        abs_2bit = os.path.join(os.path.expanduser("~"), ref_2bit.replace("~/", ""))
-        ref_dir = os.path.dirname(abs_2bit)
-        base_2bit = os.path.basename(abs_2bit)
-    else:
-        abs_2bit = os.path.abspath(ref_2bit)
-        ref_dir = os.path.dirname(abs_2bit)
-        base_2bit = os.path.basename(abs_2bit)
-    cwd = os.path.abspath(os.getcwd())
-
-    if os.path.isabs(output_dir):
-        log_dir = output_dir
-    else:
-        log_dir = os.path.join(cwd, output_dir)
-
-    os.chdir(ref_dir)
-
-    try:
-        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} {} {} {} > /dev/null".format(
-            miniIdentity, port, ref_dir, in_fasta, out_psl
-        )
-        # print(in_seq, in_fasta)
-        ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as err:
-        print(
-            "Execution failed for starting BLAT gfServer:",
-            err,
-            err.output,
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    os.chdir(cwd)
-    remove(in_fasta)
-    return out_psl
 
 
 def psl2sam(hsp, query_seq_len) -> tuple:
@@ -319,16 +162,15 @@ def softclipped_seq2SA_tag(
     read_length,
     read_strand,
     read_mode,
-    ref_2bit,
-    port,
+    blat,
     mapq_cutoff,
     max_allowed_nm,
-    output_dir="/tmp",
     blat_ident_pct_cutoff=0.95,
 ) -> str:
     """
     create chimeric alignments from the alignments which has a long softclipped segment but without SA tag
 
+    :param blat:
     :param in_seq: softclipped segment of the aligned read
     :type in_seq: str
     :param read_length: the length of the aligned read
@@ -353,12 +195,11 @@ def softclipped_seq2SA_tag(
     :rtype: str
     """
     in_seq_len = len(in_seq)
-    psl_file = gfClient_query(
-        in_seq=in_seq, ref_2bit=ref_2bit, port=port, output_dir="/tmp"
-    )
+    psl_file = blat.query(in_seq=in_seq)
+
     chimeric_aln_str = ""
     try:
-        blat = SearchIO.read(psl_file, "blat-psl")
+        blat = SearchIO.read(psl_file, "use_blat-psl")
     except ValueError as err:
         print("No BLAT hit! {}".format(in_seq), err, file=sys.stderr)
     else:
@@ -426,15 +267,3 @@ def external_tool_checking(blat=False) -> None:
             print("Exiting.", file=sys.stderr)
             sys.exit(0)
         print("Checking for '" + each + "': found " + path)
-
-
-def gfserver_tester(log_dir):
-    log_file = "{0}/gfserver.temp.log".format(log_dir)
-    if os.path.exists(log_file):
-        with open(log_file) as f:
-            for line in f:
-                if "Server ready" in line:
-                    return True
-                elif "gfServer aborted" in line or "error" in line:
-                    return False
-    return False

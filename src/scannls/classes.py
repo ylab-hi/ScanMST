@@ -6,19 +6,14 @@ import os
 import random
 import re
 import subprocess
-import sys
 import time
 from collections import namedtuple
 from multiprocessing import Process
-from pathlib import Path
 
 import psutil
 from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
-
-from scannls.common import remove_files
-from scannls.externals import gfClient_query
 
 
 class Path(object):
@@ -728,12 +723,6 @@ class Series(object):
     def __eq__(self, other) -> bool:
         return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
 
-    # def __hash__(self) -> int:
-    #    hash_val = 0
-    #    for i in self.nodes:
-    #        hash_val ^= hash(i)
-    #    return hash_val
-
     def __len__(self) -> int:
         return len(self.nodes)
 
@@ -771,10 +760,12 @@ class Series(object):
 
 
 class Blat:
-    def __init__(self, port, ref_2bit, output_dir="/tmp"):
+    def __init__(self, ref_2bit, logger, port, output_dir):
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
+        self.is_start_server = True
+        self.logger = logger
 
     @property
     def ref_dir(self):
@@ -793,15 +784,21 @@ class Blat:
         return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
 
     def is_ready(self) -> bool:
-        with open(self.log_file) as f:
-            for line in f:
-                return True if "Server ready" in line else False
+        flag = False
+        self.logger.debug("check if the server starts")
+        if os.path.exists(self.log_file):
+            with open(self.log_file) as f:
+                for line in f:
+                    if "Server ready" in line:
+                        flag = True
+        return flag
 
     def is_running(self) -> bool:
         return True if self._search_processing() else False
 
     def _search_processing(self):
         result = []
+        self.logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
             if "gfServer".lower() == proc.name().lower():
                 if proc.cmdline():
@@ -812,20 +809,21 @@ class Blat:
         subprocess.run(cmd.split(), check=True)
 
     def _start_server(self):
-        """gfServer should run at the directory where gfServer, gfClient and hg38.2bit located"""
+        """gfServer should run at the directory where gfServer,
+        gfClient and hg38.2bit located"""
 
         cwd = os.path.abspath(os.getcwd())
 
-        # change to blat directory
+        # change to use_blat directory
         os.chdir(self.ref_dir)
 
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
         cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {self.ref_2bit}"
-
         process = Process(target=self._run_cmd, args=[cmd])
         process.start()
+        self.logger.debug("starting server service")
         os.chdir(cwd)
         return process
 
@@ -833,10 +831,12 @@ class Blat:
         running_flag = self.is_running()
         if not running_flag:
             self._start_server()
+        else:
+            self.is_start_server = False
 
     def stop_server(self):
         procs = self._search_processing()
-
+        self.logger.debug("stoping server service")
         for proc in procs:
             proc.kill()
 
@@ -850,7 +850,7 @@ class Blat:
         :return: PSL file
         :rtype: str
         """
-
+        self.logger.dubug("quering the sequence")
         ran_id = random.getrandbits(30)
         in_fasta = os.path.join(self.output_dir, "{}.fasta".format(ran_id))
         with open(in_fasta, "w", buffering=1) as fasta_file:
@@ -881,27 +881,26 @@ class Blat:
 
     def query(self, in_seq, miniIdentity=90):
 
-        if self.is_ready():
-
-            out_psl = self._query(in_seq, miniIdentity)
-
+        if self.is_start_server:
+            if self.is_ready():
+                out_psl = self._query(in_seq, miniIdentity)
+            else:
+                self._wait_ready()
+                out_psl = self._query(in_seq, miniIdentity)
         else:
-
-            self._wait_ready()
             out_psl = self._query(in_seq, miniIdentity)
 
         return out_psl
 
 
 class ReadsConnecter:
-    def __init__(self, aln_list, ref_2bit, soft_len_cutoff=30, port=88888):
+    def __init__(self, aln_list, blat, logger, soft_len_cutoff=30):
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
-
-        self.ref_2bit = ref_2bit
-        self.port = port
         self.aln_list = aln_list
         self.soft_len_cutoff = soft_len_cutoff
+        self.logger = logger
+        self.blat = blat
 
     @staticmethod
     def init_mode_judge(sms) -> int:
@@ -997,7 +996,7 @@ class ReadsConnecter:
     def map_with_blat_for_genome(
         self, insert_seq, threshold_identity=0.99, top=3, align_len_threshold=20
     ):
-        # TODO: add blat class to replace
+        # TODO: add use_blat class to replace
 
         insertion_nametuple = namedtuple(
             "insertion", ("start_end", "hit", "chrom", "strand", "seq")
@@ -1007,11 +1006,9 @@ class ReadsConnecter:
         if len(insert_seq) < align_len_threshold:
             return insertion_nametuple(start_end, hit, chrom, strand, seq)
 
-        out_blat = gfClient_query(
-            in_seq=insert_seq, ref_2bit=self.ref_2bit, port=self.port
-        )
+        out_blat = self.blat.query(in_seq=insert_seq)
         try:
-            blat = SearchIO.read(out_blat, "blat-psl")
+            blat = SearchIO.read(out_blat, "use_blat-psl")
         except ValueError as error:
             return insertion_nametuple(start_end, hit, chrom, strand, seq)
 
@@ -1042,7 +1039,7 @@ class ReadsConnecter:
         same_strand = True if start_read.adhocseq == read.query_sequence else False
 
         # first case
-
+        self.logger.debug("testing first case M vs LS")
         match_flag, insertion_1_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
             read.query_sequence[:_lt_len_r2],
@@ -1069,6 +1066,7 @@ class ReadsConnecter:
 
             return True, start_read
 
+        self.logger.debug("testing second case M vs RS")
         # second case
         match_flag, insertion_2_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
@@ -1102,6 +1100,7 @@ class ReadsConnecter:
 
             return True, start_read
 
+        self.logger.debug("testing third case LS vs M")
         # third case
         match_flag, insertion_3_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
@@ -1132,6 +1131,7 @@ class ReadsConnecter:
 
             return True, start_read
 
+        self.logger.debug("testing fourth case RS vs M")
         # fourth case
         match_flag, insertion_4_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
@@ -1170,6 +1170,7 @@ class ReadsConnecter:
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
 
         # fifth case
+        self.logger.debug("testing fifth case M > S and S < M")
 
         if _read_match_r1 > (_lt_len_r2 + _rt_len_r2) and _read_match_r2 > (
             _rt_len_r1 + _lt_len_r1
@@ -1215,6 +1216,8 @@ class ReadsConnecter:
         self.reads_chain.append(start_read)
 
         if not self.candidate_nodes:  # []
+
+            self.logger.debug("ReadConnecter: candidate_nodes is []")
             start_read.mode, end_read.mode = (
                 ReadsConnecter.init_mode_judge(start_read.sms),
                 ReadsConnecter.init_mode_judge(end_read.sms),

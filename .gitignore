@@ -15,7 +15,7 @@ __pycache__/
 .run/
 # jupyter notebook
 *.ipynb
-# blat data dir
+# use_blat data dir
 blat/
 # bam
 *.bam

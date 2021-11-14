@@ -17,10 +17,12 @@ import time
 from collections import defaultdict
 
 from Bio.Seq import Seq
+from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from . import __version__
+from .classes import Blat
 from .classes import LengthAction
 from .classes import Read
 from .classes import ReadsConnecter
@@ -45,7 +47,7 @@ except ModuleNotFoundError as e:
 
 
 def detect_read_read_connections_from_cigar(
-    read, mapq_cutoff, ref_2bit, port=88888
+    read, mapq_cutoff, ref_2bit, blat, logger, port=88888
 ) -> tuple:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
@@ -151,7 +153,7 @@ def detect_read_read_connections_from_cigar(
         return [], {}
     else:
         read_connecter = ReadsConnecter(
-            aln_list=chimeric_aln_list, ref_2bit=ref_2bit, port=port
+            aln_list=chimeric_aln_list, blat=blat, logger=logger
         )
         read_connecter.run()
 
@@ -172,6 +174,8 @@ def detect_sv_from_cigar(
     gene_iv,
     motif_required,
     ref_2bit,
+    blat,
+    logger,
     update_bps=False,
     port=88888,
 ) -> list:
@@ -271,10 +275,12 @@ def softclipping_realignment(
     gtf,
     splice_bin,
     ref_2bit,
-    motif_required=True,
-    blat=False,
-    port=88888,
-    output_dir="/tmp",
+    blat,
+    logger,
+    motif_required,
+    use_blat,
+    port,
+    output_dir,
     blat_ident_pct_cutoff=0.9,
     max_allowed_nm=50,
     min_soft_seg_len=200,
@@ -285,6 +291,8 @@ def softclipping_realignment(
        (4) add putative regions of NLS events to SV tag of primary alignment
        (5) output regions of NLS events in BEDPE file
 
+    :param blat:
+    :param logger:
     :param input_bam: Transcriptomic long-read sorted BAM file
     :param mapq_cutoff: MAPQ cutoff
     :param output: file full name for output rebuild BAM file
@@ -293,7 +301,7 @@ def softclipping_realignment(
     :param splice_bin: bin size for splice site searching
     :param ref_2bit: reference 2bit file for BLAT
     :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
-    :param blat: use BLAT OR not
+    :param use_blat: use BLAT OR not
     :param port: BLAT server port
     :param output_dir: BLAT output directory for psl files
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
@@ -307,7 +315,7 @@ def softclipping_realignment(
     :type splice_bin: int
     :type ref_2bit: str
     :type motif_required: bool
-    :type blat: bool
+    :type use_blat: bool
     :type port: int
     :type output_dir: str
     :type blat_ident_pct_cutoff: float
@@ -322,7 +330,6 @@ def softclipping_realignment(
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
 
-    candidate_regions = set()
     candidate_ao_dict = defaultdict(int)
     nls_src_forms_list = []
 
@@ -434,7 +441,7 @@ def softclipping_realignment(
                 # update SA tag of representative alignments (END)
 
                 # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
-                if blat:
+                if use_blat:
                     if not read.has_tag("SA") and not read.is_supplementary:
                         read_strand = "-" if read.is_reverse else "+"
                         read_length = int(read.query_length)
@@ -457,11 +464,9 @@ def softclipping_realignment(
                                 read_length,
                                 read_strand,
                                 read_mode,
-                                ref_2bit,
-                                port,
+                                blat,
                                 mapq_cutoff,
                                 max_allowed_nm,
-                                output_dir,
                                 blat_ident_pct_cutoff,
                             )
                             if chimeric_aln_str:
@@ -479,6 +484,8 @@ def softclipping_realignment(
                         gene_iv=gene_iv,
                         motif_required=motif_required,
                         ref_2bit=ref_2bit,
+                        blat=blat,
+                        logger=logger,
                         port=port,
                     )
                     sv_tag_list = []
@@ -637,9 +644,9 @@ def parse_args():
     )
     build_parser.add_argument(
         "-b",
-        "--blat",
+        "--use_blat",
         action="store_true",
-        dest="blat",
+        dest="use_blat",
         default=True,
         help="Using BLAT to remap softclipped reads (default: %(default)s)",
     )
@@ -833,6 +840,10 @@ def main():
         options = parser.parse_args()
 
     if options.sub_command == "build":
+
+        logger.remove()
+        logger_id = logger.add(sys.stdout, level=options.log)
+
         use_blat = options.blat
         # check external tools used
         external_tool_checking(blat=use_blat)
@@ -841,16 +852,8 @@ def main():
         start = time.time()
 
         if use_blat:
-            # start gfserver
-            print("starting gfserver\n")
-
-            if not checkIfProcessRunning("gfServer"):
-                pass
-                # start_gfServer(
-                #     ref_2bit=options.two_bit,
-                #     port=options.port,
-                #     output_dir=options.tmp_dir,
-                # )
+            blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
+            blat.start_server()
 
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
@@ -863,19 +866,16 @@ def main():
             gtf=options.gtf,
             splice_bin=options.splice_bin,
             ref_2bit=options.two_bit,
+            blat=blat,
+            logger=logger,
             motif_required=motif_required,
-            blat=use_blat,
+            use_blat=use_blat,
             port=options.port,
             output_dir=options.tmp_dir,
             blat_ident_pct_cutoff=options.ident_cutoff,
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
         )
-
-        if use_blat:
-            pass
-            # # stop gfserver
-            # stop_gfServer(port=options.port, output_dir=options.tmp_dir)
 
         print("ScanNLS build running done: " + time.strftime("%Y-%m-%d %H:%M:%S"))
         end = time.time()
