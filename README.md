@@ -24,7 +24,6 @@
 
 You can install _ScanNLS_ via pip* from PyPI*:
 
-
 ```bash
 $ pip install ScanNLS
 ```

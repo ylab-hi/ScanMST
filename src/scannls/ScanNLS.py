@@ -872,7 +872,10 @@ def main():
 
         use_blat = options.blat
         # check external tools used
-        external_tool_checking(logger=logger, blat=use_blat, )
+        external_tool_checking(
+            logger=logger,
+            blat=use_blat,
+        )
 
         logger.info("ScanNLS build starts running")
         start = time.time()
