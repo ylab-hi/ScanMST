@@ -74,6 +74,7 @@ def detect_read_read_connections_from_cigar(
     #        e.g., INV,1,43947377,181934993,1,1,++
     #              TRA,1,160289623,chr17:17189212,1,1,+-
     """
+    logger.debug("")
 
     def format_sa_tag(in_str):
         """
@@ -204,7 +205,9 @@ def detect_sv_from_cigar(
         read_to_read_chains,
         reads_pair_mode_dict,
         insertion_dict,
-    ) = detect_read_read_connections_from_cigar(read, mapq_cutoff, ref_2bit, port)
+    ) = detect_read_read_connections_from_cigar(
+        read, mapq_cutoff, ref_2bit, blat, logger, port
+    )
     read_to_read_chains = [read_to_read_chains]
 
     print("Read-to-Read chain: ", read_to_read_chains)
@@ -326,6 +329,8 @@ def softclipping_realignment(
         SV tag uses the same genomic corrdinate as SA tag,
         So position should be always add 1
     """
+    logger.debug("softclipping_realignment")
+
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
 
@@ -645,7 +650,7 @@ def parse_args():
         "-b",
         "--use_blat",
         action="store_true",
-        dest="use_blat",
+        dest="blat",
         default=True,
         help="Using BLAT to remap softclipped reads (default: %(default)s)",
     )
@@ -658,7 +663,11 @@ def parse_args():
         help="set log level (default: %(default)s)",
     )
     build_parser.add_argument(
-        "--2bit", action="store", dest="two_bit", help="reference genome in 2bit format"
+        "--2bit",
+        action="store",
+        dest="two_bit",
+        help="reference genome in 2bit format",
+        required=True,
     )
     build_parser.add_argument(
         "-p",
@@ -858,6 +867,7 @@ def main():
 
         logger.remove()
         logger_id = logger.add(sys.stdout, level=options.log)
+        logger.info("port")
 
         use_blat = options.blat
         # check external tools used

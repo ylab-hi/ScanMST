@@ -759,7 +759,7 @@ class Series(object):
             return _introns
 
 
-class Blat:
+class Blat(object):
     def __init__(self, ref_2bit, logger, port, output_dir):
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
@@ -850,7 +850,7 @@ class Blat:
         :return: PSL file
         :rtype: str
         """
-        self.logger.dubug("quering the sequence")
+        self.logger.debug("quering the sequence")
         ran_id = random.getrandbits(30)
         in_fasta = os.path.join(self.output_dir, "{}.fasta".format(ran_id))
         with open(in_fasta, "w", buffering=1) as fasta_file:
@@ -893,7 +893,7 @@ class Blat:
         return out_psl
 
 
-class ReadsConnecter:
+class ReadsConnecter(object):
     def __init__(self, aln_list, blat, logger, soft_len_cutoff=30):
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
@@ -922,7 +922,7 @@ class ReadsConnecter:
         threshold=0.6,
     ):
         """query_seq: M  target_seq: S"""
-
+        # TODO
         if len(query_seq) > len(target_seq):
             return False, None
 
@@ -1008,7 +1008,7 @@ class ReadsConnecter:
 
         out_blat = self.blat.query(in_seq=insert_seq)
         try:
-            blat = SearchIO.read(out_blat, "use_blat-psl")
+            blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError as error:
             return insertion_nametuple(start_end, hit, chrom, strand, seq)
 
@@ -1036,6 +1036,10 @@ class ReadsConnecter:
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
 
+        self.logger.debug(f"{start_read.mode}, {read.mode}")
+
+        self.logger.debug(f"{start_read.adhocsms}, {read.sms}")
+
         same_strand = True if start_read.adhocseq == read.query_sequence else False
 
         # first case
@@ -1054,6 +1058,7 @@ class ReadsConnecter:
                 self.insertion_dict[(start_read, read)] = insertion
 
             read.mode = 2
+            self.logger.debug(f"{start_read.mode}, {read.mode}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
 
@@ -1083,6 +1088,8 @@ class ReadsConnecter:
 
             read.mode = 1
 
+            self.logger.debug(f"{start_read.mode}, {read.mode}")
+
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
 
             self.reads_chain.append(read)
@@ -1103,68 +1110,71 @@ class ReadsConnecter:
         self.logger.debug("testing third case LS vs M")
         # third case
         match_flag, insertion_3_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
-            read.query_sequence[:_lt_len_r1],
+            read.query_sequence[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
+            start_read.adhocseq[:_lt_len_r1],
             same_strand,
             is_align_for_ms,
             "left",
         )
 
         if match_flag:
+            read, start_read = start_read, read
             if insertion_3_seq is not None:  # insertion exist
                 insertion = self.map_with_blat_for_genome(insertion_3_seq)
-                self.insertion_dict[(start_read, read)] = insertion
+                self.insertion_dict[(read, start_read)] = insertion
 
-            start_read.mode = 2
+            read.mode = 1
+            self.logger.debug(f"{read.mode}, {start_read.mode}")
+            self.read_pair_mode_dict[(read, start_read)] = (read.mode, start_read.mode)
 
-            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.reads_chain.append(start_read)
 
-            self.reads_chain.append(read)
+            if start_read in self.candidate_nodes:
+                self.candidate_nodes.remove(start_read)
 
-            if read in self.candidate_nodes:
-                self.candidate_nodes.remove(read)
+            # read.adhocseq = start_read.adhocseq
 
-            read.adhocseq = start_read.adhocseq
+            # start_read = read
+            read.adhocsms = 0, _lt_len_r1 + _read_match_r1, _rt_len_r1
 
-            start_read = read
-            start_read.adhocsms = 0, _lt_len_r1 + _read_match_r1, _rt_len_r1
-
-            return True, start_read
+            return True, read
 
         self.logger.debug("testing fourth case RS vs M")
         # fourth case
         match_flag, insertion_4_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
-            read.query_sequence[-_rt_len_r1:],
+            read.query_sequence[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
+            start_read.adhocseq[-_rt_len_r1:],
             same_strand,
             is_align_for_ms,
             "right",
         )
 
         if match_flag:
+            read, start_read = start_read, read
             if insertion_4_seq is not None:  # insertion exist
                 insertion = self.map_with_blat_for_genome(insertion_4_seq)
-                self.insertion_dict[(start_read, read)] = insertion
+                self.insertion_dict[(read, start_read)] = insertion
 
-            start_read.mode = 1
+            start_read.mode = 2
 
-            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.logger.debug(f"{read.mode}, {start_read.mode}")
+            self.read_pair_mode_dict[(read, start_read)] = (read.mode, start_read.mode)
 
-            self.reads_chain.append(read)
+            self.reads_chain.append(start_read)
 
-            if read in self.candidate_nodes:
-                self.candidate_nodes.remove(read)
+            if start_read in self.candidate_nodes:
+                self.candidate_nodes.remove(start_read)
 
-            read.adhocseq = start_read.adhocseq
+            # read.adhocseq = start_read.adhocseq
 
-            start_read = read
-            start_read.adhocsms = (
-                _rt_len_r1,
+            # start_read = read
+            read.adhocsms = (
+                _lt_len_r1,
                 _rt_len_r1 + _read_match_r1,
                 0,
             )
 
-            return True, start_read
+            return True, read
 
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
@@ -1180,6 +1190,7 @@ class ReadsConnecter:
             start_mode = 2 if _lt_len_r1 > _read_match_r1 else 1
             read_mode = 2 if _lt_len_r2 > _read_match_r2 else 1
 
+            self.logger.debug(f"{start_read.mode}, {read.mode}")
             self.read_pair_mode_dict[(start_read, read)] = (start_mode, read_mode)
 
             return True, read
@@ -1219,7 +1230,7 @@ class ReadsConnecter:
 
             self.logger.debug("ReadConnecter: candidate_nodes is []")
             start_read.mode, end_read.mode = (
-                ReadsConnecter.init_mode_judge(start_read.sms),
+                ReadsConnecter.init_mode_judge(start_read.adhocsms),
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
 
@@ -1228,13 +1239,13 @@ class ReadsConnecter:
         else:
             for read in self.candidate_nodes:
                 start_read.mode, read.mode = (
-                    ReadsConnecter.init_mode_judge(start_read.sms),
+                    ReadsConnecter.init_mode_judge(start_read.adhocsms),
                     ReadsConnecter.init_mode_judge(read.sms),
                 )
                 _, start_read = self.test_4case(start_read, read, is_align_for_ms=True)
 
             start_read.mode, end_read.mode = (
-                ReadsConnecter.init_mode_judge(start_read.sms),
+                ReadsConnecter.init_mode_judge(start_read.adhocsms),
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
             _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=True)
