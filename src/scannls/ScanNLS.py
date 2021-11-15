@@ -210,8 +210,9 @@ def detect_sv_from_cigar(
     )
     read_to_read_chains = [read_to_read_chains]
 
-    print("Read-to-Read chain: ", read_to_read_chains)
-    print("Read-to-Read pair modes: ", reads_pair_mode_dict)
+    logger.debug("Read-to-Read chain: ", read_to_read_chains)
+    logger.debug("Read-to-Read pair modes: ", reads_pair_mode_dict)
+    logger.debug("Read-to-Read inertion: ", insertion_dict)
 
     event_groups = []
     if read_to_read_chains:
@@ -871,9 +872,9 @@ def main():
 
         use_blat = options.blat
         # check external tools used
-        external_tool_checking(blat=use_blat)
+        external_tool_checking(logger=logger, blat=use_blat, )
 
-        print("ScanNLS build starts running: " + time.strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info("ScanNLS build starts running")
         start = time.time()
 
         if use_blat:
@@ -902,9 +903,9 @@ def main():
             min_soft_seg_len=options.min_soft_seg_len,
         )
 
-        print("ScanNLS build running done: " + time.strftime("%Y-%m-%d %H:%M:%S"))
+        logger.info("ScanNLS build running done")
         end = time.time()
-        print("ScanNLS build takes " + str(end - start) + " seconds.")
+        logger.info(f"ScanNLS build takes {end - start} seconds.")
 
     elif options.sub_command == "call":
         print(

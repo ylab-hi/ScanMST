@@ -945,10 +945,6 @@ class ReadsConnecter(object):
         threshold: float = 0.6,
     ) -> Tuple[bool, Union[None, str]]:
         """query_seq: M  target_seq: S"""
-        # TODO
-        if len(query_seq) > len(target_seq):
-            return False, None
-
         # do not conduct alignment
         if not is_align:
 
@@ -993,6 +989,9 @@ class ReadsConnecter(object):
         ) / len(query_seq)
         if query_identity > threshold:
             match_flag = True
+
+            if len(query_seq) >= len(target_seq):
+                return match_flag, insert_seq
 
             if s_position == "left":
                 insert_len = len(_query_seq) - len(_query_seq.rstrip("-"))
@@ -1203,24 +1202,24 @@ class ReadsConnecter(object):
 
             return True, read
 
-        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
-        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
-
-        # fifth case
-        self.logger.debug("testing fifth case M > S and S < M")
-
-        if _read_match_r1 > (_lt_len_r2 + _rt_len_r2) and _read_match_r2 > (
-            _rt_len_r1 + _lt_len_r1
-        ):
-            self.reads_chain.append(read)
-
-            start_mode = 2 if _lt_len_r1 > _read_match_r1 else 1
-            read_mode = 2 if _lt_len_r2 > _read_match_r2 else 1
-
-            self.logger.debug(f"{start_read.mode}, {read.mode}")
-            self.read_pair_mode_dict[(start_read, read)] = (start_mode, read_mode)
-
-            return True, read
+        # _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
+        # _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+        #
+        # # fifth case
+        # self.logger.debug("testing fifth case M > S and S < M")
+        #
+        # if _read_match_r1 > (_lt_len_r2 + _rt_len_r2) and _read_match_r2 > (
+        #     _rt_len_r1 + _lt_len_r1
+        # ):
+        #     self.reads_chain.append(read)
+        #
+        #     start_mode = 2 if _lt_len_r1 > _read_match_r1 else 1
+        #     read_mode = 2 if _lt_len_r2 > _read_match_r2 else 1
+        #
+        #     self.logger.debug(f"{start_read.mode}, {read.mode}")
+        #     self.read_pair_mode_dict[(start_read, read)] = (start_mode, read_mode)
+        #
+        #     return True, read
 
     def run(self) -> None:
         """Find the best connected paths for a list of chimeric alignments

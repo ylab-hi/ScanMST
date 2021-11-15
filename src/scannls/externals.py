@@ -248,7 +248,7 @@ def softclipped_seq2SA_tag(
     return chimeric_aln_str
 
 
-def external_tool_checking(blat=False) -> None:
+def external_tool_checking(logger, blat=False) -> None:
     """checking dependencies are installed"""
     if blat:
         software = ["sambamba", "gfClient", "gfServer"]
@@ -260,10 +260,10 @@ def external_tool_checking(blat=False) -> None:
             path = subprocess.check_output([cmd, each], stderr=subprocess.STDOUT)
             path = str(path, "utf-8")
         except subprocess.CalledProcessError:
-            print(
+            logger.error(
                 "Checking for '" + each + "': ERROR - could not find '" + each + "'",
                 file=sys.stderr,
             )
-            print("Exiting.", file=sys.stderr)
+            logger.error("Exiting.", file=sys.stderr)
             sys.exit(0)
-        print("Checking for '" + each + "': found " + path)
+        logger.success("Checking for '" + each + "': found " + path)
