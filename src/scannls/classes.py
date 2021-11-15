@@ -9,11 +9,17 @@ import subprocess
 import time
 from collections import namedtuple
 from multiprocessing import Process
+from typing import Any
+from typing import List
+from typing import NamedTuple
+from typing import Tuple
+from typing import Union
 
 import psutil
 from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
+from loguru import logger
 
 
 class Path(object):
@@ -760,7 +766,15 @@ class Series(object):
 
 
 class Blat(object):
-    def __init__(self, ref_2bit, logger, port, output_dir):
+    def __init__(
+        self, ref_2bit: str, logger: logger, port: int, output_dir: str
+    ) -> None:
+        """
+        :param ref_2bit: the path of reference for blat alignment
+        :param logger: the logger for logging
+        :param port: the port of server service for blat alignment
+        :param output_dir: the path for storing alignment result
+        """
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
@@ -768,7 +782,10 @@ class Blat(object):
         self.logger = logger
 
     @property
-    def ref_dir(self):
+    def ref_dir(self) -> str:
+        """
+        :return: the absolute path of reference dir
+        """
         if self.ref_2bit.startswith("~"):
             abs_2bit = os.path.join(
                 os.path.expanduser("~"), self.ref_2bit.replace("~/", "")
@@ -780,7 +797,7 @@ class Blat(object):
         return ref_dir
 
     @property
-    def log_file(self):
+    def log_file(self) -> str:
         return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
 
     def is_ready(self) -> bool:
@@ -796,7 +813,7 @@ class Blat(object):
     def is_running(self) -> bool:
         return True if self._search_processing() else False
 
-    def _search_processing(self):
+    def _search_processing(self) -> List:
         result = []
         self.logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
@@ -805,10 +822,10 @@ class Blat(object):
                     result.append(proc)
         return result
 
-    def _run_cmd(self, cmd):
+    def _run_cmd(self, cmd: str) -> None:
         subprocess.run(cmd.split(), check=True)
 
-    def _start_server(self):
+    def _start_server(self) -> Process:
         """gfServer should run at the directory where gfServer,
         gfClient and hg38.2bit located"""
 
@@ -827,20 +844,20 @@ class Blat(object):
         os.chdir(cwd)
         return process
 
-    def start_server(self):
+    def start_server(self) -> None:
         running_flag = self.is_running()
         if not running_flag:
             self._start_server()
         else:
             self.is_start_server = False
 
-    def stop_server(self):
+    def stop_server(self) -> None:
         procs = self._search_processing()
         self.logger.debug("stoping server service")
         for proc in procs:
             proc.kill()
 
-    def _query(self, in_seq, miniIdentity=90) -> str:
+    def _query(self, in_seq: str, miniIdentity: int = 90) -> str:
         """Using gfClient to query 'in_seq' to generate alignment file (in PSL format).
 
         :param miniIdentity: the threshold of the identity for aligning
@@ -875,11 +892,11 @@ class Blat(object):
             os.remove(in_fasta)
         return out_psl
 
-    def _wait_ready(self, interval=30):
+    def _wait_ready(self, interval: int = 30) -> None:
         while not self.is_ready():
             time.sleep(interval)
 
-    def query(self, in_seq, miniIdentity=90):
+    def query(self, in_seq: str, miniIdentity: int = 90) -> str:
 
         if self.is_start_server:
             if self.is_ready():
@@ -894,7 +911,13 @@ class Blat(object):
 
 
 class ReadsConnecter(object):
-    def __init__(self, aln_list, blat, logger, soft_len_cutoff=30):
+    def __init__(
+        self,
+        aln_list: List[Read],
+        blat: Blat,
+        logger: logger,
+        soft_len_cutoff: int = 30,
+    ) -> None:
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
         self.aln_list = aln_list
@@ -903,7 +926,7 @@ class ReadsConnecter(object):
         self.blat = blat
 
     @staticmethod
-    def init_mode_judge(sms) -> int:
+    def init_mode_judge(sms: Tuple[int, int, int]) -> int:
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
@@ -914,13 +937,13 @@ class ReadsConnecter(object):
 
     @staticmethod
     def conduct_glocal_alignment_forMS(
-        query_seq,
-        target_seq,
-        same_strand,
-        is_align,
-        s_position,
-        threshold=0.6,
-    ):
+        query_seq: str,
+        target_seq: str,
+        same_strand: bool,
+        is_align: bool,
+        s_position: str,
+        threshold: float = 0.6,
+    ) -> Tuple[bool, Union[None, str]]:
         """query_seq: M  target_seq: S"""
         # TODO
         if len(query_seq) > len(target_seq):
@@ -994,10 +1017,12 @@ class ReadsConnecter(object):
         return match_flag, insert_seq
 
     def map_with_blat_for_genome(
-        self, insert_seq, threshold_identity=0.99, top=3, align_len_threshold=20
-    ):
-        # TODO: add use_blat class to replace
-
+        self,
+        insert_seq: str,
+        threshold_identity: float = 0.99,
+        top: int = 3,
+        align_len_threshold: int = 20,
+    ) -> Any:
         insertion_nametuple = namedtuple(
             "insertion", ("start_end", "hit", "chrom", "strand", "seq")
         )
@@ -1031,7 +1056,9 @@ class ReadsConnecter(object):
 
         return insertion_nametuple(start_end, hit, chrom, strand, insert_seq)
 
-    def test_4case(self, start_read, read, is_align_for_ms):
+    def test_4case(
+        self, start_read: Read, read: Read, is_align_for_ms: bool
+    ) -> Tuple[bool, Read]:
 
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
@@ -1195,7 +1222,7 @@ class ReadsConnecter(object):
 
             return True, read
 
-    def run(self):
+    def run(self) -> None:
         """Find the best connected paths for a list of chimeric alignments
         .. note::
             Read-to-Read chain scenarios
