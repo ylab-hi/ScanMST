@@ -45,13 +45,11 @@ except ModuleNotFoundError as e:
     raise SystemExit(e.msg)
 
 
-def detect_read_read_connections_from_cigar(
-    read, mapq_cutoff, ref_2bit, blat, logger, port=88888
-) -> tuple:
+def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> tuple:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
-    :param ref_2bit:
-    :param port:
+    :param logger:
+    :param blat:
     :param mapq_cutoff: MAPQ cutoff
     :type read: pysam.AlignedSegment object
     :type mapq_cutoff: int
@@ -74,7 +72,6 @@ def detect_read_read_connections_from_cigar(
     #        e.g., INV,1,43947377,181934993,1,1,++
     #              TRA,1,160289623,chr17:17189212,1,1,+-
     """
-    logger.debug("")
 
     def format_sa_tag(in_str):
         """
@@ -173,18 +170,14 @@ def detect_sv_from_cigar(
     cvg,
     gene_iv,
     motif_required,
-    ref_2bit,
     blat,
     logger,
     update_bps=False,
-    port=88888,
 ) -> list:
     """
     :param logger: logger for logging
     :param blat: `class.Blat`
     :param update_bps:
-    :param port:
-    :param ref_2bit:
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param splice_bin: a small bin for splice site searching
@@ -207,8 +200,12 @@ def detect_sv_from_cigar(
         reads_pair_mode_dict,
         insertion_dict,
     ) = detect_read_read_connections_from_cigar(
-        read, mapq_cutoff, ref_2bit, blat, logger, port
+        read=read,
+        mapq_cutoff=mapq_cutoff,
+        blat=blat,
+        logger=logger,
     )
+
     read_to_read_chains = [read_to_read_chains]
 
     logger.debug("Read-to-Read chain: ", read_to_read_chains)
@@ -477,7 +474,8 @@ def softclipping_realignment(
                             )
                             if chimeric_aln_str:
                                 read.set_tag("SA", chimeric_aln_str)
-                # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);newpos=[pos, size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
+                # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
+                # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
                 # select reads with SA tags (original or newly-added), ignore supplementary alignment
                 if read.has_tag("SA") and not read.is_supplementary:
@@ -489,10 +487,8 @@ def softclipping_realignment(
                         cvg=cvg,
                         gene_iv=gene_iv,
                         motif_required=motif_required,
-                        ref_2bit=ref_2bit,
                         blat=blat,
                         logger=logger,
-                        port=port,
                     )
                     sv_tag_list = []
                     ot_tag_list = []

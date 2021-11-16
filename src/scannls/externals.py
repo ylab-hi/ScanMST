@@ -85,10 +85,7 @@ def psl2sam(hsp, query_seq_len) -> tuple:
             soft_len = end3
         cigar += str(end3) + "S"
     # return cigar, soft_len
-    if _strand == 1:
-        strand = "+"
-    elif _strand == -1:
-        strand = "-"
+    strand = "+" if _strand == 1 else "-"
     return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
 
 
@@ -124,7 +121,7 @@ def blat_mapq_calculator(hsps, query_len, blat_ident_pct_cutoff=0.95) -> int:
         mapq = 3
     elif num_of_locations == 3:
         mapq = 2
-    elif num_of_locations >= 4 and num_of_locations <= 9:
+    elif 4 <= num_of_locations <= 9:
         mapq = 1
     else:
         mapq = 0
@@ -179,16 +176,10 @@ def softclipped_seq2SA_tag(
     :type read_strand: str
     :param read_mode: mode of the aligned read (1/2)
     :type read_mode: int
-    :param ref_2bit: reference genome (in 2bit format)
-    :type ref_2bit: str
-    :param port: BLAT server port
-    :type port: int
     :param mapq_cutoff: MAPQ cutoff
     :type mapq_cutoff: int
     :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
     :type max_allowed_nm: int
-    :param output_dir: BLAT output directory for psl files
-    :type output_dir: str
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :type blat_ident_pct_cutoff: float
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
