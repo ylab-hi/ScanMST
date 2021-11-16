@@ -4,10 +4,10 @@ import re
 import subprocess
 import sys
 
-import psutil
 from Bio import SearchIO
 
 from .common import remove
+from .exception import ToolNotFoundError
 
 try:
     import pysam
@@ -260,10 +260,5 @@ def external_tool_checking(logger, blat=False) -> None:
             path = subprocess.check_output([cmd, each], stderr=subprocess.STDOUT)
             path = str(path, "utf-8")
         except subprocess.CalledProcessError:
-            logger.error(
-                "Checking for '" + each + "': ERROR - could not find '" + each + "'",
-                file=sys.stderr,
-            )
-            logger.error("Exiting.", file=sys.stderr)
-            sys.exit(0)
+            raise ToolNotFoundError(each)
         logger.success("Checking for '" + each + "': found " + path)

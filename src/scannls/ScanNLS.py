@@ -180,7 +180,8 @@ def detect_sv_from_cigar(
     port=88888,
 ) -> list:
     """
-    :param *:
+    :param logger: logger for logging
+    :param blat: `class.Blat`
     :param update_bps:
     :param port:
     :param ref_2bit:
@@ -212,7 +213,7 @@ def detect_sv_from_cigar(
 
     logger.debug("Read-to-Read chain: ", read_to_read_chains)
     logger.debug("Read-to-Read pair modes: ", reads_pair_mode_dict)
-    logger.debug("Read-to-Read inertion: ", insertion_dict)
+    logger.debug("Read-to-Read insertion: ", insertion_dict)
 
     event_groups = []
     if read_to_read_chains:
