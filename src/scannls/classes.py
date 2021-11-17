@@ -299,15 +299,15 @@ class Read(object):
     @property
     def sms(self) -> tuple:
         # return f'{self.lt_soft_len}\t{self.read_match_size}\t{self.rt_soft_len}'
-        return (self.lt_soft_len, self.read_match_size, self.rt_soft_len)
+        return self.lt_soft_len, self.read_match_size, self.rt_soft_len
 
     def add_path(self, path) -> None:
         """path is an instance of Path class"""
         self.linked_paths.append(path)
 
     def get_exons_and_introns(self) -> tuple:
-        """get the coordiantes for reads matched part (without softclipping)
-        :return: exons coordiantes and introns coordiantes
+        """get the coordinates for reads matched part (without softclipping)
+        :return: exons coordinates and introns coordinates
         :rtype: tuple
         """
         exons = []

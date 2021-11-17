@@ -11,8 +11,10 @@ import tempfile
 from pathlib import Path
 
 import loguru
+import psutil
 import pytest
 from loguru import logger
+from psutil import Process
 
 from scannls.classes import Blat
 
@@ -32,7 +34,6 @@ class TestBlat:
         assert log_file.is_absolute()
 
     def test_is_ready(self, blat, mocker):
-        # mocker.patch("loguru.logger.debug")
         spy = mocker.spy(loguru.logger, "debug")
         assert blat.is_ready() is False
 
@@ -45,17 +46,25 @@ class TestBlat:
         assert spy.call_count == 2
 
     def test_is_running(self, blat, mocker):
+        name = "gfServe"
+        mocker.patch("psutil.process_iter", return_value=[Process(name=name)])
+        assert blat.is_running() is True
 
-        assert False
+    def test_is_running_fail(self, blat, mocker):
+        name = "test"
+        process = Process(name=name)
+        mocker.path(psutil.process_iter, return_value=[process])
+        assert blat.is_running() is False
 
-    def test_start_server(self):
-        assert False
-
-    def test_stop_server(self):
-        assert False
-
-    def test__query(self):
-        assert False
-
-    def test_query(self):
-        assert False
+    #
+    # def test_start_server(self):
+    #     assert False
+    #
+    # def test_stop_server(self):
+    #     assert False
+    #
+    # def test__query(self):
+    #     assert False
+    #
+    # def test_query(self):
+    #     assert False
