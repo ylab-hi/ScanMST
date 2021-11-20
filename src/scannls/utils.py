@@ -909,6 +909,46 @@ def infer_sv_from_connected_reads(
             ins_seq_in_read = read_seq[-read.rt_soft_len :][:indel_size]
         return ins_seq_in_read
 
+    def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
+        """
+        :param read: a chimeirc read
+        :param mode: mode for the chimeirc read
+        :param indel_size: indel size infered from 'query_offset - target_offset'
+        :type read : Read
+        :type mode: int
+        :type indel_size: int
+        :return: putative insertion sequence from the read
+        :rtype: str
+        ..note:
+            * inserted sequence:
+              S-----SM---M    M---MS-----S
+              SSSSSXXMMMMM    MMMMMXXSSSSS
+            * microhomology:
+              S-----SM---M    M---MS-----S
+              SSSSSSSXXMMM    MMMXXSSSSSSS
+        """
+        read_seq = read.query_sequence
+        bp_region_seq = ""
+        # inserted sequence
+        if bp_region_seq_len > 0:
+            if mode == 2:  # SM
+                bp_region_seq = read_seq[: read.lt_soft_len][-bp_region_seq_len:]
+            elif mode == 1:  # MS
+                bp_region_seq = read_seq[-read.rt_soft_len :][:bp_region_seq_len]
+        # microhomology
+        elif bp_region_seq_len < 0:
+            if mode == 2:  # SM
+                bp_region_seq = read_seq[
+                    read.lt_soft_len : read.lt_soft_len - bp_region_seq_len
+                ]
+            elif mode == 1:  # MS
+                bp_region_seq = read_seq[
+                    bp_region_seq_len - read.rt_soft_len : -read.rt_soft_len
+                ]
+        else:
+            bp_region_seq = ""
+        return bp_region_seq
+
     if lt_mode == 3 or rt_mode == 3:
         return "NA", 0, 0, (), (), (), (), []
 
@@ -947,16 +987,23 @@ def infer_sv_from_connected_reads(
                     + read_lt.indel_size
                     + read_rt.indel_size
                 )
-                indel_size = query_offset - target_offset
-                if indel_size == 0:  # micro-inversion
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                evt_size = query_offset - target_offset
+                if evt_size == 0:  # micro-inversion
                     return "NA", 0, 0, (), (), (), (), []
-                elif indel_size < 0:  # deletion
+                elif evt_size < 0:  # deletion
                     return "NA", 0, 0, (), (), (), (), []
-                elif indel_size >= query_offset:  # large tandem duplication
+                elif evt_size >= query_offset:  # large tandem duplication
                     chrm_start = lt_chrm
                     junc_start = read_lt.ref_start
                     chrm_end = lt_chrm
-                    junc_end = junc_start + indel_size
+                    junc_end = junc_start + evt_size
                     _nls, _anno, _can = splicing_confirmation(
                         chrm_start,
                         junc_start,
@@ -1056,7 +1103,7 @@ def infer_sv_from_connected_reads(
                     ins_start = read_lt.ref_start
                     ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
                     ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
-                        read_lt, lt_mode, indel_size
+                        read_lt, lt_mode, evt_size
                     )
 
                     is_DUP = None
@@ -1075,7 +1122,7 @@ def infer_sv_from_connected_reads(
                         chrm_start = lt_chrm
                         junc_start = read_lt.ref_start
                         chrm_end = lt_chrm
-                        junc_end = junc_start + indel_size
+                        junc_end = junc_start + evt_size
                         _nls, _anno, _can = splicing_confirmation(
                             chrm_start,
                             junc_start,
@@ -1196,20 +1243,23 @@ def infer_sv_from_connected_reads(
                     + read_lt.indel_size
                     + read_rt.indel_size
                 )
-                indel_size = query_offset - target_offset
-                # print('indel_size: ', indel_size)
-                # print('query_offset: ', query_offset)
-                if indel_size == 0:  # micro-inversion
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                evt_size = query_offset - target_offset
+                if evt_size == 0:  # micro-inversion
                     return "NA", 0, 0, (), (), (), (), []
-                elif indel_size < 0:  # deletion
+                elif evt_size < 0:  # deletion
                     return "NA", 0, 0, (), (), (), (), []
-                elif indel_size >= query_offset:
+                elif evt_size >= query_offset:
                     chrm_start = rt_chrm
                     junc_start = read_rt.ref_start
                     chrm_end = rt_chrm
-                    junc_end = junc_start + indel_size
-                    # print('junc_start: ', junc_start)
-                    # print('junc_end: ', junc_end)
+                    junc_end = junc_start + evt_size
                     _nls, _anno, _can = splicing_confirmation(
                         chrm_start,
                         junc_start,
@@ -1311,7 +1361,7 @@ def infer_sv_from_connected_reads(
                     ins_start = read_lt.ref_start + read_lt.reference_match_size
                     ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
                     ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
-                        read_lt, lt_mode, indel_size
+                        read_lt, lt_mode, evt_size
                     )
 
                     is_DUP = None
@@ -1331,7 +1381,7 @@ def infer_sv_from_connected_reads(
                         chrm_start = rt_chrm
                         junc_start = rt_start
                         chrm_end = rt_chrm
-                        junc_end = junc_start + indel_size
+                        junc_end = junc_start + evt_size
                         _nls, _anno, _can = splicing_confirmation(
                             chrm_start,
                             junc_start,
@@ -1448,6 +1498,13 @@ def infer_sv_from_connected_reads(
             if lt_mode == rt_mode == 1:
                 ra_bp = read_lt.ref_start + read_lt.reference_match_size
                 sa_bp = read_rt.ref_start + read_rt.reference_match_size
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
                 if ra_bp == sa_bp:
                     return "NA", 0, 0, (), (), (), (), []
                 else:
@@ -1569,6 +1626,13 @@ def infer_sv_from_connected_reads(
             elif lt_mode == rt_mode == 2:  # inversion
                 ra_bp = read_lt.ref_start
                 sa_bp = read_rt.ref_start
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
                 if ra_bp == sa_bp:
                     return "NA", 0, 0, (), (), (), (), []
                 else:
@@ -1696,6 +1760,13 @@ def infer_sv_from_connected_reads(
                 junc_start = read_lt.ref_start + read_lt.reference_match_size
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1791,6 +1862,13 @@ def infer_sv_from_connected_reads(
                 junc_start = read_lt.ref_start
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start + read_rt.reference_match_size
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1889,6 +1967,13 @@ def infer_sv_from_connected_reads(
                 junc_start = read_lt.ref_start + read_lt.reference_match_size
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start + read_rt.reference_match_size
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1984,6 +2069,13 @@ def infer_sv_from_connected_reads(
                 junc_start = read_lt.ref_start
                 chrm_end = rt_chrm
                 junc_end = read_rt.ref_start
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
