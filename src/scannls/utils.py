@@ -8,7 +8,6 @@ from align import aligner
 from . import __version__
 from .common import transcript_upstream_part_determiner
 
-# from scannls.NLSISO import multiple_sa_tag_selector
 
 try:
     import pysam

@@ -7,22 +7,36 @@
 @time: 16/11/2021 16:03
 """
 import os
-import tempfile
 from pathlib import Path
 
 import loguru
-import psutil
 import pytest
 from loguru import logger
-from psutil import Process
 
 from scannls.classes import Blat
+from scannls.classes import ReadsConnecter
 
 
 class TestBlat:
     @pytest.fixture(scope="class")
     def blat(self):
         return Blat(ref_2bit=".", logger=logger, port=88888, output_dir=".")
+
+    @pytest.fixture(scope="class")
+    def process(self):
+        names = ["gfServer", "test"]
+
+        class _Process:
+            def __init__(self, name):
+                self._name = name
+
+            def name(self):
+                return self._name
+
+            def cmdline(self):
+                return True
+
+        return [_Process(name) for name in names]
 
     def test_ref_dir(self, blat):
         ref_dir = Path(blat.ref_dir)
@@ -45,26 +59,18 @@ class TestBlat:
 
         assert spy.call_count == 2
 
-    def test_is_running(self, blat, mocker):
-        name = "gfServe"
-        mocker.patch("psutil.process_iter", return_value=[Process(name=name)])
+    def test_is_running(self, blat, process, mocker):
+        process_1, process_2 = process
+
+        mocker.patch("psutil.process_iter", return_value=[process_1])
         assert blat.is_running() is True
 
-    def test_is_running_fail(self, blat, mocker):
-        name = "test"
-        process = Process(name=name)
-        mocker.path(psutil.process_iter, return_value=[process])
+        mocker.patch("psutil.process_iter", return_value=[process_2])
         assert blat.is_running() is False
 
-    #
-    # def test_start_server(self):
-    #     assert False
-    #
-    # def test_stop_server(self):
-    #     assert False
-    #
-    # def test__query(self):
-    #     assert False
-    #
-    # def test_query(self):
-    #     assert False
+
+class TestReadConnector:
+    def test_run(
+        self,
+    ):
+        pass

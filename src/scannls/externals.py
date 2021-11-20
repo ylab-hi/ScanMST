@@ -190,7 +190,7 @@ def softclipped_seq2SA_tag(
 
     chimeric_aln_str = ""
     try:
-        blat = SearchIO.read(psl_file, "use_blat-psl")
+        blat = SearchIO.read(psl_file, "blat-psl")
     except ValueError as err:
         print("No BLAT hit! {}".format(in_seq), err, file=sys.stderr)
     else:
@@ -239,17 +239,12 @@ def softclipped_seq2SA_tag(
     return chimeric_aln_str
 
 
-def external_tool_checking(logger, blat=False) -> None:
+def external_tool_checking(logger) -> None:
     """checking dependencies are installed"""
-    if blat:
-        software = ["sambamba", "gfClient", "gfServer"]
-    else:
-        software = ["sambamba"]
-    cmd = "which"
-    for each in software:
-        try:
-            path = subprocess.check_output([cmd, each], stderr=subprocess.STDOUT)
-            path = str(path, "utf-8")
-        except subprocess.CalledProcessError:
-            raise ToolNotFoundError(each)
-        logger.success("Checking for '" + each + "': found " + path)
+    software = ["samtools", "gfClient", "gfServer"]
+    for tool in software:
+        output = subprocess.getoutput(tool)
+        if "command not found" in output:
+            raise ToolNotFoundError(tool)
+        else:
+            logger.success("Checking for '" + tool + "': found ")
