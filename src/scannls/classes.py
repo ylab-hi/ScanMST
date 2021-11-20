@@ -11,7 +11,6 @@ from collections import namedtuple
 from multiprocessing import Process
 from typing import Any
 from typing import List
-from typing import NamedTuple
 from typing import Tuple
 from typing import Union
 
@@ -25,11 +24,11 @@ from loguru import logger
 class Path(object):
     """store chimeric reads as nodes in a path (directed acyclic graph)
     :param nodes: a list of Read as nodes
-    :type nodes: Read
+    :type nodes: List[Read]
     :param sms: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length)
-    :type sms: tuple
+    :type sms: tuple or None
     :param sequence: reads sequence of last added read
-    :type sequence: str
+    :type sequence: str or None
     :param nm: summation of number-of-mismatches of Reads in the path
     :type nm: int
     :param mode: a dictionary of Reads-pair to mode in the path
@@ -517,7 +516,7 @@ class Series(object):
     :param nodes: sequence of Nodes
     :type nodes: list
     :param assemblied: The series is from assembly of reads (True) or a single read (False)
-    :type assemblied: bool
+    :type assemblied: bool or None
 
     .. note::
         [('TDUP', 0, 1, ('chr17:7708250', 'chr17:7701656', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
@@ -838,7 +837,7 @@ class Blat(object):
             os.remove(self.log_file)
 
         cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {self.ref_2bit}"
-        process = Process(target=self._run_cmd, args=[cmd])
+        process = Process(target=self._run_cmd, args=(cmd))
         process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
@@ -909,6 +908,165 @@ class Blat(object):
 
         return out_psl
 
+    def query_insertion(
+        self,
+        insert_seq: str,
+        threshold_identity: float = 0.99,
+        top: int = 3,
+        align_len_threshold: int = 20,
+    ) -> Any:
+
+        insertion_nametuple = namedtuple(
+            "insertion", ("start_end", "hit", "chrom", "strand", "seq")
+        )
+        hit, start_end, chrom, strand, seq = 0, None, None, None, None
+
+        if len(insert_seq) < align_len_threshold:
+            return insertion_nametuple(start_end, hit, chrom, strand, seq)
+
+        out_blat = self.query(in_seq=insert_seq)
+        try:
+            blat = SearchIO.read(out_blat, "blat-psl")
+        except ValueError:
+            return insertion_nametuple(start_end, hit, chrom, strand, seq)
+
+        hsps = blat.hsps
+        hsps.sort(key=lambda x: x.score, reverse=True)
+
+        hsps = hsps[:top]
+
+        keep_hsp = []
+        for hsp in hsps:
+            if sum(hsp.hit_span_all) / len(insert_seq) > threshold_identity:
+                keep_hsp.append(hsp)
+
+        hit = len(keep_hsp)
+
+        if hit == 1:
+            start_end = keep_hsp[0].hit_range_all
+            strand = "+" if keep_hsp[0].hit_strand_all[0] == 1 else "-"
+            chrom = keep_hsp[0].hit_id
+
+        return insertion_nametuple(start_end, hit, chrom, strand, insert_seq)
+
+    @staticmethod
+    def _remove(file):
+        if os.path.exists(file):
+            os.remove(file)
+
+    @staticmethod
+    def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float):
+        """
+        the function is used to calculate map quality of the insertion.
+        :param hsps:
+        :param in_seq_len:
+        :param threshold_identity:
+        :return:
+        """
+        num_of_locations = 0
+
+        for hsp in hsps:
+            if (
+                hsp.ident_pct / 100 >= threshold_identity
+                and hsp.query_span / in_seq_len >= threshold_identity
+            ):
+                num_of_locations += 1
+        if num_of_locations == 1:
+            mapq = 60
+        elif num_of_locations == 2:
+            mapq = 3
+        elif num_of_locations == 3:
+            mapq = 2
+        elif 4 <= num_of_locations <= 9:
+            mapq = 1
+        else:
+            mapq = 0
+        return mapq
+
+    def fetch_mapq(self, in_seq: str, threshold_identity: float) -> Any:
+        psl_file = self.query(in_seq=in_seq)
+
+        try:
+            blat = SearchIO.read(psl_file, "blat-psl")
+        except ValueError:
+            self.logger.error(f"No Blat hit found {in_seq}")
+            raise SystemExit
+        else:
+            hsps = blat.hsps
+            hsps.sort(key=lambda k: k.score, reverse=True)
+            top_hsp = hsps[0]
+            Blat._remove(psl_file)
+            mapq = Blat._calculate_mapq(hsps, len(in_seq), threshold_identity)
+        return top_hsp, mapq
+
+    def psl2sam(self, hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
+        """Convert the top HSP in PSL file to SAM fields
+        chrom, reference_start, strand, cigarstring, num_of_mismatch
+        psl2sam try to implement the psl2sam.pl script and return the cigar and mapping position estimated from psl file
+
+        :param hsp: the selected HSP form BLAT
+        :param in_seq_len:
+        :return: chrom, reference_start, strand, cigarstring, num_of_mismatch
+        """
+
+        cigar = ""
+        query_start = hsp.query_start
+        query_end = hsp.query_end
+
+        _strand = hsp.query_strand_all[0]  # may need replace by qery_strand
+        ref_start, ref_end = hsp.hit_range
+        ref_chrom = hsp.hit_id
+        num_of_mismatch = hsp.mismatch_num
+
+        soft_len = 0
+        if _strand == -1:
+            query_start = in_seq_len - hsp.query_end
+            query_end = in_seq_len - hsp.query_start
+        if query_start:
+            # 5'-end clipping
+            soft_len = query_start
+            cigar += str(query_start) + "S"
+        x = hsp.query_span_all
+        if _strand == -1:
+            y = [
+                in_seq_len - item[1] for item in hsp.query_range_all
+            ]  # may need replace by query_start_all when the bug is fixed in Biopython
+        else:
+            y = [
+                item[0] for item in hsp.query_range_all
+            ]  # may need replace by query_start_all when the bug is fixed in Biopython
+        z = hsp.hit_start_all
+        y0, z0 = y[0], z[0]
+        for i in range(1, len(hsp)):
+            ly = y[i] - y[i - 1] - x[i - 1]
+            lz = z[i] - z[i - 1] - x[i - 1]
+            if ly < lz:
+                # del: the reference gap is longer
+                cigar += str(y[i] - y0) + "M"
+                if lz - ly >= 10:
+                    cigar += str(lz - ly) + "N"
+                else:
+                    cigar += str(lz - ly) + "D"
+                y0, z0 = y[i], z[i]
+            elif lz < ly:
+                # ins: the query gap is longer
+                cigar += str(z[i] - z0) + "M"
+                cigar += str(ly - lz) + "I"
+                y0, z0 = y[i], z[i]
+
+        cigar += str(query_end - y0) + "M"
+        # print(cigar)
+        # return cigar, soft_len
+        if in_seq_len != query_end:
+            # 3'-end clipping
+            end3 = in_seq_len - query_end
+            if end3 > soft_len:
+                soft_len = end3
+            cigar += str(end3) + "S"
+        # return cigar, soft_len
+        strand = "+" if _strand == 1 else "-"
+        return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
+
 
 class ReadsConnecter(object):
     def __init__(
@@ -942,31 +1100,35 @@ class ReadsConnecter(object):
         same_strand: bool,
         is_align: bool,
         s_position: str,
-        threshold: float = 0.6,
+        threshold: float = 0.7,
     ) -> Tuple[bool, Union[None, str]]:
         """query_seq: M  target_seq: S"""
         # do not conduct alignment
+
+        insert_seq = None  # None means M is not consist with S
+        match_flag = False
         if not is_align:
-
-            insert_len = len(target_seq) - len(query_seq)
-
-            insert_seq = (
-                target_seq[-insert_len:]
-                if s_position == "left"
-                else target_seq[:insert_len]
-            )
-
-            local_alignment_result = aligner(insert_seq, query_seq, method="local")[0]
-
-            if (
-                local_alignment_result.start2 == 0
-                or local_alignment_result.end2 == len(query_seq)
-            ):
-
-                return True, None
-
-            else:
-                return True, insert_seq
+            #
+            # insert_len = len(target_seq) - len(query_seq)
+            #
+            # insert_seq = (
+            #     target_seq[-insert_len:]
+            #     if s_position == "left"
+            #     else target_seq[:insert_len]
+            # )
+            #
+            # local_alignment_result = aligner(insert_seq, query_seq, method="local")[0]
+            #
+            # if (
+            #         local_alignment_result.start2 == 0
+            #         or local_alignment_result.end2 == len(query_seq)
+            # ):
+            #
+            #     return True, None
+            #
+            # else:
+            #     return True, insert_seq
+            return True, insert_seq
 
         if not same_strand:
             target_seq = str(Seq(target_seq).reverse_complement())
@@ -977,9 +1139,6 @@ class ReadsConnecter(object):
 
         _query_seq_len, _target_seq_len = len(_query_seq), len(_target_seq)
 
-        insert_seq = None  # None means M is not consist with S
-        match_flag = False
-
         query_identity = 1 - (
             len(query_seq)
             - _query_seq_len
@@ -987,73 +1146,33 @@ class ReadsConnecter(object):
             + alignment_result.n_gaps2
             + alignment_result.n_mismatches
         ) / len(query_seq)
+
         if query_identity > threshold:
             match_flag = True
-
-            if len(query_seq) >= len(target_seq):
-                return match_flag, insert_seq
-
-            if s_position == "left":
-                insert_len = len(_query_seq) - len(_query_seq.rstrip("-"))
-            else:
-                insert_len = alignment_result.start2
-
-            if insert_len > 0:
-
-                local_len = int(0.25 * len(_query_seq.rstrip("-"))) + insert_len
-                local_query_seq = _query_seq[-insert_len - local_len : -insert_len]
-                local_target_seq = _target_seq[-local_len:]
-                local_alignment_result = aligner(
-                    local_query_seq, local_target_seq, method="local"
-                )
-                if local_alignment_result[0].end2 < local_len:
-                    insert_seq = (
-                        target_seq[:insert_len]
-                        if s_position == "left"
-                        else target_seq[-insert_len:]
-                    )
+            #
+            # if len(query_seq) >= len(target_seq):
+            #     return match_flag, insert_seq
+            #
+            # if s_position == "left":
+            #     insert_len = len(_query_seq) - len(_query_seq.rstrip("-"))
+            # else:
+            #     insert_len = alignment_result.start2
+            #
+            # if insert_len > 0:
+            #     local_len = int(0.25 * len(_query_seq.rstrip("-"))) + insert_len
+            #     local_query_seq = _query_seq[-insert_len - local_len : -insert_len]
+            #     local_target_seq = _target_seq[-local_len:]
+            #     local_alignment_result = aligner(
+            #         local_query_seq, local_target_seq, method="local"
+            #     )
+            #     if local_alignment_result[0].end2 < local_len:
+            #         insert_seq = (
+            #             target_seq[:insert_len]
+            #             if s_position == "left"
+            #             else target_seq[-insert_len:]
+            #         )
 
         return match_flag, insert_seq
-
-    def map_with_blat_for_genome(
-        self,
-        insert_seq: str,
-        threshold_identity: float = 0.99,
-        top: int = 3,
-        align_len_threshold: int = 20,
-    ) -> Any:
-        insertion_nametuple = namedtuple(
-            "insertion", ("start_end", "hit", "chrom", "strand", "seq")
-        )
-        hit, start_end, chrom, strand, seq = 0, None, None, None, None
-
-        if len(insert_seq) < align_len_threshold:
-            return insertion_nametuple(start_end, hit, chrom, strand, seq)
-
-        out_blat = self.blat.query(in_seq=insert_seq)
-        try:
-            blat = SearchIO.read(out_blat, "blat-psl")
-        except ValueError as error:
-            return insertion_nametuple(start_end, hit, chrom, strand, seq)
-
-        hsps = blat.hsps
-        hsps.sort(key=lambda x: x.score, reverse=True)
-
-        hsps = hsps[:top]
-
-        keep_hsp = []
-        for hsp in hsps:
-            if sum(hsp.hit_span_all) / len(insert_seq) > threshold_identity:
-                keep_hsp.append(hsp)
-
-        hit = len(keep_hsp)
-
-        if hit == 1:
-            start_end = keep_hsp[0].hit_range_all
-            strand = "+" if keep_hsp[0].hit_strand_all[0] == 1 else "-"
-            chrom = keep_hsp[0].hit_id
-
-        return insertion_nametuple(start_end, hit, chrom, strand, insert_seq)
 
     def test_4case(
         self, start_read: Read, read: Read, is_align_for_ms: bool
@@ -1079,9 +1198,9 @@ class ReadsConnecter(object):
         )
 
         if match_flag:  # may same
-            if insertion_1_seq is not None:  # insertion exist
-                insertion = self.map_with_blat_for_genome(insertion_1_seq)
-                self.insertion_dict[(start_read, read)] = insertion
+            # if insertion_1_seq is not None:  # insertion exist
+            #     insertion = self.map_with_blat_for_genome(insertion_1_seq)
+            #     self.insertion_dict[(start_read, read)] = insertion
 
             read.mode = 2
             self.logger.debug(f"{start_read.mode}, {read.mode}")
@@ -1108,9 +1227,6 @@ class ReadsConnecter(object):
         )
 
         if match_flag:
-            if insertion_2_seq is not None:  # insertion exist
-                insertion = self.map_with_blat_for_genome(insertion_2_seq)
-                self.insertion_dict[(start_read, read)] = insertion
 
             read.mode = 1
 
@@ -1145,9 +1261,6 @@ class ReadsConnecter(object):
 
         if match_flag:
             read, start_read = start_read, read
-            if insertion_3_seq is not None:  # insertion exist
-                insertion = self.map_with_blat_for_genome(insertion_3_seq)
-                self.insertion_dict[(read, start_read)] = insertion
 
             read.mode = 1
             self.logger.debug(f"{read.mode}, {start_read.mode}")
@@ -1158,9 +1271,6 @@ class ReadsConnecter(object):
             if start_read in self.candidate_nodes:
                 self.candidate_nodes.remove(start_read)
 
-            # read.adhocseq = start_read.adhocseq
-
-            # start_read = read
             read.adhocsms = 0, _lt_len_r1 + _read_match_r1, _rt_len_r1
 
             return True, read
@@ -1177,9 +1287,6 @@ class ReadsConnecter(object):
 
         if match_flag:
             read, start_read = start_read, read
-            if insertion_4_seq is not None:  # insertion exist
-                insertion = self.map_with_blat_for_genome(insertion_4_seq)
-                self.insertion_dict[(read, start_read)] = insertion
 
             start_read.mode = 2
 
@@ -1191,9 +1298,6 @@ class ReadsConnecter(object):
             if start_read in self.candidate_nodes:
                 self.candidate_nodes.remove(start_read)
 
-            # read.adhocseq = start_read.adhocseq
-
-            # start_read = read
             read.adhocsms = (
                 _lt_len_r1,
                 _rt_len_r1 + _read_match_r1,
@@ -1201,25 +1305,6 @@ class ReadsConnecter(object):
             )
 
             return True, read
-
-        # _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
-        # _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
-        #
-        # # fifth case
-        # self.logger.debug("testing fifth case M > S and S < M")
-        #
-        # if _read_match_r1 > (_lt_len_r2 + _rt_len_r2) and _read_match_r2 > (
-        #     _rt_len_r1 + _lt_len_r1
-        # ):
-        #     self.reads_chain.append(read)
-        #
-        #     start_mode = 2 if _lt_len_r1 > _read_match_r1 else 1
-        #     read_mode = 2 if _lt_len_r2 > _read_match_r2 else 1
-        #
-        #     self.logger.debug(f"{start_read.mode}, {read.mode}")
-        #     self.read_pair_mode_dict[(start_read, read)] = (start_mode, read_mode)
-        #
-        #     return True, read
 
     def run(self) -> None:
         """Find the best connected paths for a list of chimeric alignments

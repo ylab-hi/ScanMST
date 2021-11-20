@@ -2,11 +2,7 @@
 # -*- coding: utf-8 -*-
 import re
 import subprocess
-import sys
 
-from Bio import SearchIO
-
-from .common import remove
 from .exception import ToolNotFoundError
 
 try:
@@ -15,117 +11,6 @@ try:
     import HTSeq
 except ModuleNotFoundError as e:
     raise SystemExit(e.msg)
-
-
-def psl2sam(hsp, query_seq_len) -> tuple:
-    """Convert the top HSP in PSL file to SAM fields
-    chrom, reference_start, strand, cigarstring, num_of_mismatch
-    psl2sam try to implement the psl2sam.pl script and return the cigar and mapping position estimated from psl file
-
-    :param hsp: the selected HSP form BLAT
-    :param query_seq_len:
-    :type hsp: Bio.SearchIO._model.hsp.HSP
-    :type query_seq_len: int
-    :return: chrom, reference_start, strand, cigarstring, num_of_mismatch
-    :rtype: tuple
-    """
-
-    cigar = ""
-    query_start = hsp.query_start
-    query_end = hsp.query_end
-
-    _strand = hsp.query_strand_all[0]  # may need replace by qery_strand
-    ref_start, ref_end = hsp.hit_range
-    ref_chrom = hsp.hit_id
-    num_of_mismatch = hsp.mismatch_num
-
-    soft_len = 0
-    if _strand == -1:
-        query_start = query_seq_len - hsp.query_end
-        query_end = query_seq_len - hsp.query_start
-    if query_start:
-        # 5'-end clipping
-        soft_len = query_start
-        cigar += str(query_start) + "S"
-    x = hsp.query_span_all
-    if _strand == -1:
-        y = [
-            query_seq_len - item[1] for item in hsp.query_range_all
-        ]  # may need replace by query_start_all when the bug is fixed in Biopython
-    else:
-        y = [
-            item[0] for item in hsp.query_range_all
-        ]  # may need replace by query_start_all when the bug is fixed in Biopython
-    z = hsp.hit_start_all
-    y0, z0 = y[0], z[0]
-    for i in range(1, len(hsp)):
-        ly = y[i] - y[i - 1] - x[i - 1]
-        lz = z[i] - z[i - 1] - x[i - 1]
-        if ly < lz:
-            # del: the reference gap is longer
-            cigar += str(y[i] - y0) + "M"
-            if lz - ly >= 10:
-                cigar += str(lz - ly) + "N"
-            else:
-                cigar += str(lz - ly) + "D"
-            y0, z0 = y[i], z[i]
-        elif lz < ly:
-            # ins: the query gap is longer
-            cigar += str(z[i] - z0) + "M"
-            cigar += str(ly - lz) + "I"
-            y0, z0 = y[i], z[i]
-
-    cigar += str(query_end - y0) + "M"
-    # print(cigar)
-    # return cigar, soft_len
-    if query_seq_len != query_end:
-        # 3'-end clipping
-        end3 = query_seq_len - query_end
-        if end3 > soft_len:
-            soft_len = end3
-        cigar += str(end3) + "S"
-    # return cigar, soft_len
-    strand = "+" if _strand == 1 else "-"
-    return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
-
-
-def blat_mapq_calculator(hsps, query_len, blat_ident_pct_cutoff=0.95) -> int:
-    """MAPQ calculation using BLAT HSPs
-
-    :param hsps: BLAT HSPs
-    :param query_len: query sequence length
-    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
-    :type hsps: list (BLAT HSPs)
-    :type query_len: int
-    :type blat_ident_pct_cutoff: float
-    :return: MAPQ from BLAT
-    :rtype: int
-    ..note ::
-        MAPQ calculation rules:
-        * 60 = Uniquely mapping
-        * 3  = Maps to 2 locations in the target
-        * 2  = Maps to 3 locations in the target
-        * 1  = Maps to 4-9 locations in the target
-        * 0  = Maps to 10 or more locations in the target
-    """
-    num_of_locations = 0
-    for hsp in hsps:
-        if (
-            hsp.ident_pct / 100 >= blat_ident_pct_cutoff
-            and hsp.query_span / query_len >= blat_ident_pct_cutoff
-        ):
-            num_of_locations += 1
-    if num_of_locations == 1:
-        mapq = 60
-    elif num_of_locations == 2:
-        mapq = 3
-    elif num_of_locations == 3:
-        mapq = 2
-    elif 4 <= num_of_locations <= 9:
-        mapq = 1
-    else:
-        mapq = 0
-    return mapq
 
 
 def cigar_validity(cigar_str) -> str:
@@ -185,71 +70,58 @@ def softclipped_seq2SA_tag(
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
     :rtype: str
     """
-    in_seq_len = len(in_seq)
-    psl_file = blat.query(in_seq=in_seq)
 
     chimeric_aln_str = ""
-    try:
-        blat = SearchIO.read(psl_file, "use_blat-psl")
-    except ValueError as err:
-        print("No BLAT hit! {}".format(in_seq), err, file=sys.stderr)
-    else:
-        hsps = blat.hsps
-        hsps.sort(key=lambda k: k.score, reverse=True)
-        top_hsp = hsps[0]
-        remove(psl_file)
-        __mapq = blat_mapq_calculator(hsps, in_seq_len, blat_ident_pct_cutoff)
-        if (
-            top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
-            and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
-        ):
-            __chrm_sa, __pos_sa, __strand_sa, __cigar_sa_partial, __nm_sa = psl2sam(
-                top_hsp, in_seq_len
+    in_seq_len = len(in_seq)
+
+    top_hsp, __mapq = blat.fetch_mapq(in_seq)
+
+    if (
+        top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
+        and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
+    ):
+        __chrm_sa, __pos_sa, __strand_sa, __cigar_sa_partial, __nm_sa = blat.psl2sam(
+            top_hsp, in_seq_len
+        )
+        if read_strand == __strand_sa:
+            # same strand: different reads mode
+            # MS(1) ~ SM(2) or SM(2) ~ MS(1)
+            if read_mode == 1:
+                __cigar_sa = "{0}S{1}".format(
+                    read_length - in_seq_len, __cigar_sa_partial
+                )  # SM
+            else:
+                __cigar_sa = "{1}{0}S".format(
+                    read_length - in_seq_len, __cigar_sa_partial
+                )  # MS
+        else:
+            # opposite strand: same reads mode
+            # MS(1) ~ MS(1) or SM(2) ~ SM(2)
+            if read_mode == 1:
+                __cigar_sa = "{1}{0}S".format(
+                    read_length - in_seq_len, __cigar_sa_partial
+                )  # MS
+            else:
+                __cigar_sa = "{0}S{1}".format(
+                    read_length - in_seq_len, __cigar_sa_partial
+                )  # SM
+        valid_cigar_sa = cigar_validity(__cigar_sa)
+        if __mapq < mapq_cutoff and int(__nm_sa) < max_allowed_nm:
+            chimeric_aln_str = "{},{},{},{},{},{};".format(
+                __chrm_sa, __pos_sa, __strand_sa, valid_cigar_sa, __mapq, __nm_sa
             )
-            if read_strand == __strand_sa:
-                # same strand: different reads mode
-                # MS(1) ~ SM(2) or SM(2) ~ MS(1)
-                if read_mode == 1:
-                    __cigar_sa = "{0}S{1}".format(
-                        read_length - in_seq_len, __cigar_sa_partial
-                    )  # SM
-                else:
-                    __cigar_sa = "{1}{0}S".format(
-                        read_length - in_seq_len, __cigar_sa_partial
-                    )  # MS
-            else:
-                # opposite strand: same reads mode
-                # MS(1) ~ MS(1) or SM(2) ~ SM(2)
-                if read_mode == 1:
-                    __cigar_sa = "{1}{0}S".format(
-                        read_length - in_seq_len, __cigar_sa_partial
-                    )  # MS
-                else:
-                    __cigar_sa = "{0}S{1}".format(
-                        read_length - in_seq_len, __cigar_sa_partial
-                    )  # SM
-            valid_cigar_sa = cigar_validity(__cigar_sa)
-            if __mapq < mapq_cutoff and int(__nm_sa) < max_allowed_nm:
-                chimeric_aln_str = "{},{},{},{},{},{};".format(
-                    __chrm_sa, __pos_sa, __strand_sa, valid_cigar_sa, __mapq, __nm_sa
-                )
-            else:
-                chimeric_aln_str = ""
+        else:
+            chimeric_aln_str = ""
 
     return chimeric_aln_str
 
 
-def external_tool_checking(logger, blat=False) -> None:
+def external_tool_checking(logger) -> None:
     """checking dependencies are installed"""
-    if blat:
-        software = ["sambamba", "gfClient", "gfServer"]
-    else:
-        software = ["sambamba"]
-    cmd = "which"
-    for each in software:
-        try:
-            path = subprocess.check_output([cmd, each], stderr=subprocess.STDOUT)
-            path = str(path, "utf-8")
-        except subprocess.CalledProcessError:
-            raise ToolNotFoundError(each)
-        logger.success("Checking for '" + each + "': found " + path)
+    software = ["samtools", "gfClient", "gfServer"]
+    for tool in software:
+        output = subprocess.getoutput(tool)
+        if "command not found" in output:
+            raise ToolNotFoundError(tool)
+        else:
+            logger.success("Checking for '" + tool + "': found ")

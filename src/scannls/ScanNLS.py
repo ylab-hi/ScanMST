@@ -33,14 +33,10 @@ from .externals import softclipped_seq2SA_tag
 from .utils import extract_splice_sites
 from .utils import infer_sv_from_connected_reads
 
-# from .call import sv_scan
-
-
 try:
     import pysam
     import numpy as np
     import HTSeq
-    import skbio
 except ModuleNotFoundError as e:
     raise SystemExit(e.msg)
 
@@ -153,11 +149,11 @@ def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> 
             aln_list=chimeric_aln_list, blat=blat, logger=logger
         )
         read_connecter.run()
-
+        logger.debug(f"reads chain: {read_connecter.reads_chain}")
+        logger.debug(f"reads pair mode: {read_connecter.read_pair_mode_dict}")
         return (
             read_connecter.reads_chain,
             read_connecter.read_pair_mode_dict,
-            read_connecter.insertion_dict,
         )
 
 
@@ -210,7 +206,6 @@ def detect_sv_from_cigar(
 
     logger.debug("Read-to-Read chain: ", read_to_read_chains)
     logger.debug("Read-to-Read pair modes: ", reads_pair_mode_dict)
-    logger.debug("Read-to-Read insertion: ", insertion_dict)
 
     event_groups = []
     if read_to_read_chains:
@@ -275,13 +270,9 @@ def softclipping_realignment(
     ref_genome,
     gtf,
     splice_bin,
-    ref_2bit,
     blat,
     logger,
     motif_required,
-    use_blat,
-    port,
-    output_dir,
     blat_ident_pct_cutoff=0.9,
     max_allowed_nm=50,
     min_soft_seg_len=200,
@@ -302,7 +293,6 @@ def softclipping_realignment(
     :param splice_bin: bin size for splice site searching
     :param ref_2bit: reference 2bit file for BLAT
     :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
-    :param use_blat: use BLAT OR not
     :param port: BLAT server port
     :param output_dir: BLAT output directory for psl files
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
@@ -316,7 +306,6 @@ def softclipping_realignment(
     :type splice_bin: int
     :type ref_2bit: str
     :type motif_required: bool
-    :type use_blat: bool
     :type port: int
     :type output_dir: str
     :type blat_ident_pct_cutoff: float
@@ -444,36 +433,35 @@ def softclipping_realignment(
                 # update SA tag of representative alignments (END)
 
                 # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
-                if use_blat:
-                    if not read.has_tag("SA") and not read.is_supplementary:
-                        read_strand = "-" if read.is_reverse else "+"
-                        read_length = int(read.query_length)
-                        # assert read.cigarstring, f"{read.query_name}" # TEST
-                        _, _soft_seq, _, read_mode = get_softclip_length(read)
-                        __soft_seq = Seq(_soft_seq)
+                if not read.has_tag("SA") and not read.is_supplementary:
+                    read_strand = "-" if read.is_reverse else "+"
+                    read_length = int(read.query_length)
+                    # assert read.cigarstring, f"{read.query_name}" # TEST
+                    _, _soft_seq, _, read_mode = get_softclip_length(read)
+                    __soft_seq = Seq(_soft_seq)
 
-                        if read.is_reverse:
-                            soft_seq_ori = str(__soft_seq.reverse_complement())
-                        else:
-                            soft_seq_ori = str(__soft_seq)
+                    if read.is_reverse:
+                        soft_seq_ori = str(__soft_seq.reverse_complement())
+                    else:
+                        soft_seq_ori = str(__soft_seq)
 
-                        if (
-                            read_mode in {1, 2}
-                            and soft_seq_ori
-                            and len(soft_seq_ori) >= min_soft_seg_len
-                        ):
-                            chimeric_aln_str = softclipped_seq2SA_tag(
-                                soft_seq_ori,
-                                read_length,
-                                read_strand,
-                                read_mode,
-                                blat,
-                                mapq_cutoff,
-                                max_allowed_nm,
-                                blat_ident_pct_cutoff,
-                            )
-                            if chimeric_aln_str:
-                                read.set_tag("SA", chimeric_aln_str)
+                    if (
+                        read_mode in {1, 2}
+                        and soft_seq_ori
+                        and len(soft_seq_ori) >= min_soft_seg_len
+                    ):
+                        chimeric_aln_str = softclipped_seq2SA_tag(
+                            soft_seq_ori,
+                            read_length,
+                            read_strand,
+                            read_mode,
+                            blat,
+                            mapq_cutoff,
+                            max_allowed_nm,
+                            blat_ident_pct_cutoff,
+                        )
+                        if chimeric_aln_str:
+                            read.set_tag("SA", chimeric_aln_str)
                 # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
                 # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
@@ -645,19 +633,11 @@ def parse_args():
         help="Considering Non-canonical spliced sites",
     )
     build_parser.add_argument(
-        "-b",
-        "--use_blat",
-        action="store_true",
-        dest="blat",
-        default=True,
-        help="Using BLAT to remap softclipped reads (default: %(default)s)",
-    )
-    build_parser.add_argument(
         "--log",
         action="store",
         dest="log",
-        choices=["INFO", "DEBUG"],
-        default="INFO",
+        choices=["info", "debug"],
+        default="info",
         help="set log level (default: %(default)s)",
     )
     build_parser.add_argument(
@@ -693,20 +673,12 @@ def parse_args():
         default=100,
     )
     build_parser.add_argument(
-        "--allowed_difference",
-        action="store",
-        dest="allowed_difference",
-        type=int,
-        help="Maximum allowed difference in length between one read matched part and other read softclipped part (default: %(default)s)",
-        default=80,
-    )
-    build_parser.add_argument(
         "--identity",
         action="store",
         dest="ident_cutoff",
         type=float,
         help="blat_ident_pct_cutoff (default: %(default)s)",
-        default=0.95,
+        default=0.99,
     )
     build_parser.add_argument(
         "--tmp",
@@ -862,24 +834,19 @@ def main():
         options = parser.parse_args()
 
     if options.sub_command == "build":
-
+        # add logger
         logger.remove()
-        logger_id = logger.add(sys.stdout, level=options.log)
+        logger.add(sys.stdout, level=options.log.upper())
         logger.info("port")
 
-        use_blat = options.blat
         # check external tools used
-        external_tool_checking(
-            logger=logger,
-            blat=use_blat,
-        )
+        external_tool_checking(logger=logger)
 
         logger.info("ScanNLS build starts running")
         start = time.time()
 
-        if use_blat:
-            blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
-            blat.start_server()
+        blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
+        blat.start_server()
 
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
@@ -891,13 +858,9 @@ def main():
             ref_genome=options.ref,
             gtf=options.gtf,
             splice_bin=options.splice_bin,
-            ref_2bit=options.two_bit,
             blat=blat,
             logger=logger,
             motif_required=motif_required,
-            use_blat=use_blat,
-            port=options.port,
-            output_dir=options.tmp_dir,
             blat_ident_pct_cutoff=options.ident_cutoff,
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
