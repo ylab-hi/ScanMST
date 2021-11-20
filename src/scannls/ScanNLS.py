@@ -206,7 +206,6 @@ def detect_sv_from_cigar(
 
     logger.debug("Read-to-Read chain: ", read_to_read_chains)
     logger.debug("Read-to-Read pair modes: ", reads_pair_mode_dict)
-    logger.debug("Read-to-Read insertion: ", insertion_dict)
 
     event_groups = []
     if read_to_read_chains:

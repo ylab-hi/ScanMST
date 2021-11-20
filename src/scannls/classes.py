@@ -949,6 +949,124 @@ class Blat(object):
 
         return insertion_nametuple(start_end, hit, chrom, strand, insert_seq)
 
+    @staticmethod
+    def _remove(file):
+        if os.path.exists(file):
+            os.remove(file)
+
+    @staticmethod
+    def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float):
+        """
+        the function is used to calculate map quality of the insertion.
+        :param hsps:
+        :param in_seq_len:
+        :param threshold_identity:
+        :return:
+        """
+        num_of_locations = 0
+
+        for hsp in hsps:
+            if (
+                hsp.ident_pct / 100 >= threshold_identity
+                and hsp.query_span / in_seq_len >= threshold_identity
+            ):
+                num_of_locations += 1
+        if num_of_locations == 1:
+            mapq = 60
+        elif num_of_locations == 2:
+            mapq = 3
+        elif num_of_locations == 3:
+            mapq = 2
+        elif 4 <= num_of_locations <= 9:
+            mapq = 1
+        else:
+            mapq = 0
+        return mapq
+
+    def fetch_mapq(self, in_seq: str, threshold_identity: float) -> Any:
+        psl_file = self.query(in_seq=in_seq)
+
+        try:
+            blat = SearchIO.read(psl_file, "blat-psl")
+        except ValueError:
+            self.logger.error(f"No Blat hit found {in_seq}")
+            raise SystemExit
+        else:
+            hsps = blat.hsps
+            hsps.sort(key=lambda k: k.score, reverse=True)
+            top_hsp = hsps[0]
+            Blat._remove(psl_file)
+            mapq = Blat._calculate_mapq(hsps, len(in_seq), threshold_identity)
+        return top_hsp, mapq
+
+    def psl2sam(self, hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
+        """Convert the top HSP in PSL file to SAM fields
+        chrom, reference_start, strand, cigarstring, num_of_mismatch
+        psl2sam try to implement the psl2sam.pl script and return the cigar and mapping position estimated from psl file
+
+        :param hsp: the selected HSP form BLAT
+        :param in_seq_len:
+        :return: chrom, reference_start, strand, cigarstring, num_of_mismatch
+        """
+
+        cigar = ""
+        query_start = hsp.query_start
+        query_end = hsp.query_end
+
+        _strand = hsp.query_strand_all[0]  # may need replace by qery_strand
+        ref_start, ref_end = hsp.hit_range
+        ref_chrom = hsp.hit_id
+        num_of_mismatch = hsp.mismatch_num
+
+        soft_len = 0
+        if _strand == -1:
+            query_start = in_seq_len - hsp.query_end
+            query_end = in_seq_len - hsp.query_start
+        if query_start:
+            # 5'-end clipping
+            soft_len = query_start
+            cigar += str(query_start) + "S"
+        x = hsp.query_span_all
+        if _strand == -1:
+            y = [
+                in_seq_len - item[1] for item in hsp.query_range_all
+            ]  # may need replace by query_start_all when the bug is fixed in Biopython
+        else:
+            y = [
+                item[0] for item in hsp.query_range_all
+            ]  # may need replace by query_start_all when the bug is fixed in Biopython
+        z = hsp.hit_start_all
+        y0, z0 = y[0], z[0]
+        for i in range(1, len(hsp)):
+            ly = y[i] - y[i - 1] - x[i - 1]
+            lz = z[i] - z[i - 1] - x[i - 1]
+            if ly < lz:
+                # del: the reference gap is longer
+                cigar += str(y[i] - y0) + "M"
+                if lz - ly >= 10:
+                    cigar += str(lz - ly) + "N"
+                else:
+                    cigar += str(lz - ly) + "D"
+                y0, z0 = y[i], z[i]
+            elif lz < ly:
+                # ins: the query gap is longer
+                cigar += str(z[i] - z0) + "M"
+                cigar += str(ly - lz) + "I"
+                y0, z0 = y[i], z[i]
+
+        cigar += str(query_end - y0) + "M"
+        # print(cigar)
+        # return cigar, soft_len
+        if in_seq_len != query_end:
+            # 3'-end clipping
+            end3 = in_seq_len - query_end
+            if end3 > soft_len:
+                soft_len = end3
+            cigar += str(end3) + "S"
+        # return cigar, soft_len
+        strand = "+" if _strand == 1 else "-"
+        return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
+
 
 class ReadsConnecter(object):
     def __init__(
