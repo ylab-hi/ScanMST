@@ -14,7 +14,6 @@ import pytest
 from loguru import logger
 
 from scannls.classes import Blat
-from scannls.classes import ReadsConnecter
 
 
 class TestBlat:

@@ -1,37 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ===========================================================
-import argparse
 import os
 import re
 import subprocess
 import sys
-import textwrap
-import time
 from collections import defaultdict
 
-from loguru import logger
+import pysam
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
-from .. import __version__
-from ..classes import Blat
-from ..classes import LengthAction
-from ..classes import Read
-from ..classes import ReadsConnecter
 from ..classes import Series
-from ..common import get_softclip_length
-from ..externals import blat2chimeric_alignment
-from ..externals import external_tool_checking
+from ..utils import get_softclip_length
 from ..utils import reverse_complement
+from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
-
-try:
-    import pysam
-    import numpy as np
-    import HTSeq
-except ModuleNotFoundError as e:
-    raise SystemExit(e.msg)
+from .nls_inference import infer_nls_from_connected_reads
+from .reads_connection import detect_read_read_connections_from_cigar
 
 __funcs__ = {"detect_sv_from_cigar", "scan_bam"}
 

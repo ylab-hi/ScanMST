@@ -22,7 +22,7 @@ from pyfaidx import Fasta
 
 from . import __version__
 from ..classes import Path
-from ..common import get_softclip_length
+from ..utils import get_softclip_length
 from .helper import vcf_header
 
 try:

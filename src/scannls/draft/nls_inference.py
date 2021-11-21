@@ -1,21 +1,8 @@
-import copy
-import re
-import sys
-from collections import defaultdict
-
 from align import aligner
 
-from .. import __version__
 from .helper import gene_annotation
 from .helper import splicing_confirmation
 from .helper import update_breakpoints
-
-try:
-    import pysam
-    import numpy as np
-    import HTSeq
-except ModuleNotFoundError as e:
-    raise SystemExit(e.msg)
 
 __funcs__ = {"short_TDUP_or_not", "infer_nls_from_connected_reads"}
 

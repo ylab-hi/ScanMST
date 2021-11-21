@@ -1,22 +1,7 @@
-import copy
-import re
-import sys
-from collections import defaultdict
-
-from align import aligner
-
-from .. import __version__
-from .common import transcript_upstream_part_determiner
-
-
-try:
-    import pysam
-    import numpy as np
-    import HTSeq
-except ModuleNotFoundError as e:
-    raise SystemExit(e.msg)
-
 __funcs__ = {"detect_read_read_connections_from_cigar"}
+
+from ..classes import Read, ReadsConnecter
+from ..utils import reverse_complement
 
 
 def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> tuple:
@@ -77,8 +62,7 @@ def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> 
         if strand_ra == strand_sa:
             return query_seq_ra
         else:
-            __seq = Seq(query_seq_ra)
-            return str(__seq.reverse_complement())
+            return reverse_complement(query_seq_ra)
 
     if read.has_tag("SV"):
         return [], {}

@@ -1,35 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import argparse
-import os
-import re
-import subprocess
 import sys
 import textwrap
 import time
-from collections import defaultdict
 
 from loguru import logger
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
 
 from . import __version__
 from .call.resue_sr import joint_call
 from .classes import Blat
 from .classes import LengthAction
-from .classes import Read
-from .classes import ReadsConnecter
-from .classes import Series
-from .common import get_softclip_length
-from .draft.draft_construction import scan_bam
-from .externals import external_tool_checking
-
-try:
-    import pysam
-    import numpy as np
-    import HTSeq
-except ModuleNotFoundError as e:
-    raise SystemExit(e.msg)
+from .draft.main import scan_bam
+from scannls.utils import external_tool_checking
 
 
 def parse_args():

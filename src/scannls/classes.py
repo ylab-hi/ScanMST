@@ -447,6 +447,7 @@ class Node(object):
         genes=None,
         sr=None,
     ) -> None:
+        self.chrom = chrom
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
         self.strand = strand
@@ -658,7 +659,8 @@ class Series(object):
         else:
             return event
 
-    def order_events_by_trancription_direction(self, event_list):
+    @staticmethod
+    def order_events_by_trancription_direction(event_list):
         """
         construct breakpoints order following transcription direction for multiple-hop events or one-hop events
                 bp1                bp2   bp3               bp4

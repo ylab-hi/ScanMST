@@ -21,7 +21,7 @@ from ..classes import LengthAction
 from ..classes import Read
 from ..classes import ReadsConnecter
 from ..classes import Series
-from ..common import get_softclip_length
+from ..utils import get_softclip_length
 
 try:
     import pysam
