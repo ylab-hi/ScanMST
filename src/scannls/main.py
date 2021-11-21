@@ -265,8 +265,8 @@ def parse_args():
         "--log",
         action="store",
         dest="log",
-        choices=["INFO", "DEBUG"],
-        default="INFO",
+        choices=["info", "debug"],
+        default="info",
         help="set log level (default: %(default)s)",
     )
     isoform_parser = sub_parsers.add_parser(
@@ -324,8 +324,8 @@ def parse_args():
         "--log",
         action="store",
         dest="log",
-        choices=["INFO", "DEBUG"],
-        default="INFO",
+        choices=["info", "debug"],
+        default="info",
         help="set log level (default: %(default)s)",
     )
 

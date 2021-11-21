@@ -59,7 +59,6 @@ def detect_sv_from_cigar(
     (
         read_to_read_chains,
         reads_pair_mode_dict,
-        insertion_dict,
     ) = detect_read_read_connections_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
@@ -92,6 +91,7 @@ def detect_sv_from_cigar(
                     positions,
                     lt_info,
                     rt_info,
+                    bp_seqs,
                     strands,
                     genes,
                 ) = infer_nls_from_connected_reads(
@@ -116,6 +116,7 @@ def detect_sv_from_cigar(
                             positions,
                             lt_info,
                             rt_info,
+                            bp_seqs,
                             strands,
                             genes,
                         )
@@ -125,6 +126,7 @@ def detect_sv_from_cigar(
     for group in event_groups:
         for i in group:
             print(i)
+    logger.debug("Event groups: ", event_groups)
     return event_groups
 
 
@@ -237,175 +239,169 @@ def scan_bam(
         sys.exit(1)
 
     # update SA tags and iterate the BAM file
-    # in_bam = pysam.AlignmentFile(input_bam, "rb")
-    try:
-        for read in in_bam.fetch(until_eof=False):
-            if (
-                read.mapq >= mapq_cutoff
-                and not read.is_secondary
-                and not read.has_tag("XA")
-                and not read.is_unmapped
-            ):
-                chrm = read.reference_name
-                # update SA tag of representative alignments (START)
-                if read.has_tag("SA") and not read.is_supplementary:
-                    updated_chimeric_alns = []
-                    chimeric_alns = read.get_tag("SA")[:-1].split(";")
-                    # print(read.get_tag('SA'))
-                    # one representative alignment could have multiple corresponding supplementary alignments
-                    for _aln in chimeric_alns:
-                        (
-                            __chr_sa,
-                            __pos_sa,
-                            __strand_sa,
-                            __cigar_sa,
-                            __mapq_sa,
-                            __nm_sa,
-                        ) = _aln.split(",")
-                        left_mat = pat_left_S.search(__cigar_sa)
-                        right_mat = pat_right_S.search(__cigar_sa)
+    for read in in_bam.fetch(until_eof=False):
+        if (
+            read.mapq >= mapq_cutoff
+            and not read.is_secondary
+            and not read.has_tag("XA")
+            and not read.is_unmapped
+        ):
+            chrm = read.reference_name
+            # update SA tag of representative alignments (START)
+            if read.has_tag("SA") and not read.is_supplementary:
+                updated_chimeric_alns = []
+                chimeric_alns = read.get_tag("SA")[:-1].split(";")
+                # print(read.get_tag('SA'))
+                # one representative alignment could have multiple corresponding supplementary alignments
+                for _aln in chimeric_alns:
+                    (
+                        __chr_sa,
+                        __pos_sa,
+                        __strand_sa,
+                        __cigar_sa,
+                        __mapq_sa,
+                        __nm_sa,
+                    ) = _aln.split(",")
+                    left_mat = pat_left_S.search(__cigar_sa)
+                    right_mat = pat_right_S.search(__cigar_sa)
 
-                        l_S_len = left_mat.group(1) if left_mat else ""
-                        r_S_len = right_mat.group(1) if right_mat else ""
+                    l_S_len = left_mat.group(1) if left_mat else ""
+                    r_S_len = right_mat.group(1) if right_mat else ""
 
-                        tgt_key = "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
-                        if tgt_key in representative_alignments_new_cigar:
-                            __updated_cigar = representative_alignments_new_cigar[
-                                tgt_key
-                            ]
-                            # discard supplementary alignments with too many mismatches or lower MAPQ
-                            if not (
-                                int(__nm_sa) > max_allowed_nm
-                                or int(__mapq_sa) < mapq_cutoff
-                            ):
-                                updated_chimeric_alns.append(
-                                    "{},{},{},{},{},{}".format(
-                                        __chr_sa,
-                                        __pos_sa,
-                                        __strand_sa,
-                                        __updated_cigar,
-                                        __mapq_sa,
-                                        __nm_sa,
-                                    )
+                    tgt_key = "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
+                    if tgt_key in representative_alignments_new_cigar:
+                        __updated_cigar = representative_alignments_new_cigar[tgt_key]
+                        # discard supplementary alignments with too many mismatches or lower MAPQ
+                        if not (
+                            int(__nm_sa) > max_allowed_nm
+                            or int(__mapq_sa) < mapq_cutoff
+                        ):
+                            updated_chimeric_alns.append(
+                                "{},{},{},{},{},{}".format(
+                                    __chr_sa,
+                                    __pos_sa,
+                                    __strand_sa,
+                                    __updated_cigar,
+                                    __mapq_sa,
+                                    __nm_sa,
                                 )
-                    if len(updated_chimeric_alns) == 0:
-                        read.set_tag("SA", None)
-                    else:
-                        read.set_tag(
-                            "SA", "{};".format(";".join(updated_chimeric_alns))
-                        )
-                    # remove SA tags of representative alignments with too much mismatches
+                            )
+                if len(updated_chimeric_alns) == 0:
+                    read.set_tag("SA", None)
+                else:
+                    read.set_tag("SA", "{};".format(";".join(updated_chimeric_alns)))
+                # remove SA tags of representative alignments with too much mismatches
                 # update SA tag of representative alignments (END)
 
-                # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
-                if not read.has_tag("SA") and not read.is_supplementary:
-                    read_strand = "-" if read.is_reverse else "+"
-                    read_length = int(read.query_length)
-                    # assert read.cigarstring, f"{read.query_name}" # TEST
-                    _, _soft_seq, _, read_mode = get_softclip_length(read)
+            # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
+            if not read.has_tag("SA") and not read.is_supplementary:
+                read_strand = "-" if read.is_reverse else "+"
+                read_length = int(read.query_length)
+                # assert read.cigarstring, f"{read.query_name}" # TEST
+                _, _soft_seq, _, read_mode = get_softclip_length(read)
 
-                    if read.is_reverse:
-                        soft_seq_ori = reverse_complement(_soft_seq)
-                    else:
-                        soft_seq_ori = _soft_seq
+                if read.is_reverse:
+                    soft_seq_ori = reverse_complement(_soft_seq)
+                else:
+                    soft_seq_ori = _soft_seq
 
-                    if (
-                        read_mode in {1, 2}
-                        and soft_seq_ori
-                        and len(soft_seq_ori) >= min_soft_seg_len
-                    ):
-                        chimeric_aln_str = blat2chimeric_alignment(
-                            soft_seq_ori,
-                            read_length,
-                            read_strand,
-                            read_mode,
-                            blat,
-                            mapq_cutoff,
-                            max_allowed_nm,
-                            blat_ident_pct_cutoff,
-                        )
-                        if chimeric_aln_str:
-                            read.set_tag("SA", chimeric_aln_str)
-                # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
-                # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
-
-                # select reads with SA tags (original or newly-added), ignore supplementary alignment
-                if read.has_tag("SA") and not read.is_supplementary:
-                    event_groups = detect_sv_from_cigar(
-                        read=read,
-                        mapq_cutoff=mapq_cutoff,
-                        splice_bin=splice_bin,
-                        genome_fasta=genome_fasta,
-                        cvg=cvg,
-                        gene_iv=gene_iv,
-                        motif_required=motif_required,
-                        blat=blat,
-                        logger=logger,
+                if (
+                    read_mode in {1, 2}
+                    and soft_seq_ori
+                    and len(soft_seq_ori) >= min_soft_seg_len
+                ):
+                    chimeric_aln_str = blat2chimeric_alignment(
+                        soft_seq_ori,
+                        read_length,
+                        read_strand,
+                        read_mode,
+                        blat,
+                        mapq_cutoff,
+                        max_allowed_nm,
+                        blat_ident_pct_cutoff,
                     )
-                    sv_tag_list = []
-                    ot_tag_list = []
-                    for group in event_groups:
-                        nls_event_list = []
-                        for event in group:
-                            (
-                                _type,
-                                _anno,
-                                _canonical,
-                                _positions,
-                                read1_info,
-                                read2_info,
-                                strands,
-                                genes,
-                            ) = event
-                            _bp1, _bp2, _mode1, _mode2 = _positions
-                            _strand1, _strand2 = strands
-                            _gene1, _gene2 = genes
-                            if _type in {"TDUP", "INV", "TRA"}:
-                                _chrm1, _pos1 = _bp1.split(":")
-                                _chrm2, _pos2 = _bp2.split(":")
-                                # SV tag uses SA tag corrdinate system (start with 1)
-                                # So, position should always add 1
-                                sv_tag_list.append(
-                                    f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
-                                )
-                                nls_event_list.append(event)
+                    if chimeric_aln_str:
+                        read.set_tag("SA", chimeric_aln_str)
+            # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
+            # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
-                                event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:{int(_pos2) + 1}\t{_strand1}{_strand2}"
-                                reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t{_strand2}{_strand1}"
-                                if event_key in candidate_ao_dict:
-                                    candidate_ao_dict[event_key] += 1
-                                elif reversed_event_key in candidate_ao_dict:
-                                    candidate_ao_dict[reversed_event_key] += 1
+            # select reads with SA tags (original or newly-added), ignore supplementary alignment
+            if read.has_tag("SA") and not read.is_supplementary:
+                event_groups = detect_sv_from_cigar(
+                    read=read,
+                    mapq_cutoff=mapq_cutoff,
+                    splice_bin=splice_bin,
+                    genome_fasta=genome_fasta,
+                    cvg=cvg,
+                    gene_iv=gene_iv,
+                    motif_required=motif_required,
+                    blat=blat,
+                    logger=logger,
+                )
+                sv_tag_list = []
+                ot_tag_list = []
+                for group in event_groups:
+                    nls_event_list = []
+                    for event in group:
+                        (
+                            _type,
+                            _anno,
+                            _canonical,
+                            _positions,
+                            read1_info,
+                            read2_info,
+                            bp_seqs,
+                            strands,
+                            genes,
+                        ) = event
+                        _bp1, _bp2, _mode1, _mode2 = _positions
+                        _strand1, _strand2 = strands
+                        _gene1, _gene2 = genes
+                        if _type in {"TDUP", "INV", "TRA"}:
+                            _chrm1, _pos1 = _bp1.split(":")
+                            _chrm2, _pos2 = _bp2.split(":")
+                            # SV tag uses SA tag corrdinate system (start with 1)
+                            # So, position should always add 1
+                            sv_tag_list.append(
+                                f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                            )
+                            nls_event_list.append(event)
 
-                                # candidate_group_dict[
-                                #    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
-                                # ] = group_counter
-                            elif _type in {"INS"}:
-                                _end_pos = int(_bp1) + int(_bp2)
-                                # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
-                                ot_tag_list.append(
-                                    f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
-                                )
+                            event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:{int(_pos2) + 1}\t{_strand1}{_strand2}"
+                            reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t{_strand2}{_strand1}"
+                            if event_key in candidate_ao_dict:
+                                candidate_ao_dict[event_key] += 1
+                            elif reversed_event_key in candidate_ao_dict:
+                                candidate_ao_dict[reversed_event_key] += 1
 
-                                candidate_ao_dict[
-                                    f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
-                                ] += 1
+                            # candidate_group_dict[
+                            #    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
+                            # ] = group_counter
+                        elif _type in {"INS"}:
+                            _end_pos = int(_bp1) + int(_bp2)
+                            # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
+                            ot_tag_list.append(
+                                f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                            )
 
-                        if nls_event_list:
-                            # print("nls_event_list: ", len(nls_event_list))
-                            bp_series = Series()
-                            bp_series.init(nls_event_list)
-                            nls_src_forms_list.append(bp_series)
+                            candidate_ao_dict[
+                                f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
+                            ] += 1
 
-                    if sv_tag_list:
-                        read.set_tag("SV", "".join(sv_tag_list))
-                    if ot_tag_list:
-                        read.set_tag("OT", "".join(ot_tag_list))
+                    if nls_event_list:
+                        pass
+                        # print("nls_event_list: ", len(nls_event_list))
+                        # bp_series = Series()
+                        # bp_series.init(nls_event_list)
+                        # nls_src_forms_list.append(bp_series)
 
-            output_bam.write(read)
-    except ValueError as e:
-        print("BAM index file is not found!", e, file=sys.stderr)
-        # sys.exit(1)
+                if sv_tag_list:
+                    read.set_tag("SV", "".join(sv_tag_list))
+                if ot_tag_list:
+                    read.set_tag("OT", "".join(ot_tag_list))
+
+        output_bam.write(read)
+
     in_bam.close()
     output_bam.close()
 

@@ -20,7 +20,7 @@ from Bio import SearchIO
 from Bio.Seq import Seq
 from pyfaidx import Fasta
 
-from . import __version__
+from .. import __version__
 from ..classes import Path
 from ..utils import get_softclip_length
 from .helper import vcf_header

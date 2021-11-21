@@ -87,9 +87,9 @@ def infer_nls_from_connected_reads(
     :rtype: tuple
     .. note::
         putative event examples:
-            * 'NA', 0, 0, (), (), (), (), []
+            * 'NA', 0, 0, (), (), (), (), (), []
             * 'TDUP', annotation, canonical/noncanonical, ('chrm1:pos1', 'chrm2:pos2', mode1, mode2),
-            (read1_ref_start, read1_ref_end, read1_exons), (read2_ref_start, read2_ref_end, read2_exons), (strand1, strand2), [gene1, gene2]
+            (read1_ref_start, read1_ref_end, read1_exons), (read2_ref_start, read2_ref_end, read2_exons), (lt_bp_seq, rt_bp_seq), (strand1, strand2), [gene1, gene2]
        annotation explanation:
        3(11) => both breakpoints overlap with coding exons boundary
        2(10) => one breakpoint overlap with coding exons boundary
@@ -118,13 +118,13 @@ def infer_nls_from_connected_reads(
 
     def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
         """
-        :param read: a chimeirc read
+        :param read_seq: query sequence of a read as it is in the BAM file
         :param mode: mode for the chimeirc read
         :param indel_size: indel size infered from 'query_offset - target_offset'
-        :type read : Read
+        :type read_seq : str
         :type mode: int
         :type indel_size: int
-        :return: putative insertion sequence from the read
+        :return: putative insertion/microhomology sequence from the read; + means insertion, - means microhomology
         :rtype: str
         ..note:
             * inserted sequence:
@@ -142,6 +142,7 @@ def infer_nls_from_connected_reads(
                 bp_region_seq = read_seq[: read.lt_soft_len][-bp_region_seq_len:]
             elif mode == 1:  # MS
                 bp_region_seq = read_seq[-read.rt_soft_len :][:bp_region_seq_len]
+            bp_region_seq = "+" + bp_region_seq
         # microhomology
         elif bp_region_seq_len < 0:
             if mode == 2:  # SM
@@ -152,12 +153,13 @@ def infer_nls_from_connected_reads(
                 bp_region_seq = read_seq[
                     bp_region_seq_len - read.rt_soft_len : -read.rt_soft_len
                 ]
+            bp_region_seq = "-" + bp_region_seq
         else:
             bp_region_seq = ""
         return bp_region_seq
 
     if lt_mode == 3 or rt_mode == 3:
-        return "NA", 0, 0, (), (), (), (), []
+        return "NA", 0, 0, (), (), (), (), (), []
 
     lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (
         read_lt.chrom,
@@ -201,11 +203,15 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+
+                lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+                rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
+
                 evt_size = query_offset - target_offset
                 if evt_size == 0:  # micro-inversion
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
                 elif evt_size < 0:  # deletion
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
                 elif evt_size >= query_offset:  # large tandem duplication
                     chrm_start = lt_chrm
                     junc_start = read_lt.ref_start
@@ -253,6 +259,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         (lt_start, lt_end, lt_exons),
                                         (rt_start, rt_end, rt_exons),
+                                        (lt_bp_seq, rt_bp_seq),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -269,6 +276,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         (lt_start, lt_end, lt_exons),
                                         (rt_start, rt_end, rt_exons),
+                                        (lt_bp_seq, rt_bp_seq),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -285,6 +293,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -301,11 +310,12 @@ def infer_nls_from_connected_reads(
                                 ),
                                 (lt_start, lt_end, lt_exons),
                                 (rt_start, rt_end, rt_exons),
+                                (lt_bp_seq, rt_bp_seq),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
                     else:
-                        return "NA", 0, 0, (), (), (), (), []
+                        return "NA", 0, 0, (), (), (), (), (), []
                 else:  # read length > tandem duplication size
                     ins_start = read_lt.ref_start
                     ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
@@ -372,6 +382,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             (lt_start, lt_end, lt_exons),
                                             (rt_start, rt_end, rt_exons),
+                                            (lt_bp_seq, rt_bp_seq),
                                             (lt_strand, rt_strand),
                                             [*_genes],
                                         )
@@ -388,6 +399,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             (lt_start, lt_end, lt_exons),
                                             (rt_start, rt_end, rt_exons),
+                                            (lt_bp_seq, rt_bp_seq),
                                             (lt_strand, rt_strand),
                                             [*_genes],
                                         )
@@ -404,6 +416,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         (lt_start, lt_end, lt_exons),
                                         (rt_start, rt_end, rt_exons),
+                                        (lt_bp_seq, rt_bp_seq),
                                         (lt_strand, rt_strand),
                                         [*_genes],
                                     )
@@ -420,6 +433,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -436,6 +450,7 @@ def infer_nls_from_connected_reads(
                             (ins_start, len(ins_seq_in_read), 2, 1),
                             (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
+                            (lt_bp_seq, rt_bp_seq),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
@@ -457,11 +472,13 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+                lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+                rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 evt_size = query_offset - target_offset
                 if evt_size == 0:  # micro-inversion
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
                 elif evt_size < 0:  # deletion
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
                 elif evt_size >= query_offset:
                     chrm_start = rt_chrm
                     junc_start = read_rt.ref_start
@@ -510,6 +527,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         (rt_start, rt_end, rt_exons),
                                         (lt_start, lt_end, lt_exons),
+                                        (lt_bp_seq, rt_bp_seq),
                                         (rt_strand, lt_strand),
                                         [*_genes],
                                     )
@@ -526,6 +544,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         (rt_start, rt_end, rt_exons),
                                         (lt_start, lt_end, lt_exons),
+                                        (lt_bp_seq, rt_bp_seq),
                                         (rt_strand, lt_strand),
                                         [*_genes],
                                     )
@@ -542,6 +561,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (rt_start, rt_end, rt_exons),
                                     (lt_start, lt_end, lt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (rt_strand, lt_strand),
                                     [*_genes],
                                 )
@@ -558,11 +578,12 @@ def infer_nls_from_connected_reads(
                                 ),
                                 (rt_start, rt_end, rt_exons),
                                 (lt_start, lt_end, lt_exons),
+                                (lt_bp_seq, rt_bp_seq),
                                 (rt_strand, lt_strand),
                                 [*_genes],
                             )
                     else:
-                        return "NA", 0, 0, (), (), (), (), []
+                        return "NA", 0, 0, (), (), (), (), (), []
                 # indel_size < query_offset
                 else:
                     ins_start = read_lt.ref_start + read_lt.reference_match_size
@@ -631,6 +652,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             (rt_start, rt_end, rt_exons),
                                             (lt_start, lt_end, lt_exons),
+                                            (lt_bp_seq, rt_bp_seq),
                                             (rt_strand, lt_strand),
                                             [*_genes],
                                         )
@@ -647,6 +669,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             (rt_start, rt_end, rt_exons),
                                             (lt_start, lt_end, lt_exons),
+                                            (lt_bp_seq, rt_bp_seq),
                                             (rt_strand, lt_strand),
                                             [*_genes],
                                         )
@@ -663,6 +686,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         (rt_start, rt_end, rt_exons),
                                         (lt_start, lt_end, lt_exons),
+                                        (lt_bp_seq, rt_bp_seq),
                                         (rt_strand, lt_strand),
                                         [*_genes],
                                     )
@@ -679,11 +703,12 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (rt_start, rt_end, rt_exons),
                                     (lt_start, lt_end, lt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (rt_strand, lt_strand),
                                     [*_genes],
                                 )
                         else:
-                            return "NA", 0, 0, (), (), (), (), []
+                            return "NA", 0, 0, (), (), (), (), (), []
                     # it is a short insertion
                     else:
                         _genes = gene_annotation(
@@ -696,11 +721,12 @@ def infer_nls_from_connected_reads(
                             (ins_start, len(ins_seq_in_read), 1, 2),
                             (rt_start, rt_end, rt_exons),
                             (lt_start, lt_end, lt_exons),
+                            (lt_bp_seq, rt_bp_seq),
                             (rt_strand, lt_strand),
                             [*_genes],
                         )
             else:
-                return "NA", 0, 0, (), (), (), (), []
+                return "NA", 0, 0, (), (), (), (), (), []
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 ra_bp = read_lt.ref_start + read_lt.reference_match_size
@@ -713,7 +739,7 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
                 if ra_bp == sa_bp:
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -735,10 +761,22 @@ def infer_nls_from_connected_reads(
                         strands = (lt_strand, rt_strand)
                         lt_start_end_exons = (lt_start, lt_end, lt_exons)
                         rt_start_end_exons = (rt_start, rt_end, rt_exons)
+                        lt_bp_seq = obtain_bp_region_seq(
+                            read_lt, lt_mode, bp_region_seq_len
+                        )
+                        rt_bp_seq = obtain_bp_region_seq(
+                            read_rt, rt_mode, bp_region_seq_len
+                        )
                     elif junc_start == sa_bp:
                         strands = (rt_strand, lt_strand)
                         lt_start_end_exons = (rt_start, rt_end, rt_exons)
                         rt_start_end_exons = (lt_start, lt_end, lt_exons)
+                        lt_bp_seq = obtain_bp_region_seq(
+                            read_rt, rt_mode, bp_region_seq_len
+                        )
+                        rt_bp_seq = obtain_bp_region_seq(
+                            read_lt, lt_mode, bp_region_seq_len
+                        )
                     _genes = gene_annotation(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
@@ -775,6 +813,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             lt_start_end_exons,
                                             rt_start_end_exons,
+                                            (lt_bp_seq, rt_bp_seq),
                                             tuple([*strands]),
                                             [*_genes],
                                         )
@@ -791,6 +830,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             lt_start_end_exons,
                                             rt_start_end_exons,
+                                            (lt_bp_seq, rt_bp_seq),
                                             tuple([*strands]),
                                             [*_genes],
                                         )
@@ -807,6 +847,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         lt_start_end_exons,
                                         rt_start_end_exons,
+                                        (lt_bp_seq, rt_bp_seq),
                                         tuple([*strands]),
                                         [*_genes],
                                     )
@@ -823,13 +864,14 @@ def infer_nls_from_connected_reads(
                                     ),
                                     lt_start_end_exons,
                                     rt_start_end_exons,
+                                    (lt_bp_seq, rt_bp_seq),
                                     tuple([*strands]),
                                     [*_genes],
                                 )
                         else:
-                            return "NA", 0, 0, (), (), (), (), []
+                            return "NA", 0, 0, (), (), (), (), (), []
                     else:
-                        return "NA", 0, 0, (), (), (), (), []
+                        return "NA", 0, 0, (), (), (), (), (), []
             elif lt_mode == rt_mode == 2:  # inversion
                 ra_bp = read_lt.ref_start
                 sa_bp = read_rt.ref_start
@@ -840,8 +882,9 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+
                 if ra_bp == sa_bp:
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -862,10 +905,22 @@ def infer_nls_from_connected_reads(
                         strands = (lt_strand, rt_strand)
                         lt_start_end_exons = (lt_start, lt_end, lt_exons)
                         rt_start_end_exons = (rt_start, rt_end, rt_exons)
+                        lt_bp_seq = obtain_bp_region_seq(
+                            read_lt, lt_mode, bp_region_seq_len
+                        )
+                        rt_bp_seq = obtain_bp_region_seq(
+                            read_rt, rt_mode, bp_region_seq_len
+                        )
                     elif junc_start == sa_bp:
                         strands = (rt_strand, lt_strand)
                         lt_start_end_exons = (rt_start, rt_end, rt_exons)
                         rt_start_end_exons = (lt_start, lt_end, lt_exons)
+                        lt_bp_seq = obtain_bp_region_seq(
+                            read_rt, rt_mode, bp_region_seq_len
+                        )
+                        rt_bp_seq = obtain_bp_region_seq(
+                            read_lt, lt_mode, bp_region_seq_len
+                        )
                     _genes = gene_annotation(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
@@ -875,7 +930,6 @@ def infer_nls_from_connected_reads(
                             genome_fasta
                         ) and read_rt.splice_site_checker(genome_fasta):
                             if _can == 1:
-
                                 strand_l, strand_r = strands
                                 if update_bps:
                                     new_junc_start, new_junc_end = update_breakpoints(
@@ -903,6 +957,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             lt_start_end_exons,
                                             rt_start_end_exons,
+                                            (lt_bp_seq, rt_bp_seq),
                                             tuple([*strands]),
                                             [*_genes],
                                         )
@@ -919,6 +974,7 @@ def infer_nls_from_connected_reads(
                                             ),
                                             lt_start_end_exons,
                                             rt_start_end_exons,
+                                            (lt_bp_seq, rt_bp_seq),
                                             tuple([*strands]),
                                             [*_genes],
                                         )
@@ -935,6 +991,7 @@ def infer_nls_from_connected_reads(
                                         ),
                                         lt_start_end_exons,
                                         rt_start_end_exons,
+                                        (lt_bp_seq, rt_bp_seq),
                                         tuple([*strands]),
                                         [*_genes],
                                     )
@@ -951,15 +1008,16 @@ def infer_nls_from_connected_reads(
                                     ),
                                     lt_start_end_exons,
                                     rt_start_end_exons,
+                                    (lt_bp_seq, rt_bp_seq),
                                     tuple([*strands]),
                                     [*_genes],
                                 )
                         else:
-                            return "NA", 0, 0, (), (), (), (), []
+                            return "NA", 0, 0, (), (), (), (), (), []
                     else:
-                        return "NA", 0, 0, (), (), (), (), []
+                        return "NA", 0, 0, (), (), (), (), (), []
             else:
-                return "NA", 0, 0, (), (), (), (), []
+                return "NA", 0, 0, (), (), (), (), (), []
     else:  # lt_chrm != rt_chrm
         if lt_strand == rt_strand:
             if lt_mode == 1 and rt_mode == 2:
@@ -974,6 +1032,8 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+                lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+                rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1016,6 +1076,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1032,6 +1093,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1048,6 +1110,7 @@ def infer_nls_from_connected_reads(
                                 ),
                                 (lt_start, lt_end, lt_exons),
                                 (rt_start, rt_end, rt_exons),
+                                (lt_bp_seq, rt_bp_seq),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -1059,6 +1122,7 @@ def infer_nls_from_connected_reads(
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 2),
                             (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
+                            (lt_bp_seq, rt_bp_seq),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
@@ -1076,6 +1140,8 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+                lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+                rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1118,6 +1184,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1134,6 +1201,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1150,6 +1218,7 @@ def infer_nls_from_connected_reads(
                                 ),
                                 (lt_start, lt_end, lt_exons),
                                 (rt_start, rt_end, rt_exons),
+                                (lt_bp_seq, rt_bp_seq),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -1161,13 +1230,14 @@ def infer_nls_from_connected_reads(
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 1),
                             (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
+                            (lt_bp_seq, rt_bp_seq),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
             else:
-                return "NA", 0, 0, (), (), (), (), []
+                return "NA", 0, 0, (), (), (), (), (), []
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 chrm_start = lt_chrm
@@ -1181,6 +1251,9 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+
+                lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+                rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1223,6 +1296,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1239,6 +1313,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1255,6 +1330,7 @@ def infer_nls_from_connected_reads(
                                 ),
                                 (lt_start, lt_end, lt_exons),
                                 (rt_start, rt_end, rt_exons),
+                                (lt_bp_seq, rt_bp_seq),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -1266,11 +1342,12 @@ def infer_nls_from_connected_reads(
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 1),
                             (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
+                            (lt_bp_seq, rt_bp_seq),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
             elif lt_mode == rt_mode == 2:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -1283,6 +1360,8 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+                lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+                rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
@@ -1325,6 +1404,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1341,6 +1421,7 @@ def infer_nls_from_connected_reads(
                                     ),
                                     (lt_start, lt_end, lt_exons),
                                     (rt_start, rt_end, rt_exons),
+                                    (lt_bp_seq, rt_bp_seq),
                                     (lt_strand, rt_strand),
                                     [*_genes],
                                 )
@@ -1357,6 +1438,7 @@ def infer_nls_from_connected_reads(
                                 ),
                                 (lt_start, lt_end, lt_exons),
                                 (rt_start, rt_end, rt_exons),
+                                (lt_bp_seq, rt_bp_seq),
                                 (lt_strand, rt_strand),
                                 [*_genes],
                             )
@@ -1368,10 +1450,11 @@ def infer_nls_from_connected_reads(
                             (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 2),
                             (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
+                            (lt_bp_seq, rt_bp_seq),
                             (lt_strand, rt_strand),
                             [*_genes],
                         )
                 else:
-                    return "NA", 0, 0, (), (), (), (), []
+                    return "NA", 0, 0, (), (), (), (), (), []
             else:
-                return "NA", 0, 0, (), (), (), (), []
+                return "NA", 0, 0, (), (), (), (), (), []

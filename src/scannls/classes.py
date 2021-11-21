@@ -839,7 +839,7 @@ class Blat(object):
             os.remove(self.log_file)
 
         cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {self.ref_2bit}"
-        process = Process(target=self._run_cmd, args=(cmd))
+        process = Process(target=self._run_cmd, args=[cmd])
         process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
