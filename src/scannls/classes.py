@@ -767,6 +767,11 @@ class Series(object):
 
 
 class Blat(object):
+    """
+    the Blat class is used to integrate the blat service (gfServer and
+    gfClient) so that we can query certain sequences from the genome shamelessly
+    """
+
     def __init__(
         self, ref_2bit: str, logger: logger, port: int, output_dir: str
     ) -> None:
@@ -785,6 +790,8 @@ class Blat(object):
     @property
     def ref_dir(self) -> str:
         """
+        the property for ref_dir, which is the path of reference for blat
+
         :return: the absolute path of reference dir
         """
         if self.ref_2bit.startswith("~"):
@@ -799,9 +806,17 @@ class Blat(object):
 
     @property
     def log_file(self) -> str:
+        """
+        the property for log_file, which is the path of log file for blat
+        """
         return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
 
     def is_ready(self) -> bool:
+        """
+        the function for checking whether the blat server is ready or not
+        after starting the server service
+        :return: the boolean value of whether the server is ready or not
+        """
         flag = False
         self.logger.debug("check if the server starts")
         if os.path.exists(self.log_file):
@@ -812,9 +827,19 @@ class Blat(object):
         return flag
 
     def is_running(self) -> bool:
+        """
+        the function for checking whether the blat server is running or not
+
+        :return: the boolean value of whether the server is running or not
+        """
         return True if self._search_processing() else False
 
     def _search_processing(self) -> List:
+        """
+        the function for searching the process of blat server
+        in current system
+        :return: the list of process of blat server
+        """
         result = []
         self.logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
@@ -824,6 +849,10 @@ class Blat(object):
         return result
 
     def _run_cmd(self, cmd: str) -> None:
+        """
+        the function is used to run the command in the system
+        :param cmd: the command to be run
+        """
         subprocess.run(cmd.split(), check=True)
 
     def _start_server(self) -> Process:
@@ -846,6 +875,10 @@ class Blat(object):
         return process
 
     def start_server(self) -> None:
+        """
+        the function for starting the server service, if the server is not running,
+        we will start the server service
+        """
         running_flag = self.is_running()
         if not running_flag:
             self._start_server()
@@ -853,22 +886,24 @@ class Blat(object):
             self.is_start_server = False
 
     def stop_server(self) -> None:
+        """
+        the function for stopping the server service, if the server is running,
+        """
         procs = self._search_processing()
-        self.logger.debug("stoping server service")
+        self.logger.debug("stopping server service")
         for proc in procs:
             proc.kill()
 
     def _query(self, in_seq: str, miniIdentity: int = 90) -> str:
-        """Using gfClient to query 'in_seq' to generate alignment file (in PSL format).
+        """
+        the function is help function in order to using gfClient
+        to query 'in_seq' to generate alignment file (in PSL format).
 
         :param miniIdentity: the threshold of the identity for aligning
-        :type miniIdentity: int
         :param in_seq: sequence of softclipped segment
-        :type in_seq: str
-        :return: PSL file
-        :rtype: str
+        :return: the path for PSL file
         """
-        self.logger.debug("quering the sequence")
+        self.logger.debug("querying the sequence")
         ran_id = random.getrandbits(30)
         in_fasta = os.path.join(self.output_dir, "{}.fasta".format(ran_id))
         with open(in_fasta, "w", buffering=1) as fasta_file:
@@ -889,15 +924,27 @@ class Blat(object):
             raise SystemExit(f"{err} {err.output}")
 
         os.chdir(cwd)
-        if os.path.exists(in_fasta):
-            os.remove(in_fasta)
+        self._remove(in_fasta)
+
         return out_psl
 
     def _wait_ready(self, interval: int = 30) -> None:
+        """
+        the function for waiting the server service to be ready,
+
+        :param interval: the interval time for checking the server service
+        """
         while not self.is_ready():
             time.sleep(interval)
 
     def query(self, in_seq: str, miniIdentity: int = 90) -> str:
+        """
+        the function for querying the sequence to the server service
+
+        :param in_seq: the sequence of input sequence
+        :param miniIdentity: the threshold of the identity for aligning
+        :return: the path for PSL file
+        """
 
         if self.is_start_server:
             if self.is_ready():
@@ -917,6 +964,16 @@ class Blat(object):
         top: int = 3,
         align_len_threshold: int = 20,
     ) -> Any:
+        """
+        the function for querying the insertion sequence to the server service, and
+        the function is a specific version of the function 'query'.
+
+        :param insert_seq: insertion sequence
+        :param threshold_identity: the threshold of the identity for aligning
+        :param top: the top number of the alignments
+        :param align_len_threshold: the threshold of the insertion sequence length
+        :return: insertion sequence alignment in NamedTuple format
+        """
 
         insertion_nametuple = namedtuple(
             "insertion", ("start_end", "hit", "chrom", "strand", "seq")
@@ -953,17 +1010,23 @@ class Blat(object):
 
     @staticmethod
     def _remove(file):
+        """
+        the function for removing the file
+
+        :param file: the path of the file
+        """
         if os.path.exists(file):
             os.remove(file)
 
     @staticmethod
-    def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float):
+    def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float) -> int:
         """
         the function is used to calculate map quality of the insertion.
-        :param hsps:
-        :param in_seq_len:
-        :param threshold_identity:
-        :return:
+
+        :param hsps: the list of hsp after aligning the insertion sequence
+        :param in_seq_len: the length of the input sequence
+        :param threshold_identity: the threshold of the identity for aligning
+        :return: the map quality of the insertion
         """
         num_of_locations = 0
 
@@ -986,6 +1049,13 @@ class Blat(object):
         return mapq
 
     def fetch_mapq(self, in_seq: str, threshold_identity: float) -> Any:
+        """
+        the function is used to fetch the map quality of the insertion.
+
+        :param in_seq: the input sequence
+        :param threshold_identity: the threshold of the identity for aligning
+        :return: the top hit of the insertion sequence, and the map quality of the insertion
+        """
         psl_file = self.query(in_seq=in_seq)
 
         try:
@@ -1002,12 +1072,14 @@ class Blat(object):
         return top_hsp, mapq
 
     def psl2sam(self, hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
-        """Convert the top HSP in PSL file to SAM fields
-        chrom, reference_start, strand, cigarstring, num_of_mismatch
-        psl2sam try to implement the psl2sam.pl script and return the cigar and mapping position estimated from psl file
+        """
+        Convert the top HSP in PSL file to SAM fields chrom, reference_start,
+        strand, cigarstring, num_of_mismatch. The function try to implement
+        the psl2sam.pl script and return the cigar and mapping position
+        estimated from psl file
 
         :param hsp: the selected HSP form BLAT
-        :param in_seq_len:
+        :param in_seq_len: the length of the input sequence
         :return: chrom, reference_start, strand, cigarstring, num_of_mismatch
         """
 
@@ -1067,10 +1139,15 @@ class Blat(object):
             cigar += str(end3) + "S"
         # return cigar, soft_len
         strand = "+" if _strand == 1 else "-"
+
         return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
 
 
 class ReadsConnecter(object):
+    """
+    the ReadsConnecter class is used to connect the reads and identify the mode of the reads
+    """
+
     def __init__(
         self,
         aln_list: List[Read],
