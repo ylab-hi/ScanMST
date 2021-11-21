@@ -1,0 +1,5 @@
+(1) reads connections => reads_connection.py
+(2) NLS inference (breakpoint region insertion/microhomology identification) => nls_inference.py
+(3) transcript draft construction => draft_construction.py
+(4) draft assembly => draft_assembly.py
+(5) output (BEDPE and pickle) => output.py

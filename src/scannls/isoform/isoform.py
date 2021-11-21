@@ -1,48 +1,38 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ===============================================================================
-__version__ = "v3.3"
-import sys
-import re
-import os
 import argparse
-import pandas as pd
-import numpy as np
-import glob
-import HTSeq
-import skbio
-import tempfile
-import subprocess
-import shutil
-from collections import defaultdict, OrderedDict, Counter
-import vcf
-import pysam
-import networkx as nx
-from pyfaidx import Fasta
-from Bio.Seq import Seq
-
-# from Bio.Align.Applications import MuscleCommandline, MafftCommandline, ClustalwCommandline
-from Bio.Application import ApplicationError
-from Bio import AlignIO
-
-# from Bio.Align import AlignInfo
-from io import StringIO, BytesIO
-import random
 import copy
+import glob
+import os
+import random
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from collections import Counter
+from collections import defaultdict
+from collections import OrderedDict
+from io import BytesIO
+from io import StringIO
+
+import HTSeq
+import networkx as nx
+import numpy as np
+import pandas as pd
+import pysam
+import skbio
+import vcf
 from align import aligner
+from Bio import AlignIO
+from Bio.Application import ApplicationError
+from Bio.Seq import Seq
+from pyfaidx import Fasta
 from varname import nameof
 
-
-def status_message(msg):
-    print(msg)
-    sys.stdout.flush()
-
-
-def remove(infile):
-    if os.path.isfile(infile):
-        os.remove(infile)
-    else:
-        shutil.rmtree(infile)
+# from Bio.Align.Applications import MuscleCommandline, MafftCommandline, ClustalwCommandline
+# from Bio.Align import AlignInfo
 
 
 def reverse_complement(in_str):

@@ -21,9 +21,9 @@ from Bio.Seq import Seq
 from pyfaidx import Fasta
 
 from . import __version__
-from .classes import Path
-from .common import get_softclip_length
-from .utils import vcf_header
+from ..classes import Path
+from ..common import get_softclip_length
+from .helper import vcf_header
 
 try:
     import pysam
@@ -227,7 +227,7 @@ def scan_region(bam_object, in_region, mapq_cutoff, soft_len_cutoff):
                         ao_total_dict[sv_id] = ao
 
 
-def sv_scan(
+def joint_call(
     input_bam,
     target,
     output_prefix,

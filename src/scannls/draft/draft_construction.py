@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ===========================================================
-"""
-2021-10-01:
-detect_sv_from_cigar output a list of putative NLS events
-modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
-
-"""
 import argparse
 import os
 import re
@@ -16,22 +10,21 @@ import textwrap
 import time
 from collections import defaultdict
 
-from Bio.Seq import Seq
 from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
-from . import __version__
-from .classes import Blat
-from .classes import LengthAction
-from .classes import Read
-from .classes import ReadsConnecter
-from .classes import Series
-from .common import get_softclip_length
-from .externals import external_tool_checking
-from .externals import softclipped_seq2SA_tag
-from .utils import extract_splice_sites
-from .utils import infer_sv_from_connected_reads
+from .. import __version__
+from ..classes import Blat
+from ..classes import LengthAction
+from ..classes import Read
+from ..classes import ReadsConnecter
+from ..classes import Series
+from ..common import get_softclip_length
+from ..externals import blat2chimeric_alignment
+from ..externals import external_tool_checking
+from ..utils import reverse_complement
+from .helper import extract_splice_sites
 
 try:
     import pysam
@@ -40,121 +33,7 @@ try:
 except ModuleNotFoundError as e:
     raise SystemExit(e.msg)
 
-
-def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> tuple:
-    """Detecting read-read connections with chimeric alignments CIGAR string
-
-    :param logger:
-    :param blat:
-    :param mapq_cutoff: MAPQ cutoff
-    :type read: pysam.AlignedSegment object
-    :type mapq_cutoff: int
-    :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) => mode-of-Read1, mode-of-Read2
-    :rtype: tuple
-    .. note::
-        Read-to-Read chain scenarios
-        * [[Read1, Read2, Read3]]
-        * [[Read1, Read2, Read3],[Read4,Read5]]
-
-        Dictionary of Read-pair scenarios
-        * (Read1, Read2) => mode-of-Read1, mode-of-Read2
-        * (Read2, Read1) => mode-of-Read2, mode-of-Read1
-
-    .. important::
-        If no 'SA' tag is found in this read, read-to-read chain and the read-pair => mode dictionary will become empty.
-
-    #return: NLS_type(TDUP/INV), exon_boundary(0/1/2/3), canonical_or_not (1/0), [position, size, rep_aln_mode, sup_aln_mode], [++]
-    #        TRA, canonical_or_not (1/0), [position, sup_position, rep_aln_mode, sup_aln_mode], [+-]
-    #        e.g., INV,1,43947377,181934993,1,1,++
-    #              TRA,1,160289623,chr17:17189212,1,1,+-
-    """
-
-    def format_sa_tag(in_str):
-        """
-        To keep read.reference_start and start position of SA alignment consistent, start position of SA alignment need to substract 1
-        :param in_str: string of supplementary read item in the SA tag
-        :type in_str: str
-        :return: chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
-        :rtype: tuple
-        .. note::
-             pos_sa, mapq_sa and nm_sa are integral variables now.
-        """
-        chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = in_str.split(",")
-        pos_sa = int(pos_sa) - 1
-        mapq_sa = int(mapq_sa)
-        nm_sa = int(nm_sa)
-        return chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
-
-    def obtain_sa_query_seq_from_ra(query_seq_ra, strand_ra, strand_sa):
-        """a helper function to define query_seq for the supplementary alignment
-        :param query_seq_ra: query sequence of representative alignment
-        :type query_seq_ra: str
-        :param strand_ra: direction of representative read (-|+)
-        :type strand_ra: str
-        :param strand_sa: direction of supplementary read (-|+)
-        :type strand_sa: str
-        :return: query sequence of supplementary alignment
-        :rtype: str
-        """
-        if strand_ra == strand_sa:
-            return query_seq_ra
-        else:
-            __seq = Seq(query_seq_ra)
-            return str(__seq.reverse_complement())
-
-    if read.has_tag("SV"):
-        return [], {}
-
-    if read.is_supplementary:
-        return [], {}
-
-    # if no 'SA' tag was found, read-to-read chain will be empty
-    try:
-        chimeric_aln = read.get_tag("SA")[:-1].split(";")
-    except KeyError:
-        return [], {}
-
-    # chimeric alignments for a chimeric read
-    # a chimeric read can have multiple chimeric alignments
-    chimeric_aln_list = []
-
-    chrm_ra = read.reference_name
-    pos_ra = read.reference_start
-    if read.is_reverse:
-        strand_ra = "-"
-    else:
-        strand_ra = "+"
-    cigar_ra = read.cigarstring
-    mapq_ra = read.mapping_quality
-    nm_ra = read.get_tag("NM")
-    seq_ra = read.query_sequence
-
-    if mapq_ra > mapq_cutoff:
-        chimeric_aln_list.append(
-            Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
-        )
-
-    for sa_string in chimeric_aln:
-        chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
-        seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
-        if mapq_sa > mapq_cutoff:
-            chimeric_aln_list.append(
-                Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa)
-            )
-
-    if not chimeric_aln_list:
-        return [], {}
-    else:
-        read_connecter = ReadsConnecter(
-            aln_list=chimeric_aln_list, blat=blat, logger=logger
-        )
-        read_connecter.run()
-        logger.debug(f"reads chain: {read_connecter.reads_chain}")
-        logger.debug(f"reads pair mode: {read_connecter.read_pair_mode_dict}")
-        return (
-            read_connecter.reads_chain,
-            read_connecter.read_pair_mode_dict,
-        )
+__funcs__ = {"detect_sv_from_cigar", "scan_bam"}
 
 
 def detect_sv_from_cigar(
@@ -229,7 +108,7 @@ def detect_sv_from_cigar(
                     rt_info,
                     strands,
                     genes,
-                ) = infer_sv_from_connected_reads(
+                ) = infer_nls_from_connected_reads(
                     _lt,
                     _rt,
                     _lt_mode,
@@ -263,7 +142,7 @@ def detect_sv_from_cigar(
     return event_groups
 
 
-def softclipping_realignment(
+def scan_bam(
     input_bam,
     mapq_cutoff,
     output,
@@ -278,7 +157,7 @@ def softclipping_realignment(
     min_soft_seg_len=200,
 ):
     """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
-       (2) add SA tag for reads with long length of softclipped segment using BLAT (Optional)
+       (2) add SA tag for reads with long length of softclipped segment using BLAT
        (3) identify putative regions of NLS events using connected chimeric reads
        (4) add putative regions of NLS events to SV tag of primary alignment
        (5) output regions of NLS events in BEDPE file
@@ -317,7 +196,7 @@ def softclipping_realignment(
         SV tag uses the same genomic corrdinate as SA tag,
         So position should be always add 1
     """
-    logger.debug("softclipping_realignment")
+    logger.debug("scan_bam")
 
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
@@ -438,19 +317,18 @@ def softclipping_realignment(
                     read_length = int(read.query_length)
                     # assert read.cigarstring, f"{read.query_name}" # TEST
                     _, _soft_seq, _, read_mode = get_softclip_length(read)
-                    __soft_seq = Seq(_soft_seq)
 
                     if read.is_reverse:
-                        soft_seq_ori = str(__soft_seq.reverse_complement())
+                        soft_seq_ori = reverse_complement(_soft_seq)
                     else:
-                        soft_seq_ori = str(__soft_seq)
+                        soft_seq_ori = _soft_seq
 
                     if (
                         read_mode in {1, 2}
                         and soft_seq_ori
                         and len(soft_seq_ori) >= min_soft_seg_len
                     ):
-                        chimeric_aln_str = softclipped_seq2SA_tag(
+                        chimeric_aln_str = blat2chimeric_alignment(
                             soft_seq_ori,
                             read_length,
                             read_strand,
@@ -551,360 +429,3 @@ def softclipping_realignment(
     prefix = output.split(".")[0]
     # output_bedpe_file(candidate_ao_dict, candidate_group_dict, prefix, splice_bin)
     return None
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic long-reads data",
-        epilog=textwrap.dedent(
-            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
-        ),
-    )
-    parser.add_argument(
-        "-v", "--version", action="version", version="%(prog)s {}".format(__version__)
-    )
-    sub_parsers = parser.add_subparsers(help="sub-command help", dest="sub_command")
-
-    build_parser = sub_parsers.add_parser(
-        "build",
-        help="add additional tags to build.BAM",
-        description="%(prog)s -i input_bam_file -o output_bam_file -r ref_genome_fasta -g gtf_file [opts]",
-        epilog=textwrap.dedent(
-            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
-        ),
-    )
-
-    build_parser.add_argument(
-        "-i",
-        "--input",
-        action="store",
-        dest="input",
-        help="Input BAM file",
-        required=True,
-    )
-    build_parser.add_argument(
-        "-r",
-        "--ref",
-        action="store",
-        dest="ref",
-        help="reference genome in FASTA format (with fai index)",
-        required=True,
-    )
-    build_parser.add_argument(
-        "-g",
-        "--gtf",
-        action="store",
-        dest="gtf",
-        help="gene annotations in GTF format",
-        required=True,
-    )
-    build_parser.add_argument(
-        "-o",
-        "--output",
-        action="store",
-        dest="output",
-        help="output BAM file",
-        required=True,
-    )
-    build_parser.add_argument(
-        "-s",
-        "--splice_bin",
-        action="store",
-        dest="splice_bin",
-        type=int,
-        help="minimal observation count for ITD (default: %(default)s)",
-        default=5,
-    )
-    build_parser.add_argument(
-        "-m",
-        "--mapq",
-        action="store",
-        dest="mapq",
-        type=int,
-        help="minimal MAPQ in BAM for calling NLS (default: %(default)s)",
-        default=15,
-    )
-    build_parser.add_argument(
-        "-n",
-        "--noncanonical",
-        action="store_true",
-        dest="noncanonical",
-        default=False,
-        help="Considering Non-canonical spliced sites",
-    )
-    build_parser.add_argument(
-        "--log",
-        action="store",
-        dest="log",
-        choices=["info", "debug"],
-        default="info",
-        help="set log level (default: %(default)s)",
-    )
-    build_parser.add_argument(
-        "--2bit",
-        action="store",
-        dest="two_bit",
-        help="reference genome in 2bit format",
-        required=True,
-    )
-    build_parser.add_argument(
-        "-p",
-        "--port",
-        action="store",
-        dest="port",
-        type=int,
-        help="port for BLAT server (default: %(default)s)",
-        default=88888,
-    )
-    build_parser.add_argument(
-        "--min_soft_seg_len",
-        action="store",
-        dest="min_soft_seg_len",
-        type=int,
-        help="minimum softclipped segement length to trigger BLAT alignment (default: %(default)s)",
-        default=200,
-    )
-    build_parser.add_argument(
-        "--max_allowed_nm",
-        action="store",
-        dest="max_allowed_nm",
-        type=int,
-        help="Maximum allowed NM to keep AS tag (default: %(default)s)",
-        default=100,
-    )
-    build_parser.add_argument(
-        "--identity",
-        action="store",
-        dest="ident_cutoff",
-        type=float,
-        help="blat_ident_pct_cutoff (default: %(default)s)",
-        default=0.99,
-    )
-    build_parser.add_argument(
-        "--tmp",
-        action="store",
-        dest="tmp_dir",
-        type=str,
-        help="BLAT temporary directory (default: %(default)s)",
-        default="/tmp",
-    )
-
-    call_parser = sub_parsers.add_parser(
-        "call",
-        help="call NLS events from build.BAM",
-        description="%(prog)s -i input_bam_file_from_ScanNLS_build -o output_vcf_file_prefix [opts]",
-        epilog=textwrap.dedent(
-            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
-        ),
-    )
-
-    call_parser.add_argument(
-        "-i",
-        "--input",
-        action="store",
-        dest="input",
-        help="Input BAM file",
-        required=True,
-    )
-    call_parser.add_argument(
-        "-o",
-        "--output",
-        action="store",
-        dest="output",
-        help="output file prefix",
-        required=True,
-    )
-    call_parser.add_argument(
-        "-a",
-        "--alignment_fraction",
-        action="store",
-        dest="alignment_fraction",
-        type=float,
-        help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
-        default=0.8,
-    )
-    call_parser.add_argument(
-        "-c",
-        "--sr",
-        action="store",
-        dest="sr",
-        type=int,
-        help="minimal observation supporting reads for SV (default: %(default)s)",
-        default=4,
-    )
-    call_parser.add_argument(
-        "-d",
-        "--depth",
-        action="store",
-        dest="depth",
-        type=int,
-        help="minimal depth to call SV (default: %(default)s)",
-        default=10,
-    )
-    call_parser.add_argument(
-        "-p",
-        "--pso",
-        action="store",
-        dest="pso",
-        type=float,
-        help="minimal variant allele frequency (default: %(default)s)",
-        default=0.1,
-    )
-    call_parser.add_argument(
-        "-l",
-        "--length",
-        action=LengthAction,
-        dest="length",
-        type=int,
-        help="minimal length (>=1) of SV to report (default: %(default)s)",
-        default=1000,
-    )
-    call_parser.add_argument(
-        "-m",
-        "--mapq",
-        action="store",
-        dest="mapq",
-        type=int,
-        help="minimal MAPQ of read from BAM file to call NLS (default: %(default)s)",
-        default=15,
-    )
-    call_parser.add_argument(
-        "-n",
-        action="store",
-        dest="mismatch",
-        type=int,
-        help="maximum mismatch bases of pairwise local alignment (default: %(default)s)",
-        default=3,
-    )
-    call_parser.add_argument(
-        "-s",
-        "--seed",
-        action="store",
-        dest="seed",
-        type=int,
-        help="maximum seed observation (reads with SV tags) count of SV (default: %(default)s)",
-        default=4,
-    )
-    call_parser.add_argument(
-        "--soft_len",
-        action="store",
-        dest="soft_len",
-        type=int,
-        help="Minimal soft-clipped length to be count (default: %(default)s)",
-        default=5,
-    )
-    call_parser.add_argument(
-        "-t",
-        action="store",
-        dest="region",
-        help="Limit analysis to targets listed in the BEDPE-format FILE",
-    )
-    call_parser.add_argument(
-        "--log",
-        action="store",
-        dest="log",
-        choices=["INFO", "DEBUG"],
-        default="INFO",
-        help="set log level (default: %(default)s)",
-    )
-
-    infer_parser = sub_parsers.add_parser(
-        "infer",
-        help="infer NLS isoforms using built BAM and called VCF",
-        description="%(prog)s -i input_bam_file_from_ScanNLS_build -o output_vcf_file_prefix [opts]",
-        epilog=textwrap.dedent(
-            """Author: Ting-You Wang <tywang@umn.edu>, Hormel Institute, University of Minnesota, 2021"""
-        ),
-    )
-
-    return parser
-
-
-def main():
-    if sys.version_info < (3, 7):
-        sys.exit(
-            "Sorry, this code need Python 3.7 or higher. Please update. Aborting..."
-        )
-    parser = parse_args()
-
-    if len(sys.argv[1:]) < 1:
-        parser.print_help()
-        sys.exit(1)
-    else:
-        options = parser.parse_args()
-
-    if options.sub_command == "build":
-        # add logger
-        logger.remove()
-        logger.add(sys.stdout, level=options.log.upper())
-        logger.info("port")
-
-        # check external tools used
-        external_tool_checking(logger=logger)
-
-        logger.info("ScanNLS build starts running")
-        start = time.time()
-
-        blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
-        blat.start_server()
-
-        # CIGAR string refinement or add SV tag
-        motif_required = not options.noncanonical
-
-        softclipping_realignment(
-            input_bam=options.input,
-            mapq_cutoff=options.mapq,
-            output=options.output,
-            ref_genome=options.ref,
-            gtf=options.gtf,
-            splice_bin=options.splice_bin,
-            blat=blat,
-            logger=logger,
-            motif_required=motif_required,
-            blat_ident_pct_cutoff=options.ident_cutoff,
-            max_allowed_nm=options.max_allowed_nm,
-            min_soft_seg_len=options.min_soft_seg_len,
-        )
-
-        logger.info("ScanNLS build running done")
-        end = time.time()
-        logger.info(f"ScanNLS build takes {end - start} seconds.")
-
-    elif options.sub_command == "call":
-        print(
-            "ScanNLS calling NLS events starts running: "
-            + time.strftime("%Y-%m-%d %H:%M:%S")
-        )
-        start = time.time()
-        event_dict = sv_scan(
-            options.input,
-            options.output,
-            options.sr,
-            options.depth,
-            options.pso,
-            options.length,
-            options.soft_len,
-            options.region,
-            options.mapq,
-            options.mismatch,
-            options.alignment_fraction,
-            options.seed,
-        )
-        print(
-            "ScanNLS calling NLS events running done: "
-            + time.strftime("%Y-%m-%d %H:%M:%S")
-        )
-        end = time.time()
-        print("ScanNLS calling NLS events takes " + str(end - start) + " seconds.")
-    # infer transcript forms (GTF) and the corresponding sequences (FASTA)
-    elif options.sub_command == "infer":
-        pass
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        # stop gfserver
-        sys.stderr.write("User interrupt me ^_^ \n")
-        sys.exit(1)

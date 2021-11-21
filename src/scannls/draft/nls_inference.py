@@ -1,0 +1,1390 @@
+import copy
+import re
+import sys
+from collections import defaultdict
+
+from align import aligner
+
+from .. import __version__
+from .helper import gene_annotation
+from .helper import splicing_confirmation
+from .helper import update_breakpoints
+
+try:
+    import pysam
+    import numpy as np
+    import HTSeq
+except ModuleNotFoundError as e:
+    raise SystemExit(e.msg)
+
+__funcs__ = {"short_TDUP_or_not", "infer_nls_from_connected_reads"}
+
+
+def short_TDUP_or_not(
+    chrm, ra_mode, sa_start, sa_end, ins_seq_in_read, fastafile
+) -> bool:
+    """judge the ins_seq_in_read is a TDUP (TDUP size < reads length)
+    OR novel sequence insertion using reference sequence infered
+    from chimeric alignment start position and indel_size from 'query_offset - target_offset'
+
+    :param chrm: the chromosome
+    :param ra_mode: representative alignment mode
+    :param sa_start: supplementary alignment reference start position
+    :param sa_end: supplementary alignment reference end positions
+    :param ins_seq_in_read: putative inertion sequence from the read
+    :param fastafile: pyfaidx.Fasta object of reference genome (FASTA file)
+    :type chrm: str
+    :type ra_mode: int
+    :type sa_start: int
+    :type sa_end: int
+    :type ins_seq_in_read: str
+    :type fastafile: pyfaidx.Fasta object
+    :returns: True if it is a short TDUP
+    :rtype: bool
+    """
+    indel_size = len(ins_seq_in_read)
+    if ra_mode == 1:
+        ref_seq = fastafile[chrm][sa_start - 10 : sa_start + indel_size].seq
+    elif ra_mode == 2:
+        ref_seq = fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
+
+    alignment_result = aligner(ins_seq_in_read, ref_seq, method="glocal")[0]
+    search_seq = alignment_result.seq1.decode("utf-8")
+    target_seq = alignment_result.seq2.decode("utf-8")
+    search_seq_len = len(search_seq)
+    target_seq_len = len(target_seq)
+    search_start, search_end = alignment_result.start1, alignment_result.end1 - 1
+    target_start, target_end = alignment_result.start2, alignment_result.end2 - 1
+    aln_len = search_end - search_start + 1
+    total_mismatches = len(search_seq) - aln_len + alignment_result.n_mismatches
+    if total_mismatches <= 3:
+        return True
+    else:
+        return False
+
+
+def infer_nls_from_connected_reads(
+    read_lt,
+    read_rt,
+    lt_mode,
+    rt_mode,
+    splice_bin,
+    genome_fasta,
+    cvg,
+    gene_iv,
+    motif_required,
+    update_bps=False,
+) -> tuple:
+    """
+    :param read_lt: Read 1
+    :param read_rt: Read 2
+    :param lt_mode: mode of Read 1
+    :param rt_mode: mode of Read 2
+    :param splice_bin: a small bin for splice site searching
+    :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
+    :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
+    :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
+    :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
+    :param update_bps: if canonical splice sites, update breakpoints to fit the splice sites
+    :type read_lt: Read
+    :type read_rt: Read
+    :type lt_mode: int
+    :type rt_mode: int
+    :type splice_bin : int
+    :type genome_fasta: pyfaidx.Fasta
+    :type cvg: HTSeq.GenomicArrayOfSets
+    :type gene_iv: HTSeq.GenomicArrayOfSets
+    :type motif_required: bool
+    :type update_bps: bool
+    :return: putative event from reads-pair
+    :rtype: tuple
+    .. note::
+        putative event examples:
+            * 'NA', 0, 0, (), (), (), (), []
+            * 'TDUP', annotation, canonical/noncanonical, ('chrm1:pos1', 'chrm2:pos2', mode1, mode2),
+            (read1_ref_start, read1_ref_end, read1_exons), (read2_ref_start, read2_ref_end, read2_exons), (strand1, strand2), [gene1, gene2]
+       annotation explanation:
+       3(11) => both breakpoints overlap with coding exons boundary
+       2(10) => one breakpoint overlap with coding exons boundary
+       1(01) => one breakpoint overlap with coding exons boundary
+       0(00) => none breakpoint overlap with coding exons boundary
+    """
+    # TODO add insertion information from connected reads
+    def obtain_ins_seq_from_softclipped_part_read(read, mode, indel_size) -> str:
+        """
+        :param read: a chimeirc read
+        :param mode: mode for the chimeirc read
+        :param indel_size: indel size infered from 'query_offset - target_offset'
+        :type read : Read
+        :type mode: int
+        :type indel_size: int
+        :return: putative insertion sequence from the read
+        :rtype: str
+        """
+        read_seq = read.query_sequence
+        ins_seq_in_read = ""
+        if mode == 2:  # SM
+            ins_seq_in_read = read_seq[: read.lt_soft_len][-indel_size:]
+        elif mode == 1:  # MS
+            ins_seq_in_read = read_seq[-read.rt_soft_len :][:indel_size]
+        return ins_seq_in_read
+
+    def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
+        """
+        :param read: a chimeirc read
+        :param mode: mode for the chimeirc read
+        :param indel_size: indel size infered from 'query_offset - target_offset'
+        :type read : Read
+        :type mode: int
+        :type indel_size: int
+        :return: putative insertion sequence from the read
+        :rtype: str
+        ..note:
+            * inserted sequence:
+              S-----SM---M    M---MS-----S
+              SSSSSXXMMMMM    MMMMMXXSSSSS
+            * microhomology:
+              S-----SM---M    M---MS-----S
+              SSSSSSSXXMMM    MMMXXSSSSSSS
+        """
+        read_seq = read.query_sequence
+        bp_region_seq = ""
+        # inserted sequence
+        if bp_region_seq_len > 0:
+            if mode == 2:  # SM
+                bp_region_seq = read_seq[: read.lt_soft_len][-bp_region_seq_len:]
+            elif mode == 1:  # MS
+                bp_region_seq = read_seq[-read.rt_soft_len :][:bp_region_seq_len]
+        # microhomology
+        elif bp_region_seq_len < 0:
+            if mode == 2:  # SM
+                bp_region_seq = read_seq[
+                    read.lt_soft_len : read.lt_soft_len - bp_region_seq_len
+                ]
+            elif mode == 1:  # MS
+                bp_region_seq = read_seq[
+                    bp_region_seq_len - read.rt_soft_len : -read.rt_soft_len
+                ]
+        else:
+            bp_region_seq = ""
+        return bp_region_seq
+
+    if lt_mode == 3 or rt_mode == 3:
+        return "NA", 0, 0, (), (), (), (), []
+
+    lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (
+        read_lt.chrom,
+        read_lt.strand,
+        read_lt.ref_start,
+        read_lt.ref_end,
+        read_lt.cigartuples,
+        read_lt.cigarstring,
+    )
+    rt_chrm, rt_strand, rt_start, rt_end, rt_cigartuples, rt_cigarstring = (
+        read_rt.chrom,
+        read_rt.strand,
+        read_rt.ref_start,
+        read_rt.ref_end,
+        read_rt.cigartuples,
+        read_rt.cigarstring,
+    )
+
+    lt_exons, lt_introns = read_lt.get_exons_and_introns()
+    rt_exons, rt_introns = read_rt.get_exons_and_introns()
+
+    target_start = 0
+    target_end = 0
+    if lt_chrm == rt_chrm:
+        if lt_strand == rt_strand:  # deletion, insertion, duplication
+            if lt_mode == 2 and rt_mode == 1:
+                target_start = read_rt.ref_start
+                target_end = read_lt.ref_end
+                target_offset = target_end - target_start
+                query_offset = (
+                    read_lt.query_length
+                    - read_rt.lt_soft_len
+                    - read_lt.rt_soft_len
+                    + read_lt.indel_size
+                    + read_rt.indel_size
+                )
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                evt_size = query_offset - target_offset
+                if evt_size == 0:  # micro-inversion
+                    return "NA", 0, 0, (), (), (), (), []
+                elif evt_size < 0:  # deletion
+                    return "NA", 0, 0, (), (), (), (), []
+                elif evt_size >= query_offset:  # large tandem duplication
+                    chrm_start = lt_chrm
+                    junc_start = read_lt.ref_start
+                    chrm_end = lt_chrm
+                    junc_end = junc_start + evt_size
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        False,
+                        motif_required,
+                    )
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
+                    if _nls:
+                        if _can == 1:
+                            if update_bps:
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    lt_strand,
+                                    rt_strand,
+                                    2,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
+                                )
+                                if not new_junc_start and not new_junc_end:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        0,
+                                        (
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_strand, rt_strand),
+                                        [*_genes],
+                                    )
+                                else:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{lt_chrm}:{new_junc_start}",
+                                            f"{lt_chrm}:{new_junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_strand, rt_strand),
+                                        [*_genes],
+                                    )
+                            else:
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return (
+                                "TDUP",
+                                _anno,
+                                _can,
+                                (
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{lt_chrm}:{junc_end}",
+                                    2,
+                                    1,
+                                ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
+                                (lt_strand, rt_strand),
+                                [*_genes],
+                            )
+                    else:
+                        return "NA", 0, 0, (), (), (), (), []
+                else:  # read length > tandem duplication size
+                    ins_start = read_lt.ref_start
+                    ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
+                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                        read_lt, lt_mode, evt_size
+                    )
+
+                    is_DUP = None
+                    if short_TDUP_or_not(
+                        lt_chrm,
+                        lt_mode,
+                        rt_start,
+                        rt_end,
+                        ins_seq_in_read,
+                        genome_fasta,
+                    ):
+                        is_DUP = True
+                    else:
+                        is_DUP = False
+                    if is_DUP:
+                        chrm_start = lt_chrm
+                        junc_start = read_lt.ref_start
+                        chrm_end = lt_chrm
+                        junc_end = junc_start + evt_size
+                        _nls, _anno, _can = splicing_confirmation(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            False,
+                            motif_required,
+                        )
+                        _genes = gene_annotation(
+                            chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                        )
+                        if _nls:
+                            if _can == 1:
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        lt_chrm,
+                                        junc_start,
+                                        lt_chrm,
+                                        junc_end,
+                                        lt_strand,
+                                        rt_strand,
+                                        2,
+                                        1,
+                                        splice_bin,
+                                        genome_fasta,
+                                    )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{lt_chrm}:{junc_start}",
+                                                f"{lt_chrm}:{junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_strand, rt_strand),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{lt_chrm}:{new_junc_start}",
+                                                f"{lt_chrm}:{new_junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_strand, rt_strand),
+                                            [*_genes],
+                                        )
+                                else:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_strand, rt_strand),
+                                        [*_genes],
+                                    )
+                            else:
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    _can,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return "NA", 0, 0, (), (), (), (), []
+                    else:  # it's a short insertion
+                        _genes = gene_annotation(
+                            lt_chrm, ins_start, lt_chrm, ins_start, gene_iv
+                        )
+                        return (
+                            "INS",
+                            ref_allele,
+                            ins_seq_in_read,
+                            (ins_start, len(ins_seq_in_read), 2, 1),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
+                            (lt_strand, rt_strand),
+                            [*_genes],
+                        )
+            elif lt_mode == 1 and rt_mode == 2:
+                target_start = read_lt.ref_start
+                target_end = read_rt.ref_start + read_rt.reference_match_size
+                target_offset = target_end - target_start
+                query_offset = (
+                    read_lt.query_length
+                    - read_rt.rt_soft_len
+                    - read_lt.lt_soft_len
+                    + read_lt.indel_size
+                    + read_rt.indel_size
+                )
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                evt_size = query_offset - target_offset
+                if evt_size == 0:  # micro-inversion
+                    return "NA", 0, 0, (), (), (), (), []
+                elif evt_size < 0:  # deletion
+                    return "NA", 0, 0, (), (), (), (), []
+                elif evt_size >= query_offset:
+                    chrm_start = rt_chrm
+                    junc_start = read_rt.ref_start
+                    chrm_end = rt_chrm
+                    junc_end = junc_start + evt_size
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        False,
+                        motif_required,
+                    )
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
+                    if _nls:
+                        if _can == 1:
+                            if update_bps:
+                                new_junc_start, new_junc_end = update_breakpoints(
+                                    lt_chrm,
+                                    junc_start,
+                                    lt_chrm,
+                                    junc_end,
+                                    rt_strand,
+                                    lt_strand,
+                                    2,
+                                    1,
+                                    splice_bin,
+                                    genome_fasta,
+                                )
+
+                                if not new_junc_start and not new_junc_end:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        0,
+                                        (
+                                            f"{rt_chrm}:{junc_start}",
+                                            f"{rt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
+                                        [*_genes],
+                                    )
+                                else:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{rt_chrm}:{new_junc_start}",
+                                            f"{rt_chrm}:{new_junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
+                                        [*_genes],
+                                    )
+                            else:
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{rt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_strand, lt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return (
+                                "TDUP",
+                                _anno,
+                                _can,
+                                (
+                                    f"{rt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    2,
+                                    1,
+                                ),
+                                (rt_start, rt_end, rt_exons),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_strand, lt_strand),
+                                [*_genes],
+                            )
+                    else:
+                        return "NA", 0, 0, (), (), (), (), []
+                # indel_size < query_offset
+                else:
+                    ins_start = read_lt.ref_start + read_lt.reference_match_size
+                    ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
+                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                        read_lt, lt_mode, evt_size
+                    )
+
+                    is_DUP = None
+
+                    if short_TDUP_or_not(
+                        lt_chrm,
+                        lt_mode,
+                        rt_start,
+                        rt_end,
+                        ins_seq_in_read,
+                        genome_fasta,
+                    ):
+                        is_DUP = True
+                    else:
+                        is_DUP = False
+                    if is_DUP:
+                        chrm_start = rt_chrm
+                        junc_start = rt_start
+                        chrm_end = rt_chrm
+                        junc_end = junc_start + evt_size
+                        _nls, _anno, _can = splicing_confirmation(
+                            chrm_start,
+                            junc_start,
+                            chrm_end,
+                            junc_end,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            False,
+                            motif_required,
+                        )
+                        _genes = gene_annotation(
+                            chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                        )
+                        if _nls:
+                            if _can == 1:
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        rt_chrm,
+                                        junc_start,
+                                        rt_chrm,
+                                        junc_end,
+                                        rt_strand,
+                                        lt_strand,
+                                        2,
+                                        1,
+                                        splice_bin,
+                                        genome_fasta,
+                                    )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{rt_chrm}:{junc_start}",
+                                                f"{rt_chrm}:{junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_strand, lt_strand),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "TDUP",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{rt_chrm}:{new_junc_start}",
+                                                f"{rt_chrm}:{new_junc_end}",
+                                                2,
+                                                1,
+                                            ),
+                                            (rt_start, rt_end, rt_exons),
+                                            (lt_start, lt_end, lt_exons),
+                                            (rt_strand, lt_strand),
+                                            [*_genes],
+                                        )
+                                else:
+                                    return (
+                                        "TDUP",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{rt_chrm}:{junc_start}",
+                                            f"{rt_chrm}:{junc_end}",
+                                            2,
+                                            1,
+                                        ),
+                                        (rt_start, rt_end, rt_exons),
+                                        (lt_start, lt_end, lt_exons),
+                                        (rt_strand, lt_strand),
+                                        [*_genes],
+                                    )
+                            else:
+                                return (
+                                    "TDUP",
+                                    _anno,
+                                    _can,
+                                    (
+                                        f"{rt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_strand, lt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return "NA", 0, 0, (), (), (), (), []
+                    # it is a short insertion
+                    else:
+                        _genes = gene_annotation(
+                            rt_chrm, ins_start, rt_chrm, ins_start, gene_iv
+                        )
+                        return (
+                            "INS",
+                            ref_allele,
+                            ins_seq_in_read,
+                            (ins_start, len(ins_seq_in_read), 1, 2),
+                            (rt_start, rt_end, rt_exons),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_strand, lt_strand),
+                            [*_genes],
+                        )
+            else:
+                return "NA", 0, 0, (), (), (), (), []
+        else:  # lt_strand != rt_strand
+            if lt_mode == rt_mode == 1:
+                ra_bp = read_lt.ref_start + read_lt.reference_match_size
+                sa_bp = read_rt.ref_start + read_rt.reference_match_size
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                if ra_bp == sa_bp:
+                    return "NA", 0, 0, (), (), (), (), []
+                else:
+                    chrm_start = lt_chrm
+                    junc_start = min(ra_bp, sa_bp)
+                    chrm_end = lt_chrm
+                    junc_end = junc_start + abs(ra_bp - sa_bp)
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        True,
+                        motif_required,
+                    )
+
+                    if junc_start == ra_bp:
+                        strands = (lt_strand, rt_strand)
+                        lt_start_end_exons = (lt_start, lt_end, lt_exons)
+                        rt_start_end_exons = (rt_start, rt_end, rt_exons)
+                    elif junc_start == sa_bp:
+                        strands = (rt_strand, lt_strand)
+                        lt_start_end_exons = (rt_start, rt_end, rt_exons)
+                        rt_start_end_exons = (lt_start, lt_end, lt_exons)
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
+                    if _nls:
+                        # check whether the chimeric alignments uses canonical splice sites or not (60% fraction by default)
+                        if read_lt.splice_site_checker(
+                            genome_fasta
+                        ) and read_rt.splice_site_checker(genome_fasta):
+                            if _can == 1:
+                                strand_l, strand_r = strands
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        lt_chrm,
+                                        junc_start,
+                                        lt_chrm,
+                                        junc_end,
+                                        strand_l,
+                                        strand_r,
+                                        1,
+                                        1,
+                                        splice_bin,
+                                        genome_fasta,
+                                    )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{lt_chrm}:{junc_start}",
+                                                f"{lt_chrm}:{junc_end}",
+                                                1,
+                                                1,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{lt_chrm}:{new_junc_start}",
+                                                f"{lt_chrm}:{new_junc_end}",
+                                                1,
+                                                1,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
+                                else:
+                                    return (
+                                        "INV",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            1,
+                                            1,
+                                        ),
+                                        lt_start_end_exons,
+                                        rt_start_end_exons,
+                                        tuple([*strands]),
+                                        [*_genes],
+                                    )
+                            else:
+                                return (
+                                    "INV",
+                                    _anno,
+                                    _can,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        1,
+                                        1,
+                                    ),
+                                    lt_start_end_exons,
+                                    rt_start_end_exons,
+                                    tuple([*strands]),
+                                    [*_genes],
+                                )
+                        else:
+                            return "NA", 0, 0, (), (), (), (), []
+                    else:
+                        return "NA", 0, 0, (), (), (), (), []
+            elif lt_mode == rt_mode == 2:  # inversion
+                ra_bp = read_lt.ref_start
+                sa_bp = read_rt.ref_start
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                if ra_bp == sa_bp:
+                    return "NA", 0, 0, (), (), (), (), []
+                else:
+                    chrm_start = lt_chrm
+                    junc_start = min(ra_bp, sa_bp)
+                    chrm_end = lt_chrm
+                    junc_end = junc_start + abs(ra_bp - sa_bp)
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        True,
+                        motif_required,
+                    )
+                    if junc_start == ra_bp:
+                        strands = (lt_strand, rt_strand)
+                        lt_start_end_exons = (lt_start, lt_end, lt_exons)
+                        rt_start_end_exons = (rt_start, rt_end, rt_exons)
+                    elif junc_start == sa_bp:
+                        strands = (rt_strand, lt_strand)
+                        lt_start_end_exons = (rt_start, rt_end, rt_exons)
+                        rt_start_end_exons = (lt_start, lt_end, lt_exons)
+                    _genes = gene_annotation(
+                        chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                    )
+                    if _nls:
+                        # check whether the chimeric alignments uses canonical splice sites or not (60% fraction by default)
+                        if read_lt.splice_site_checker(
+                            genome_fasta
+                        ) and read_rt.splice_site_checker(genome_fasta):
+                            if _can == 1:
+
+                                strand_l, strand_r = strands
+                                if update_bps:
+                                    new_junc_start, new_junc_end = update_breakpoints(
+                                        lt_chrm,
+                                        junc_start,
+                                        lt_chrm,
+                                        junc_end,
+                                        strand_l,
+                                        strand_r,
+                                        2,
+                                        2,
+                                        splice_bin,
+                                        genome_fasta,
+                                    )
+                                    if not new_junc_start and not new_junc_end:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            0,
+                                            (
+                                                f"{lt_chrm}:{junc_start}",
+                                                f"{lt_chrm}:{junc_end}",
+                                                2,
+                                                2,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
+                                    else:
+                                        return (
+                                            "INV",
+                                            _anno,
+                                            1,
+                                            (
+                                                f"{lt_chrm}:{new_junc_start}",
+                                                f"{lt_chrm}:{new_junc_end}",
+                                                2,
+                                                2,
+                                            ),
+                                            lt_start_end_exons,
+                                            rt_start_end_exons,
+                                            tuple([*strands]),
+                                            [*_genes],
+                                        )
+                                else:
+                                    return (
+                                        "INV",
+                                        _anno,
+                                        1,
+                                        (
+                                            f"{lt_chrm}:{junc_start}",
+                                            f"{lt_chrm}:{junc_end}",
+                                            2,
+                                            2,
+                                        ),
+                                        lt_start_end_exons,
+                                        rt_start_end_exons,
+                                        tuple([*strands]),
+                                        [*_genes],
+                                    )
+                            else:
+                                return (
+                                    "INV",
+                                    _anno,
+                                    _can,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{lt_chrm}:{junc_end}",
+                                        2,
+                                        2,
+                                    ),
+                                    lt_start_end_exons,
+                                    rt_start_end_exons,
+                                    tuple([*strands]),
+                                    [*_genes],
+                                )
+                        else:
+                            return "NA", 0, 0, (), (), (), (), []
+                    else:
+                        return "NA", 0, 0, (), (), (), (), []
+            else:
+                return "NA", 0, 0, (), (), (), (), []
+    else:  # lt_chrm != rt_chrm
+        if lt_strand == rt_strand:
+            if lt_mode == 1 and rt_mode == 2:
+                chrm_start = lt_chrm
+                junc_start = read_lt.ref_start + read_lt.reference_match_size
+                chrm_end = rt_chrm
+                junc_end = read_rt.ref_start
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    False,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
+                if _nls:
+                    if _can == 1:
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                1,
+                                2,
+                                splice_bin,
+                                genome_fasta,
+                            )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        1,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        1,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                (
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    1,
+                                    2,
+                                ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
+                                (lt_strand, rt_strand),
+                                [*_genes],
+                            )
+                    else:
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 2),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
+                            (lt_strand, rt_strand),
+                            [*_genes],
+                        )
+                else:
+                    return "NA", 0, 0, (), (), (), (), []
+            elif lt_mode == 2 and rt_mode == 1:
+                chrm_start = lt_chrm
+                junc_start = read_lt.ref_start
+                chrm_end = rt_chrm
+                junc_end = read_rt.ref_start + read_rt.reference_match_size
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    False,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
+                if _nls:
+                    if _can == 1:
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                2,
+                                1,
+                                splice_bin,
+                                genome_fasta,
+                            )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        2,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                (
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    2,
+                                    1,
+                                ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
+                                (lt_strand, rt_strand),
+                                [*_genes],
+                            )
+                    else:
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 1),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
+                            (lt_strand, rt_strand),
+                            [*_genes],
+                        )
+                else:
+                    return "NA", 0, 0, (), (), (), (), []
+            else:
+                return "NA", 0, 0, (), (), (), (), []
+        else:  # lt_strand != rt_strand
+            if lt_mode == rt_mode == 1:
+                chrm_start = lt_chrm
+                junc_start = read_lt.ref_start + read_lt.reference_match_size
+                chrm_end = rt_chrm
+                junc_end = read_rt.ref_start + read_rt.reference_match_size
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.lt_soft_len
+                    - read_rt.lt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    True,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
+                if _nls:
+                    if _can == 1:
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                1,
+                                1,
+                                splice_bin,
+                                genome_fasta,
+                            )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        1,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        1,
+                                        1,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                (
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    1,
+                                    1,
+                                ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
+                                (lt_strand, rt_strand),
+                                [*_genes],
+                            )
+                    else:
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 1, 1),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
+                            (lt_strand, rt_strand),
+                            [*_genes],
+                        )
+                else:
+                    return "NA", 0, 0, (), (), (), (), []
+            elif lt_mode == rt_mode == 2:
+                chrm_start = lt_chrm
+                junc_start = read_lt.ref_start
+                chrm_end = rt_chrm
+                junc_end = read_rt.ref_start
+                bp_region_seq_len = (
+                    read_lt.query_length
+                    - read_lt.rt_soft_len
+                    - read_rt.rt_soft_len
+                    - read_lt.read_match_size
+                    - read_rt.read_match_size
+                )
+                _nls, _anno, _can = splicing_confirmation(
+                    chrm_start,
+                    junc_start,
+                    chrm_end,
+                    junc_end,
+                    splice_bin,
+                    genome_fasta,
+                    cvg,
+                    True,
+                    motif_required,
+                )
+                _genes = gene_annotation(
+                    chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                )
+                if _nls:
+                    if _can == 1:
+                        if update_bps:
+                            new_junc_start, new_junc_end = update_breakpoints(
+                                chrm_start,
+                                junc_start,
+                                chrm_end,
+                                junc_end,
+                                lt_strand,
+                                rt_strand,
+                                2,
+                                2,
+                                splice_bin,
+                                genome_fasta,
+                            )
+                            if not new_junc_start and not new_junc_end:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    0,
+                                    (
+                                        f"{lt_chrm}:{junc_start}",
+                                        f"{rt_chrm}:{junc_end}",
+                                        2,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                            else:
+                                return (
+                                    "TRA",
+                                    _anno,
+                                    1,
+                                    (
+                                        f"{lt_chrm}:{new_junc_start}",
+                                        f"{rt_chrm}:{new_junc_end}",
+                                        2,
+                                        2,
+                                    ),
+                                    (lt_start, lt_end, lt_exons),
+                                    (rt_start, rt_end, rt_exons),
+                                    (lt_strand, rt_strand),
+                                    [*_genes],
+                                )
+                        else:
+                            return (
+                                "TRA",
+                                _anno,
+                                1,
+                                (
+                                    f"{lt_chrm}:{junc_start}",
+                                    f"{rt_chrm}:{junc_end}",
+                                    2,
+                                    2,
+                                ),
+                                (lt_start, lt_end, lt_exons),
+                                (rt_start, rt_end, rt_exons),
+                                (lt_strand, rt_strand),
+                                [*_genes],
+                            )
+                    else:
+                        return (
+                            "TRA",
+                            _anno,
+                            _can,
+                            (f"{lt_chrm}:{junc_start}", f"{rt_chrm}:{junc_end}", 2, 2),
+                            (lt_start, lt_end, lt_exons),
+                            (rt_start, rt_end, rt_exons),
+                            (lt_strand, rt_strand),
+                            [*_genes],
+                        )
+                else:
+                    return "NA", 0, 0, (), (), (), (), []
+            else:
+                return "NA", 0, 0, (), (), (), (), []

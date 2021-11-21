@@ -107,6 +107,7 @@ def get_softclip_length(read):
         return 0, "", -1, 0
 
 
+'''
 def transcript_upstream_part_determiner(strand1, strand2, mode1, mode2) -> bool:
     """Determine the transcript upstream part using strand and mode information
     :param strand1: strand for breakpoint1
@@ -142,3 +143,4 @@ def transcript_upstream_part_determiner(strand1, strand2, mode1, mode2) -> bool:
         elif mode1 == 2 and mode2 == 1:
             is_bp1_upstream = True
     return is_bp1_upstream
+'''

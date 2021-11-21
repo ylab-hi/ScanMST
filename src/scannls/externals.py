@@ -39,7 +39,7 @@ def cigar_validity(cigar_str) -> str:
     return valid_cigar
 
 
-def softclipped_seq2SA_tag(
+def blat2chimeric_alignment(
     in_seq,
     read_length,
     read_strand,
