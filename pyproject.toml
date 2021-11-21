@@ -26,6 +26,7 @@ HTSeq = "^0.13.5"
 pyfaidx = "^0.6.3"
 psutil = "^5.8.0"
 loguru = "^0.5.3"
+pynvim = "^0.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
