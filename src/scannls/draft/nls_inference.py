@@ -18,7 +18,7 @@ def short_TDUP_or_not(
     :param ra_mode: representative alignment mode
     :param sa_start: supplementary alignment reference start position
     :param sa_end: supplementary alignment reference end positions
-    :param ins_seq_in_read: putative inertion sequence from the read
+    :param ins_seq_in_read: putative insertion sequence from the read
     :param fastafile: pyfaidx.Fasta object of reference genome (FASTA file)
     :type chrm: str
     :type ra_mode: int

@@ -7,7 +7,6 @@ import random
 import re
 import subprocess
 import time
-from collections import namedtuple
 from multiprocessing import Process
 from typing import Any
 from typing import List
@@ -19,6 +18,9 @@ from align import aligner
 from Bio import SearchIO
 from Bio.Seq import Seq
 from loguru import logger
+
+from .draft.nls_inference import infer_nls_from_connected_reads
+from .exception import ReadNotFoundError
 
 
 class Path(object):
@@ -225,8 +227,8 @@ class Read(object):
             ),
         )
 
-    @classmethod
-    def init(cls, chrom, position, strand, cigar_str, mapq, nm, query_seq):
+    @staticmethod
+    def _calculate_features(cigar_str):
         cigar_char_dict = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5}
         # 'length', 'operation char'
         len_type_tuple = re.findall(r"(\d+)(\w)", cigar_str)
@@ -268,6 +270,31 @@ class Read(object):
             lt_soft_len = lt_len
         if rt_op == 4:
             rt_soft_len = rt_len
+        return (
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigar_without_soft,
+            query_length,
+            cigartuples,
+        )
+
+    @classmethod
+    def init(cls, chrom, position, strand, cigar_str, mapq, nm, query_seq):
+
+        (
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigar_without_soft,
+            query_length,
+            cigartuples,
+        ) = Read._calculate_features(cigar_str)
+
         return cls(
             chrom,
             position,
@@ -297,7 +324,6 @@ class Read(object):
 
     @property
     def sms(self) -> tuple:
-        # return f'{self.lt_soft_len}\t{self.read_match_size}\t{self.rt_soft_len}'
         return self.lt_soft_len, self.read_match_size, self.rt_soft_len
 
     def add_path(self, path) -> None:
@@ -372,6 +398,58 @@ class Read(object):
             return False
 
 
+class NoneInsertion(Read):
+    def __init__(self, hit_num: int, query_seq: str):
+        self.query_sequence = query_seq
+        self.hit = hit_num
+
+
+class Insertion(Read):
+    def __init__(
+        self,
+        hit_num: int,
+        chrom: str,
+        position: int,
+        strand: str,
+        cigar_str: str,
+        mapq: int,
+        nm: int,
+        query_seq: str,
+    ):
+        (
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigar_without_soft,
+            query_length,
+            cigartuples,
+        ) = Read._calculate_features(cigar_str)
+        super().__init__(
+            chrom,
+            position,
+            strand,
+            cigar_str,
+            mapq,
+            nm,
+            query_seq,
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigar_without_soft,
+            query_length,
+            cigartuples,
+        )
+        self.hit = hit_num
+        self.sv_type = None
+
+    def reverse_completement_query(self):
+        self.query_sequence = str(Seq(self.query_sequence).reverse_complement())
+
+
 class LengthAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         if values <= 0:
@@ -429,6 +507,7 @@ class Node(object):
         "annotation_code",
         "splicing_code",
         "sr",
+        "insertion_info",
     )
 
     def __init__(
@@ -446,6 +525,7 @@ class Node(object):
         modes=None,
         genes=None,
         sr=None,
+        insertion_info=None,
     ) -> None:
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
@@ -460,6 +540,7 @@ class Node(object):
         self.annotation_code = annot
         self.splicing_code = canonical
         self.sr = sr
+        self.insertion_info = insertion_info
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
@@ -509,7 +590,94 @@ class Node(object):
 
     @classmethod
     def create_nodes(cls, number):
-        return [cls() for i in range(number)]
+        return [cls() for _ in range(number)]
+
+    @property
+    def introns(self):
+        if len(self.exons) <= 1:
+            return []
+        else:
+            _positions = []
+            for i, j in self.exons:
+                _positions.extend([i, j])
+            _positions.pop(0)
+            _positions.pop(-1)
+            _introns = list(zip(_positions[::2], _positions[1::2]))
+            return _introns
+
+
+class Event:
+    def __init__(self, event):
+        (
+            sv_type,
+            annot,
+            canonical,
+            _positions,
+            read1_info,
+            read2_info,
+            insertion_info,
+            strands,
+            genes,
+        ) = event
+
+        self.sv_type = sv_type
+        self.annot = annot
+        self.canonical = canonical
+        self.genes = genes
+        self.insertion_info = insertion_info
+
+        self.bp1, self.bp2 = _positions[:2]
+
+        self.mode1, self.mode2 = _positions[2:]
+
+        self.strand1, self.strand2 = strands
+
+        self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
+        self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+
+    @property
+    def chrom1(self):
+        return self.bp1.split(":")[0]
+
+    @property
+    def chrom2(self):
+        return self.bp2.split(":")[0]
+
+    @property
+    def insertion_seq(self):
+        return self.insertion_info[0][1:]
+
+    def has_insertion(self):
+        return True if self.insertion_info[0].startswith("+") else False
+
+    def is_same_strand(self):
+        return self.strand1 == self.strand2
+
+    def read1(self, read_chains):
+        for read in read_chains:
+            if read.ref_start == self.read1_ref_start:
+                return read
+        else:
+            raise ReadNotFoundError
+
+    def read2(self, read_chains):
+        for read in read_chains:
+            if read.ref_start == self.read2_ref_start:
+                return read
+        else:
+            raise ReadNotFoundError
+
+    def update_node_info(
+        self, flag, new_node, insertion_mode, insertion, is_update_insertion_info=True
+    ):
+        new_node.sv_type = self.sv_type
+        new_node.annotation_code = self.annot
+        new_node.splicing_code = self.canonical
+        new_node.modes = [self.mode1, insertion_mode]
+        new_node.genes = self.genes
+        if is_update_insertion_info:
+            new_node.insertion_info = (flag, insertion)
+        return new_node
 
 
 class Series(object):
@@ -535,64 +703,127 @@ class Series(object):
     sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
     """
 
-    __slots__ = ("nodes", "assemblied")
-
-    def __init__(self) -> None:
+    def __init__(self, blat) -> None:
         self.nodes = []
         self.assemblied = None
+        self.blat = blat
 
-    def init(self, event_list) -> None:
+    def add_node(self, node: Node) -> None:
+        self.nodes.append(node)
+
+    def init(
+        self,
+        event_list,
+        read_chains,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        gene_iv,
+        motif_required,
+        update_bps=False,
+    ) -> None:
         """add event list as Node to self.nodes"""
-        event_list = self.order_events_by_trancription_direction(event_list)
-        hop_number = len(event_list)
-        # print('hop_number:', hop_number)
-        self.nodes = Node.create_nodes(hop_number + 1)
+        event_list = [
+            event
+            for event in self.order_events_by_trancription_direction(event_list)
+            if event[0] != "NA"
+        ]
+        event_list_len = len(event_list)
+        for index, event in enumerate(event_list):
+            event = Event(event)
 
-        for i in range(hop_number):
-            (
-                sv_type,
-                annot,
-                canonical,
-                _positions,
-                read1_info,
-                read2_info,
-                strands,
-                genes,
-            ) = event_list[i]
-            _bp1 = _positions[0]
-            _bp2 = _positions[1]
-            _chrm1 = _bp1.split(":")[0]
-            _chrm2 = _bp2.split(":")[0]
-            _mode1 = _positions[2]
-            _mode2 = _positions[3]
-            _strand1 = strands[0]
-            _strand2 = strands[1]
-            read1_ref_start, read1_ref_end, read1_exons = read1_info
-            read2_ref_start, read2_ref_end, read2_exons = read2_info
+            # TODO check breakpoint order
+            new_node = Node(
+                prev_bp=event.bp1,
+                next_bp=event.bp2,
+                strand=event.strand1,
+                chrom=event.chrom1,
+                ref_start=event.read1_ref_start,
+                exons=event.read1_exons,
+            )
+            # is insertions
+            if event.has_insertion():
 
-            self.nodes[i].next_breakpoint = _bp1
-            self.nodes[i + 1].prev_breakpoint = _bp2
+                insertion_seq = event.insertion_seq  # pick from the first read
+                flag, insertion = self.blat.query_insertion(insertion_seq)
 
-            self.nodes[i].strand = _strand1
-            self.nodes[i + 1].strand = _strand2
+                if flag:  # only one hit
+                    # add first node and insertion node
 
-            self.nodes[i].chrom = _chrm1
-            self.nodes[i + 1].chrom = _chrm2
+                    # get type of insertion between first node and insertion node
+                    read1 = event.read1(read_chains)
 
-            self.nodes[i].ref_start = read1_ref_start
-            self.nodes[i + 1].ref_start = read2_ref_start
+                    insertion_mode = 2 if event.mode1 == 1 else 1
 
-            self.nodes[i].ref_end = read1_ref_end
-            self.nodes[i + 1].ref_end = read2_ref_end
+                    read1_insertion_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=read1,
+                            read_rt=insertion,
+                            lt_mode=event.mode1,
+                            rt_mode=insertion_mode,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            update_bps=update_bps,
+                        )
+                    )
+                    # TODO if we only care about the sv type between read and insertion
+                    # TODO or we need to update other info:
+                    # update and add first node
+                    new_node = event.update_node_info(
+                        flag, new_node, insertion_mode, insertion
+                    )
+                    self.add_node(new_node)
 
-            self.nodes[i].exons = read1_exons
-            self.nodes[i + 1].exons = read2_exons
+                    # TODO may be we can do not add insertion node
+                    # get type of insertion between insertion node and second node
+                    read2 = event.read2(read_chains)
+                    insertion_mode = 2 if event.mode2 == 1 else 1
+                    # TODO sequence may need to be reverse complemented
+                    insertion_read2_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=insertion,
+                            read_rt=read2,
+                            lt_mode=insertion_mode,
+                            rt_mode=read2,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            update_bps=update_bps,
+                        )
+                    )
 
-            self.nodes[i].sv_type = sv_type
-            self.nodes[i].annotation_code = annot
-            self.nodes[i].splicing_code = canonical
-            self.nodes[i].modes = (_mode1, _mode2)
-            self.nodes[i].genes = genes
+                    insertion.sv_type = insertion_read2_event.sv_type
+                    self.add_node(insertion)
+                else:  # no hits or multiple hits
+                    new_node = event.update_node_info(
+                        flag, new_node, event.mode2, insertion
+                    )
+                    self.add_node(new_node)
+            # no insertion
+            else:
+                new_node = event.update_node_info(
+                    None, new_node, event.mode2, None, False
+                )
+                self.add_node(new_node)
+
+            # add final node
+            if index == event_list_len - 1:
+                # TODO check breakpoint
+                final_node = Node(
+                    prev_bp=event.bp1,
+                    next_bp=event.bp2,
+                    strand=event.strand2,
+                    chrom=event.chrom2,
+                    ref_start=event.read2_ref_start,
+                    exons=event.read2_exons,
+                )
+
+                self.add_node(final_node)
 
     @staticmethod
     def reorder_event(event):
@@ -739,10 +970,6 @@ class Series(object):
     def __repr__(self) -> str:
         return ";".join(map(str, self.nodes))
 
-    # def reversed(self) -> None:
-    #    """reverse the sequence of Nodes"""
-    #    self.nodes = self.nodes[::-1]
-
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""
         paired_breakpoints = []
@@ -751,19 +978,6 @@ class Series(object):
                 f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
             )
         return paired_breakpoints
-
-    @property
-    def introns(self):
-        if len(self.exons) <= 1:
-            return []
-        else:
-            _positions = []
-            for i, j in self.exons:
-                _positions.extend([i, j])
-            _positions.pop(0)
-            _positions.pop(-1)
-            _introns = list(zip(_positions[::2], _positions[1::2]))
-            return _introns
 
 
 class Blat(object):
@@ -975,38 +1189,48 @@ class Blat(object):
         :return: insertion sequence alignment in NamedTuple format
         """
 
-        insertion_nametuple = namedtuple(
-            "insertion", ("start_end", "hit", "chrom", "strand", "seq")
-        )
-        hit, start_end, chrom, strand, seq = 0, None, None, None, None
+        flag = False  # flag for checking the insertion  if its hit is only one
 
         if len(insert_seq) < align_len_threshold:
-            return insertion_nametuple(start_end, hit, chrom, strand, seq)
+            return flag, NoneInsertion(hit_num=0, query_seq=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)
         try:
             blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
-            return insertion_nametuple(start_end, hit, chrom, strand, seq)
+            return flag, NoneInsertion(hit_num=0, query_seq=insert_seq)
 
         hsps = blat.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
-
         hsps = hsps[:top]
-
         keep_hsp = []
         for hsp in hsps:
             if sum(hsp.hit_span_all) / len(insert_seq) > threshold_identity:
                 keep_hsp.append(hsp)
-
         hit = len(keep_hsp)
 
         if hit == 1:
-            start_end = keep_hsp[0].hit_range_all
-            strand = "+" if keep_hsp[0].hit_strand_all[0] == 1 else "-"
-            chrom = keep_hsp[0].hit_id
+            top_hsp = keep_hsp[0]
+            flag = True
+            # start_end = top_hsp.hit_range_all
+            # strand = "+" if top_hsp.hit_strand_all[0] == 1 else "-"
+            # chrom = top_hsp.hit_id
 
-        return insertion_nametuple(start_end, hit, chrom, strand, insert_seq)
+            ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
+                top_hsp, in_seq_len=len(insert_seq)
+            )
+            return flag, Insertion(
+                hit_num=1,
+                chrom=ref_chrom,
+                position=position,
+                strand=strand,
+                cigar_str=cigar,
+                mapq=60,
+                nm=num_of_mismatch,
+                query_seq=insert_seq,
+            )
+        else:
+            return flag, NoneInsertion(hit_num=hit, query_seq=insert_seq)
 
     @staticmethod
     def _remove(file):
