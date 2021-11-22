@@ -405,53 +405,6 @@ class NoneInsertion(Read):
         self.query_sequence = query_sequence
         self.hit = hit_num
 
-    # self.chrom = chrom
-    # self.prev_breakpoint = prev_bp
-    # self.next_breakpoint = next_bp
-    # self.strand = strand
-    # self.ref_start = ref_start
-    # self.ref_end = ref_end
-    # self.exons = exons
-    # self.sv_type = sv_type
-    # self.modes = modes
-    # self.genes = genes
-    # self.annotation_code = annot
-    # self.splicing_code = canonical
-    # self.sr = sr
-    # self.insertion_info = insertion_info
-
-    # self.prev_breakpoint = prev_bp
-    # self.next_breakpoint = next_bp
-    # self.exons = exons
-    # self.sv_type = sv_type
-    # self.modes = modes
-    # self.genes = genes
-    # self.annotation_code = annot
-    # self.splicing_code = canonical
-    # self.sr = sr
-    # self.insertion_info = insertion_info
-    #
-    #     self.chrom = chrom
-    #     self.ref_start = position
-    #     self.strand = strand
-    #     self.cigarstring = cigar_str
-    #     self.mapq = mapq
-    #     self.nm = nm
-    #     self.query_sequence = query_seq
-    #     self.linked_paths = []
-    #     self.lt_soft_len = lt_soft_len
-    #     self.rt_soft_len = rt_soft_len
-    #     self.read_match_size = read_match_size
-    #     self.reference_match_size = reference_match_size
-    #     self.indel_size = indel_size
-    #     self.cigartuples_without_soft = cigar_without_soft
-    #     self.query_length = query_length
-    #     self.cigartuples = cigartuples
-    #
-    #     self.adhocsms = None
-    #     self.adhocseq = None
-    #     self.mode = None
-
 
 class Insertion(Read):
     def __init__(
@@ -813,10 +766,11 @@ class Series(object):
     sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
     """
 
-    def __init__(self, blat) -> None:
+    def __init__(self, blat, logger) -> None:
         self.nodes = []
         self.assemblied = None
         self.blat = blat
+        self.logger = logger
 
     def add_node(self, node: Node) -> None:
         self.nodes.append(node)
@@ -915,13 +869,16 @@ class Series(object):
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
+                        self.logger.debug(f"Add insertion to Series")
                         self.add_node(insertion)
 
                 else:  # no hits or multiple hits
+                    # only add read1 with insertion
                     read1_node = event.update_node_info(flag, read1_node, insertion)
                     self.add_node(read1_node)
             # no insertion
             else:
+                # add read 1 with on insertion
                 read1_node = event.update_node_info(False, read1_node, None, False)
                 self.add_node(read1_node)
 
