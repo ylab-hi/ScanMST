@@ -19,8 +19,10 @@ from Bio import SearchIO
 from Bio.Seq import Seq
 from loguru import logger
 
+from .draft.helper import cigar_validity
 from .draft.nls_inference import infer_nls_from_connected_reads
 from .exception import ReadNotFoundError
+from .utils import reverse_complement
 
 
 class Path(object):
@@ -85,8 +87,8 @@ class Read(object):
     :type ref_start: int
     :param strand: direction of chimeric read (-|+)
     :type strand: str
-    :param cigar_str: cigar string of chimeric read (-|+)
-    :type cigar_str: str
+    :param cigarstring: cigar string of chimeric read (-|+)
+    :type cigarstring: str
     :param mapq: MAPQ of chimeric read
     :type mapq: int
     :param nm: number of mismatches of chimeric read
@@ -138,35 +140,35 @@ class Read(object):
     def __init__(
         self,
         chrom,
-        position,
+        ref_start,
         strand,
-        cigar_str,
+        cigarstring,
         mapq,
         nm,
-        query_seq,
+        query_sequence,
         lt_soft_len,
         rt_soft_len,
         read_match_size,
         reference_match_size,
         indel_size,
-        cigar_without_soft,
+        cigartuples_without_soft,
         query_length,
         cigartuples,
     ) -> None:
         self.chrom = chrom
-        self.ref_start = position
+        self.ref_start = ref_start
         self.strand = strand
-        self.cigarstring = cigar_str
+        self.cigarstring = cigarstring
         self.mapq = mapq
         self.nm = nm
-        self.query_sequence = query_seq
+        self.query_sequence = query_sequence
         self.linked_paths = []
         self.lt_soft_len = lt_soft_len
         self.rt_soft_len = rt_soft_len
         self.read_match_size = read_match_size
         self.reference_match_size = reference_match_size
         self.indel_size = indel_size
-        self.cigartuples_without_soft = cigar_without_soft
+        self.cigartuples_without_soft = cigartuples_without_soft
         self.query_length = query_length
         self.cigartuples = cigartuples
 
@@ -399,9 +401,56 @@ class Read(object):
 
 
 class NoneInsertion(Read):
-    def __init__(self, hit_num: int, query_seq: str):
-        self.query_sequence = query_seq
+    def __init__(self, hit_num: int, query_sequence: str):
+        self.query_sequence = query_sequence
         self.hit = hit_num
+
+    # self.chrom = chrom
+    # self.prev_breakpoint = prev_bp
+    # self.next_breakpoint = next_bp
+    # self.strand = strand
+    # self.ref_start = ref_start
+    # self.ref_end = ref_end
+    # self.exons = exons
+    # self.sv_type = sv_type
+    # self.modes = modes
+    # self.genes = genes
+    # self.annotation_code = annot
+    # self.splicing_code = canonical
+    # self.sr = sr
+    # self.insertion_info = insertion_info
+
+    # self.prev_breakpoint = prev_bp
+    # self.next_breakpoint = next_bp
+    # self.exons = exons
+    # self.sv_type = sv_type
+    # self.modes = modes
+    # self.genes = genes
+    # self.annotation_code = annot
+    # self.splicing_code = canonical
+    # self.sr = sr
+    # self.insertion_info = insertion_info
+    #
+    #     self.chrom = chrom
+    #     self.ref_start = position
+    #     self.strand = strand
+    #     self.cigarstring = cigar_str
+    #     self.mapq = mapq
+    #     self.nm = nm
+    #     self.query_sequence = query_seq
+    #     self.linked_paths = []
+    #     self.lt_soft_len = lt_soft_len
+    #     self.rt_soft_len = rt_soft_len
+    #     self.read_match_size = read_match_size
+    #     self.reference_match_size = reference_match_size
+    #     self.indel_size = indel_size
+    #     self.cigartuples_without_soft = cigar_without_soft
+    #     self.query_length = query_length
+    #     self.cigartuples = cigartuples
+    #
+    #     self.adhocsms = None
+    #     self.adhocseq = None
+    #     self.mode = None
 
 
 class Insertion(Read):
@@ -409,12 +458,12 @@ class Insertion(Read):
         self,
         hit_num: int,
         chrom: str,
-        position: int,
+        ref_start: int,
         strand: str,
-        cigar_str: str,
+        cigarstring: str,
         mapq: int,
         nm: int,
-        query_seq: str,
+        query_sequence: str,
     ):
         (
             lt_soft_len,
@@ -425,15 +474,15 @@ class Insertion(Read):
             cigar_without_soft,
             query_length,
             cigartuples,
-        ) = Read._calculate_features(cigar_str)
+        ) = Read._calculate_features(cigarstring)
         super().__init__(
             chrom,
-            position,
+            ref_start,
             strand,
-            cigar_str,
+            cigarstring,
             mapq,
             nm,
-            query_seq,
+            query_sequence,
             lt_soft_len,
             rt_soft_len,
             read_match_size,
@@ -443,11 +492,31 @@ class Insertion(Read):
             query_length,
             cigartuples,
         )
-        self.hit = hit_num
+        self.hit_num = hit_num
         self.sv_type = None
 
+        self.prev_breakpoint = None
+        self.next_breakpoint = None
+        self.exons = None
+        self.modes = None
+        self.genes = None
+        self.annotation_code = None
+        self.splicing_code = None
+        self.sr = None
+
+    def update_cigarstring(self, sms, source_s):
+        _ls, _m, _rs = sms
+        if source_s == "left":
+            ls = _ls - self.query_length
+            rs = _rs + _m
+        else:
+            ls = _ls + _m
+            rs = _rs - self.query_length
+
+        self.cigarstring = cigar_validity(f"{ls}S{self.cigarstring}{rs}S")
+
     def reverse_completement_query(self):
-        self.query_sequence = str(Seq(self.query_sequence).reverse_complement())
+        self.query_sequence = reverse_complement(self.query_sequence)
 
 
 class LengthAction(argparse.Action):
@@ -621,19 +690,20 @@ class Event:
         ) = event
 
         self.sv_type = sv_type
-        self.annot = annot
-        self.canonical = canonical
-        self.genes = genes
-        self.insertion_info = insertion_info
+        if self.sv_type != "NA":
+            self.annotation_code = annot
+            self.splicing_code = canonical
+            self.genes = genes
+            self.insertion_info = insertion_info
+            self.bp1, self.bp2 = _positions[:2]
+            self.mode1, self.mode2 = _positions[2:]
+            self.strand1, self.strand2 = strands
+            self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
+            self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
 
-        self.bp1, self.bp2 = _positions[:2]
-
-        self.mode1, self.mode2 = _positions[2:]
-
-        self.strand1, self.strand2 = strands
-
-        self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
-        self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+    @property
+    def modes(self):
+        return [self.mode1, self.mode2]
 
     @property
     def chrom1(self):
@@ -644,8 +714,15 @@ class Event:
         return self.bp2.split(":")[0]
 
     @property
-    def insertion_seq(self):
+    def insertion_seq1(self):
         return self.insertion_info[0][1:]
+
+    @property
+    def insertion_seq2(self):
+        return self.insertion_info[1][1:]
+
+    def is_NA(self):
+        return True if self.sv_type == "NA" else False
 
     def has_insertion(self):
         return True if self.insertion_info[0].startswith("+") else False
@@ -667,17 +744,50 @@ class Event:
         else:
             raise ReadNotFoundError
 
+    def update_specific_info_within_event(self, node, info_key_list):
+        """
+        update node info from the event by the info_key_list
+
+        :param node:  Node
+        :param info_key_list: [key1, key2, ...]
+        :return: Node with updated info
+        """
+
+        for key in info_key_list:
+            setattr(node, key, getattr(self, key))
+
+        return node
+
     def update_node_info(
-        self, flag, new_node, insertion_mode, insertion, is_update_insertion_info=True
+        self, flag, new_node, insertion, is_update_insertion_info=True
     ):
-        new_node.sv_type = self.sv_type
-        new_node.annotation_code = self.annot
-        new_node.splicing_code = self.canonical
-        new_node.modes = [self.mode1, insertion_mode]
-        new_node.genes = self.genes
+        """
+        update the common info the node in the front, and the common info includes
+
+        sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
+
+        :param flag:
+        :param new_node:
+        :param insertion:
+        :param is_update_insertion_info:
+        :return:
+        """
+        new_node = self.update_specific_info_within_event(
+            new_node, ["sv_type", "annotation", "splicing_code", "modes", "genes"]
+        )
         if is_update_insertion_info:
             new_node.insertion_info = (flag, insertion)
         return new_node
+
+    def update_insertion_info(self, insertion):
+        insertion.prev_breakpoint = insertion.ref_start
+        insertion.next_breakpoint = insertion.ref_end
+
+        insertion.exons, _ = insertion.get_exons_and_introns()
+        # TODO: the event between insertion and read has these attributes?
+        return self.update_specific_info_within_event(
+            insertion, ["sv_type", "annotation", "splicing_code", "modes", "genes"]
+        )
 
 
 class Series(object):
@@ -724,34 +834,35 @@ class Series(object):
     ) -> None:
         """add event list as Node to self.nodes"""
         event_list = [
-            event
+            Event(event)
             for event in self.order_events_by_trancription_direction(event_list)
             if event[0] != "NA"
         ]
         event_list_len = len(event_list)
+        previous_breakpoint = None
         for index, event in enumerate(event_list):
-            event = Event(event)
 
-            # TODO check breakpoint order
-            new_node = Node(
-                prev_bp=event.bp1,
-                next_bp=event.bp2,
+            read1_node = Node(
+                prev_bp=previous_breakpoint,
+                next_bp=event.bp1,
                 strand=event.strand1,
                 chrom=event.chrom1,
                 ref_start=event.read1_ref_start,
                 exons=event.read1_exons,
             )
+            previous_breakpoint = event.bp2
+
             # is insertions
             if event.has_insertion():
 
-                insertion_seq = event.insertion_seq  # pick from the first read
+                insertion_seq = event.insertion_seq1  # pick from the first read
                 flag, insertion = self.blat.query_insertion(insertion_seq)
-
                 if flag:  # only one hit
                     # add first node and insertion node
 
                     # get type of insertion between first node and insertion node
                     read1 = event.read1(read_chains)
+                    insertion.update_cigarstring(read1.cigarstring, source_s="right")
 
                     insertion_mode = 2 if event.mode1 == 1 else 1
 
@@ -769,19 +880,14 @@ class Series(object):
                             update_bps=update_bps,
                         )
                     )
-                    # TODO if we only care about the sv type between read and insertion
-                    # TODO or we need to update other info:
-                    # update and add first node
-                    new_node = event.update_node_info(
-                        flag, new_node, insertion_mode, insertion
-                    )
-                    self.add_node(new_node)
 
-                    # TODO may be we can do not add insertion node
                     # get type of insertion between insertion node and second node
                     read2 = event.read2(read_chains)
                     insertion_mode = 2 if event.mode2 == 1 else 1
-                    # TODO sequence may need to be reverse complemented
+
+                    if event.strand1 != event.strand2:
+                        insertion.reverse_completement_query()
+
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=insertion,
@@ -796,27 +902,34 @@ class Series(object):
                             update_bps=update_bps,
                         )
                     )
+                    if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
+                        # only add read1
+                        read1_node = event.update_node_info(flag, read1_node, insertion)
+                        self.add_node(read1_node)
+                    else:
+                        # add read1 and insertion
+                        read1_node = read1_insertion_event.update_node_info(
+                            flag, read1_node, insertion
+                        )
+                        self.add_node(read1_node)
+                        insertion = insertion_read2_event.update_insertion_info(
+                            insertion
+                        )
+                        self.add_node(insertion)
 
-                    insertion.sv_type = insertion_read2_event.sv_type
-                    self.add_node(insertion)
                 else:  # no hits or multiple hits
-                    new_node = event.update_node_info(
-                        flag, new_node, event.mode2, insertion
-                    )
-                    self.add_node(new_node)
+                    read1_node = event.update_node_info(flag, read1_node, insertion)
+                    self.add_node(read1_node)
             # no insertion
             else:
-                new_node = event.update_node_info(
-                    None, new_node, event.mode2, None, False
-                )
-                self.add_node(new_node)
+                read1_node = event.update_node_info(False, read1_node, None, False)
+                self.add_node(read1_node)
 
             # add final node
             if index == event_list_len - 1:
                 # TODO check breakpoint
                 final_node = Node(
-                    prev_bp=event.bp1,
-                    next_bp=event.bp2,
+                    prev_bp=previous_breakpoint,
                     strand=event.strand2,
                     chrom=event.chrom2,
                     ref_start=event.read2_ref_start,
@@ -1192,13 +1305,13 @@ class Blat(object):
         flag = False  # flag for checking the insertion  if its hit is only one
 
         if len(insert_seq) < align_len_threshold:
-            return flag, NoneInsertion(hit_num=0, query_seq=insert_seq)
+            return flag, NoneInsertion(hit_num=0, query_sequence=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)
         try:
             blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
-            return flag, NoneInsertion(hit_num=0, query_seq=insert_seq)
+            return flag, NoneInsertion(hit_num=0, query_sequence=insert_seq)
 
         hsps = blat.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
@@ -1222,15 +1335,15 @@ class Blat(object):
             return flag, Insertion(
                 hit_num=1,
                 chrom=ref_chrom,
-                position=position,
+                ref_start=position,
                 strand=strand,
-                cigar_str=cigar,
+                cigarstring=cigar,
                 mapq=60,
                 nm=num_of_mismatch,
-                query_seq=insert_seq,
+                query_sequence=insert_seq,
             )
         else:
-            return flag, NoneInsertion(hit_num=hit, query_seq=insert_seq)
+            return flag, NoneInsertion(hit_num=hit, query_sequence=insert_seq)
 
     @staticmethod
     def _remove(file):
@@ -1311,7 +1424,7 @@ class Blat(object):
         query_start = hsp.query_start
         query_end = hsp.query_end
 
-        _strand = hsp.query_strand_all[0]  # may need replace by qery_strand
+        _strand = hsp.query_strand_all[0]  # may need replace by query_strand
         ref_start, ref_end = hsp.hit_range
         ref_chrom = hsp.hit_id
         num_of_mismatch = hsp.mismatch_num
