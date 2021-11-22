@@ -70,8 +70,7 @@ def detect_sv_from_cigar(
 
     logger.debug("Read-to-Read chain: ", read_to_read_chains)
     logger.debug("Read-to-Read pair modes: ", reads_pair_mode_dict)
-
-    event_groups = []
+    event_list = []
     if read_to_read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
@@ -121,13 +120,8 @@ def detect_sv_from_cigar(
                             genes,
                         )
                     )
-            if event_list:
-                event_groups.append(event_list)
-    for group in event_groups:
-        for i in group:
-            print(i)
-    logger.debug("Event groups: ", event_groups)
-    return event_groups
+    logger.debug("Event groups: ", event_list)
+    return event_list, read_to_read_chains[0]
 
 
 def scan_bam(
@@ -199,12 +193,12 @@ def scan_bam(
     try:
         genome_fasta = Fasta(ref_genome, sequence_always_upper=True)
     except FastaNotFoundError as e:
-        print("read reference genome " + ref_genome + " error!", e)
+        logger.error("read reference genome " + ref_genome + " error!", e)
         sys.exit(1)
     try:
         cvg, gene_iv = extract_splice_sites(gtf, splice_bin)
     except IOError as e:
-        print("read GTF file " + gtf + " error!", e)
+        logger.error("read GTF file " + gtf + " error!", e)
         sys.exit(1)
 
     # supplementary alignment cigarstring extraction
@@ -327,7 +321,7 @@ def scan_bam(
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if read.has_tag("SA") and not read.is_supplementary:
-                event_groups = detect_sv_from_cigar(
+                event_lists, read_chains = detect_sv_from_cigar(
                     read=read,
                     mapq_cutoff=mapq_cutoff,
                     splice_bin=splice_bin,
@@ -340,60 +334,66 @@ def scan_bam(
                 )
                 sv_tag_list = []
                 ot_tag_list = []
-                for group in event_groups:
+                for event in event_lists:
                     nls_event_list = []
-                    for event in group:
-                        (
-                            _type,
-                            _anno,
-                            _canonical,
-                            _positions,
-                            read1_info,
-                            read2_info,
-                            bp_seqs,
-                            strands,
-                            genes,
-                        ) = event
-                        _bp1, _bp2, _mode1, _mode2 = _positions
-                        _strand1, _strand2 = strands
-                        _gene1, _gene2 = genes
-                        if _type in {"TDUP", "INV", "TRA"}:
-                            _chrm1, _pos1 = _bp1.split(":")
-                            _chrm2, _pos2 = _bp2.split(":")
-                            # SV tag uses SA tag corrdinate system (start with 1)
-                            # So, position should always add 1
-                            sv_tag_list.append(
-                                f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
-                            )
-                            nls_event_list.append(event)
+                    (
+                        _type,
+                        _anno,
+                        _canonical,
+                        _positions,
+                        read1_info,
+                        read2_info,
+                        bp_seqs,
+                        strands,
+                        genes,
+                    ) = event
+                    _bp1, _bp2, _mode1, _mode2 = _positions
+                    _strand1, _strand2 = strands
+                    _gene1, _gene2 = genes
+                    if _type in {"TDUP", "INV", "TRA"}:
+                        _chrm1, _pos1 = _bp1.split(":")
+                        _chrm2, _pos2 = _bp2.split(":")
+                        # SV tag uses SA tag corrdinate system (start with 1)
+                        # So, position should always add 1
+                        sv_tag_list.append(
+                            f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                        )
+                        nls_event_list.append(event)
 
-                            event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:{int(_pos2) + 1}\t{_strand1}{_strand2}"
-                            reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t{_strand2}{_strand1}"
-                            if event_key in candidate_ao_dict:
-                                candidate_ao_dict[event_key] += 1
-                            elif reversed_event_key in candidate_ao_dict:
-                                candidate_ao_dict[reversed_event_key] += 1
+                        event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:{int(_pos2) + 1}\t{_strand1}{_strand2}"
+                        reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t{_strand2}{_strand1}"
+                        if event_key in candidate_ao_dict:
+                            candidate_ao_dict[event_key] += 1
+                        elif reversed_event_key in candidate_ao_dict:
+                            candidate_ao_dict[reversed_event_key] += 1
 
-                            # candidate_group_dict[
-                            #    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
-                            # ] = group_counter
-                        elif _type in {"INS"}:
-                            _end_pos = int(_bp1) + int(_bp2)
-                            # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
-                            ot_tag_list.append(
-                                f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
-                            )
+                        # candidate_group_dict[
+                        #    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
+                        # ] = group_counter
+                    elif _type in {"INS"}:
+                        _end_pos = int(_bp1) + int(_bp2)
+                        # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
+                        ot_tag_list.append(
+                            f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                        )
 
-                            candidate_ao_dict[
-                                f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
-                            ] += 1
+                        candidate_ao_dict[
+                            f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
+                        ] += 1
 
                     if nls_event_list:
-                        pass
-                        # print("nls_event_list: ", len(nls_event_list))
-                        # bp_series = Series()
-                        # bp_series.init(nls_event_list)
-                        # nls_src_forms_list.append(bp_series)
+                        logger.debug(f"{nls_event_list=}")
+                        series = Series(blat=blat, logger=logger)
+                        series.init(
+                            nls_event_list,
+                            read_chains,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            gene_iv,
+                            motif_required,
+                        )
+                        nls_src_forms_list.append(series)
 
                 if sv_tag_list:
                     read.set_tag("SV", "".join(sv_tag_list))
@@ -406,8 +406,4 @@ def scan_bam(
     output_bam.close()
 
     subprocess.check_call("samtools index {}".format(output), shell=True)
-    print("NLS Src forms: ", nls_src_forms_list)
-    # output_candidates = aggregate_candidates(candidate_ao_dict, len_cutoff=0)
-    prefix = output.split(".")[0]
-    # output_bedpe_file(candidate_ao_dict, candidate_group_dict, prefix, splice_bin)
-    return None
+    logger.debug(f"{nls_src_forms_list}")
