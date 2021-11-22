@@ -401,12 +401,20 @@ class Read(object):
 
 
 class NoneInsertion(Read):
+    """
+    the class is used to represent reads insertion whose hit is 0 or >1
+    """
+
     def __init__(self, hit_num: int, query_sequence: str):
         self.query_sequence = query_sequence
         self.hit = hit_num
 
 
 class Insertion(Read):
+    """
+    the class is used to represent reads insertion whose hit is 1
+    """
+
     def __init__(
         self,
         hit_num: int,
@@ -448,6 +456,7 @@ class Insertion(Read):
         self.hit_num = hit_num
         self.sv_type = None
 
+        # add attributes for insertion in order to be compatible with the class Node
         self.prev_breakpoint = None
         self.next_breakpoint = None
         self.exons = None
@@ -456,6 +465,9 @@ class Insertion(Read):
         self.annotation_code = None
         self.splicing_code = None
         self.sr = None
+
+    def __repr__(self):
+        return fr"Insertion({self.chrom}, {self.ref_start}, {self.ref_end}, {self.strand}, {self.mapq}, {self.nm})"
 
     def update_cigarstring(self, sms, source_s):
         _ls, _m, _rs = sms
@@ -810,6 +822,7 @@ class Series(object):
                 strand=event.strand1,
                 chrom=event.chrom1,
                 ref_start=event.read1_ref_start,
+                ref_end=event.read1_ref_end,
                 exons=event.read1_exons,
             )
             previous_breakpoint = event.bp2
@@ -865,6 +878,10 @@ class Series(object):
                             update_bps=update_bps,
                         )
                     )
+
+                    if event.strand1 != event.strand2:
+                        insertion.reverse_completement_query()
+
                     if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
                         # only add read1
                         read1_node = event.update_node_info(flag, read1_node, insertion)
@@ -875,6 +892,7 @@ class Series(object):
                             flag, read1_node, insertion
                         )
                         self.add_node(read1_node)
+
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
@@ -1050,7 +1068,7 @@ class Series(object):
         return len(self.nodes) < len(other.nodes)
 
     def __repr__(self) -> str:
-        return ";".join(map(str, self.nodes))
+        return ";".join(map(repr, self.nodes))
 
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""

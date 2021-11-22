@@ -68,8 +68,6 @@ def detect_sv_from_cigar(
 
     read_to_read_chains = [read_to_read_chains]
 
-    logger.debug("Read-to-Read chain: ", read_to_read_chains)
-    logger.debug("Read-to-Read pair modes: ", reads_pair_mode_dict)
     event_list = []
     if read_to_read_chains:
         # every chain is a group of connected reads
@@ -120,7 +118,6 @@ def detect_sv_from_cigar(
                             genes,
                         )
                     )
-    logger.debug("Event groups: ", event_list)
     return event_list, read_to_read_chains[0]
 
 
@@ -334,8 +331,8 @@ def scan_bam(
                 )
                 sv_tag_list = []
                 ot_tag_list = []
+                nls_event_list = []
                 for event in event_lists:
-                    nls_event_list = []
                     (
                         _type,
                         _anno,
@@ -381,19 +378,20 @@ def scan_bam(
                             f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
                         ] += 1
 
-                    if nls_event_list:
-                        series = Series(blat=blat, logger=logger)
-                        series.init(
-                            nls_event_list,
-                            read_chains,
-                            splice_bin,
-                            genome_fasta,
-                            cvg,
-                            gene_iv,
-                            motif_required,
-                        )
-                        nls_src_forms_list.append(series)
-                        logger.debug(series)
+                if nls_event_list:
+                    series = Series(blat=blat, logger=logger)
+                    logger.debug(f"{nls_event_list=}")
+                    series.init(
+                        nls_event_list,
+                        read_chains,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        gene_iv,
+                        motif_required,
+                    )
+                    nls_src_forms_list.append(series)
+                    logger.debug(f"{series=}")
 
                 if sv_tag_list:
                     read.set_tag("SV", "".join(sv_tag_list))
@@ -406,4 +404,4 @@ def scan_bam(
     output_bam.close()
 
     subprocess.check_call("samtools index {}".format(output), shell=True)
-    logger.debug(f"{nls_src_forms_list}")
+    logger.debug(f"{nls_src_forms_list=}")
