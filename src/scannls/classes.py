@@ -674,6 +674,14 @@ class Event:
     def insertion_seq2(self):
         return self.insertion_info[1][1:]
 
+    @property
+    def source_s1(self):
+        return "left" if self.mode1 == 2 else "right"
+
+    @property
+    def source_s2(self):
+        return "left" if self.mode2 == 2 else "right"
+
     def is_NA(self):
         return True if self.sv_type == "NA" else False
 
@@ -813,10 +821,11 @@ class Series(object):
                 flag, insertion = self.blat.query_insertion(insertion_seq)
                 if flag:  # only one hit
                     # add first node and insertion node
+                    source_s = event.source_s1
 
                     # get type of insertion between first node and insertion node
                     read1 = event.read1(read_chains)
-                    insertion.update_cigarstring(read1.cigarstring, source_s="right")
+                    insertion.update_cigarstring(read1.cigarstring, source_s=source_s)
 
                     insertion_mode = 2 if event.mode1 == 1 else 1
 
