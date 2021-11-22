@@ -22,7 +22,7 @@ python = "^3.8"
 align = {git = "https://github.com/brentp/align.git"}
 biopython = "^1.79"
 pysam = "^0.18.0"
-HTSeq = "^0.13.5"
+HTSeq = "^1.99.2"
 pyfaidx = "^0.6.3"
 psutil = "^5.8.0"
 loguru = "^0.5.3"
