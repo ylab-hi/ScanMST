@@ -734,7 +734,7 @@ class Event:
         :return:
         """
         new_node = self.update_specific_info_within_event(
-            new_node, ["sv_type", "annotation", "splicing_code", "modes", "genes"]
+            new_node, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
         )
         if is_update_insertion_info:
             new_node.insertion_info = (flag, insertion)
@@ -918,6 +918,7 @@ class Series(object):
             _positions,
             read1_info,
             read2_info,
+            insertion_info,
             strands,
             genes,
         ) = event
@@ -963,6 +964,7 @@ class Series(object):
                 _positions,
                 read2_info,
                 read1_info,
+                insertion_info[::-1],
                 strands,
                 genes,
             )
@@ -998,6 +1000,7 @@ class Series(object):
                 _positions,
                 read1_info,
                 read2_info,
+                insertion_info,
                 strands,
                 genes,
             ) = ordered_evt

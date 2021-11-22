@@ -382,7 +382,6 @@ def scan_bam(
                         ] += 1
 
                     if nls_event_list:
-                        logger.debug(f"{nls_event_list=}")
                         series = Series(blat=blat, logger=logger)
                         series.init(
                             nls_event_list,
@@ -394,6 +393,7 @@ def scan_bam(
                             motif_required,
                         )
                         nls_src_forms_list.append(series)
+                        logger.debug(series)
 
                 if sv_tag_list:
                     read.set_tag("SV", "".join(sv_tag_list))
