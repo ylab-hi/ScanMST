@@ -215,7 +215,6 @@ def extract_splice_sites(in_file, bin_size) -> tuple:
                 elif strand == "-":
                     cvg[iv1] += "AC"
                     cvg[iv2] += "CT"
-    sys.stdout.write("{} is fully loaded!\n".format(in_file))
     return cvg, gene_iv
 
 

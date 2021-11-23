@@ -467,7 +467,7 @@ class Insertion(Read):
         self.sr = None
 
     def __repr__(self):
-        return fr"Insertion({self.chrom}, {self.ref_start}, {self.ref_end}, {self.strand}, {self.mapq}, {self.nm})"
+        return fr"Insertion({self.chrom}, {self.ref_start}, {self.ref_end}, {self.query_length}, {self.strand}, {self.mapq}, {self.nm})"
 
     def update_cigarstring(self, sms, source_s):
         _ls, _m, _rs = sms
@@ -604,7 +604,7 @@ class Node(object):
     # for debug purpose
     def __repr__(self) -> str:
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
     def __str__(self) -> str:
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
@@ -665,6 +665,12 @@ class Event:
             self.strand1, self.strand2 = strands
             self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
             self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+
+    def __repr__(self):
+        if self.sv_type != "NA":
+            return (
+                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code})"
+            )
 
     @property
     def modes(self):
@@ -838,7 +844,7 @@ class Series(object):
 
                     # get type of insertion between first node and insertion node
                     read1 = event.read1(read_chains)
-                    insertion.update_cigarstring(read1.cigarstring, source_s=source_s)
+                    insertion.update_cigarstring(read1.sms, source_s=source_s)
 
                     insertion_mode = 2 if event.mode1 == 1 else 1
 
@@ -911,12 +917,12 @@ class Series(object):
 
             # add final node
             if index == event_list_len - 1:
-                # TODO check breakpoint
                 final_node = Node(
                     prev_bp=previous_breakpoint,
                     strand=event.strand2,
                     chrom=event.chrom2,
                     ref_start=event.read2_ref_start,
+                    ref_end=event.read2_ref_end,
                     exons=event.read2_exons,
                 )
 
@@ -925,7 +931,8 @@ class Series(object):
     @staticmethod
     def reorder_event(event):
         """
-        order breakpoints pairs following the transcription direction using information of reads 'mode' and 'strand'
+        order breakpoints pairs following the transcription direction using
+        information of reads 'mode' and 'strand'
         +1;-1 => up;down
         +2;-2 => down;up
         """
@@ -1068,7 +1075,14 @@ class Series(object):
         return len(self.nodes) < len(other.nodes)
 
     def __repr__(self) -> str:
-        return ";".join(map(repr, self.nodes))
+        _repr = "\nSeries("
+        space = " " * 4
+        for n in self.nodes:
+            _repr += f"\n{space}{n!r}"
+
+        _repr += ")"
+        return _repr
+        # return ";".join(map(repr, self.nodes))
 
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""
@@ -1504,6 +1518,7 @@ class ReadsConnecter(object):
         is_align: bool,
         s_position: str,
         threshold: float = 0.7,
+        minimum_s_length: int = 30,
     ) -> Tuple[bool, Union[None, str]]:
         """query_seq: M  target_seq: S"""
         # do not conduct alignment
@@ -1531,7 +1546,10 @@ class ReadsConnecter(object):
             #
             # else:
             #     return True, insert_seq
-            return True, insert_seq
+            if len(target_seq) <= minimum_s_length:
+                return False, insert_seq
+            else:
+                return True, insert_seq
 
         if not same_strand:
             target_seq = str(Seq(target_seq).reverse_complement())
@@ -1584,9 +1602,9 @@ class ReadsConnecter(object):
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
 
-        self.logger.debug(f"{start_read.mode}, {read.mode}")
+        self.logger.debug(f"{start_read.mode=}, {read.mode=}")
 
-        self.logger.debug(f"{start_read.adhocsms}, {read.sms}")
+        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
 
         same_strand = True if start_read.adhocseq == read.query_sequence else False
 
@@ -1606,7 +1624,7 @@ class ReadsConnecter(object):
             #     self.insertion_dict[(start_read, read)] = insertion
 
             read.mode = 2
-            self.logger.debug(f"{start_read.mode}, {read.mode}")
+            self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
 
@@ -1633,7 +1651,7 @@ class ReadsConnecter(object):
 
             read.mode = 1
 
-            self.logger.debug(f"{start_read.mode}, {read.mode}")
+            self.logger.debug(f"{start_read.mode=}, {read.mode=}")
 
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
 
@@ -1666,7 +1684,7 @@ class ReadsConnecter(object):
             read, start_read = start_read, read
 
             read.mode = 1
-            self.logger.debug(f"{read.mode}, {start_read.mode}")
+            self.logger.debug(f"{read.mode=}, {start_read.mode=}")
             self.read_pair_mode_dict[(read, start_read)] = (read.mode, start_read.mode)
 
             self.reads_chain.append(start_read)
@@ -1693,7 +1711,7 @@ class ReadsConnecter(object):
 
             start_read.mode = 2
 
-            self.logger.debug(f"{read.mode}, {start_read.mode}")
+            self.logger.debug(f"{read.mode=}, {start_read.mode=}")
             self.read_pair_mode_dict[(read, start_read)] = (read.mode, start_read.mode)
 
             self.reads_chain.append(start_read)

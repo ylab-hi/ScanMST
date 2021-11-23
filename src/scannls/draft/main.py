@@ -175,7 +175,6 @@ def scan_bam(
         SV tag uses the same genomic corrdinate as SA tag,
         So position should be always add 1
     """
-    logger.debug("scan_bam")
 
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
@@ -194,6 +193,7 @@ def scan_bam(
         sys.exit(1)
     try:
         cvg, gene_iv = extract_splice_sites(gtf, splice_bin)
+        logger.success("extract splice sites from " + gtf + " done!")
     except IOError as e:
         logger.error("read GTF file " + gtf + " error!", e)
         sys.exit(1)
