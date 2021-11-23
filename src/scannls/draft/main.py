@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
+from typing import Any
 
 import pysam
 from pyfaidx import Fasta
@@ -34,7 +35,7 @@ def detect_sv_from_cigar(
     blat,
     logger,
     update_bps=False,
-) -> list:
+) -> Any:
     """
     :param logger: logger for logging
     :param blat: `class.Blat`
@@ -149,10 +150,7 @@ def scan_bam(
     :param ref_genome: reference genome (FASTA file)
     :param gtf: reference gene annotations (GTF file)
     :param splice_bin: bin size for splice site searching
-    :param ref_2bit: reference 2bit file for BLAT
     :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
-    :param port: BLAT server port
-    :param output_dir: BLAT output directory for psl files
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
     :param min_soft_seg_len: minium softclipped segement length to trigger BLAT for reads with softcliping but no SA tag
@@ -162,10 +160,7 @@ def scan_bam(
     :type ref_genome: str
     :type gtf: str
     :type splice_bin: int
-    :type ref_2bit: str
     :type motif_required: bool
-    :type port: int
-    :type output_dir: str
     :type blat_ident_pct_cutoff: float
     :type max_allowed_nm: int
     :type min_soft_seg_len: int

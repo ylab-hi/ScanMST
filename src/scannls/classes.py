@@ -10,6 +10,7 @@ import time
 from multiprocessing import Process
 from typing import Any
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -467,7 +468,8 @@ class Insertion(Read):
         self.sr = None
 
     def __repr__(self):
-        return fr"Insertion({self.chrom}, {self.ref_start}, {self.ref_end}, {self.query_length}, {self.strand}, {self.mapq}, {self.nm})"
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
     def update_cigarstring(self, sms, source_s):
         _ls, _m, _rs = sms
@@ -494,29 +496,17 @@ class LengthAction(argparse.Action):
 class Node(object):
     """build a breakpoint node class for storing information of every breakpoint
     :param prev_bp: breakpoint for the previous breakpoints connections
-    :type prev_bp: str
     :param next_bp: breakpoint for the next breakpoints connections
-    :type next_bp: str
     :param strand: direction of chimeric read (-|+)
-    :type strand: str
     :param chrom: chromosome
-    :type chrom: str
     :param ref_start: reference start position
-    :type ref_start: int
     :param ref_end: reference end position
-    :type ref_end: int
     :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
-    :type exons: list of tuple
     :param sv_type: one of the SV types (TDUP/INV/TRA)
-    :type sv_type: str
     :param annot: gene annotation code
-    :type annot: int
     :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
-    :type canonical: int
     :param modes: read modes of connected breakpoints
-    :type modes: tuple
     :param genes: overlapped genes of connected breakpoints
-    :type genes: tuple
 
     .. note::
         connection-level fields:
@@ -546,20 +536,20 @@ class Node(object):
 
     def __init__(
         self,
-        prev_bp=None,
-        next_bp=None,
-        strand=None,
-        chrom=None,
-        ref_start=None,
-        ref_end=None,
-        exons=None,
-        sv_type=None,
-        annot=None,
-        canonical=None,
-        modes=None,
-        genes=None,
-        sr=None,
-        insertion_info=None,
+        prev_bp: Optional[str] = None,
+        next_bp: Optional[str] = None,
+        strand: Optional[str] = None,
+        chrom: Optional[str] = None,
+        ref_start: Optional[int] = None,
+        ref_end: Optional[int] = None,
+        exons: Optional[Tuple[int]] = None,
+        sv_type: Optional[str] = None,
+        annot: Optional[int] = None,
+        canonical: Optional[int] = None,
+        modes: Optional[Tuple[int]] = None,
+        genes: Optional[Tuple[str]] = None,
+        sr: Optional[int] = None,
+        insertion_info: Optional[Tuple[bool, Union[Insertion, NoneInsertion]]] = None,
     ) -> None:
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
@@ -641,6 +631,10 @@ class Node(object):
 
 
 class Event:
+    """
+    the Event class is used to parse the return value from the function nls_inference
+    """
+
     def __init__(self, event):
         (
             sv_type,
@@ -673,57 +667,66 @@ class Event:
             )
 
     @property
-    def modes(self):
+    def modes(self) -> List[int]:
+        """
+        :return: the mode of read1 and read2 in the event
+        """
         return [self.mode1, self.mode2]
 
     @property
-    def chrom1(self):
+    def chrom1(self) -> str:
         return self.bp1.split(":")[0]
 
     @property
-    def chrom2(self):
+    def chrom2(self) -> str:
         return self.bp2.split(":")[0]
 
     @property
-    def insertion_seq1(self):
+    def insertion_seq1(self) -> str:
         return self.insertion_info[0][1:]
 
     @property
-    def insertion_seq2(self):
+    def insertion_seq2(self) -> str:
         return self.insertion_info[1][1:]
 
     @property
-    def source_s1(self):
+    def source_s1(self) -> str:
+        """
+        the source of the insertion in read1
+        :return:
+        """
         return "left" if self.mode1 == 2 else "right"
 
     @property
-    def source_s2(self):
+    def source_s2(self) -> str:
         return "left" if self.mode2 == 2 else "right"
 
-    def is_NA(self):
+    def is_NA(self) -> bool:
         return True if self.sv_type == "NA" else False
 
-    def has_insertion(self):
+    def has_insertion(self) -> bool:
         return True if self.insertion_info[0].startswith("+") else False
 
-    def is_same_strand(self):
+    def is_same_strand(self) -> bool:
         return self.strand1 == self.strand2
 
-    def read1(self, read_chains):
+    def read1(self, read_chains: List[Read]) -> Read:
         for read in read_chains:
             if read.ref_start == self.read1_ref_start:
                 return read
         else:
             raise ReadNotFoundError
 
-    def read2(self, read_chains):
+    def read2(self, read_chains: List[Read]) -> Read:
         for read in read_chains:
             if read.ref_start == self.read2_ref_start:
                 return read
         else:
             raise ReadNotFoundError
 
-    def update_specific_info_within_event(self, node, info_key_list):
+    def update_specific_info_within_event(
+        self, node: Union[Node, Insertion], info_key_list: List[str]
+    ) -> Union[Node, Insertion]:
         """
         update node info from the event by the info_key_list
 
@@ -738,18 +741,22 @@ class Event:
         return node
 
     def update_node_info(
-        self, flag, new_node, insertion, is_update_insertion_info=True
-    ):
+        self,
+        flag: bool,
+        new_node: Node,
+        insertion: Union[Insertion, None],
+        is_update_insertion_info: bool = True,
+    ) -> Node:
         """
         update the common info the node in the front, and the common info includes
 
         sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
 
-        :param flag:
-        :param new_node:
-        :param insertion:
-        :param is_update_insertion_info:
-        :return:
+        :param flag: the flag indicates whether there is a insertion
+        :param new_node: the new node to be updated
+        :param insertion: the insertion to be updated
+        :param is_update_insertion_info: whether to update the insertion info
+        :return: the updated node
         """
         new_node = self.update_specific_info_within_event(
             new_node, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
@@ -758,14 +765,19 @@ class Event:
             new_node.insertion_info = (flag, insertion)
         return new_node
 
-    def update_insertion_info(self, insertion):
+    def update_insertion_info(self, insertion: Insertion) -> Insertion:
+        """
+        update the information of insertion
+
+        :param insertion: the insertion to be updated
+        :return: the updated insertion
+        """
         insertion.prev_breakpoint = insertion.ref_start
         insertion.next_breakpoint = insertion.ref_end
 
         insertion.exons, _ = insertion.get_exons_and_introns()
-        # TODO: the event between insertion and read has these attributes?
         return self.update_specific_info_within_event(
-            insertion, ["sv_type", "annotation", "splicing_code", "modes", "genes"]
+            insertion, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
         )
 
 
@@ -792,13 +804,13 @@ class Series(object):
     sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
     """
 
-    def __init__(self, blat, logger) -> None:
+    def __init__(self, blat: "Blat", logger: logger) -> None:
         self.nodes = []
         self.assemblied = None
         self.blat = blat
         self.logger = logger
 
-    def add_node(self, node: Node) -> None:
+    def add_node(self, node: Union[Node, Insertion]) -> None:
         self.nodes.append(node)
 
     def init(
@@ -875,7 +887,7 @@ class Series(object):
                             read_lt=insertion,
                             read_rt=read2,
                             lt_mode=insertion_mode,
-                            rt_mode=read2,
+                            rt_mode=event.mode2,
                             splice_bin=splice_bin,
                             genome_fasta=genome_fasta,
                             cvg=cvg,
@@ -1082,7 +1094,6 @@ class Series(object):
 
         _repr += ")"
         return _repr
-        # return ";".join(map(repr, self.nodes))
 
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""
@@ -1192,19 +1203,19 @@ class Blat(object):
 
         # change to use_blat directory
         os.chdir(self.ref_dir)
-        logger.trace(self.ref_dir)
-        logger.trace(os.getcwd())
+        logger.trace(f"{self.ref_dir=}")
+        logger.trace(f"{os.getcwd()}")
 
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
         cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {os.path.basename(self.ref_2bit)}"
-        logger.trace(cmd)
+        logger.trace(f"{cmd=}")
         process = Process(target=self._run_cmd, args=[cmd])
         process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
-        logger.trace(os.getcwd())
+        logger.trace(f"{os.getcwd()}")
         return process
 
     def start_server(self) -> None:
@@ -1249,12 +1260,12 @@ class Blat(object):
         logger.trace(os.getcwd())
 
         os.chdir(self.ref_dir)
-        logger.trace(self.ref_dir)
+        logger.trace(f"{self.ref_dir=}")
         logger.trace(os.getcwd())
         cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} > /dev/null".format(
             miniIdentity, self.port, in_fasta, out_psl
         )
-        logger.trace(cmd)
+        logger.trace(f"{cmd=}")
         try:
             ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as err:
@@ -1526,7 +1537,6 @@ class ReadsConnecter(object):
         target_seq: str,
         same_strand: bool,
         is_align: bool,
-        s_position: str,
         threshold: float = 0.7,
         minimum_s_length: int = 30,
     ) -> Tuple[bool, Union[None, str]]:
@@ -1625,7 +1635,6 @@ class ReadsConnecter(object):
             read.query_sequence[:_lt_len_r2],
             same_strand,
             is_align_for_ms,
-            "left",
         )
 
         if match_flag:  # may same
@@ -1654,7 +1663,6 @@ class ReadsConnecter(object):
             read.query_sequence[-_rt_len_r2:],
             same_strand,
             is_align_for_ms,
-            "right",
         )
 
         if match_flag:
@@ -1687,7 +1695,6 @@ class ReadsConnecter(object):
             start_read.adhocseq[:_lt_len_r1],
             same_strand,
             is_align_for_ms,
-            "left",
         )
 
         if match_flag:
@@ -1713,7 +1720,6 @@ class ReadsConnecter(object):
             start_read.adhocseq[-_rt_len_r1:],
             same_strand,
             is_align_for_ms,
-            "right",
         )
 
         if match_flag:

@@ -1916,6 +1916,7 @@ def update_gtf(in_gtf, out_gtf, out_fasta, ref_genome):
 
 def ref_guided_update(in_exons, ref_exons, shift=50):
     """
+    :param shift:
     :param in_exons: reads-inferred upstream transcript exons form
     :type in_exons: list
     :param ref_exons: overlapped reference transcript exons form

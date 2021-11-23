@@ -1,5 +1,4 @@
 import re
-import sys
 from collections import defaultdict
 
 __funcs__ = {

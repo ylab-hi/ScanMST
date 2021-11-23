@@ -1,3 +1,5 @@
+import HTSeq
+import pyfaidx
 from align import aligner
 
 from .helper import gene_annotation
@@ -53,14 +55,14 @@ def short_TDUP_or_not(
 def infer_nls_from_connected_reads(
     read_lt,
     read_rt,
-    lt_mode,
-    rt_mode,
-    splice_bin,
-    genome_fasta,
-    cvg,
-    gene_iv,
-    motif_required,
-    update_bps=False,
+    lt_mode: int,
+    rt_mode: int,
+    splice_bin: int,
+    genome_fasta: pyfaidx.Fasta,
+    cvg: HTSeq.GenomicArrayOfSets,
+    gene_iv: HTSeq.GenomicArrayOfSets,
+    motif_required: bool,
+    update_bps: bool = False,
 ) -> tuple:
     """
     :param read_lt: Read 1
@@ -73,18 +75,7 @@ def infer_nls_from_connected_reads(
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
     :param update_bps: if canonical splice sites, update breakpoints to fit the splice sites
-    :type read_lt: Read
-    :type read_rt: Read
-    :type lt_mode: int
-    :type rt_mode: int
-    :type splice_bin : int
-    :type genome_fasta: pyfaidx.Fasta
-    :type cvg: HTSeq.GenomicArrayOfSets
-    :type gene_iv: HTSeq.GenomicArrayOfSets
-    :type motif_required: bool
-    :type update_bps: bool
     :return: putative event from reads-pair
-    :rtype: tuple
     .. note::
         putative event examples:
             * 'NA', 0, 0, (), (), (), (), (), []
@@ -119,12 +110,10 @@ def infer_nls_from_connected_reads(
 
     def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> tuple:
         """
-        :param read_seq: query sequence of a read as it is in the BAM file
+        :param bp_region_seq_len: the length of the breakpoint region sequence
+        :param read:  the chimeirc read
         :param mode: mode for the chimeirc read
-        :param indel_size: indel size infered from 'query_offset - target_offset'
-        :type read_seq : str
         :type mode: int
-        :type indel_size: int
         :return: (putative insertion/microhomology sequence from the read; + means insertion, - means microhomology, mode)
         :rtype: tuple
         ..note:
