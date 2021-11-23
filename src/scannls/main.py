@@ -98,7 +98,7 @@ def parse_args():
         "--log",
         action="store",
         dest="log",
-        choices=["info", "debug"],
+        choices=["info", "debug", "trace"],
         default="info",
         help="set log level (default: %(default)s)",
     )

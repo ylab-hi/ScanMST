@@ -1188,18 +1188,23 @@ class Blat(object):
         gfClient and hg38.2bit located"""
 
         cwd = os.path.abspath(os.getcwd())
+        logger.debug(os.getcwd())
 
         # change to use_blat directory
         os.chdir(self.ref_dir)
+        logger.trace(self.ref_dir)
+        logger.trace(os.getcwd())
 
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
-        cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {self.ref_2bit}"
+        cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {os.path.basename(self.ref_2bit)}"
+        logger.trace(cmd)
         process = Process(target=self._run_cmd, args=[cmd])
         process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
+        logger.trace(os.getcwd())
         return process
 
     def start_server(self) -> None:
@@ -1241,17 +1246,22 @@ class Blat(object):
         out_psl = os.path.join(self.output_dir, "{}.psl".format(ran_id))
 
         cwd = os.path.abspath(os.getcwd())
+        logger.trace(os.getcwd())
 
         os.chdir(self.ref_dir)
-        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} {} {} {} > /dev/null".format(
-            miniIdentity, self.port, self.ref_dir, in_fasta, out_psl
+        logger.trace(self.ref_dir)
+        logger.trace(os.getcwd())
+        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} > /dev/null".format(
+            miniIdentity, self.port, in_fasta, out_psl
         )
+        logger.trace(cmd)
         try:
             ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as err:
             raise SystemExit(f"{err} {err.output}")
 
         os.chdir(cwd)
+        logger.trace(os.getcwd())
         self._remove(in_fasta)
 
         return out_psl
