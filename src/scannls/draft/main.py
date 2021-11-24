@@ -34,12 +34,10 @@ def detect_sv_from_cigar(
     motif_required,
     blat,
     logger,
-    update_bps=False,
 ) -> Any:
     """
     :param logger: logger for logging
     :param blat: `class.Blat`
-    :param update_bps:
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param splice_bin: a small bin for splice site searching
@@ -103,7 +101,6 @@ def detect_sv_from_cigar(
                     gene_iv=gene_iv,
                     motif_required=motif_required,
                     logger=logger,
-                    update_bps=update_bps,
                 )
 
                 if nls_type != "NA":
