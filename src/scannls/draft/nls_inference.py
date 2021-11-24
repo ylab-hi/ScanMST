@@ -192,7 +192,7 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
 
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
 
                 if bp_region_seq_len > 0:
                     query_offset = (
@@ -335,7 +335,7 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
 
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
 
                 if bp_region_seq_len > 0:
                     query_offset = (
@@ -481,7 +481,7 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
                 if ra_bp == sa_bp:
                     return NAN
                 else:
@@ -560,7 +560,7 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
 
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
 
                 if ra_bp == sa_bp:
                     return NAN
@@ -645,7 +645,7 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
 
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
 
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
@@ -689,7 +689,7 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
@@ -735,7 +735,7 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
@@ -779,7 +779,7 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
 
-                logger.trace("{bp_region_seq_len=}")
+                logger.trace(f"{bp_region_seq_len=}")
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 _nls, _anno, _can = splicing_confirmation(
