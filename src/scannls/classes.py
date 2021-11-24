@@ -1512,12 +1512,10 @@ class ReadsConnecter(object):
         aln_list: List[Read],
         blat: Blat,
         logger: logger,
-        soft_len_cutoff: int = 30,
     ) -> None:
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
         self.aln_list = aln_list
-        self.soft_len_cutoff = soft_len_cutoff
         self.logger = logger
         self.blat = blat
 
@@ -1718,17 +1716,13 @@ class ReadsConnecter(object):
             * (Read1, Read2) => mode-of-Read1, mode-of-Read2
             * (Read2, Read1) => mode-of-Read2, mode-of-Read1
         """
-        start_nodes = []
 
         # find start node and end node
-        for read in self.aln_list:
-            if (
-                read.lt_soft_len < self.soft_len_cutoff
-                or read.rt_soft_len < self.soft_len_cutoff
-            ):
-                start_nodes.append(read)
-            else:
-                self.candidate_nodes.append(read)
+        temp_list = sorted(
+            self.aln_list, key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
+        )
+        start_nodes = temp_list[:2]
+        self.candidate_nodes = temp_list[2:]
 
         start_read = start_nodes[0]
         end_read = start_nodes[1]
