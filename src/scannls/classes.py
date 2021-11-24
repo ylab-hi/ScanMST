@@ -363,7 +363,7 @@ class Read(object):
             introns = list(zip(_positions[::2], _positions[1::2]))
         return exons, introns
 
-    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
+    def splice_site_checker(self, genome_fasta, fraction_cutoff=0) -> bool:
         """check whether the fraction of canonical splice site usage in read reference matched part is bigger than 'fraction_cutoff' or not
         :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
         :param fraction_cutoff: fraction of canonical splice sites used in the putative introns inferred from the CIGAR
@@ -832,7 +832,6 @@ class Series(object):
         cvg,
         gene_iv,
         motif_required,
-        update_bps=False,
     ) -> None:
         """add event list as Node to self.nodes"""
         event_list = [
@@ -933,7 +932,7 @@ class Series(object):
 
                     if event.strand1 == "-":
                         insertion.reverse_completement_query()
-                    self.logger.tracef(f"Add Novel Insertion {insertion=} to read1")
+                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
                     # only add read1 with insertion
                     read1_node = event.update_node_info(flag, read1_node, insertion)
                     self.add_node(read1_node)
@@ -1573,7 +1572,7 @@ class ReadsConnecter(object):
             return match_flag, insert_seq
 
         if not same_strand:
-            target_seq = str(Seq(target_seq).reverse_complement())
+            target_seq = reverse_complement(target_seq)
 
         alignment_result = aligner(query_seq, target_seq, method="semi-global")[0]
         _query_seq = alignment_result.seq1.decode("utf-8")
