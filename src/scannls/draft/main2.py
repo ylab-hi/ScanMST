@@ -471,6 +471,47 @@ class BamScanner:
             )
             raise SystemExit
 
+    @staticmethod
+    def test(
+        identified_key,
+        *,
+        in_bam_path,
+        ref_genome,
+        gtf,
+        output,
+        header,
+        blat,
+        logger,
+        mapq_cutoff,
+        representative_alignments_new_cigar,
+        max_allowed_nm,
+        min_soft_seg_len,
+        blat_ident_pct_cutoff,
+        splice_bin,
+        motif_required,
+        candidate_ao_dict,
+    ):
+        """
+        print all parameter of the function
+        """
+        print(f"{identified_key=}")
+        print(f"{in_bam_path=}")
+        print(f"{ref_genome=}")
+        print(f"{gtf=}")
+        print(f"{output=}")
+        print(f"{header=}")
+        print(f"{blat=}")
+        print(f"{logger=}")
+        print(f"{mapq_cutoff=}")
+        print(f"{representative_alignments_new_cigar=}")
+        print(f"{max_allowed_nm=}")
+        print(f"{min_soft_seg_len=}")
+        print(f"{blat_ident_pct_cutoff=}")
+        print(f"{splice_bin=}")
+        print(f"{motif_required=}")
+        print(f"{candidate_ao_dict=}")
+        return identified_key
+
     def run(self):
         """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
            (2) add SA tag for reads with long length of softclipped segment using BLAT
@@ -486,56 +527,6 @@ class BamScanner:
 
         self._iter_bam()
 
-        # identified_key,
-        # *,
-        # in_bam_path,
-        # ref_genome,
-        # gtf,
-        # output,
-        # header,
-        # blat,
-        # logger,
-        # mapq_cutoff,
-        # representative_alignments_new_cigar,
-        # max_allowed_nm,
-        # min_soft_seg_len,
-        # blat_ident_pct_cutoff,
-        # splice_bin,
-        # motif_required,
-        # candidate_ao_dict,
-        #
-        #
-        # self.in_bam_path = input_bam
-        # self.in_bam = pysam.AlignmentFile(input_bam, "rb")
-        #
-        # self.bam_chrom_info = {}
-        #
-        # self.output = output
-        # self.mapq_cutoff = mapq_cutoff
-        #
-        # self.ref_genome = (
-        #     ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
-        # )
-        #
-        # self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
-        #
-        # self.splice_bin = splice_in
-        # self.blat = blat
-        # self.logger = logger
-        # self.motif_required = motif_required
-        # self.parallel = parallel
-        # self.max_allowed_nm = max_allowed_nm
-        # self.min_soft_seg_len = min_soft_seg_len
-        # self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
-        #
-        # self.pat_left_S = re.compile(r"^(\d+)S")
-        # self.pat_right_S = re.compile(r"(\d+)S$")
-        # self.header = self._get_bam_header()
-        #
-        # self.representative_alignments_new_cigar = {}
-        #
-        # self.candidate_ao_dict = {}
-
         self.logger.trace(f"{self.bam_chrom_info=}")
 
         self_local_namespace = copy.copy(locals())["self"]
@@ -548,13 +539,17 @@ class BamScanner:
             if value.kind.name == "KEYWORD_ONLY"
         }
 
+        intact_series_list = []
         if self.parallel == 1:
             parallel_worker = ParallelWorker(
                 BamScanner._scan_bam_helper, self.logger, self.parallel
             )
+            # result = parallel_worker.run("normal", **keyword_parameters_dict)
             result = parallel_worker.run("normal", **keyword_parameters_dict)
+
             print(result)
-            #
+            intact_series_list.extend(result["normal"])
+
             # tmp_output, intact_series_list = BamScanner._scan_bam_helper(
             #     "normal", **keyword_parameters_dict
             # )
@@ -577,7 +572,6 @@ class BamScanner:
             result = parallel_worker.run(*contigs, **keyword_parameters_dict)
 
             temp_bamfiles = []
-            intact_series_list = []
             for contig in contigs:
                 contig_output, contig_series_list = result[contig]
                 temp_bamfiles.append(contig_output)
