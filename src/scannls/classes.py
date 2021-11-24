@@ -1545,8 +1545,9 @@ class ReadsConnecter(object):
         else:
             return 1
 
-    @staticmethod
+    # @staticmethod
     def conduct_glocal_alignment_forMS(
+        self,
         query_seq: str,
         target_seq: str,
         same_strand: bool,
@@ -1559,6 +1560,8 @@ class ReadsConnecter(object):
 
         insert_seq = None  # None means M is not consist with S
         match_flag = False
+        self.logger.trace(f"{len(query_seq)}")
+        self.logger.trace(f"{len(target_seq)}")
         if not is_align:
             if len(target_seq) <= minimum_s_length:
                 return False, insert_seq
@@ -1605,7 +1608,7 @@ class ReadsConnecter(object):
 
         # first case
         self.logger.debug("testing first case M vs LS")
-        match_flag, insertion_1_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
+        match_flag, insertion_1_seq = self.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
             read.query_sequence[:_lt_len_r2],
             same_strand,
@@ -1633,7 +1636,7 @@ class ReadsConnecter(object):
 
         self.logger.debug("testing second case M vs RS")
         # second case
-        match_flag, insertion_2_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
+        match_flag, insertion_2_seq = self.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
             read.query_sequence[-_rt_len_r2:],
             same_strand,
@@ -1665,7 +1668,7 @@ class ReadsConnecter(object):
 
         self.logger.debug("testing third case LS vs M")
         # third case
-        match_flag, insertion_3_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
+        match_flag, insertion_3_seq = self.conduct_glocal_alignment_forMS(
             read.query_sequence[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
             start_read.adhocseq[:_lt_len_r1],
             same_strand,
@@ -1690,7 +1693,7 @@ class ReadsConnecter(object):
 
         self.logger.debug("testing fourth case RS vs M")
         # fourth case
-        match_flag, insertion_4_seq = ReadsConnecter.conduct_glocal_alignment_forMS(
+        match_flag, insertion_4_seq = self.conduct_glocal_alignment_forMS(
             read.query_sequence[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
             start_read.adhocseq[-_rt_len_r1:],
             same_strand,
