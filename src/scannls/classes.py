@@ -955,6 +955,7 @@ class Series(object):
                 # add read 1 with on insertion
                 microhomology = MicroHomology(event.insertion_seq1)
 
+                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
                 if event.strand1 == "-":
                     microhomology.reverse_completement_query()
 
