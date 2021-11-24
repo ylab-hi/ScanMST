@@ -1,6 +1,7 @@
 import HTSeq
 import pyfaidx
 from align import aligner
+from loguru import logger
 
 from .helper import gene_annotation
 from .helper import splicing_confirmation
@@ -40,8 +41,6 @@ def short_TDUP_or_not(
     alignment_result = aligner(ins_seq_in_read, ref_seq, method="glocal")[0]
     search_seq = alignment_result.seq1.decode("utf-8")
     target_seq = alignment_result.seq2.decode("utf-8")
-    search_seq_len = len(search_seq)
-    target_seq_len = len(target_seq)
     search_start, search_end = alignment_result.start1, alignment_result.end1 - 1
     target_start, target_end = alignment_result.start2, alignment_result.end2 - 1
     aln_len = search_end - search_start + 1
@@ -62,6 +61,7 @@ def infer_nls_from_connected_reads(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
+    logger: logger,
     update_bps: bool = False,
 ) -> tuple:
     """

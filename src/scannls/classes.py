@@ -871,6 +871,7 @@ class Series(object):
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
+                            logger=self.logger,
                             update_bps=update_bps,
                         )
                     )
