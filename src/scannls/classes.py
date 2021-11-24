@@ -915,7 +915,7 @@ class Series(object):
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
-                        self.logger.debug(f"Add {insertion=} to Series")
+                        self.logger.trace(f"Add {insertion=} to Series")
                         self.add_node(insertion)
 
                 else:  # no hits or multiple hits
@@ -1780,10 +1780,9 @@ class ParallelWorker:
         result = {}
 
         with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-            for arg in args:
-                key = arg[0]
+            for key in args:
                 self.logger.debug(f"ParallelWorker: {key}")
-                future = executor.submit(self.func, arg, **kwargs)
+                future = executor.submit(self.func, key, **kwargs)
                 tasks[future] = key
 
             for future in futures.as_completed(tasks):

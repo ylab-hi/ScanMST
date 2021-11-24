@@ -47,12 +47,16 @@ class BamScanner:
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
 
         self.bam_chrom_info = {}
+
         self.output = output
         self.mapq_cutoff = mapq_cutoff
+
         self.ref_genome = (
             ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
         )
+
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
+
         self.splice_bin = splice_in
         self.blat = blat
         self.logger = logger
@@ -64,10 +68,7 @@ class BamScanner:
 
         self.pat_left_S = re.compile(r"^(\d+)S")
         self.pat_right_S = re.compile(r"(\d+)S$")
-
-        self.genome_fasta = self._get_genome_fasta()
         self.header = self._get_bam_header()
-        self.cvg, self.gene_iv = self._get_cvg_gene_iv()
 
         self.representative_alignments_new_cigar = {}
 
@@ -80,7 +81,7 @@ class BamScanner:
         try:
             return True if header["HD"]["SO"] == "coordinate" else False
         except KeyError:
-            self.logger.error(f"Bam file {self.bam_file_bam} is not sorted")
+            self.logger.error(f"Bam file {self.in_bam} is not sorted")
             raise SystemExit
 
     def _count_chrom_info(self, read):
@@ -102,22 +103,24 @@ class BamScanner:
         self._check_bam_sort(header)
         return header
 
-    def _get_genome_fasta(self):
+    @staticmethod
+    def _get_genome_fasta(ref_genome, logger):
         """
         get the genome fasta file
         """
         try:
-            return Fasta(str(self.ref_genome), sequence_always_upper=True)
+            return Fasta(str(ref_genome), sequence_always_upper=True)
         except FastaNotFoundError:
-            self.logger.error(f"Cannot find the reference genome {self.ref_genome}")
+            logger.error(f"Cannot find the reference genome {ref_genome}")
             raise SystemExit
 
-    def _get_cvg_gene_iv(self):
+    @staticmethod
+    def _get_cvg_gene_iv(gtf, splice_bin, logger):
         try:
-            cvg, gene_iv = extract_splice_sites(str(self.gtf), self.splice_bin)
-            self.logger.success(f"extract splice sites from {self.gtf} done!")
+            cvg, gene_iv = extract_splice_sites(str(gtf), splice_bin)
+            logger.success(f"extract splice sites from {gtf} done!")
         except IOError as e:
-            self.logger.error(f"read GTF file {self.gtf} error!", e)
+            logger.error(f"read GTF file {gtf} error!", e)
             raise SystemExit
         else:
             return cvg, gene_iv
@@ -225,8 +228,10 @@ class BamScanner:
         identified_key,
         *,
         in_bam_path,
-        header,
+        ref_genome,
+        gtf,
         output,
+        header,
         blat,
         logger,
         mapq_cutoff,
@@ -235,21 +240,29 @@ class BamScanner:
         min_soft_seg_len,
         blat_ident_pct_cutoff,
         splice_bin,
-        genome_fasta,
-        cvg,
-        gene_iv,
         motif_required,
         candidate_ao_dict,
     ):
+        print(f"{identified_key= } start")
+        genome_fasta = BamScanner._get_genome_fasta(ref_genome, logger)
+
+        cvg, gene_iv = BamScanner._get_cvg_gene_iv(gtf, splice_bin, logger)
+
+        in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
+
+        chrom_bam_io_object = (
+            in_bam_io_object.fetch()
+            if identified_key == "normal"
+            else in_bam_io_object.fetch(contig=identified_key)
+        )
+
         current_output = output.parent.joinpath(f"{identified_key}_{output.name}")
+
+        output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
         nls_src_forms_list = []
         pat_left_S = re.compile(r"^(\d+)S")
         pat_right_S = re.compile(r"(\d+)S$")
-
-        output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
-
-        chrom_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
         # update SA tags and iterate the BAM file
         for read in chrom_bam_io_object:
@@ -428,22 +441,11 @@ class BamScanner:
         logger.debug(f"{nls_src_forms_list=}")
         return current_output, nls_src_forms_list
 
-    def run(self):
-        """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
-           (2) add SA tag for reads with long length of softclipped segment using BLAT
-           (3) identify putative regions of NLS events using connected chimeric reads
-           (4) add putative regions of NLS events to SV tag of primary alignment
-           (5) current_output regions of NLS events in BEDPE file
-
-
-        ..note ::
-            SV tag uses the same genomic coordinate as SA tag,
-            So position should be always add 1
-        """
-
+    def _iter_bam(self):
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
+
         try:
             for read in self.in_bam.fetch():
                 if read.is_supplementary:
@@ -464,12 +466,75 @@ class BamScanner:
                 else:
                     self._count_chrom_info(read)
         except ValueError as e:
-            print(
-                "BAM index file is not found in supplementary alignments!\n",
-                e,
-                file=sys.stderr,
+            self.logger.error(
+                f"BAM index file is not found in supplementary alignments! {e}"
             )
-            sys.exit(1)
+            raise SystemExit
+
+    def run(self):
+        """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
+           (2) add SA tag for reads with long length of softclipped segment using BLAT
+           (3) identify putative regions of NLS events using connected chimeric reads
+           (4) add putative regions of NLS events to SV tag of primary alignment
+           (5) current_output regions of NLS events in BEDPE file
+
+
+        ..note ::
+            SV tag uses the same genomic coordinate as SA tag,
+            So position should be always add 1
+        """
+
+        self._iter_bam()
+
+        # identified_key,
+        # *,
+        # in_bam_path,
+        # ref_genome,
+        # gtf,
+        # output,
+        # header,
+        # blat,
+        # logger,
+        # mapq_cutoff,
+        # representative_alignments_new_cigar,
+        # max_allowed_nm,
+        # min_soft_seg_len,
+        # blat_ident_pct_cutoff,
+        # splice_bin,
+        # motif_required,
+        # candidate_ao_dict,
+        #
+        #
+        # self.in_bam_path = input_bam
+        # self.in_bam = pysam.AlignmentFile(input_bam, "rb")
+        #
+        # self.bam_chrom_info = {}
+        #
+        # self.output = output
+        # self.mapq_cutoff = mapq_cutoff
+        #
+        # self.ref_genome = (
+        #     ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        # )
+        #
+        # self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
+        #
+        # self.splice_bin = splice_in
+        # self.blat = blat
+        # self.logger = logger
+        # self.motif_required = motif_required
+        # self.parallel = parallel
+        # self.max_allowed_nm = max_allowed_nm
+        # self.min_soft_seg_len = min_soft_seg_len
+        # self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
+        #
+        # self.pat_left_S = re.compile(r"^(\d+)S")
+        # self.pat_right_S = re.compile(r"(\d+)S$")
+        # self.header = self._get_bam_header()
+        #
+        # self.representative_alignments_new_cigar = {}
+        #
+        # self.candidate_ao_dict = {}
 
         self.logger.trace(f"{self.bam_chrom_info=}")
 
@@ -484,10 +549,16 @@ class BamScanner:
         }
 
         if self.parallel == 1:
-            tmp_output, intact_series_list = BamScanner._scan_bam_helper(
-                "intact", self.in_bam.fetch(), **keyword_parameters_dict
+            parallel_worker = ParallelWorker(
+                BamScanner._scan_bam_helper, self.logger, self.parallel
             )
-            tmp_output.rename(self.output)
+            result = parallel_worker.run("normal", **keyword_parameters_dict)
+            print(result)
+            #
+            # tmp_output, intact_series_list = BamScanner._scan_bam_helper(
+            #     "normal", **keyword_parameters_dict
+            # )
+            # tmp_output.rename(self.output)
         else:
             # create a temporary directory for storing temporary files of bam
 
@@ -498,21 +569,16 @@ class BamScanner:
 
             keyword_parameters_dict["output"] = temp_output
 
-            alignment_segment = []
-
-            for contig, (start, end) in self.bam_chrom_info.items():
-                alignment_segment.append(
-                    (contig, self.in_bam.fetch(region=f"{contig}"))
-                )
+            contigs = self.bam_chrom_info.keys()
 
             parallel_worker = ParallelWorker(
                 BamScanner._scan_bam_helper, self.logger, self.parallel
             )
-            result = parallel_worker.run(*alignment_segment, **keyword_parameters_dict)
+            result = parallel_worker.run(*contigs, **keyword_parameters_dict)
 
             temp_bamfiles = []
             intact_series_list = []
-            for contig, _ in alignment_segment:
+            for contig in contigs:
                 contig_output, contig_series_list = result[contig]
                 temp_bamfiles.append(contig_output)
                 intact_series_list.extend(contig_series_list)
