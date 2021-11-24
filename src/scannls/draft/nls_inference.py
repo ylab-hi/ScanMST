@@ -180,13 +180,7 @@ def infer_nls_from_connected_reads(
                 target_start = read_rt.ref_start
                 target_end = read_lt.ref_end
                 target_offset = target_end - target_start
-                query_offset = (
-                    read_lt.query_length
-                    - read_rt.lt_soft_len
-                    - read_lt.rt_soft_len
-                    + read_lt.indel_size
-                    + read_rt.indel_size
-                )
+
                 bp_region_seq_len = (
                     read_lt.query_length
                     - read_lt.rt_soft_len
@@ -194,6 +188,17 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+
+                if bp_region_seq_len > 0:
+                    query_offset = (
+                        read_lt.reference_match_size + read_rt.reference_match_size
+                    )
+                else:
+                    query_offset = (
+                        read_lt.reference_match_size
+                        + read_rt.reference_match_size
+                        + bp_region_seq_len
+                    )
 
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
@@ -449,13 +454,6 @@ def infer_nls_from_connected_reads(
                 target_start = read_lt.ref_start
                 target_end = read_rt.ref_start + read_rt.reference_match_size
                 target_offset = target_end - target_start
-                query_offset = (
-                    read_lt.query_length
-                    - read_rt.rt_soft_len
-                    - read_lt.lt_soft_len
-                    + read_lt.indel_size
-                    + read_rt.indel_size
-                )
                 bp_region_seq_len = (
                     read_lt.query_length
                     - read_lt.lt_soft_len
@@ -463,6 +461,17 @@ def infer_nls_from_connected_reads(
                     - read_lt.read_match_size
                     - read_rt.read_match_size
                 )
+                if bp_region_seq_len > 0:
+                    query_offset = (
+                        read_lt.reference_match_size + read_rt.reference_match_size
+                    )
+                else:
+                    query_offset = (
+                        read_lt.reference_match_size
+                        + read_rt.reference_match_size
+                        + bp_region_seq_len
+                    )
+
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 evt_size = query_offset - target_offset
