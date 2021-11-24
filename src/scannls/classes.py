@@ -630,7 +630,7 @@ class Node(object):
             return _introns
 
 
-class Event:
+class Event(object):
     """
     the Event class is used to parse the return value from the function nls_inference
     """
@@ -872,7 +872,6 @@ class Series(object):
                             gene_iv=gene_iv,
                             motif_required=motif_required,
                             logger=self.logger,
-                            update_bps=update_bps,
                         )
                     )
 
@@ -894,7 +893,7 @@ class Series(object):
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            update_bps=update_bps,
+                            logger=self.logger,
                         )
                     )
 

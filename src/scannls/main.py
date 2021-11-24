@@ -102,6 +102,13 @@ def parse_args():
         help="set log level (default: %(default)s)",
     )
     draft_parser.add_argument(
+        "--log_file",
+        action="store",
+        dest="log_file",
+        help="output log file",
+    )
+
+    draft_parser.add_argument(
         "--2bit",
         action="store",
         dest="two_bit",
@@ -261,12 +268,18 @@ def parse_args():
         help="Limit analysis to targets listed in the BEDPE-format FILE",
     )
     call_parser.add_argument(
-        "--log",
+        "--log_level",
         action="store",
-        dest="log",
-        choices=["info", "debug"],
+        dest="log_level",
+        choices=["info", "debug", "trace"],
         default="info",
         help="set log level (default: %(default)s)",
+    )
+    call_parser.add_argument(
+        "--log_file",
+        action="store",
+        dest="log_file",
+        help="output log file",
     )
     isoform_parser = sub_parsers.add_parser(
         "isoform",
@@ -320,10 +333,10 @@ def parse_args():
         default=0.1,
     )
     isoform_parser.add_argument(
-        "--log",
+        "--log_level",
         action="store",
-        dest="log",
-        choices=["info", "debug"],
+        dest="log_level",
+        choices=["info", "debug", "trace"],
         default="info",
         help="set log level (default: %(default)s)",
     )
@@ -347,7 +360,10 @@ def main():
     if options.sub_command == "draft":
         # add logger
         logger.remove()
-        logger.add(sys.stdout, level=options.log_level.upper())
+        if options.log_file:
+            logger.add(options.log_file, level=options.log_level.upper())
+        else:
+            logger.add(sys.stdout, level=options.log_level.upper())
         logger.info("port")
 
         # check external tools used
@@ -383,6 +399,11 @@ def main():
 
     elif options.sub_command == "call":
         pass
+
+        # if options.log_file:
+        #    logger.add(options.log_file, level=options.log_level.upper())
+        # else:
+        #    logger.add(sys.stdout, level=options.log_level.upper())
         # print(
         #     "ScanNLS calling NLS events starts running: "
         #     + time.strftime("%Y-%m-%d %H:%M:%S")
