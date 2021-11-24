@@ -486,6 +486,9 @@ class Insertion(Read):
     def reverse_completement_query(self):
         self.query_sequence = reverse_complement(self.query_sequence)
 
+    def reverse_strand(self):
+        self.strand = "-" if self.strand == "+" else "+"
+
 
 class LengthAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -599,7 +602,7 @@ class Node(object):
 
     def __str__(self) -> str:
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
     def is_next_node(self, other) -> bool:
         if self.next_breakpoint == other.prev_breakpoint:
@@ -882,6 +885,7 @@ class Series(object):
 
                     if event.strand1 != event.strand2:
                         insertion.reverse_completement_query()
+                        insertion.reverse_strand()
 
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
@@ -900,6 +904,7 @@ class Series(object):
 
                     if event.strand1 != event.strand2:
                         insertion.reverse_completement_query()
+                        insertion.reverse_strand()
 
                     if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
                         # only add read1
