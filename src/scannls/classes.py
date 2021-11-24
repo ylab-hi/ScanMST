@@ -401,7 +401,7 @@ class Read(object):
             return False
 
 
-class NoneInsertion(Read):
+class NovelInsertion(Read):
     """
     the class is used to represent reads insertion whose hit is 0 or >1
     """
@@ -409,6 +409,12 @@ class NoneInsertion(Read):
     def __init__(self, hit_num: int, query_sequence: str):
         self.query_sequence = query_sequence
         self.hit = hit_num
+
+    def __repr__(self):
+        return f"NovelInsertion({self.query_sequence}:{self.hit})"
+
+    def reverse_completement_query(self):
+        self.query_sequence = reverse_complement(self.query_sequence)
 
 
 class Insertion(Read):
@@ -553,7 +559,7 @@ class Node(object):
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
         sr: Optional[int] = None,
-        insertion_info: Optional[Tuple[bool, Union[Insertion, NoneInsertion]]] = None,
+        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
     ) -> None:
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
@@ -902,7 +908,7 @@ class Series(object):
                         )
                     )
 
-                    if event.strand1 != event.strand2:
+                    if event.strand1 != event.strand2 and event.strand1 == "+":
                         insertion.reverse_completement_query()
                         insertion.reverse_strand()
 
@@ -920,10 +926,14 @@ class Series(object):
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
-                        self.logger.debug(f"Add insertion to Series")
+                        self.logger.trace(f"Add {insertion} to Series")
                         self.add_node(insertion)
 
                 else:  # no hits or multiple hits
+
+                    if event.strand1 == "-":
+                        insertion.reverse_completement_query()
+                    self.logger.tracef(f"Add Novel Insertion {insertion=} to read1")
                     # only add read1 with insertion
                     read1_node = event.update_node_info(flag, read1_node, insertion)
                     self.add_node(read1_node)
@@ -931,6 +941,7 @@ class Series(object):
             else:
                 # add read 1 with on insertion
                 read1_node = event.update_node_info(False, read1_node, None, False)
+
                 self.add_node(read1_node)
 
             # add final node
@@ -1333,13 +1344,13 @@ class Blat(object):
         flag = False  # flag for checking the insertion  if its hit is only one
 
         if len(insert_seq) < align_len_threshold:
-            return flag, NoneInsertion(hit_num=0, query_sequence=insert_seq)
+            return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)
         try:
             blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
-            return flag, NoneInsertion(hit_num=0, query_sequence=insert_seq)
+            return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         hsps = blat.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
@@ -1371,7 +1382,7 @@ class Blat(object):
                 query_sequence=insert_seq,
             )
         else:
-            return flag, NoneInsertion(hit_num=hit, query_sequence=insert_seq)
+            return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
 
     @staticmethod
     def _remove(file):
