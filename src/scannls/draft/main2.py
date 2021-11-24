@@ -3,12 +3,10 @@
 # ===========================================================
 import copy
 import inspect
-import os
 import re
 import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 import pysam
@@ -23,8 +21,6 @@ from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
 from .nls_inference import infer_nls_from_connected_reads
 from .reads_connection import detect_read_read_connections_from_cigar
-
-__funcs__ = {"detect_sv_from_cigar", "scan_bam"}
 
 
 class BamScanner:
@@ -42,27 +38,28 @@ class BamScanner:
         logger,
         motif_required,
         parallel,
-        max_allowed_nm=50,
-        min_soft_seg_len=200,
-        blat_ident_pct_cutoff=0.9,
+        max_allowed_nm,
+        min_soft_seg_len,
+        blat_ident_pct_cutoff,
     ):
 
         self.bam_file_bam = input_bam
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
         self.bam_chrom_info = {}
-
-        self.mapq_cutoff = (mapq_cutoff,)
-        self.output = (Path(output),)
-        self.ref_genome = ref_genome.expanduser() if "~" in ref_genome else ref_genome
-        self.gtf = gtf.expanduser() if "~" in gtf else gtf
-        self.splice_bin = (splice_in,)
-        self.blat = (blat,)
-        self.logger = (logger,)
-        self.motif_required = (motif_required,)
-        self.parallel = (parallel,)
-        self.max_allowed_nm = (max_allowed_nm,)
-        self.min_soft_seg_len = (min_soft_seg_len,)
-        self.blat_ident_pct_cutoff = (blat_ident_pct_cutoff,)
+        self.output = output
+        self.mapq_cutoff = mapq_cutoff
+        self.ref_genome = (
+            ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        )
+        self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
+        self.splice_bin = splice_in
+        self.blat = blat
+        self.logger = logger
+        self.motif_required = motif_required
+        self.parallel = parallel
+        self.max_allowed_nm = max_allowed_nm
+        self.min_soft_seg_len = min_soft_seg_len
+        self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
 
         self.pat_left_S = re.compile(r"^(\d+)S")
         self.pat_right_S = re.compile(r"(\d+)S$")
@@ -70,6 +67,10 @@ class BamScanner:
         self.genome_fasta = self._get_genome_fasta()
         self.header = self._get_bam_header()
         self.cvg, self.gene_iv = self._get_cvg_gene_iv()
+
+        self.representative_alignments_new_cigar = {}
+
+        self.candidate_ao_dict = {}
 
     def _check_bam_sort(self, header):
         """
@@ -105,14 +106,14 @@ class BamScanner:
         get the genome fasta file
         """
         try:
-            return Fasta(self.ref_genome, sequence_always_upper=True)
+            return Fasta(str(self.ref_genome), sequence_always_upper=True)
         except FastaNotFoundError:
             self.logger.error(f"Cannot find the reference genome {self.ref_genome}")
             raise SystemExit
 
     def _get_cvg_gene_iv(self):
         try:
-            cvg, gene_iv = extract_splice_sites(self.gtf, self.splice_bin)
+            cvg, gene_iv = extract_splice_sites(str(self.gtf), self.splice_bin)
             self.logger.success(f"extract splice sites from {self.gtf} done!")
         except IOError as e:
             self.logger.error(f"read GTF file {self.gtf} error!", e)
@@ -342,7 +343,7 @@ class BamScanner:
 
                 # select reads with SA tags (original or newly-added), ignore supplementary alignment
                 if read.has_tag("SA") and not read.is_supplementary:
-                    event_lists, read_chains = detect_sv_from_cigar(
+                    event_lists, read_chains = BamScanner.detect_sv_from_cigar(
                         read=read,
                         mapq_cutoff=mapq_cutoff,
                         splice_bin=splice_bin,
@@ -426,7 +427,7 @@ class BamScanner:
         logger.debug(f"{nls_src_forms_list=}")
         return current_output, nls_src_forms_list
 
-    def scan_bam(self):
+    def run(self):
         """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
            (2) add SA tag for reads with long length of softclipped segment using BLAT
            (3) identify putative regions of NLS events using connected chimeric reads
@@ -442,7 +443,6 @@ class BamScanner:
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
-        representative_alignments_new_cigar = {}
         try:
             for read in self.in_bam.fetch():
                 self._count_chrom_info(read)
@@ -458,7 +458,7 @@ class BamScanner:
                         r_S_len = right_mat.group(1)
                     else:
                         r_S_len = ""
-                    representative_alignments_new_cigar[
+                    self.representative_alignments_new_cigar[
                         "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
                     ] = sup_aln_cigar
         except ValueError as e:
@@ -468,11 +468,13 @@ class BamScanner:
                 file=sys.stderr,
             )
             sys.exit(1)
+
         self.logger.trace(f"{self.bam_chrom_info=}")
 
-        local_namespace = copy.copy(locals())
+        self_local_namespace = copy.copy(locals())["self"]
+
         keyword_parameters_dict = {
-            key: local_namespace[key]
+            key: getattr(self_local_namespace, key)
             for key, value in inspect.signature(
                 BamScanner._scan_bam_helper
             ).parameters.items()

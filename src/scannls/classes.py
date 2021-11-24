@@ -1805,22 +1805,17 @@ class ParallelWorker:
         self.func = func
         self.logger = logger
 
-        self.n_jobs = n_jobs
+        self.n_jobs = self.setter_n_jobs(n_jobs)
 
-    @property
-    def n_jobs(self):
-        return self.n_jobs
-
-    @n_jobs.setter
-    def n_jobs(self, n_jobs):
+    def setter_n_jobs(self, n_jobs):
         current_max_processor = os.cpu_count()
         if n_jobs > current_max_processor:
             self.logger.warning(
                 f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
             )
-            self._n_jobs = n_jobs  # the max processor is decided by ProcessPoolExecutor
+            return n_jobs  # the max processor is decided by ProcessPoolExecutor
         else:
-            self._n_jobs = n_jobs
+            return n_jobs
 
     def run(self, *args, **kwargs):
         """
