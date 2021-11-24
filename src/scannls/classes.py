@@ -417,6 +417,14 @@ class NovelInsertion(Read):
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
+class MicroHomology:
+    def __init__(self, query_sequence: str):
+        self.query_sequence = query_sequence
+
+    def __repr__(self):
+        return f"MicroHomology({self.query_sequence})"
+
+
 class Insertion(Read):
     """
     the class is used to represent reads insertion whose hit is 1
