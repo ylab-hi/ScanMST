@@ -288,7 +288,7 @@ def splicing_confirmation(
     :rtype: tuple
 
     .. note::
-        Possible output scenarios
+        Possible current_output scenarios
         * True,  3(11), 1 => reported, both breakpoints overlap with annotated coding exons boundary, using canonical splice motif
         * True,  2(10), 0 => reported, one breakpoint overlap with annotated coding exons boundary, using noncanonical splice motif
         * True,  1(01), 0 => reported, one breakpoint overlap with annotated coding exons boundary, using noncanonical splice motif
@@ -773,7 +773,7 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    top_hsp, __mapq = blat.fetch_mapq(in_seq)
+    top_hsp, __mapq = blat.fetch_mapq(in_seq, blat_ident_pct_cutoff)
 
     if (
         top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff

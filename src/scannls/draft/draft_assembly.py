@@ -3,10 +3,11 @@
 # ===========================================================
 """
 2021-10-01:
-detect_sv_from_cigar output a list of putative NLS events
+detect_sv_from_cigar current_output a list of putative NLS events
 modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
 
 """
+import copy
 from collections import defaultdict
 
 

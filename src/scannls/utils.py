@@ -39,7 +39,9 @@ def get_softclip_length(read):
     query_length     == rlen
     reference_length == alen
     query_sequence   == seq
-    return: length of soft-clipped part, sequence of soft-clipped part, the connection point of soft-clipped part (left/right), left/right soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
+    return: length of soft-clipped part,sequence of soft-clipped part,
+            the connection point of soft-clipped part (left/right), left/right soft-clipped part:
+            0:other; 2:left[SM]; 1:right[MS]
     """
     if read.cigartuples[0][0] == 4:
         # there are soft-clipped segments in left and right both
@@ -57,7 +59,7 @@ def get_softclip_length(read):
                 return (
                     read.cigartuples[-1][1],
                     read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
-                    read.ref_end - 1,
+                    read.reference_end - 1,
                     1,
                 )
         # there are soft-clipped segments in left only
@@ -78,3 +80,26 @@ def get_softclip_length(read):
         )
     else:
         return 0, "", -1, 0
+
+
+def check_bam_sort(bam_file_header, logger):
+    """
+    check if the bam file is sorted
+    """
+    try:
+        return True if bam_file_header["HD"]["SO"] == "coordinate" else False
+    except KeyError:
+        logger.error("BAM file is not sorted")
+        raise SystemExit
+
+
+def count_chrom_info(read, chrom_info):
+    """
+    count the chrom and the chrom start and the chrom end
+    """
+    if read.reference_name in chrom_info:
+        if read.reference_end > chrom_info[read.reference_name][1]:
+            chrom_info[read.reference_name][1] = read.reference_end
+    else:
+        chrom_info[read.reference_name] = [read.reference_start, read.reference_end]
+    return chrom_info

@@ -3,7 +3,7 @@
 # ===========================================================
 """
 2021-10-01:
-detect_sv_from_cigar output a list of putative NLS events
+detect_sv_from_cigar current_output a list of putative NLS events
 modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
 
 """
@@ -15,13 +15,13 @@ def output_bedpe_file(sr_dict, group_dict, prefix, splice_bin):
     """
     :param sr_dict: sv candidate to number of supporting reads(SR) dictionary
     :param group_dict: sv candidate to group of events dictionary, connected chimeric reads are included in one group
-    :param prefix: output file prefix
+    :param prefix: current_output file prefix
     :param splice_bin: bin size for splice site searching
     :type sr_dict: dict
     :type group_dict: dict
     :type prefix: str
     :type splice_bin: int
-    :return: output BEDPE file
+    :return: current_output BEDPE file
     :rtype: str
     .. note::
     """

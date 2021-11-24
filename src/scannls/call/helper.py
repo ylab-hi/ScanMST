@@ -19,7 +19,7 @@ __funcs__ = {"vcf_header", "sv_checker"}
 
 
 def vcf_header(output_prefix, bam_header):
-    """output VCF header using information from BAM header
+    """current_output VCF header using information from BAM header
     :param output_prefix: file prefix for VCF file, usually uses sample name
     :param bam_header: header of BAM file
     :type output_prefix: str

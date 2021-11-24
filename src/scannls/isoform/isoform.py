@@ -1343,7 +1343,7 @@ def vcf_construction(in_vcf, in_bam, out_gtf, ref_genome, output_prefix):
                 for j in gtf_record_list:
                     output_gtf_file.write(f"{j}\n")
             else:
-                print("No output GTF!\n")
+                print("No current_output GTF!\n")
             for _id in fasta_dict:
                 output_fa.write(f"{_id}\n")
                 output_fa.write(f"{fasta_dict[_id]}\n")
@@ -1765,7 +1765,7 @@ def vcf_parser(
                 for j in gtf_record_list:
                     gtf_file.write(f"{j}\n")
             else:
-                print("No output GTF!\n")
+                print("No current_output GTF!\n")
     gtf_file.close()
 
 
@@ -1848,7 +1848,7 @@ def update_gtf(in_gtf, out_gtf, out_fasta, ref_genome):
         event_type = event_type_dict[gene_id]
         _up = trx_to_exons[trx_upstream]
         _down = trx_to_exons[trx_downstream]
-        # output to GTF file
+        # current_output to GTF file
         out_gtf_file.write(
             f'{_up[0].chrom}\tScanNLS\ttranscript\t{_up[0].start+1}\t{_up[-1].end}\t.\t{_up[0].strand}\t.\tgene_id "{gene_id}"; transcript_id "{trx_upstream}"; event_type "{event_type}";\n'
         )
@@ -1871,7 +1871,7 @@ def update_gtf(in_gtf, out_gtf, out_fasta, ref_genome):
             )
         bp_up = ""
         bp_down = ""
-        # output upstream sequences
+        # current_output upstream sequences
         if _up[0].strand == "+":
             chrm, start_end_pos = upstream_titles[-1].split("(")[0].split(":")
             bp_up = "{}:{}".format(chrm, int(start_end_pos.split("-")[1]) + 1)
@@ -1884,7 +1884,7 @@ def update_gtf(in_gtf, out_gtf, out_fasta, ref_genome):
                 upstream_seq += genome_fasta[exon.chrom][
                     exon.start : exon.end
                 ].reverse.complement.seq
-        # output downstream sequences
+        # current_output downstream sequences
         if _down[0].strand == "+":
             chrm, start_end_pos = downstream_titles[0].split("(")[0].split(":")
             bp_down = "{}:{}".format(chrm, start_end_pos.split("-")[0])
@@ -2013,14 +2013,14 @@ if __name__ == "__main__":
     # parser.add_argument('--ao', action='store', dest='ao', type=int, help="minimal AO (default: %(default)s)", default=2)
     # parser.add_argument('--dp', action='store', dest='dp', type=int, help="minimal DP (default: %(default)s)", default=5)
     # parser.add_argument('--af', action='store', dest='af', type=float, help="minimal AF (default: %(default)s)", default=0.01)
-    # parser.add_argument('-t', '--type', action='store', dest='type', help="output type (default: %(default)s)", choices=['gene', 'transcript'], default='gene')
+    # parser.add_argument('-t', '--type', action='store', dest='type', help="current_output type (default: %(default)s)", choices=['gene', 'transcript'], default='gene')
     parser.add_argument(
         "-o",
-        "--output",
+        "--current_output",
         action="store",
-        dest="output",
-        help="output file prefix (default: %(default)s)",
-        default="output",
+        dest="current_output",
+        help="current_output file prefix (default: %(default)s)",
+        default="current_output",
     )
     parser.add_argument("-v", "--version", action="version", version="%(prog)s 1.0")
     args = parser.parse_args()

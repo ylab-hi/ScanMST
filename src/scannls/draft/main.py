@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ===========================================================
+import copy
+import inspect
 import os
 import re
 import subprocess
 import sys
+import time
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 import pysam
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
+from ..classes import ParallelWorker
 from ..classes import Series
+from ..utils import check_bam_sort
+from ..utils import count_chrom_info
 from ..utils import get_softclip_length
 from ..utils import reverse_complement
 from .helper import blat2chimeric_alignment
@@ -122,117 +129,44 @@ def detect_sv_from_cigar(
     return event_list, read_to_read_chains[0]
 
 
-def scan_bam(
-    input_bam,
-    mapq_cutoff,
+def _scan_bam_helper(
+    identified_key,
+    chrom_bam_io_object,
+    *,
+    header,
     output,
-    ref_genome,
-    gtf,
-    splice_bin,
     blat,
     logger,
+    mapq_cutoff,
+    representative_alignments_new_cigar,
+    max_allowed_nm,
+    min_soft_seg_len,
+    blat_ident_pct_cutoff,
+    splice_bin,
+    genome_fasta,
+    cvg,
+    gene_iv,
     motif_required,
-    blat_ident_pct_cutoff=0.9,
-    max_allowed_nm=50,
-    min_soft_seg_len=200,
+    candidate_ao_dict,
 ):
-    """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
-       (2) add SA tag for reads with long length of softclipped segment using BLAT
-       (3) identify putative regions of NLS events using connected chimeric reads
-       (4) add putative regions of NLS events to SV tag of primary alignment
-       (5) output regions of NLS events in BEDPE file
+    current_output = output.parent.joinpath(f"{identified_key}_{output.name}")
 
-    :param blat:
-    :param logger:
-    :param input_bam: Transcriptomic long-read sorted BAM file
-    :param mapq_cutoff: MAPQ cutoff
-    :param output: file full name for output rebuild BAM file
-    :param ref_genome: reference genome (FASTA file)
-    :param gtf: reference gene annotations (GTF file)
-    :param splice_bin: bin size for splice site searching
-    :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
-    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
-    :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
-    :param min_soft_seg_len: minium softclipped segement length to trigger BLAT for reads with softcliping but no SA tag
-    :type input_bam: str (BAM filename)
-    :type mapq_cutoff: int
-    :type output: str
-    :type ref_genome: str
-    :type gtf: str
-    :type splice_bin: int
-    :type motif_required: bool
-    :type blat_ident_pct_cutoff: float
-    :type max_allowed_nm: int
-    :type min_soft_seg_len: int
-    :return: No returns
-    :rtype: None
-    ..note ::
-        SV tag uses the same genomic corrdinate as SA tag,
-        So position should be always add 1
-    """
-
-    in_bam = pysam.AlignmentFile(input_bam, "rb")
-    output_bam = pysam.AlignmentFile(f"{output}", "wb", template=in_bam)
-
-    candidate_ao_dict = defaultdict(int)
     nls_src_forms_list = []
-
-    if "~" in ref_genome:
-        ref_genome = os.path.expanduser(ref_genome)
-    if "~" in gtf:
-        gtf = os.path.expanduser(gtf)
-    try:
-        genome_fasta = Fasta(ref_genome, sequence_always_upper=True)
-    except FastaNotFoundError as e:
-        logger.error("read reference genome " + ref_genome + " error!", e)
-        sys.exit(1)
-    try:
-        cvg, gene_iv = extract_splice_sites(gtf, splice_bin)
-        logger.success("extract splice sites from " + gtf + " done!")
-    except IOError as e:
-        logger.error("read GTF file " + gtf + " error!", e)
-        sys.exit(1)
-
-    # supplementary alignment cigarstring extraction
-    # key: read.query_name + left S + right S
-    # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
-    representative_alignments_new_cigar = {}
     pat_left_S = re.compile(r"^(\d+)S")
     pat_right_S = re.compile(r"(\d+)S$")
-    try:
-        for read in in_bam.fetch(until_eof=False):
-            if read.is_supplementary:
-                sup_aln_cigar = read.cigarstring
-                left_mat = pat_left_S.search(sup_aln_cigar)
-                right_mat = pat_right_S.search(sup_aln_cigar)
-                if left_mat:
-                    l_S_len = left_mat.group(1)
-                else:
-                    l_S_len = ""
-                if right_mat:
-                    r_S_len = right_mat.group(1)
-                else:
-                    r_S_len = ""
-                representative_alignments_new_cigar[
-                    "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
-                ] = sup_aln_cigar
-    except ValueError as e:
-        print(
-            "BAM index file is not found in supplementary alignments!\n",
-            e,
-            file=sys.stderr,
-        )
-        sys.exit(1)
+
+    output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
     # update SA tags and iterate the BAM file
-    for read in in_bam.fetch(until_eof=False):
+    for read in chrom_bam_io_object:
+        logger.trace(f"{read=}")
         if (
             read.mapq >= mapq_cutoff
             and not read.is_secondary
             and not read.has_tag("XA")
             and not read.is_unmapped
         ):
-            chrm = read.reference_name
+            chrom = read.reference_name
             # update SA tag of representative alignments (START)
             if read.has_tag("SA") and not read.is_supplementary:
                 updated_chimeric_alns = []
@@ -359,18 +293,14 @@ def scan_bam(
                         elif reversed_event_key in candidate_ao_dict:
                             candidate_ao_dict[reversed_event_key] += 1
 
-                        # candidate_group_dict[
-                        #    f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1)+1}\t{_chrm2}:{int(_pos2)+1}\t{_strand1}{_strand2}"
-                        # ] = group_counter
                     elif _type in {"INS"}:
                         _end_pos = int(_bp1) + int(_bp2)
-                        # 'INS', ref_allele, ins_seq_in_read, [ins_start, len(ins_seq_in_read), 1, 2], [lt_strand, rt_strand], [*_genes]
                         ot_tag_list.append(
                             f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                         )
 
                         candidate_ao_dict[
-                            f"{_type}\t{_canonical}\t{chrm}:{_bp1}\t{chrm}:{_end_pos}\t{_strand1}{_strand2}"
+                            f"{_type}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:{_end_pos}\t{_strand1}{_strand2}"
                         ] += 1
 
                 if nls_event_list:
@@ -395,8 +325,159 @@ def scan_bam(
 
         output_bam.write(read)
 
-    in_bam.close()
     output_bam.close()
 
-    subprocess.check_call("samtools index {}".format(output), shell=True)
+    subprocess.check_call("samtools index {}".format(current_output), shell=True)
     logger.debug(f"{nls_src_forms_list=}")
+    return current_output, nls_src_forms_list
+
+
+def scan_bam(
+    input_bam,
+    mapq_cutoff,
+    output,
+    ref_genome,
+    gtf,
+    splice_bin,
+    blat,
+    logger,
+    motif_required,
+    parallel,
+    max_allowed_nm=50,
+    min_soft_seg_len=200,
+    blat_ident_pct_cutoff=0.9,
+):
+    """(1) update CIGAR strings of supplementary alignments in the primary alignment SA tag.
+       (2) add SA tag for reads with long length of softclipped segment using BLAT
+       (3) identify putative regions of NLS events using connected chimeric reads
+       (4) add putative regions of NLS events to SV tag of primary alignment
+       (5) current_output regions of NLS events in BEDPE file
+
+    :param parallel:
+    :param blat:
+    :param logger:
+    :param input_bam: Transcriptomic long-read sorted BAM file
+    :param mapq_cutoff: MAPQ cutoff
+    :param output: file full name for current_output rebuild BAM file
+    :param ref_genome: reference genome (FASTA file)
+    :param gtf: reference gene annotations (GTF file)
+    :param splice_bin: bin size for splice site searching
+    :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
+    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
+    :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
+    :param min_soft_seg_len: minimum softclipped segment length to trigger BLAT for reads with softcliping but no SA tag
+    :type input_bam: str (BAM filename)
+    :type mapq_cutoff: int
+    :type output: str
+    :type ref_genome: str
+    :type gtf: str
+    :type splice_bin: int
+    :type motif_required: bool
+    :type blat_ident_pct_cutoff: float
+    :type max_allowed_nm: int
+    :type min_soft_seg_len: int
+    :return: No returns
+    :rtype: None
+    ..note ::
+        SV tag uses the same genomic coordinate as SA tag,
+        So position should be always add 1
+    """
+
+    in_bam = pysam.AlignmentFile(input_bam, "rb")
+    header = in_bam.header.as_dict()
+    check_bam_sort(header, logger)
+    bam_chrom_info_dict = {}
+    candidate_ao_dict = defaultdict(int)
+
+    if "~" in ref_genome:
+        ref_genome = os.path.expanduser(ref_genome)
+    if "~" in gtf:
+        gtf = os.path.expanduser(gtf)
+    try:
+        genome_fasta = Fasta(ref_genome, sequence_always_upper=True)
+    except FastaNotFoundError as e:
+        logger.error("read reference genome " + ref_genome + " error!", e)
+        sys.exit(1)
+    try:
+        cvg, gene_iv = extract_splice_sites(gtf, splice_bin)
+        logger.success("extract splice sites from " + gtf + " done!")
+    except IOError as e:
+        logger.error("read GTF file " + gtf + " error!", e)
+        sys.exit(1)
+
+    pat_left_S = re.compile(r"^(\d+)S")
+    pat_right_S = re.compile(r"(\d+)S$")
+
+    # supplementary alignment cigarstring extraction
+    # key: read.query_name + left S + right S
+    # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
+    representative_alignments_new_cigar = {}
+    try:
+        for read in in_bam.fetch():
+            bam_chrom_info_dict = count_chrom_info(read, bam_chrom_info_dict)
+            if read.is_supplementary:
+                sup_aln_cigar = read.cigarstring
+                left_mat = pat_left_S.search(sup_aln_cigar)
+                right_mat = pat_right_S.search(sup_aln_cigar)
+                if left_mat:
+                    l_S_len = left_mat.group(1)
+                else:
+                    l_S_len = ""
+                if right_mat:
+                    r_S_len = right_mat.group(1)
+                else:
+                    r_S_len = ""
+                representative_alignments_new_cigar[
+                    "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
+                ] = sup_aln_cigar
+    except ValueError as e:
+        print(
+            "BAM index file is not found in supplementary alignments!\n",
+            e,
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    logger.trace(f"{bam_chrom_info_dict=}")
+    output = Path(output)
+    local_namespace = copy.copy(locals())
+    keyword_parameters_dict = {
+        key: local_namespace[key]
+        for key, value in inspect.signature(_scan_bam_helper).parameters.items()
+        if value.kind.name == "KEYWORD_ONLY"
+    }
+
+    if parallel == 1:
+        tmp_output, intact_series_list = _scan_bam_helper(
+            "intact", in_bam.fetch(), **keyword_parameters_dict
+        )
+        tmp_output.rename(output)
+    else:
+        # create a temporary directory for storing temporary files of bam
+        temp_id = int(time.time())
+        temp_dirname = output.parent.joinpath(f"temp_{temp_id}")
+        temp_dirname.mkdir()
+        temp_output = temp_dirname.joinpath(output.name)
+
+        keyword_parameters_dict["output"] = temp_output
+
+        alignment_segment = []
+
+        for contig, (start, end) in bam_chrom_info_dict.items():
+            alignment_segment.append(
+                (contig, in_bam.fetch(region=f"{contig}:{start}-{end}"))
+            )
+
+        parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
+        result = parallel_worker.run(*alignment_segment, **keyword_parameters_dict)
+
+        temp_bamfiles = []
+        intact_series_list = []
+        for contig, _ in alignment_segment:
+            contig_output, contig_series_list = result[contig]
+            temp_bamfiles.append(contig_output)
+            intact_series_list.extend(contig_series_list)
+
+        merge_cmd = f"samtools merge {output} {temp_dirname}/*.bam"
+        subprocess.check_call(merge_cmd, shell=True)
+
+    return intact_series_list

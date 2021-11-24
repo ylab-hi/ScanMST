@@ -94,12 +94,20 @@ def parse_args():
         help="Considering Non-canonical spliced sites",
     )
     draft_parser.add_argument(
-        "--log",
+        "--log_level",
         action="store",
         dest="log",
         choices=["info", "debug", "trace"],
         default="info",
         help="set log level (default: %(default)s)",
+    )
+    draft_parser.add_argument(
+        "--parallel",
+        action="store",
+        dest="parallel",
+        type=int,
+        default=1,
+        help="set working mode in processor (default: %(default)s)",
     )
     draft_parser.add_argument(
         "--2bit",
@@ -261,13 +269,14 @@ def parse_args():
         help="Limit analysis to targets listed in the BEDPE-format FILE",
     )
     call_parser.add_argument(
-        "--log",
+        "--log_level",
         action="store",
         dest="log",
         choices=["info", "debug"],
         default="info",
         help="set log level (default: %(default)s)",
     )
+
     isoform_parser = sub_parsers.add_parser(
         "isoform",
         help="infer NLS isoforms using built BAM and called VCF",
@@ -286,10 +295,10 @@ def parse_args():
     )
     isoform_parser.add_argument(
         "-o",
-        "--output",
+        "--current_output",
         action="store",
-        dest="output",
-        help="output file prefix",
+        dest="current_output",
+        help="current_output file prefix",
         required=True,
     )
     isoform_parser.add_argument(
@@ -348,14 +357,17 @@ def main():
         # add logger
         logger.remove()
         logger.add(sys.stdout, level=options.log.upper())
-        logger.info("port")
 
         # check external tools used
         external_tool_checking(logger=logger)
 
-        logger.info("ScanNLS build starts running")
-        start = time.time()
+        if options.parallel > 1:
+            logger.info("ScanNLS draft starts running in parallel mode")
+        else:
+            logger.info("ScanNLS draft starts running in normal mode")
 
+        logger.info(f"{options.input=}")
+        start = time.time()
         blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
         blat.start_server()
 
@@ -372,9 +384,10 @@ def main():
             blat=blat,
             logger=logger,
             motif_required=motif_required,
-            blat_ident_pct_cutoff=options.ident_cutoff,
+            parallel=options.parallel,
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
+            blat_ident_pct_cutoff=options.ident_cutoff,
         )
 
         logger.info("ScanNLS build running done")
@@ -390,7 +403,7 @@ def main():
         # start = time.time()
         # event_dict = joint_call(
         #     options.input,
-        #     options.output,
+        #     options.current_output,
         #     options.sr,
         #     options.depth,
         #     options.pso,

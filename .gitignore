@@ -20,3 +20,5 @@ blat/
 # bam
 *.bam
 *.sam
+# debug reprot
+/debuglog/

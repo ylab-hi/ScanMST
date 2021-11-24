@@ -7,6 +7,7 @@ import random
 import re
 import subprocess
 import time
+from concurrent import futures
 from multiprocessing import Process
 from typing import Any
 from typing import List
@@ -914,7 +915,7 @@ class Series(object):
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
-                        self.logger.debug(f"Add insertion to Series")
+                        self.logger.debug(f"Add {insertion=} to Series")
                         self.add_node(insertion)
 
                 else:  # no hits or multiple hits
@@ -1797,3 +1798,46 @@ class ReadsConnecter(object):
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
             _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=True)
+
+
+class ParallelWorker:
+    def __init__(self, func, logger, n_jobs=1):
+        self.func = func
+        self.logger = logger
+
+        self.n_jobs = n_jobs
+
+    @property
+    def n_jobs(self):
+        return self.n_jobs
+
+    @n_jobs.setter
+    def n_jobs(self, n_jobs):
+        current_max_processor = os.cpu_count()
+        if n_jobs > current_max_processor:
+            self.logger.warning(
+                f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
+            )
+            self._n_jobs = n_jobs  # the max processor is decided by ProcessPoolExecutor
+        else:
+            self._n_jobs = n_jobs
+
+    def run(self, *args, **kwargs):
+        """
+        using concurrent.future to parallel process
+        """
+        tasks = {}
+        result = {}
+
+        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
+            for arg in args:
+                key = args[0]
+                future = executor.submit(self.func, arg, **kwargs)
+                tasks[future] = key
+
+            for future in futures.as_completed(tasks):
+                self.logger.trace(f"ParallelWorker: {tasks[future]} done")
+                key = tasks[future]
+                result[key] = future.result()
+
+        return result
