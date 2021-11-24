@@ -43,8 +43,9 @@ class BamScanner:
         blat_ident_pct_cutoff,
     ):
 
-        self.bam_file_bam = input_bam
+        self.in_bam_path = input_bam
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
+
         self.bam_chrom_info = {}
         self.output = output
         self.mapq_cutoff = mapq_cutoff
@@ -180,7 +181,6 @@ class BamScanner:
                         _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
                     elif (_rt, _lt) in reads_pair_mode_dict:
                         _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
-                    # print(_lt_mode, _rt_mode)
                     (
                         nls_type,
                         _anno,
@@ -223,8 +223,8 @@ class BamScanner:
     @staticmethod
     def _scan_bam_helper(
         identified_key,
-        chrom_bam_io_object,
         *,
+        in_bam_path,
         header,
         output,
         blat,
@@ -249,9 +249,10 @@ class BamScanner:
 
         output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
+        chrom_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
+
         # update SA tags and iterate the BAM file
         for read in chrom_bam_io_object:
-            logger.trace(f"{read=}")
             if (
                 read.mapq >= mapq_cutoff
                 and not read.is_secondary
@@ -445,7 +446,6 @@ class BamScanner:
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
         try:
             for read in self.in_bam.fetch():
-                self._count_chrom_info(read)
                 if read.is_supplementary:
                     sup_aln_cigar = read.cigarstring
                     left_mat = self.pat_left_S.search(sup_aln_cigar)
@@ -461,6 +461,8 @@ class BamScanner:
                     self.representative_alignments_new_cigar[
                         "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
                     ] = sup_aln_cigar
+                else:
+                    self._count_chrom_info(read)
         except ValueError as e:
             print(
                 "BAM index file is not found in supplementary alignments!\n",
@@ -500,7 +502,7 @@ class BamScanner:
 
             for contig, (start, end) in self.bam_chrom_info.items():
                 alignment_segment.append(
-                    (contig, self.in_bam.fetch(region=f"{contig}:{start}-{end}"))
+                    (contig, self.in_bam.fetch(region=f"{contig}"))
                 )
 
             parallel_worker = ParallelWorker(

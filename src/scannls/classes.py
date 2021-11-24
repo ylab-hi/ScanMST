@@ -1513,12 +1513,10 @@ class ReadsConnecter(object):
         aln_list: List[Read],
         blat: Blat,
         logger: logger,
-        soft_len_cutoff: int = 30,
     ) -> None:
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
         self.aln_list = aln_list
-        self.soft_len_cutoff = soft_len_cutoff
         self.logger = logger
         self.blat = blat
 
@@ -1547,30 +1545,13 @@ class ReadsConnecter(object):
         insert_seq = None  # None means M is not consist with S
         match_flag = False
         if not is_align:
-            #
-            # insert_len = len(target_seq) - len(query_seq)
-            #
-            # insert_seq = (
-            #     target_seq[-insert_len:]
-            #     if s_position == "left"
-            #     else target_seq[:insert_len]
-            # )
-            #
-            # local_alignment_result = aligner(insert_seq, query_seq, method="local")[0]
-            #
-            # if (
-            #         local_alignment_result.start2 == 0
-            #         or local_alignment_result.end2 == len(query_seq)
-            # ):
-            #
-            #     return True, None
-            #
-            # else:
-            #     return True, insert_seq
             if len(target_seq) <= minimum_s_length:
                 return False, insert_seq
             else:
                 return True, insert_seq
+
+        if len(target_seq) <= minimum_s_length:
+            return match_flag, insert_seq
 
         if not same_strand:
             target_seq = str(Seq(target_seq).reverse_complement())
@@ -1591,28 +1572,6 @@ class ReadsConnecter(object):
 
         if query_identity > threshold:
             match_flag = True
-            #
-            # if len(query_seq) >= len(target_seq):
-            #     return match_flag, insert_seq
-            #
-            # if s_position == "left":
-            #     insert_len = len(_query_seq) - len(_query_seq.rstrip("-"))
-            # else:
-            #     insert_len = alignment_result.start2
-            #
-            # if insert_len > 0:
-            #     local_len = int(0.25 * len(_query_seq.rstrip("-"))) + insert_len
-            #     local_query_seq = _query_seq[-insert_len - local_len : -insert_len]
-            #     local_target_seq = _target_seq[-local_len:]
-            #     local_alignment_result = aligner(
-            #         local_query_seq, local_target_seq, method="local"
-            #     )
-            #     if local_alignment_result[0].end2 < local_len:
-            #         insert_seq = (
-            #             target_seq[:insert_len]
-            #             if s_position == "left"
-            #             else target_seq[-insert_len:]
-            #         )
 
         return match_flag, insert_seq
 
@@ -1755,17 +1714,13 @@ class ReadsConnecter(object):
             * (Read1, Read2) => mode-of-Read1, mode-of-Read2
             * (Read2, Read1) => mode-of-Read2, mode-of-Read1
         """
-        start_nodes = []
 
         # find start node and end node
-        for read in self.aln_list:
-            if (
-                read.lt_soft_len < self.soft_len_cutoff
-                or read.rt_soft_len < self.soft_len_cutoff
-            ):
-                start_nodes.append(read)
-            else:
-                self.candidate_nodes.append(read)
+        temp_list = sorted(
+            self.aln_list, key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
+        )
+        start_nodes = temp_list[:2]
+        self.candidate_nodes = temp_list[2:]
 
         start_read = start_nodes[0]
         end_read = start_nodes[1]
@@ -1826,7 +1781,8 @@ class ParallelWorker:
 
         with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
             for arg in args:
-                key = args[0]
+                key = arg[0]
+                self.logger.debug(f"ParallelWorker: {key}")
                 future = executor.submit(self.func, arg, **kwargs)
                 tasks[future] = key
 
