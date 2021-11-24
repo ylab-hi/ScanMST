@@ -94,9 +94,9 @@ def parse_args():
         help="Considering Non-canonical spliced sites",
     )
     draft_parser.add_argument(
-        "--log",
+        "--log_level",
         action="store",
-        dest="log",
+        dest="log_level",
         choices=["info", "debug", "trace"],
         default="info",
         help="set log level (default: %(default)s)",
@@ -347,7 +347,7 @@ def main():
     if options.sub_command == "draft":
         # add logger
         logger.remove()
-        logger.add(sys.stdout, level=options.log.upper())
+        logger.add(sys.stdout, level=options.log_level.upper())
         logger.info("port")
 
         # check external tools used
