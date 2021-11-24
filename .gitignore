@@ -20,3 +20,4 @@ blat/
 # bam
 *.bam
 *.sam
+/debuglog/

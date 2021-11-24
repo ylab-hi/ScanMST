@@ -1546,30 +1546,13 @@ class ReadsConnecter(object):
         insert_seq = None  # None means M is not consist with S
         match_flag = False
         if not is_align:
-            #
-            # insert_len = len(target_seq) - len(query_seq)
-            #
-            # insert_seq = (
-            #     target_seq[-insert_len:]
-            #     if s_position == "left"
-            #     else target_seq[:insert_len]
-            # )
-            #
-            # local_alignment_result = aligner(insert_seq, query_seq, method="local")[0]
-            #
-            # if (
-            #         local_alignment_result.start2 == 0
-            #         or local_alignment_result.end2 == len(query_seq)
-            # ):
-            #
-            #     return True, None
-            #
-            # else:
-            #     return True, insert_seq
             if len(target_seq) <= minimum_s_length:
-                return False, insert_seq
+                return match_flag, insert_seq
             else:
                 return True, insert_seq
+
+        if len(target_seq) <= minimum_s_length:
+            return match_flag, insert_seq
 
         if not same_strand:
             target_seq = str(Seq(target_seq).reverse_complement())
@@ -1590,28 +1573,6 @@ class ReadsConnecter(object):
 
         if query_identity > threshold:
             match_flag = True
-            #
-            # if len(query_seq) >= len(target_seq):
-            #     return match_flag, insert_seq
-            #
-            # if s_position == "left":
-            #     insert_len = len(_query_seq) - len(_query_seq.rstrip("-"))
-            # else:
-            #     insert_len = alignment_result.start2
-            #
-            # if insert_len > 0:
-            #     local_len = int(0.25 * len(_query_seq.rstrip("-"))) + insert_len
-            #     local_query_seq = _query_seq[-insert_len - local_len : -insert_len]
-            #     local_target_seq = _target_seq[-local_len:]
-            #     local_alignment_result = aligner(
-            #         local_query_seq, local_target_seq, method="local"
-            #     )
-            #     if local_alignment_result[0].end2 < local_len:
-            #         insert_seq = (
-            #             target_seq[:insert_len]
-            #             if s_position == "left"
-            #             else target_seq[-insert_len:]
-            #         )
 
         return match_flag, insert_seq
 
