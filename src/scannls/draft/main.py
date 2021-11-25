@@ -230,6 +230,7 @@ def detect_sv_from_cigar(
                     cvg=cvg,
                     gene_iv=gene_iv,
                     motif_required=motif_required,
+                    logger=logger,
                 )
 
                 if nls_type != "NA":
