@@ -1599,8 +1599,9 @@ class ReadsConnecter(object):
 
         insert_seq = None  # None means M is not consist with S
         match_flag = False
-        self.logger.trace(f"{len(query_seq)}")
-        self.logger.trace(f"{len(target_seq)}")
+        self.logger.trace(
+            f"query length ={len(query_seq)} target length ={len(target_seq)}"
+        )
         if not is_align:
             if len(target_seq) <= minimum_s_length:
                 return match_flag, insert_seq
