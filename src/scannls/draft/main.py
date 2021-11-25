@@ -18,6 +18,7 @@ from ..classes import ParallelWorker
 from ..classes import Series
 from ..utils import get_softclip_length
 from ..utils import reverse_complement
+from ..utils import write_series_to_file
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
 from .nls_inference import infer_nls_from_connected_reads
@@ -147,6 +148,7 @@ def _get_genome_fasta(ref_genome, logger):
 def _get_cvg_gene_iv(gtf, splice_bin, logger):
     try:
         cvg, gene_iv = extract_splice_sites(str(gtf), splice_bin)
+        logger.success(f"{gtf} loaded successfully")
     except IOError as e:
         logger.error(f"read GTF file {gtf} error!", e)
         raise SystemExit
@@ -526,16 +528,13 @@ def scanbam_run(
         if value.kind.name == "KEYWORD_ONLY"
     }
 
-    intact_series_list = []
     if parallel == 1:
+
         result = _scan_bam_helper("normal", **keyword_parameters_dict)
         current_output, intact_series_list = result
 
-        # parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
-        # result = parallel_worker.run("normal", **keyword_parameters_dict)
-        # intact_series_list.extend(result["normal"])
-
     else:
+        intact_series_list = []
         # create a temporary directory for storing temporary files of bam
         output = Path(output)
         temp_id = int(time.time_ns())
@@ -559,4 +558,7 @@ def scanbam_run(
         merge_cmd = f"samtools merge {output} {temp_dirname}/*.bam"
         subprocess.check_call(merge_cmd, shell=True)
 
+    write_series_to_file(
+        f"{output.parent.joinpath(output.stem)}_series.txt", intact_series_list
+    )
     return intact_series_list

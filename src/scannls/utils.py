@@ -80,3 +80,12 @@ def get_softclip_length(read):
         )
     else:
         return 0, "", -1, 0
+
+
+def write_series_to_file(series, file_name):
+    """
+    write series to file
+    """
+    with open(file_name, "w") as f:
+        for item in series:
+            f.write(str(item) + "\n")
