@@ -80,26 +80,3 @@ def get_softclip_length(read):
         )
     else:
         return 0, "", -1, 0
-
-
-def check_bam_sort(bam_file_header, logger):
-    """
-    check if the bam file is sorted
-    """
-    try:
-        return True if bam_file_header["HD"]["SO"] == "coordinate" else False
-    except KeyError:
-        logger.error("BAM file is not sorted")
-        raise SystemExit
-
-
-def count_chrom_info(read, chrom_info):
-    """
-    count the chrom and the chrom start and the chrom end
-    """
-    if read.reference_name in chrom_info:
-        if read.reference_end > chrom_info[read.reference_name][1]:
-            chrom_info[read.reference_name][1] = read.reference_end
-    else:
-        chrom_info[read.reference_name] = [read.reference_start, read.reference_end]
-    return chrom_info

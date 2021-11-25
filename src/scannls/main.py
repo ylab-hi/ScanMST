@@ -4,16 +4,13 @@ import argparse
 import sys
 import textwrap
 import time
-from pathlib import Path
 
 from loguru import logger
 
 from . import __version__
 from .classes import Blat
 from .classes import LengthAction
-from .draft.main import scan_bam
-from .draft.main2 import BamScanner
-from .draft.main2 import scan_run
+from .draft.main import scanbam_run
 from scannls.utils import external_tool_checking
 
 
@@ -377,22 +374,7 @@ def main():
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
 
-        # scan_bam(
-        #     input_bam=options.input,
-        #     mapq_cutoff=options.mapq,
-        #     output=options.output,
-        #     ref_genome=options.ref,
-        #     gtf=options.gtf,
-        #     splice_bin=options.splice_bin,
-        #     blat=blat,
-        #     logger=logger,
-        #     motif_required=motif_required,
-        #     parallel=options.parallel,
-        #     max_allowed_nm=options.max_allowed_nm,
-        #     min_soft_seg_len=options.min_soft_seg_len,
-        #     blat_ident_pct_cutoff=options.ident_cutoff,
-        # )
-        scan_run(
+        intact_series_list = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=options.tmp_dir,
@@ -411,23 +393,6 @@ def main():
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
-        #
-        # bam_scanner = BamScanner(
-        #     input_bam=Path(options.input),
-        #     mapq_cutoff=options.mapq,
-        #     output=Path(options.output),
-        #     ref_genome=Path(options.ref),
-        #     gtf=Path(options.gtf),
-        #     splice_in=options.splice_bin,
-        #     blat=blat,
-        #     logger=logger,
-        #     motif_required=motif_required,
-        #     parallel=options.parallel,
-        #     max_allowed_nm=options.max_allowed_nm,
-        #     min_soft_seg_len=options.min_soft_seg_len,
-        #     blat_ident_pct_cutoff=options.ident_cutoff,
-        # )
-        # intact_series_list = bam_scanner.run()
 
         logger.info("ScanNLS build running done")
         end = time.time()
