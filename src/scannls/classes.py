@@ -17,7 +17,6 @@ from typing import Union
 import psutil
 from align import aligner
 from Bio import SearchIO
-from Bio.Seq import Seq
 from loguru import logger
 
 from .draft.helper import cigar_validity
@@ -1120,6 +1119,9 @@ class Series(object):
             )
         return paired_breakpoints
 
+    def disable_blat_logger(self):
+        self.blat, self.logger = None, None
+
 
 class Blat(object):
     """
@@ -1128,7 +1130,13 @@ class Blat(object):
     """
 
     def __init__(
-        self, ref_2bit: str, logger: logger, port: int, output_dir: str
+        self,
+        ref_2bit: str,
+        logger: logger,
+        port: int,
+        output_dir: str,
+        fix_log_file=None,
+        is_start_server=True,
     ) -> None:
         """
         :param ref_2bit: the path of reference for blat alignment
@@ -1139,8 +1147,9 @@ class Blat(object):
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
-        self.is_start_server = True
+        self.is_start_server = is_start_server
         self.logger = logger
+        self.fix_log_file = fix_log_file
 
     @property
     def ref_dir(self) -> str:
@@ -1164,7 +1173,11 @@ class Blat(object):
         """
         the property for log_file, which is the path of log file for blat
         """
-        return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
+        return (
+            f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
+            if self.fix_log_file is None
+            else self.fix_log_file
+        )
 
     def is_ready(self) -> bool:
         """
@@ -1771,3 +1784,41 @@ class ReadsConnecter(object):
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
             _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=True)
+
+
+class ParallelWorker:
+    def __init__(self, func, logger, n_jobs=1):
+        self.func = func
+        self.logger = logger
+
+        self.n_jobs = self.setter_n_jobs(n_jobs)
+
+    def setter_n_jobs(self, n_jobs):
+        current_max_processor = os.cpu_count()
+        if n_jobs > current_max_processor:
+            self.logger.warning(
+                f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
+            )
+            return n_jobs  # the max processor is decided by ProcessPoolExecutor
+        else:
+            return n_jobs
+
+    def run(self, *args, **kwargs):
+        """
+        using concurrent.future to parallel process
+        """
+        tasks = {}
+        result = {}
+
+        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
+            for key in args:
+                self.logger.debug(f"ParallelWorker: {key}")
+                future = executor.submit(self.func, key, **kwargs)
+                tasks[future] = key
+
+            for future in futures.as_completed(tasks):
+                self.logger.trace(f"ParallelWorker: {tasks[future]} done")
+                key = tasks[future]
+                result[key] = future.result()
+
+        return result
