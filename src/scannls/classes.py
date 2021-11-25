@@ -1117,7 +1117,13 @@ class Blat(object):
     """
 
     def __init__(
-        self, ref_2bit: str, logger: logger, port: int, output_dir: str
+        self,
+        ref_2bit: str,
+        logger: logger,
+        port: int,
+        output_dir: str,
+        fix_log_file=None,
+        is_start_server=True,
     ) -> None:
         """
         :param ref_2bit: the path of reference for blat alignment
@@ -1128,8 +1134,9 @@ class Blat(object):
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
-        self.is_start_server = True
+        self.is_start_server = is_start_server
         self.logger = logger
+        self.fix_log_file = fix_log_file
 
     @property
     def ref_dir(self) -> str:
@@ -1153,7 +1160,11 @@ class Blat(object):
         """
         the property for log_file, which is the path of log file for blat
         """
-        return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
+        return (
+            f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
+            if self.fix_log_file is None
+            else self.fix_log_file
+        )
 
     def is_ready(self) -> bool:
         """

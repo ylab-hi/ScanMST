@@ -275,7 +275,7 @@ def _scan_bam_helper(
 ):
     from loguru import logger
 
-    logger.trace(f"{identified_key= } start")
+    logger.info(f"{identified_key= } start")
     output = Path(output)
     genome_fasta = _get_genome_fasta(ref_genome, logger)
 
@@ -291,7 +291,7 @@ def _scan_bam_helper(
 
     blat = Blat(two_bit, logger, port, tmp_dir, blat_logfile, False)
 
-    temp_id = int(time.time())
+    temp_id = int(time.time_ns())
 
     current_output = output.parent.joinpath(f"{identified_key}_{temp_id}_{output.name}")
 
@@ -458,6 +458,7 @@ def _scan_bam_helper(
                         gene_iv,
                         motif_required,
                     )
+                    series.disable_blat_logger()
                     nls_src_forms_list.append(series)
                     logger.debug(f"{series=}")
 
@@ -473,55 +474,6 @@ def _scan_bam_helper(
     subprocess.check_call("samtools index {}".format(current_output), shell=True)
     logger.debug(f"{nls_src_forms_list=}")
     return current_output, nls_src_forms_list
-
-
-def test(
-    identified_key,
-    *,
-    in_bam_path,
-    ref_genome,
-    gtf,
-    output,
-    header,
-    blat,
-    logger,
-    mapq_cutoff,
-    representative_alignments_new_cigar,
-    max_allowed_nm,
-    min_soft_seg_len,
-    blat_ident_pct_cutoff,
-    splice_bin,
-    motif_required,
-    candidate_ao_dict,
-):
-    """
-    print all parameter of the function
-    """
-    print(f"{identified_key=}")
-    print(f"{in_bam_path=}")
-    print(f"{ref_genome=}")
-    print(f"{gtf=}")
-    print(f"{output=}")
-    print(f"{header=}")
-    print(f"{blat=}")
-    print(f"{logger=}")
-    print(f"{mapq_cutoff=}")
-    print(f"{representative_alignments_new_cigar=}")
-    print(f"{max_allowed_nm=}")
-    print(f"{min_soft_seg_len=}")
-    print(f"{blat_ident_pct_cutoff=}")
-    print(f"{splice_bin=}")
-    print(f"{motif_required=}")
-    print(f"{candidate_ao_dict=}")
-    return identified_key
-
-
-def test2(*args, **kwargs):
-    for arg in args:
-        print(arg)
-    for key, value in kwargs.items():
-        print(key, value)
-    return args, kwargs
 
 
 def scan_run(
@@ -558,25 +510,8 @@ def scan_run(
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
     )
 
-    # identified_key,
-    # *,
-    # in_bam_path,
-    # ref_genome,
-    # gtf,
-    # output,
-    # header,
-    # blat,
-    # logger,
-    # mapq_cutoff,
-    # representative_alignments_new_cigar,
-    # max_allowed_nm,
-    # min_soft_seg_len,
-    # blat_ident_pct_cutoff,
-    # splice_bin,
-    # motif_required,
-    # candidate_ao_dict,
-
     representative_alignments_new_cigar = bam_scanner.iter_bam()
+
     header = bam_scanner.header
     candidate_ao_dict = {}
     logger.trace(f"{bam_scanner.bam_chrom_info=}")
@@ -593,35 +528,10 @@ def scan_run(
     if parallel == 1:
 
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
-        # result = parallel_worker.run("normal", **keyword_parameters_dict)
         result = parallel_worker.run("normal", **keyword_parameters_dict)
 
-        print(result)
         intact_series_list.extend(result["normal"])
 
-        #
-        # keys = ["normal"]
-        # tasks = {}
-        # result = {}
-        #
-        # with futures.ProcessPoolExecutor(max_workers=parallel) as executor:
-        #     for key in keys:
-        #         logger.debug(f"ParallelWorker: {key}")
-        #         future = executor.submit(test2, key, **keyword_parameters_dict)
-        #
-        #         tasks[future] = key
-        #
-        #     for future in futures.as_completed(tasks):
-        #         logger.trace(f"ParallelWorker: {tasks[future]} done")
-        #         key = tasks[future]
-        #         result[key] = future.result()
-        #
-        # print(result)
-
-        # tmp_output, intact_series_list = BamScanner._scan_bam_helper(
-        #     "normal", **keyword_parameters_dict
-        # )
-        # tmp_output.rename(self.output)
     else:
         # create a temporary directory for storing temporary files of bam
         output = Path(output)
