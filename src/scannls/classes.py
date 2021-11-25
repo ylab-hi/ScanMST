@@ -1856,3 +1856,40 @@ class ParallelWorker:
                     pbar.update(1)
 
         return result
+
+
+class MyLogger:
+    def __init__(self, contig, logger):
+        self.logger = logger
+        self.contig = contig
+
+    def debug(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.debug(msg)
+
+    def info(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.info(msg)
+
+    def warning(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.warning(msg)
+
+    def error(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.error(msg)
+
+    def critical(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.critical(msg)
+
+    def trace(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.trace(msg)
+
+    def success(self, msg):
+        msg = f"{self.contig}: {msg}"
+        self.logger.success(msg)
+
+    def complete(self):
+        self.logger.complete()

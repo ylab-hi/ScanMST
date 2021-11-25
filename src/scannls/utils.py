@@ -74,7 +74,7 @@ def get_softclip_length(read) -> tuple:
         return 0, "", -1, 0
 
 
-def write_series_to_file(series, file_name):
+def write_series_to_file(file_name, series):
     """
     write series to file
     """

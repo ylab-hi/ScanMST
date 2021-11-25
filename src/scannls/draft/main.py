@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import Any
 
 import pysam
-from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from ..classes import Blat
+from ..classes import MyLogger
 from ..classes import ParallelWorker
 from ..classes import Series
 from ..utils import get_softclip_length
@@ -277,6 +277,7 @@ def _scan_bam_helper(
 ):
     from loguru import logger
 
+    logger = MyLogger(identified_key, logger)
     logger.info(f"{identified_key= } start")
 
     output = Path(output)
