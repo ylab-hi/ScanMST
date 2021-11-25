@@ -1136,6 +1136,8 @@ class Series(object):
         _repr += ")"
         return _repr
 
+    __str__ = __repr__
+
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""
         paired_breakpoints = []
