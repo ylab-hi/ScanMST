@@ -243,26 +243,26 @@ class Read(object):
         indel_size = 0
         reference_match_size = 0
         read_match_size = 0
-        cigar_without_soft = []
+        cigartuples_without_soft = []
         for op_code, _len_ in cigartuples:
             if op_code == 0:  # M
                 reference_match_size += _len_
                 read_match_size += _len_
                 query_length += _len_
-                cigar_without_soft.append([0, _len_])
+                cigartuples_without_soft.append([0, _len_])
             elif op_code == 1:  # I
                 indel_size += -_len_
                 read_match_size += _len_
                 query_length += _len_
-                cigar_without_soft.append([1, _len_])
+                cigartuples_without_soft.append([1, _len_])
             elif op_code == 2:  # D
                 indel_size += _len_
                 reference_match_size += _len_
-                cigar_without_soft.append([2, _len_])
+                cigartuples_without_soft.append([2, _len_])
             elif op_code == 3:  # N
                 indel_size += _len_
                 reference_match_size += _len_
-                cigar_without_soft.append([3, _len_])
+                cigartuples_without_soft.append([3, _len_])
             elif op_code == 4:  # S
                 query_length += _len_
 
@@ -280,7 +280,7 @@ class Read(object):
             read_match_size,
             reference_match_size,
             indel_size,
-            cigar_without_soft,
+            cigartuples_without_soft,
             query_length,
             cigartuples,
         )
@@ -294,7 +294,7 @@ class Read(object):
             read_match_size,
             reference_match_size,
             indel_size,
-            cigar_without_soft,
+            cigartuples_without_soft,
             query_length,
             cigartuples,
         ) = Read._calculate_features(cigar_str)
@@ -312,7 +312,7 @@ class Read(object):
             read_match_size,
             reference_match_size,
             indel_size,
-            cigar_without_soft,
+            cigartuples_without_soft,
             query_length,
             cigartuples,
         )
@@ -434,7 +434,7 @@ class Insertion(Read):
             read_match_size,
             reference_match_size,
             indel_size,
-            cigar_without_soft,
+            cigartuples_without_soft,
             query_length,
             cigartuples,
         ) = Read._calculate_features(cigarstring)
@@ -451,7 +451,7 @@ class Insertion(Read):
             read_match_size,
             reference_match_size,
             indel_size,
-            cigar_without_soft,
+            cigartuples_without_soft,
             query_length,
             cigartuples,
         )
@@ -461,12 +461,13 @@ class Insertion(Read):
         # add attributes for insertion in order to be compatible with the class Node
         self.prev_breakpoint = None
         self.next_breakpoint = None
-        self.exons = None
         self.modes = None
         self.genes = None
         self.annotation_code = None
         self.splicing_code = None
         self.sr = None
+
+        self.exons, _ = self.get_exons_and_introns()
 
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
@@ -813,6 +814,9 @@ class Series(object):
 
     def add_node(self, node: Union[Node, Insertion]) -> None:
         self.nodes.append(node)
+
+    def disable_blat_logger(self):
+        self.logger, self.blat = None, None
 
     def init(
         self,
