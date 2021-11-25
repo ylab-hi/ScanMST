@@ -1,6 +1,8 @@
 import subprocess
+import time
 
 from Bio.Seq import Seq
+from loguru import logger
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
@@ -79,3 +81,14 @@ def write_series_to_file(series, file_name):
     with open(file_name, "w") as f:
         for item in series:
             f.write(str(item) + "\n")
+
+
+def timeit(func):
+    def wrapped(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        logger.debug("Function '{}' executed in {:f} s", func.__name__, end - start)
+        return result
+
+    return wrapped

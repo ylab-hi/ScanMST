@@ -6,6 +6,7 @@ import textwrap
 import time
 
 from loguru import logger
+from tqdm import tqdm
 
 from . import __version__
 from .classes import Blat
@@ -356,7 +357,12 @@ def main():
     if options.sub_command == "draft":
         # add logger
         logger.remove()
-        logger.add(sys.stdout, level=options.log.upper())
+        logger.add(
+            lambda msg: tqdm.write(msg, end=""),
+            level=options.log.upper(),
+            enqueue=True,
+            colorize=True,
+        )
 
         # check external tools used
         external_tool_checking(logger=logger)
@@ -370,7 +376,7 @@ def main():
         start = time.time()
         blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
         blat.start_server()
-        blat_logfile = blat.log_file
+        blat_info = blat.log_file, blat.is_start_server
         # CIGAR string refinement or add SV tag
         motif_required = not options.noncanonical
 
@@ -378,7 +384,7 @@ def main():
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=options.tmp_dir,
-            blat_logfile=blat_logfile,
+            blat_info=blat_info,
             in_bam_path=options.input,
             mapq_cutoff=options.mapq,
             output=options.output,

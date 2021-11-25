@@ -5,11 +5,13 @@ import copy
 import inspect
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import pysam
+from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
@@ -258,7 +260,7 @@ def _scan_bam_helper(
     two_bit,
     port,
     tmp_dir,
-    blat_logfile,
+    blat_info,
     in_bam_path,
     ref_genome,
     gtf,
@@ -276,6 +278,7 @@ def _scan_bam_helper(
     from loguru import logger
 
     logger.info(f"{identified_key= } start")
+
     output = Path(output)
     genome_fasta = _get_genome_fasta(ref_genome, logger)
 
@@ -288,8 +291,9 @@ def _scan_bam_helper(
         if identified_key == "normal"
         else in_bam_io_object.fetch(contig=identified_key)
     )
+    blat_log_file, blat_is_start_server = blat_info
 
-    blat = Blat(two_bit, logger, port, tmp_dir, blat_logfile, False)
+    blat = Blat(two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server)
 
     temp_id = int(time.time_ns())
 
@@ -477,6 +481,7 @@ def _scan_bam_helper(
 
     subprocess.check_call("samtools index {}".format(current_output), shell=True)
     logger.debug(f"{nls_src_forms_list=}")
+    logger.complete()
     return current_output, nls_src_forms_list
 
 
@@ -484,7 +489,7 @@ def scanbam_run(
     two_bit,
     port,
     tmp_dir,
-    blat_logfile,
+    blat_info,
     in_bam_path,
     mapq_cutoff,
     output,

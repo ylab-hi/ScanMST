@@ -19,6 +19,7 @@ import psutil
 from align import aligner
 from Bio import SearchIO
 from loguru import logger
+from tqdm import tqdm
 
 from .draft.helper import cigar_validity
 from .draft.nls_inference import infer_nls_from_connected_reads
@@ -1839,15 +1840,19 @@ class ParallelWorker:
         tasks = {}
         result = {}
 
-        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-            for key in args:
-                self.logger.debug(f"ParallelWorker: {key}")
-                future = executor.submit(self.func, key, **kwargs)
-                tasks[future] = key
+        with tqdm(
+            total=len(args), desc=f"ParallelWorker[{self.func.__name__}]", unit="contig"
+        ) as pbar:
+            with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
+                for key in args:
+                    self.logger.debug(f"ParallelWorker: {key}")
+                    future = executor.submit(self.func, key, **kwargs)
+                    tasks[future] = key
 
-            for future in futures.as_completed(tasks):
-                self.logger.trace(f"ParallelWorker: {tasks[future]} done")
-                key = tasks[future]
-                result[key] = future.result()
+                for future in futures.as_completed(tasks):
+                    self.logger.trace(f"ParallelWorker: {tasks[future]} done")
+                    key = tasks[future]
+                    result[key] = future.result()
+                    pbar.update(1)
 
         return result
