@@ -7,7 +7,6 @@ import random
 import re
 import subprocess
 import time
-from concurrent import futures
 from multiprocessing import Process
 from typing import Any
 from typing import List
@@ -364,7 +363,7 @@ class Read(object):
             introns = list(zip(_positions[::2], _positions[1::2]))
         return exons, introns
 
-    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
+    def splice_site_checker(self, genome_fasta, fraction_cutoff=0) -> bool:
         """check whether the fraction of canonical splice site usage in read reference matched part is bigger than 'fraction_cutoff' or not
         :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
         :param fraction_cutoff: fraction of canonical splice sites used in the putative introns inferred from the CIGAR
@@ -402,7 +401,7 @@ class Read(object):
             return False
 
 
-class NoneInsertion(Read):
+class NovelInsertion(Read):
     """
     the class is used to represent reads insertion whose hit is 0 or >1
     """
@@ -410,6 +409,12 @@ class NoneInsertion(Read):
     def __init__(self, hit_num: int, query_sequence: str):
         self.query_sequence = query_sequence
         self.hit = hit_num
+
+    def __repr__(self):
+        return f"NovelInsertion({self.query_sequence}:{self.hit})"
+
+    def reverse_completement_query(self):
+        self.query_sequence = reverse_complement(self.query_sequence)
 
 
 class Insertion(Read):
@@ -487,6 +492,9 @@ class Insertion(Read):
     def reverse_completement_query(self):
         self.query_sequence = reverse_complement(self.query_sequence)
 
+    def reverse_strand(self):
+        self.strand = "-" if self.strand == "+" else "+"
+
 
 class LengthAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -551,7 +559,7 @@ class Node(object):
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
         sr: Optional[int] = None,
-        insertion_info: Optional[Tuple[bool, Union[Insertion, NoneInsertion]]] = None,
+        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
     ) -> None:
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
@@ -600,7 +608,7 @@ class Node(object):
 
     def __str__(self) -> str:
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint})"
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
     def is_next_node(self, other) -> bool:
         if self.next_breakpoint == other.prev_breakpoint:
@@ -632,7 +640,7 @@ class Node(object):
             return _introns
 
 
-class Event:
+class Event(object):
     """
     the Event class is used to parse the return value from the function nls_inference
     """
@@ -815,9 +823,6 @@ class Series(object):
     def add_node(self, node: Union[Node, Insertion]) -> None:
         self.nodes.append(node)
 
-    def disable_blat_logger(self):
-        self.logger, self.blat = None, None
-
     def init(
         self,
         event_list,
@@ -827,7 +832,6 @@ class Series(object):
         cvg,
         gene_iv,
         motif_required,
-        update_bps=False,
     ) -> None:
         """add event list as Node to self.nodes"""
         event_list = [
@@ -876,6 +880,7 @@ class Series(object):
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
+                            logger=self.logger,
                         )
                     )
 
@@ -885,6 +890,7 @@ class Series(object):
 
                     if event.strand1 != event.strand2:
                         insertion.reverse_completement_query()
+                        insertion.reverse_strand()
 
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
@@ -897,11 +903,13 @@ class Series(object):
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
+                            logger=self.logger,
                         )
                     )
 
-                    if event.strand1 != event.strand2:
+                    if event.strand1 != event.strand2 and event.strand1 == "+":
                         insertion.reverse_completement_query()
+                        insertion.reverse_strand()
 
                     if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
                         # only add read1
@@ -917,10 +925,14 @@ class Series(object):
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
-                        self.logger.trace(f"Add {insertion=} to Series")
+                        self.logger.trace(f"Add {insertion} to Series")
                         self.add_node(insertion)
 
                 else:  # no hits or multiple hits
+
+                    if event.strand1 == "-":
+                        insertion.reverse_completement_query()
+                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
                     # only add read1 with insertion
                     read1_node = event.update_node_info(flag, read1_node, insertion)
                     self.add_node(read1_node)
@@ -928,6 +940,7 @@ class Series(object):
             else:
                 # add read 1 with on insertion
                 read1_node = event.update_node_info(False, read1_node, None, False)
+
                 self.add_node(read1_node)
 
             # add final node
@@ -1115,13 +1128,7 @@ class Blat(object):
     """
 
     def __init__(
-        self,
-        ref_2bit: str,
-        logger: logger,
-        port: int,
-        output_dir: str,
-        fix_log_file=None,
-        is_start_server=True,
+        self, ref_2bit: str, logger: logger, port: int, output_dir: str
     ) -> None:
         """
         :param ref_2bit: the path of reference for blat alignment
@@ -1132,9 +1139,8 @@ class Blat(object):
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
-        self.is_start_server = is_start_server
+        self.is_start_server = True
         self.logger = logger
-        self.fix_log_file = fix_log_file
 
     @property
     def ref_dir(self) -> str:
@@ -1158,11 +1164,7 @@ class Blat(object):
         """
         the property for log_file, which is the path of log file for blat
         """
-        return (
-            f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
-            if self.fix_log_file is None
-            else self.fix_log_file
-        )
+        return f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
 
     def is_ready(self) -> bool:
         """
@@ -1341,13 +1343,13 @@ class Blat(object):
         flag = False  # flag for checking the insertion  if its hit is only one
 
         if len(insert_seq) < align_len_threshold:
-            return flag, NoneInsertion(hit_num=0, query_sequence=insert_seq)
+            return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)
         try:
             blat = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
-            return flag, NoneInsertion(hit_num=0, query_sequence=insert_seq)
+            return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         hsps = blat.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
@@ -1379,7 +1381,7 @@ class Blat(object):
                 query_sequence=insert_seq,
             )
         else:
-            return flag, NoneInsertion(hit_num=hit, query_sequence=insert_seq)
+            return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
 
     @staticmethod
     def _remove(file):
@@ -1562,7 +1564,7 @@ class ReadsConnecter(object):
         self.logger.trace(f"{len(target_seq)}")
         if not is_align:
             if len(target_seq) <= minimum_s_length:
-                return False, insert_seq
+                return match_flag, insert_seq
             else:
                 return True, insert_seq
 
@@ -1570,7 +1572,7 @@ class ReadsConnecter(object):
             return match_flag, insert_seq
 
         if not same_strand:
-            target_seq = str(Seq(target_seq).reverse_complement())
+            target_seq = reverse_complement(target_seq)
 
         alignment_result = aligner(query_seq, target_seq, method="semi-global")[0]
         _query_seq = alignment_result.seq1.decode("utf-8")
@@ -1769,41 +1771,3 @@ class ReadsConnecter(object):
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
             _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=True)
-
-
-class ParallelWorker:
-    def __init__(self, func, logger, n_jobs=1):
-        self.func = func
-        self.logger = logger
-
-        self.n_jobs = self.setter_n_jobs(n_jobs)
-
-    def setter_n_jobs(self, n_jobs):
-        current_max_processor = os.cpu_count()
-        if n_jobs > current_max_processor:
-            self.logger.warning(
-                f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
-            )
-            return n_jobs  # the max processor is decided by ProcessPoolExecutor
-        else:
-            return n_jobs
-
-    def run(self, *args, **kwargs):
-        """
-        using concurrent.future to parallel process
-        """
-        tasks = {}
-        result = {}
-
-        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-            for key in args:
-                self.logger.debug(f"ParallelWorker: {key}")
-                future = executor.submit(self.func, key, **kwargs)
-                tasks[future] = key
-
-            for future in futures.as_completed(tasks):
-                self.logger.trace(f"ParallelWorker: {tasks[future]} done")
-                key = tasks[future]
-                result[key] = future.result()
-
-        return result

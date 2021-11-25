@@ -2,7 +2,7 @@ import subprocess
 
 from Bio.Seq import Seq
 
-__funcs__ = {"reverse_complement"}
+__funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
 from scannls.exception import ToolNotFoundError
 
