@@ -61,7 +61,6 @@ def infer_nls_from_connected_reads(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    logger: logger,
 ) -> tuple:
     """
     :param read_lt: Read 1

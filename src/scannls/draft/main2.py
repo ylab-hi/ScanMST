@@ -221,15 +221,15 @@ def detect_sv_from_cigar(
                     strands,
                     genes,
                 ) = infer_nls_from_connected_reads(
-                    _lt,
-                    _rt,
-                    _lt_mode,
-                    _rt_mode,
-                    splice_bin,
-                    genome_fasta,
-                    cvg,
-                    gene_iv,
-                    motif_required,
+                    read_lt=_lt,
+                    read_rt=_rt,
+                    lt_mode=_lt_mode,
+                    rt_mode=_rt_mode,
+                    splice_bin=splice_bin,
+                    genome_fasta=genome_fasta,
+                    cvg=cvg,
+                    gene_iv=gene_iv,
+                    motif_required=motif_required,
                 )
 
                 if nls_type != "NA":
