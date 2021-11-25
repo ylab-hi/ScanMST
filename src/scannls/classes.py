@@ -417,6 +417,17 @@ class NovelInsertion(Read):
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
+class MicroHomology:
+    def __init__(self, query_sequence: str):
+        self.query_sequence = query_sequence
+
+    def __repr__(self):
+        return f"MicroHomology({self.query_sequence})"
+
+    def reverse_completement_query(self):
+        self.query_sequence = reverse_complement(self.query_sequence)
+
+
 class Insertion(Read):
     """
     the class is used to represent reads insertion whose hit is 1
@@ -717,6 +728,9 @@ class Event(object):
     def has_insertion(self) -> bool:
         return True if self.insertion_info[0].startswith("+") else False
 
+    def has_microhomology(self) -> bool:
+        return True if self.insertion_info[0].startswith("-") else False
+
     def is_same_strand(self) -> bool:
         return self.strand1 == self.strand2
 
@@ -754,7 +768,7 @@ class Event(object):
         self,
         flag: bool,
         new_node: Node,
-        insertion: Union[Insertion, None],
+        insertion: Union[Insertion, None, MicroHomology],
         is_update_insertion_info: bool = True,
     ) -> Node:
         """
@@ -937,10 +951,20 @@ class Series(object):
                     read1_node = event.update_node_info(flag, read1_node, insertion)
                     self.add_node(read1_node)
             # no insertion
-            else:
+            elif event.has_microhomology():
                 # add read 1 with on insertion
-                read1_node = event.update_node_info(False, read1_node, None, False)
+                microhomology = MicroHomology(event.insertion_seq1)
 
+                if event.strand1 == "-":
+                    microhomology.reverse_completement_query()
+
+                read1_node = event.update_node_info(
+                    False, read1_node, microhomology, False
+                )
+                self.add_node(read1_node)
+
+            else:
+                read1_node = event.update_node_info(False, read1_node, None, False)
                 self.add_node(read1_node)
 
             # add final node
