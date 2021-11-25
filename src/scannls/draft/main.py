@@ -561,7 +561,7 @@ def scanbam_run(
             temp_bamfiles.append(contig_output)
             intact_series_list.extend(contig_series_list)
 
-        merge_cmd = f"samtools merge {output} {temp_dirname}/*.bam"
+        merge_cmd = f"samtools merge -f {output} {temp_dirname}/*.bam"
         subprocess.check_call(merge_cmd, shell=True)
 
     write_series_to_file(

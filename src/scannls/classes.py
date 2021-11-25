@@ -1839,13 +1839,13 @@ class ParallelWorker:
         """
         tasks = {}
         result = {}
-
+        self.logger.info(f"ParallelWorker: {self.n_jobs} jobs")
         with tqdm(
             total=len(args), desc=f"ParallelWorker[{self.func.__name__}]", unit="contig"
         ) as pbar:
             with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
                 for key in args:
-                    self.logger.debug(f"ParallelWorker: {key}")
+                    self.logger.debug(f"ParallelWorker: {key} submitted")
                     future = executor.submit(self.func, key, **kwargs)
                     tasks[future] = key
 
