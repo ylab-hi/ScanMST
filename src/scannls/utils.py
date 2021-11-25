@@ -26,22 +26,12 @@ def external_tool_checking(logger) -> None:
             logger.success("Checking for '" + tool + "': found ")
 
 
-def get_softclip_length(read):
-    """0 => M
-    1 => I
-    2 => D
-    3 => N
-    4 => S
-    5 => H
-    Name changes:
-    reference_start  == pos
-    reference_end    == aend
-    query_length     == rlen
-    reference_length == alen
-    query_sequence   == seq
-    return: length of soft-clipped part,sequence of soft-clipped part,
-            the connection point of soft-clipped part (left/right), left/right soft-clipped part:
-            0:other; 2:left[SM]; 1:right[MS]
+def get_softclip_length(read) -> tuple:
+    """Extract softclipped sequence information from input read
+    :param read: reads from pysam
+    :type read: pysam.libcalignedsegment.AlignedSegment
+    :return: length of soft-clipped part, sequence of soft-clipped part, the connection point of soft-clipped part (left/right), mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
+    :rtype: tuple
     """
     if read.cigartuples[0][0] == 4:
         # there are soft-clipped segments in left and right both
@@ -51,7 +41,7 @@ def get_softclip_length(read):
                 return (
                     read.cigartuples[0][1],
                     read.query_sequence[: read.cigartuples[0][1]],
-                    read.ref_start,
+                    read.reference_start,
                     2,
                 )
             # length of right soft-clipped segment is bigger
@@ -67,7 +57,7 @@ def get_softclip_length(read):
             return (
                 read.cigartuples[0][1],
                 read.query_sequence[: read.cigartuples[0][1]],
-                read.ref_start,
+                read.reference_start,
                 2,
             )
     # there are soft-clipped segments in right only
@@ -80,12 +70,3 @@ def get_softclip_length(read):
         )
     else:
         return 0, "", -1, 0
-
-
-def write_series_to_file(series, file_name):
-    """
-    write series to file
-    """
-    with open(file_name, "w") as f:
-        for item in series:
-            f.write(str(item) + "\n")
