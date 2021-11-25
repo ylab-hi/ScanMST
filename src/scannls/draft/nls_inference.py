@@ -62,7 +62,6 @@ def infer_nls_from_connected_reads(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    update_bps: bool = False,
 ) -> tuple:
     """
     :param read_lt: Read 1
@@ -74,7 +73,6 @@ def infer_nls_from_connected_reads(
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
-    :param update_bps: if canonical splice sites, update breakpoints to fit the splice sites
     :return: putative event from reads-pair
     .. note::
         putative event examples:

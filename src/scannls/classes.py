@@ -876,7 +876,6 @@ class Series(object):
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            update_bps=update_bps,
                         )
                     )
 
@@ -898,7 +897,6 @@ class Series(object):
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            update_bps=update_bps,
                         )
                     )
 
