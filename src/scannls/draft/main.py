@@ -5,7 +5,6 @@ import copy
 import inspect
 import re
 import subprocess
-import sys
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -258,6 +257,7 @@ def detect_sv_from_cigar(
 def _scan_bam_helper(
     identified_key,
     *,
+    running_mode,
     two_bit,
     port,
     tmp_dir,
@@ -277,33 +277,23 @@ def _scan_bam_helper(
 ):
     from loguru import logger
 
-    logger = MyLogger(identified_key, logger)
+    if running_mode == "parallel":
+        logger = MyLogger(identified_key, logger)
+
     logger.info(f"{identified_key= } start")
 
     output = Path(output)
+
     genome_fasta = _get_genome_fasta(ref_genome, logger)
-
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin, logger)
-
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
+    chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
 
-    chrom_bam_io_object = (
-        in_bam_io_object.fetch()
-        if identified_key == "normal"
-        else in_bam_io_object.fetch(contig=identified_key)
-    )
     blat_log_file, blat_is_start_server = blat_info
-
     blat = Blat(two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server)
 
     temp_id = int(time.time_ns())
-
-    current_output = (
-        output
-        if identified_key == "normal"
-        else output.parent.joinpath(f"{identified_key}_{temp_id}_{output.name}")
-    )
-
+    current_output = output.parent.joinpath(f"{identified_key}_{temp_id}_{output.name}")
     output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
     nls_src_forms_list = []
@@ -522,57 +512,64 @@ def scanbam_run(
         min_soft_seg_len=min_soft_seg_len,
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
     )
-
+    # iterate over all read of the bam file
     representative_alignments_new_cigar = bam_scanner.iter_bam()
+    # get the chromosome name we want to scan
+    filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
+    filter_chrom_list.extend(["chrX", "chrY"])
 
+    contigs = [
+        contig
+        for contig in bam_scanner.bam_chrom_info.keys()
+        if contig in filter_chrom_list
+    ]
+
+    logger.info(f" Processing {contigs=}")
+    # get the header of the bam file in order to write the new bam file
     header = bam_scanner.header
-    # logger.trace(f"{bam_scanner.bam_chrom_info=}")
-
+    # get running mode
+    running_mode = "normal" if parallel == 1 else "parallel"
+    # get current local namespace
     self_local_namespace = copy.copy(locals())
-
+    # get the keyword arguments for the _scan_bam_helper function
     keyword_parameters_dict = {
         key: self_local_namespace[key]
         for key, value in inspect.signature(_scan_bam_helper).parameters.items()
         if value.kind.name == "KEYWORD_ONLY"
     }
 
+    # create a temporary directory for storing temporary files of bam
+    output = Path(output)
+    temp_id = int(time.time_ns())
+    temp_dirname = output.parent.joinpath(f"temp_{temp_id}")
+    temp_dirname.mkdir()
+    temp_output = temp_dirname.joinpath(output.name)
+
+    keyword_parameters_dict["output"] = temp_output
+
+    intact_series_list = []
+    temp_bamfiles = []
+
     if parallel == 1:
 
-        result = _scan_bam_helper("normal", **keyword_parameters_dict)
-        current_output, intact_series_list = result
+        for contig in contigs:
+            result = _scan_bam_helper(contig, **keyword_parameters_dict)
+            contig_output, contig_series_list = result
+            temp_bamfiles.append(contig_output)
+            intact_series_list.extend(contig_series_list)
 
     else:
-        intact_series_list = []
-        # create a temporary directory for storing temporary files of bam
-        output = Path(output)
-        temp_id = int(time.time_ns())
-        temp_dirname = output.parent.joinpath(f"temp_{temp_id}")
-        temp_dirname.mkdir()
-        temp_output = temp_dirname.joinpath(output.name)
 
-        keyword_parameters_dict["output"] = temp_output
-
-        filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
-        filter_chrom_list.extend(["chrX", "chrY"])
-
-        contigs = [
-            contig
-            for contig in bam_scanner.bam_chrom_info.keys()
-            if contig in filter_chrom_list
-        ]
-
-        logger.trace(f"{contigs=}")
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)
 
-        temp_bamfiles = []
         for contig in contigs:
             contig_output, contig_series_list = result[contig]
             temp_bamfiles.append(contig_output)
             intact_series_list.extend(contig_series_list)
 
-        merge_cmd = f"samtools merge -f {output} {temp_dirname}/*.bam"
-        subprocess.check_call(merge_cmd, shell=True)
+    merge_cmd = f"samtools merge -f {output} {temp_dirname}/*.bam"
+    subprocess.check_call(merge_cmd, shell=True)
 
     write_series_to_file(
         f"{output.parent.joinpath(output.stem)}_series.txt", intact_series_list

@@ -1817,6 +1817,18 @@ class ReadsConnecter(object):
 
 
 class ParallelWorker:
+    """
+    the ParallelWorker class is used to run function in parallel
+
+
+
+    >>> parallel_worker = ParallelWorker(func=func, args=args, kwargs=kwargs)
+
+    """
+
+    """
+    """
+
     def __init__(self, func, logger, n_jobs=1):
         self.func = func
         self.logger = logger
@@ -1859,6 +1871,13 @@ class ParallelWorker:
 
 
 class MyLogger:
+    """
+    wrapper for logger in order to use in multiprocessing
+    to show contig name in logging information before message.
+    However, there is no way to get concrete line number the code is running.
+    Hence, it is difficult to debug in parallel mode
+    """
+
     def __init__(self, contig, logger):
         self.logger = logger
         self.contig = contig
