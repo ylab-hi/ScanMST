@@ -655,6 +655,13 @@ class Node(object):
 class Event(object):
     """
     the Event class is used to parse the return value from the function nls_inference
+    TODO: add docstring
+    >>> args, kwargs = [], {}
+    >>> event = Event(infer_nls_from_connected_reads(*args, **kwargs))
+    >>> event.sv_type
+    TRA
+    >>> event
+    Event(TRA, )
     """
 
     def __init__(self, event):
@@ -1156,6 +1163,30 @@ class Blat(object):
     """
     the Blat class is used to integrate the blat service (gfServer and
     gfClient) so that we can query certain sequences from the genome shamelessly
+
+    :param ref_2bit: the path of reference for blat alignment
+    :param logger: the logger for logging
+    :param port: the port of server service for blat alignment
+    :param output_dir: the path for storing alignment result
+
+    >>> from  loguru import   logger
+    >>> blat = Blat(ref_2bit='reference.2bit', logger=logger, output_dir='/tmp')
+    >>> blat.is_running()
+    True
+    >>> blat.stop_server()
+    >>> blat.is_running()
+    False
+    >>> blat.start_server()
+    >>> blat.is_running()
+    True
+    >>> blat.query(in_seq='ATCGTCC')
+    /tmp/tmp_gfClient_in_seq_out.psl
+    >>> blat.query_insertion(insert_seq='ATCGTCC')
+    True, Insertion(chr1:1-9:+,ATCGTCC, None, TPA, chr1:1, chr1:9 )
+    >>> blat.query_insertion(insert_seq='ATCCATCC')
+    False, NovelInsertion(ATCCATCC:0)
+    >>> blat.query_insertion(insert_seq="ATCG")
+    False, NovelInsertion(ATCG:10)
     """
 
     def __init__(
@@ -1167,12 +1198,7 @@ class Blat(object):
         fix_log_file=None,
         is_start_server=True,
     ) -> None:
-        """
-        :param ref_2bit: the path of reference for blat alignment
-        :param logger: the logger for logging
-        :param port: the port of server service for blat alignment
-        :param output_dir: the path for storing alignment result
-        """
+
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
@@ -1563,6 +1589,20 @@ class Blat(object):
 class ReadsConnecter(object):
     """
     the ReadsConnecter class is used to connect the reads and identify the mode of the reads
+
+    :param aln_list: the list of the alignment
+    :param blat: `class.Blat` for the BLAT search
+    :param logger: `loguru.logger` for logging
+
+    >>> from loguru import  logger
+    >>> aln_list = []
+    >>> blat = Blat(ref_2bit='reference.2bit', logger= logger, port=88888, output_dir='/tmp')
+    >>> readconnecter = ReadsConnecter(aln_list=aln_list, blat=blat, logger=logger)
+    >>> readconnecter.run()
+    >>> readconnecter.reads_chain
+    [Read(chr1, 6524193, 6524850, +, 60, 8), Read(chr1, 6522473, 6522883, +, 60, 4)]
+    >>> readconnecter.read_pair_mode_dict
+    {(Read(chr1, 6524193, 6524850, +, 60, 8), Read(chr1, 6522473, 6522883, +, 60, 4)): (1, 2)}
     """
 
     def __init__(
@@ -1571,6 +1611,7 @@ class ReadsConnecter(object):
         blat: Blat,
         logger: logger,
     ) -> None:
+
         self.reads_chain, self.candidate_nodes = [], []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}
         self.aln_list = aln_list
@@ -1819,23 +1860,38 @@ class ReadsConnecter(object):
 class ParallelWorker:
     """
     the ParallelWorker class is used to run function in parallel
+    args include the unique parameter of the function and  keyword arguments include
+    the common parameters of the function
 
 
-
-    >>> parallel_worker = ParallelWorker(func=func, args=args, kwargs=kwargs)
-
+    :param func: the function to be run in parallel
+    :param n_jobs: the number of jobs to run in parallel
+    :param logger: the logger object
+    >>> from loguru import logger
+    >>> def func(x, *, y=1):
+    ...     z = x + y
+    ...     return z
+    >>> args, kwargs = [1, 2, 3], {'y': 4}
+    >>> n_jobs = 3
+    >>> parallel_worker = ParallelWorker(func=func, logger=logger, n_jobs=n_jobs)
+    >>> result = parallel_worker.run(*args, **kwargs)
+    >>> result
+    {1: 5, 2: 6, 3: 7}
     """
 
     """
     """
 
-    def __init__(self, func, logger, n_jobs=1):
+    def __init__(self, func, logger, n_jobs: int = 1):
         self.func = func
         self.logger = logger
 
         self.n_jobs = self.setter_n_jobs(n_jobs)
 
-    def setter_n_jobs(self, n_jobs):
+    def setter_n_jobs(self, n_jobs: int) -> int:
+        """
+        set the number of jobs to run in parallel in terms of cpu cores
+        """
         current_max_processor = os.cpu_count()
         if n_jobs > current_max_processor:
             self.logger.warning(
@@ -1845,7 +1901,7 @@ class ParallelWorker:
         else:
             return n_jobs
 
-    def run(self, *args, **kwargs):
+    def run(self, *args, **kwargs) -> dict:
         """
         using concurrent.future to parallel process
         """

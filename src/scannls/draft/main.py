@@ -13,6 +13,7 @@ from typing import Any
 import pysam
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
+from tqdm import tqdm
 
 from ..classes import Blat
 from ..classes import MyLogger
@@ -305,6 +306,7 @@ def _scan_bam_helper(
 
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
+        logger.trace(f"{read.query_name= } {read.query_sequence=} {read.cigarstring=}")
         if (
             read.mapq >= mapq_cutoff
             and not read.is_secondary
