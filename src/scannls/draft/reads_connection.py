@@ -104,9 +104,10 @@ def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> 
                 Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa)
             )
 
-    if not chimeric_aln_list:
+    if len(chimeric_aln_list) < 1 + len(chimeric_aln):
         return [], {}
     else:
+
         read_connecter = ReadsConnecter(
             aln_list=chimeric_aln_list, blat=blat, logger=logger
         )

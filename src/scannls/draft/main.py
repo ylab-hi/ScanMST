@@ -108,7 +108,7 @@ class BamScanner:
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
-
+        self.logger.info("Iter bam file and Extracting supplementary alignments")
         try:
             for read in self.in_bam.fetch():
                 if read.is_supplementary:
@@ -526,7 +526,7 @@ def scanbam_run(
     representative_alignments_new_cigar = bam_scanner.iter_bam()
 
     header = bam_scanner.header
-    logger.trace(f"{bam_scanner.bam_chrom_info=}")
+    # logger.trace(f"{bam_scanner.bam_chrom_info=}")
 
     self_local_namespace = copy.copy(locals())
 
@@ -552,8 +552,16 @@ def scanbam_run(
 
         keyword_parameters_dict["output"] = temp_output
 
-        contigs = bam_scanner.bam_chrom_info.keys()
+        filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
+        filter_chrom_list.extend(["chrX", "chrY"])
 
+        contigs = [
+            contig
+            for contig in bam_scanner.bam_chrom_info.keys()
+            if contig in filter_chrom_list
+        ]
+
+        logger.trace(f"{contigs=}")
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)
 
