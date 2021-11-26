@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import time
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -273,7 +274,6 @@ def _scan_bam_helper(
     blat_ident_pct_cutoff,
     splice_bin,
     motif_required,
-    candidate_ao_dict,
 ):
     from loguru import logger
 
@@ -307,6 +307,9 @@ def _scan_bam_helper(
     output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
     nls_src_forms_list = []
+    candidate_ins_dict = defaultdict(int)
+    candidate_ao_dict = defaultdict(int)
+
     pat_left_S = re.compile(r"^(\d+)S")
     pat_right_S = re.compile(r"(\d+)S$")
 
@@ -451,8 +454,8 @@ def _scan_bam_helper(
                             f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                         )
 
-                        candidate_ao_dict[
-                            f"{_type}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:{_end_pos}\t{_strand1}{_strand2}"
+                        candidate_ins_dict[
+                            f"{_type}\t{_anno}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:{_end_pos}\t{_strand1}{_strand2}"
                         ] += 1
 
                 if nls_event_list:
@@ -523,7 +526,6 @@ def scanbam_run(
     representative_alignments_new_cigar = bam_scanner.iter_bam()
 
     header = bam_scanner.header
-    candidate_ao_dict = {}
     logger.trace(f"{bam_scanner.bam_chrom_info=}")
 
     self_local_namespace = copy.copy(locals())
