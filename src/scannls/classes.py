@@ -83,6 +83,7 @@ class Path(object):
 
 class Read(object):
     """build a read class for storing information of every junction read
+
     :param chrom: chromosome of genome
     :type chrom: str
     :param ref_start: start position of chimeric read
@@ -403,22 +404,51 @@ class Read(object):
 
 
 class NovelInsertion(Read):
-    """
-    the class is used to represent reads insertion whose hit is 0 or >1
+    """the class is used to represent reads insertion whose hit is 0 or >1
+
+    :Example:
+
+    >>> novel_insertion = NovelInsertion(hit_num=0, query_sequence='ATCA')
+    >>> novel_insertion
+    NovelInsertion(ATCA:0)
+    >>> novel_insertion.query_sequence
+    ATCA
+    >>> novel_insertion.hit_num
+    0
+
+    .. note::
+        `NovelInsertion` is a subclass of :class:`Read`, and siblings of :class:`Insertion`
+
+    .. seealso::
+        :class:`Insertion`
     """
 
     def __init__(self, hit_num: int, query_sequence: str):
         self.query_sequence = query_sequence
-        self.hit = hit_num
+        self.hit_num = hit_num
 
     def __repr__(self):
-        return f"NovelInsertion({self.query_sequence}:{self.hit})"
+        return f"NovelInsertion({self.query_sequence}:{self.hit_num})"
 
     def reverse_completement_query(self):
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
 class MicroHomology:
+    """the class is used to represent microhomology
+
+    :Example:
+
+    >>> microhomology = MicroHomology(query_sequence="ATCA")
+    >>> microhomology
+    MicroHomology(ATCA)
+    >>> microhomology.query_sequence
+    ATCA
+
+    .. seealso::
+        :class:`Insertion` and :class:`NovelInsertion`
+    """
+
     def __init__(self, query_sequence: str):
         self.query_sequence = query_sequence
 
@@ -432,6 +462,29 @@ class MicroHomology:
 class Insertion(Read):
     """
     the class is used to represent reads insertion whose hit is 1
+
+    :param chrom: chromosome of genome
+    :param ref_start: start position of chimeric read
+    :param strand: direction of chimeric read (-|+)
+    :param cigarstring: cigar string of chimeric read (-|+)
+    :param mapq: MAPQ of chimeric read
+    :param nm: number of mismatches of chimeric read
+    :param query_sequence: read sequence in the BAM file
+
+    :Example:
+
+    >>> insertion = Insertion(hit_num=1, chrom= '1', ref_start=1, strand='+', cigarstring='1S1M1S',
+    ...                       mapq=60, nm=0, query_sequence='ATCA')
+
+    >>> insertion
+    Insertion(1:1-4:+, 1-2|2-3, TPA, 1, 4)
+
+    .. note::
+        `Insertion` is a subclass of :class:`Read`, and siblings of :class:`NovelInsertion`
+        `Insertion` includes the attributes of :class:`Node` in order to enable us to
+        manipulate the attributes of `Insertion` same as :class:`Node` in :class:`Series`
+
+    .. seealso:: :class:`NovelInsertion`, :class:`Node` and :class:`Read`
     """
 
     def __init__(
@@ -653,15 +706,24 @@ class Node(object):
 
 
 class Event(object):
-    """
-    the Event class is used to parse the return value from the function nls_inference
-    TODO: add docstring
+    """the Event class is used to parse the return value from the function nls_inference
+
+    :Example:
+
     >>> args, kwargs = [], {}
     >>> event = Event(infer_nls_from_connected_reads(*args, **kwargs))
     >>> event.sv_type
     TRA
     >>> event
     Event(TRA, )
+
+
+    .. note::
+
+    .. seealso::
+
+    .. todo::
+        add more examples
     """
 
     def __init__(self, event):
@@ -1169,6 +1231,8 @@ class Blat(object):
     :param port: the port of server service for blat alignment
     :param output_dir: the path for storing alignment result
 
+    :Example:
+
     >>> from  loguru import   logger
     >>> blat = Blat(ref_2bit='reference.2bit', logger=logger, output_dir='/tmp')
     >>> blat.is_running()
@@ -1187,6 +1251,7 @@ class Blat(object):
     False, NovelInsertion(ATCCATCC:0)
     >>> blat.query_insertion(insert_seq="ATCG")
     False, NovelInsertion(ATCG:10)
+
     """
 
     def __init__(
@@ -1594,6 +1659,8 @@ class ReadsConnecter(object):
     :param blat: `class.Blat` for the BLAT search
     :param logger: `loguru.logger` for logging
 
+    :Example:
+
     >>> from loguru import  logger
     >>> aln_list = []
     >>> blat = Blat(ref_2bit='reference.2bit', logger= logger, port=88888, output_dir='/tmp')
@@ -1867,6 +1934,9 @@ class ParallelWorker:
     :param func: the function to be run in parallel
     :param n_jobs: the number of jobs to run in parallel
     :param logger: the logger object
+
+    :Example:
+
     >>> from loguru import logger
     >>> def func(x, *, y=1):
     ...     z = x + y
