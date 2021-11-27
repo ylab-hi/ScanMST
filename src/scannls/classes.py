@@ -1748,6 +1748,17 @@ class ReadsConnecter(object):
         self, start_read: Read, read: Read, is_align_for_ms: bool
     ) -> Tuple[bool, Read]:
 
+        """
+
+        :param start_read:
+        :param read:
+        :param is_align_for_ms:
+        :return:
+
+
+        .. todo::
+            fix the bug of the case 5
+        """
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
 
