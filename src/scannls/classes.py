@@ -116,6 +116,18 @@ class Read(object):
     :type cigartuples_without_soft: list
     :param query_length: length of the chimeric read
     :type query_length: int
+
+    :Example:
+    >>> chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra = 'chr1', 6524193, '+', '5S10M2I5M10N10M15S', 60, 0, 'ATCGAAATTAGCTGGGTGTAGTGGCAGGTACCTATGGTCCTGGCTAC'
+    >>> read = Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
+    >>> read
+    Read(chr1, 6524193, 6524213, +, 60, 0)
+    >>> read.read_match_size
+    27
+    >>> read.reference_match_size
+    35
+    >>> read.sms
+    5,27,15
     """
 
     __slots__ = (
@@ -590,6 +602,27 @@ class Node(object):
         * genes
         * annotation_code
         * splicing_code
+    :Example:
+    # TODO
+    >>> previous_breakpoint, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra = 'chr1', 6524193, '+', '5S10M2I5M10N10M15S', 60, 0, 'ATCGAAATTAGCTGGGTGTAGTGGCAGGTACCTATGGTCCTGGCTAC'
+    >>>  read1_node = Node(
+                prev_bp=previous_breakpoint,
+                next_bp=event.bp1,
+                strand=event.strand1,
+                chrom=event.chrom1,
+                ref_start=event.read1_ref_start,
+                ref_end=event.read1_ref_end,
+                exons=event.read1_exons,
+            )
+    >>> read = Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
+    >>> read
+    Read(chr1, 6524193, 6524213, +, 60, 0)
+    >>> read.read_match_size
+    27
+    >>> read.reference_match_size
+    35
+    >>> read.sms
+    5,27,15
     """
 
     __slots__ = (
@@ -1935,7 +1968,7 @@ class ReadsConnecter(object):
         flag = True
         if not self.candidate_nodes:  # []
 
-            self.logger.debug("ReadConnecter: candidate_nodes is []")
+            self.logger.debug("ReadsConnecter: candidate_nodes is []")
             start_read.mode, end_read.mode = (
                 ReadsConnecter.init_mode_judge(start_read.adhocsms),
                 ReadsConnecter.init_mode_judge(end_read.sms),
@@ -2040,7 +2073,7 @@ class ParallelWorker:
         return result
 
 
-class MyLogger:
+class MyLogger(object):
     """
     wrapper for logger in order to use in multiprocessing
     to show contig name in logging information before message.
