@@ -446,7 +446,7 @@ class NovelInsertion(Read):
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
-class MicroHomology:
+class MicroHomology(object):
     """the class is used to represent microhomology
 
     :Example:
@@ -2001,7 +2001,7 @@ class ReadsConnecter(object):
         return flag
 
 
-class ParallelWorker:
+class ParallelWorker(object):
     """
     the ParallelWorker class is used to run function in parallel
     args include the unique parameter of the function and  keyword arguments include
