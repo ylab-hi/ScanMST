@@ -1746,7 +1746,7 @@ class ReadsConnecter(object):
 
     def test_4case(
         self, start_read: Read, read: Read, is_align_for_ms: bool
-    ) -> Tuple[bool, Read]:
+    ) -> Tuple[bool, Union[Read, None]]:
 
         """
 
@@ -1883,7 +1883,11 @@ class ReadsConnecter(object):
 
             return True, read
 
-    def run(self) -> None:
+        self.logger.debug("testing fifth case ")
+        # case five
+        return False, None
+
+    def run(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
         .. note::
             Read-to-Read chain scenarios
@@ -1909,7 +1913,7 @@ class ReadsConnecter(object):
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)
-
+        flag = True
         if not self.candidate_nodes:  # []
 
             self.logger.debug("ReadConnecter: candidate_nodes is []")
@@ -1918,7 +1922,7 @@ class ReadsConnecter(object):
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
 
-            _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=False)
+            flag, _ = self.test_4case(start_read, end_read, is_align_for_ms=False)
 
         else:
             for read in self.candidate_nodes:
@@ -1926,13 +1930,23 @@ class ReadsConnecter(object):
                     ReadsConnecter.init_mode_judge(start_read.adhocsms),
                     ReadsConnecter.init_mode_judge(read.sms),
                 )
-                _, start_read = self.test_4case(start_read, read, is_align_for_ms=True)
+                flag, start_read = self.test_4case(
+                    start_read, read, is_align_for_ms=True
+                )
 
-            start_read.mode, end_read.mode = (
-                ReadsConnecter.init_mode_judge(start_read.adhocsms),
-                ReadsConnecter.init_mode_judge(end_read.sms),
-            )
-            _, start_read = self.test_4case(start_read, end_read, is_align_for_ms=True)
+                if not flag:  # False
+                    break
+
+            if flag:  # False
+                start_read.mode, end_read.mode = (
+                    ReadsConnecter.init_mode_judge(start_read.adhocsms),
+                    ReadsConnecter.init_mode_judge(end_read.sms),
+                )
+                _, start_read = self.test_4case(
+                    start_read, end_read, is_align_for_ms=True
+                )
+
+        return flag
 
 
 class ParallelWorker:
