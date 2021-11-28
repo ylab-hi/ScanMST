@@ -1702,10 +1702,13 @@ class ReadsConnecter(object):
         target_seq: str,
         same_strand: bool,
         is_align: bool,
-        threshold: float = 0.7,
+        query_threshold: float = 0.7,
+        target_threshold=0.8,
         minimum_s_length: int = 30,
     ) -> Tuple[bool, Union[None, str]]:
-        """query_seq: M  target_seq: S"""
+        """query_seq: M  target_seq: S
+        :param target_threshold:
+        """
         # do not conduct alignment
 
         insert_seq = None  # None means M is not consist with S
@@ -1731,15 +1734,31 @@ class ReadsConnecter(object):
 
         _query_seq_len, _target_seq_len = len(_query_seq), len(_target_seq)
 
-        query_identity = 1 - (
-            len(query_seq)
-            - _query_seq_len
-            + alignment_result.n_gaps1
-            + alignment_result.n_gaps2
-            + alignment_result.n_mismatches
-        ) / len(query_seq)
+        query_identity = (
+            1
+            - (
+                len(query_seq)
+                - _query_seq_len
+                + alignment_result.n_gaps1
+                + alignment_result.n_gaps2
+                + alignment_result.n_mismatches
+            )
+            / _query_seq_len
+        )
 
-        if query_identity > threshold:
+        target_identity = (
+            1
+            - (
+                alignment_result.n_gaps1
+                + alignment_result.n_gaps2
+                + alignment_result.n_mismatches
+            )
+            / _target_seq_len
+        )
+
+        self.logger.trace(f"{alignment_result=}")
+        self.logger.trace(f"{query_identity=} {target_identity=}")
+        if query_identity > query_threshold and target_identity > target_threshold:
             match_flag = True
 
         return match_flag, insert_seq
@@ -1884,8 +1903,8 @@ class ReadsConnecter(object):
             return True, read
 
         self.logger.debug("testing fifth case ")
-        # case five
-        return False, None
+        # # case five
+        # return False, None
 
     def run(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
