@@ -7,6 +7,7 @@ import random
 import re
 import subprocess
 import time
+from collections import defaultdict
 from concurrent import futures
 from multiprocessing import Process
 from typing import Any
@@ -549,7 +550,7 @@ class Insertion(Read):
         self.splicing_code = None
         self.sr = None
 
-        self.exons, _ = self.get_exons_and_introns()
+        self.exons, self.introns = self.get_exons_and_introns()
 
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
@@ -571,6 +572,15 @@ class Insertion(Read):
 
     def reverse_strand(self):
         self.strand = "-" if self.strand == "+" else "+"
+
+    def get_unique_key(self):
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
+
+        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+
+        return key
 
 
 class LengthAction(argparse.Action):
@@ -736,6 +746,20 @@ class Node(object):
             _positions.pop(-1)
             _introns = list(zip(_positions[::2], _positions[1::2]))
             return _introns
+
+    def get_unique_key(self):
+
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
+
+        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+        _, insertion_type = self.insertion_info
+
+        if insertion_type.__class__.name in ["NovelInsertion", "MicroHomology"]:
+            key += f"-{insertion_type.query_sequence}"
+
+        return key
 
 
 class Event(object):
@@ -1253,6 +1277,9 @@ class Series(object):
     def disable_blat_logger(self):
         self.blat, self.logger = None, None
 
+    def get_unique_key(self):
+        return "".join([node.get_unique_key() for node in self.nodes])
+
 
 class Blat(object):
     """
@@ -1736,10 +1763,16 @@ class ReadsConnecter(object):
         same_strand: bool,
         is_align: bool,
         query_threshold: float = 0.7,
-        target_threshold=0.8,
+        target_threshold: float = 0.8,
         minimum_s_length: int = 30,
     ) -> Tuple[bool, Union[None, str]]:
         """query_seq: M  target_seq: S
+        :param minimum_s_length:
+        :param query_threshold:
+        :param is_align:
+        :param same_strand:
+        :param target_seq:
+        :param query_seq:
         :param target_threshold:
         """
         # do not conduct alignment
@@ -2115,3 +2148,23 @@ class MyLogger(object):
 
     def complete(self):
         self.logger.complete()
+
+
+class Assembler:
+    def __init__(self, series_list):
+        self.series_list = series_list
+
+    def __iter__(self):
+        for series in self.series_list:
+            yield series
+
+    def reduce(self):
+        """
+        reduce the series list by merging nodes with same length
+        """
+        result_dict = defaultdict(list)
+
+        for series in self:
+            series_group = result_dict[series]
+            if series_group:
+                pass
