@@ -551,6 +551,7 @@ class Insertion(Read):
         self.sr = None
 
         self.exons, self.introns = self.get_exons_and_introns()
+        self.successor, self.predecessor = [], []
 
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
@@ -579,9 +580,50 @@ class Insertion(Read):
 
         key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
 
-        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+        key = f"{self.chrom}-{key}"
 
         return key
+
+    def copy(self):
+        new_node = Node()
+
+        for attr_key, attr_value in self.__dict__:
+            new_node.__dict__[attr_key] = attr_value
+
+        return new_node
+
+    def is_start_node(self):
+        return True if not self.has_predecessor() else False
+
+    def is_end_node(self):
+        return True if not self.has_successor() else False
+
+    def has_predecessor(self):
+        return True if self.predecessor else False
+
+    def has_successor(self):
+        return True if self.successor else False
+
+    def add_successor(self, successor):
+
+        for successor_node in self.successor:
+            if successor_node.unique_key != successor.unique_key:
+                self.successor.append(successor)
+
+    def add_predecessor(self, predecessor):
+        for predecessor_node in self.predecessor:
+            if predecessor_node.unique_key != predecessor.unique_key:
+                self.predecessor.append(predecessor)
+
+    def update_sr(self, key=1):
+        # TODO: may be wrong
+        self.sr += key
+
+    def update_first_exon_start(self, coord):
+        self.exons[0][0] = min(coord, self.exons[0][0])
+
+    def update_last_exon_end(self, coord):
+        self.exons[-1][1] = max(coord, self.exons[-1][1])
 
 
 class LengthAction(argparse.Action):
@@ -651,6 +693,8 @@ class Node(object):
         "splicing_code",
         "sr",
         "insertion_info",
+        "predecessor",
+        "successor",
     )
 
     def __init__(
@@ -684,6 +728,8 @@ class Node(object):
         self.splicing_code = canonical
         self.sr = sr
         self.insertion_info = insertion_info
+
+        self.predecessor, self.successor = [], []
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
@@ -755,7 +801,10 @@ class Node(object):
 
         key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
 
-        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+        # key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+
+        key = f"{self.chrom}-{key}"
+
         _, insertion_type = self.insertion_info
 
         if insertion_type.__class__.name in ["NovelInsertion", "MicroHomology"]:
@@ -770,6 +819,38 @@ class Node(object):
             new_node.__dict__[attr_key] = attr_value
 
         return new_node
+
+    def is_start_node(self):
+        return True if not self.has_predecessor() else False
+
+    def is_end_node(self):
+        return True if not self.has_successor() else False
+
+    def has_predecessor(self):
+        return True if self.predecessor else False
+
+    def has_successor(self):
+        return True if self.successor else False
+
+    def add_successor(self, successor):
+
+        for successor_node in self.successor:
+            if successor_node.unique_key != successor.unique_key:
+                self.successor.append(successor)
+
+    def add_predecessor(self, predecessor):
+        for predecessor_node in self.predecessor:
+            if predecessor_node.unique_key != predecessor.unique_key:
+                self.predecessor.append(predecessor)
+
+    def update_sr(self, key=1):
+        self.sr += key
+
+    def update_first_exon_start(self, coord):
+        self.exons[0][0] = min(coord, self.exons[0][0])
+
+    def update_last_exon_end(self, coord):
+        self.exons[-1][1] = max(coord, self.exons[-1][1])
 
 
 class Event(object):
@@ -1273,6 +1354,10 @@ class Series(object):
         _repr += ")"
         return _repr
 
+    def __iter__(self):
+        for node in self.nodes:
+            yield node
+
     __str__ = __repr__
 
     def decompose(self) -> list:
@@ -1377,7 +1462,7 @@ class Series(object):
 
     def get_double_node_key(self):
         for index in range(len(self.nodes) - 1):
-            yield f"{index}-{self.nodes[index].unique_key}{self.nodes[index+1].unique_key}"
+            yield f"{index}-{self.nodes[index].unique_key}{self.nodes[index + 1].unique_key}"
 
 
 class Blat(object):
@@ -2249,14 +2334,41 @@ class MyLogger(object):
         self.logger.complete()
 
 
-class Assembler(object):
+class SpliceGraph:
+    """
+    the SpliceGraph class is used to trace the path of splice graph
+
+    :Example:
+
+    >>> from loguru import logger
+    >>> splice_graph = SpliceGraph(series_list=[], logger=logger)
+    >>> splice_graph.construct()
+    >>> splice_graph.trace()
+    >>> splice_graph.result_series_list
+
+    """
+
     def __init__(self, series_list, logger):
         self.series_list = series_list
         self.logger = logger
+        self.nodes = {}
+        self.result_series_list = []
+
+    def get_start_nodes(self):
+        return [node for node in self.nodes.values() if node.is_start_node]
+
+    def get_node(self, unique_key):
+        return self.nodes.get(unique_key, None)
+
+    def add_node(self, node):
+        self.nodes[node.unique_key] = node
 
     def __iter__(self):
-        for series in self.series_list:
-            yield series
+        for node in self.nodes.values():
+            yield node
+
+    def __contains__(self, node):
+        return True if self.get_node(node.unique_key) is not None else False
 
     def reduce(self):
         """
@@ -2264,7 +2376,7 @@ class Assembler(object):
         """
         result_dict = {}
 
-        for series in self:
+        for series in self.series_list:
             another_series = result_dict.get(series.unique_key, None)
             if another_series is not None:
                 result_dict[series.unique_key] = series + another_series
@@ -2273,55 +2385,44 @@ class Assembler(object):
 
         self.series_list = result_dict.values()
 
-    def extend(self):
-        start_dict = defaultdict(list)
-        end_dict = defaultdict(list)
+    def construct(self):
+        self.reduce()
 
-        for series in self:
-            start_node_intron_key = series.start_node_intron_key()
-            end_node_intron_key = series.end_node_intron_key()
+        for series in self.series_list:
+            for index, node in enumerate(series):
+                unique_key = node.unique_key
+                if node in self:
 
-            start_dict[start_node_intron_key].append(series)
-            end_dict[end_node_intron_key].append(series)
+                    node_in_graph = self.get_node(unique_key)
+                    node_in_graph.update_sr()
+                    node_in_graph.update_first_exon_start(node.exons[0][0])
+                    node_in_graph.update_end_exon_end(node.exons[-1][1])
 
-            start_another_series = start_dict[end_node_intron_key]
-            for another in start_another_series:
-                if (
-                    another.start_node.exons[0][0] > series.end_node.exons[0][0]
-                    and another.start_node.exons[-1][-1] > series.end_node.exons[-1][-1]
-                ):
-                    another.is_extended, series.is_extended = True, True
-                    new_series = series.extend_series(another)
-                    start_dict[new_series.start_node_intron_key()].append(new_series)
-                    end_dict[new_series.end_node_intron_key()].append(new_series)
+                    if index != len(series) - 1:
+                        successor_node = series[index + 1]
+                        node_in_graph.add_successor(successor_node)
 
-            end_another_series = end_dict[start_node_intron_key]
-            for another in end_another_series:
-                if (
-                    series.start_node.exons[0][0] > another.end_node.exons[0][0]
-                    and series.start_node.exons[-1][-1] > another.end_node.exons[-1][-1]
-                ):
-                    another.is_extended, series.is_extended = True, True
-                    new_series = another.extend_series(series)
-                    start_dict[new_series.start_node_intron_key()].append(new_series)
-                    end_dict[new_series.end_node_intron_key()].append(new_series)
+                else:
+                    self.add_node(node)
+                    if index != len(series) - 1:
+                        successor_node = series[index + 1]
+                        node.add_successor(successor_node)
 
-        start_dict_result = [
-            series
-            for series_list in start_dict.values()
-            for series in series_list
-            if not series.is_extended
-        ]
+    def _trace(self, start_node, path, group_paths):
 
-        self.series_list = start_dict_result
+        if not start_node:
+            group_paths.append(path)
 
-    def merge(self):
-        result_dict = defaultdict(list)
-        for series in sorted(self.series_list, key=lambda x: len(x), reverse=True):
-            merge_pool = {}
-            double_node_keys = series.get_double_node_key()
+        else:
+            successors = start_node.successors
+            if successors:
+                for successor in successors:
+                    self._trace(successor, path + [start_node], group_paths)
+            else:
+                self._trace(successors, path + [start_node], group_paths)
 
-            for double_node_key in double_node_keys:
-                another_series_list = result_dict[double_node_key]
-                if another_series_list:
-                    merge_pool[double_node_key] = another_series_list
+    def trace(self):
+        for start_node in self.get_start_nodes():
+            group_paths = []
+            self._trace(start_node, [], group_paths)
+            self.result_series_list.append(group_paths)
