@@ -360,10 +360,10 @@ class Read(object):
             if op_code in {0, 2}:  # M, D
                 current_pos = current_pos + _len_
             elif op_code == 3:  # N
-                exons.append((start_pos, current_pos))
+                exons.append([start_pos, current_pos])
                 current_pos = current_pos + _len_
                 start_pos = current_pos
-        exons.append((start_pos, current_pos))
+        exons.append([start_pos, current_pos])
 
         # No 'N' in the cigar
         if len(exons) == 1:
@@ -375,7 +375,7 @@ class Read(object):
             _positions.sort()
             _positions.pop(0)
             _positions.pop(-1)
-            introns = list(zip(_positions[::2], _positions[1::2]))
+            introns = [[x, y] for x, y in zip(_positions[::2], _positions[1::2])]
         return exons, introns
 
     def splice_site_checker(self, genome_fasta, fraction_cutoff=0) -> bool:
@@ -573,7 +573,8 @@ class Insertion(Read):
     def reverse_strand(self):
         self.strand = "-" if self.strand == "+" else "+"
 
-    def get_unique_key(self):
+    @property
+    def unique_key(self):
         introns = self.introns
 
         key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
@@ -747,7 +748,8 @@ class Node(object):
             _introns = list(zip(_positions[::2], _positions[1::2]))
             return _introns
 
-    def get_unique_key(self):
+    @property
+    def unique_key(self):
 
         introns = self.introns
 
@@ -760,6 +762,14 @@ class Node(object):
             key += f"-{insertion_type.query_sequence}"
 
         return key
+
+    def copy(self) -> "Node":
+        new_node = Node()
+
+        for attr_key, attr_value in self.__dict__:
+            new_node.__dict__[attr_key] = attr_value
+
+        return new_node
 
 
 class Event(object):
@@ -957,7 +967,7 @@ class Series(object):
 
     def __init__(self, blat: "Blat", logger: logger) -> None:
         self.nodes = []
-        self.assemblied = None
+        self.is_extended = False
         self.blat = blat
         self.logger = logger
 
@@ -1277,8 +1287,86 @@ class Series(object):
     def disable_blat_logger(self):
         self.blat, self.logger = None, None
 
-    def get_unique_key(self):
-        return "".join([node.get_unique_key() for node in self.nodes])
+    @property
+    def start_node(self):
+        return self.nodes[0]
+
+    @start_node.setter
+    def start_node(self, node):
+        self.nodes[0] = node
+
+    @property
+    def end_node(self):
+        return self.nodes[-1]
+
+    @end_node.setter
+    def end_node(self, node):
+        self.nodes[-1] = node
+
+    @property
+    def unique_key(self):
+        return "".join([node.unique_key for node in self.nodes])
+
+    @staticmethod
+    def merge_nodes(node1, node2):
+        node1.exons[0][0] = min(node1.exons[0][0], node2.exons[0][0])
+        node1.exons[-1][1] = max(node1.exons[-1][1], node2.exons[-1][1])
+
+        return node1
+
+    def __add__(self, other):
+
+        if isinstance(other, Series):
+            self.start_node = Series.merge_nodes(self.start_node, other.start_node)
+            self.end_node = Series.merge_nodes(self.end_node, other.end_node)
+
+            for node1, node2 in zip(self.nodes[:-1], other.nodes[:-1]):
+                node1.sr += node2.sr
+
+            return self
+        else:
+            raise TypeError(
+                f"Series object can only be added to Series object. {type(other)} object is not supported."
+            )
+
+    def extend_series(self, other):
+        new_series = Series(blat=self.blat, logger=self.logger)
+        if isinstance(other, Series):
+
+            for node in self:
+                new_series.add_node(node.copy())
+
+            new_series.end_node.exons[0][0] = min(
+                new_series.end_node.exons[0][0], other.start_node.exons[0][0]
+            )
+            new_series.end_node.exons[-1][1] = max(
+                new_series.end_node.exons[-1][1], other.start_node.exons[-1][1]
+            )
+
+            for node in other[1:]:
+                new_series.add_node(node.copy())
+
+            return new_series
+
+        else:
+            raise TypeError(
+                f"Series object can only be extended to Series object. {type(other)} object is not supported."
+            )
+
+    def end_node_intron_key(self):
+        introns_key = "".join(
+            [f"{start}-{end}" for start, end in self.end_node.introns]
+        )
+        introns_key = f"{self.end_node.chrom}-{introns_key}"
+
+        return introns_key
+
+    def start_node_intron_key(self):
+        introns_key = "".join(
+            [f"{start}-{end}" for start, end in self.start_node.introns]
+        )
+        introns_key = f"{self.start_node.chrom}-{introns_key}"
+        return introns_key
 
 
 class Blat(object):
@@ -2162,9 +2250,69 @@ class Assembler:
         """
         reduce the series list by merging nodes with same length
         """
-        result_dict = defaultdict(list)
+        result_dict = {}
 
         for series in self:
-            series_group = result_dict[series]
-            if series_group:
-                pass
+            another_series = result_dict.get(series.unique_key, None)
+            if another_series is not None:
+                result_dict[series.unique_key] = series + another_series
+            else:
+                result_dict[series.unique_key] = series
+
+        self.series_list = result_dict.values()
+
+    def extend(self):
+        start_dict = defaultdict(list)
+        end_dict = defaultdict(list)
+
+        for series in self:
+            start_node_intron_key = series.start_node_intron_key()
+            end_node_intron_key = series.end_node_intron_key()
+
+            start_dict[start_node_intron_key].append(series)
+            end_dict[end_node_intron_key].append(series)
+
+            start_another_series = start_dict[end_node_intron_key]
+            if start_another_series:
+                for another in start_another_series:
+                    if (
+                        another.start_node.exons[0][0] > series.end_node.exons[0][0]
+                        and another.start_node.exons[-1][-1]
+                        > series.end_node.exons[-1][-1]
+                    ):
+                        another.is_extended, series.is_extended = True, True
+                        new_series = series.extend_series(another)
+                        start_dict[new_series.start_node_intron_key()].append(
+                            new_series
+                        )
+                        end_dict[new_series.end_node_intron_key()].append(new_series)
+
+            end_another_series = end_dict[start_node_intron_key]
+            if end_another_series:
+                for another in end_another_series:
+                    if (
+                        series.start_node.exons[0][0] > another.end_node.exons[0][0]
+                        and series.start_node.exons[-1][-1]
+                        > another.end_node.exons[-1][-1]
+                    ):
+                        another.is_extended, series.is_extended = True, True
+                        new_series = another.extend_series(series)
+                        start_dict[new_series.start_node_intron_key()].append(
+                            new_series
+                        )
+                        end_dict[new_series.end_node_intron_key()].append(new_series)
+
+    start_dict_result = [
+        series
+        for series_list in start_dict.values()
+        for series in series_list
+        if not series.is_extended
+    ]
+    end_dict_result = [
+        series
+        for series_list in end_dict.values()
+        for series in series_list
+        if not series.is_extended
+    ]
+
+    self.series_list = start_dict_result + end_dict_result
