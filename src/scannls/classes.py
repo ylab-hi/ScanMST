@@ -2238,7 +2238,7 @@ class MyLogger(object):
         self.logger.complete()
 
 
-class Assembler:
+class Assembler(object):
     def __init__(self, series_list):
         self.series_list = series_list
 
@@ -2302,17 +2302,11 @@ class Assembler:
                         )
                         end_dict[new_series.end_node_intron_key()].append(new_series)
 
-    start_dict_result = [
-        series
-        for series_list in start_dict.values()
-        for series in series_list
-        if not series.is_extended
-    ]
-    end_dict_result = [
-        series
-        for series_list in end_dict.values()
-        for series in series_list
-        if not series.is_extended
-    ]
+        start_dict_result = [
+            series
+            for series_list in start_dict.values()
+            for series in series_list
+            if not series.is_extended
+        ]
 
-    self.series_list = start_dict_result + end_dict_result
+        self.series_list = start_dict_result
