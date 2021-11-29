@@ -1317,13 +1317,20 @@ class Series(object):
     def __add__(self, other):
 
         if isinstance(other, Series):
-            self.start_node = Series.merge_nodes(self.start_node, other.start_node)
-            self.end_node = Series.merge_nodes(self.end_node, other.end_node)
+            if len(other) == len(self):
+                # same length and only for reduce to merge two series wit same start node and end node
 
-            for node1, node2 in zip(self.nodes[:-1], other.nodes[:-1]):
-                node1.sr += node2.sr
+                self.start_node = Series.merge_nodes(self.start_node, other.start_node)
+                self.end_node = Series.merge_nodes(self.end_node, other.end_node)
 
-            return self
+                for node1, node2 in zip(self.nodes[:-1], other.nodes[:-1]):
+                    node1.sr += node2.sr
+
+                return self
+
+            else:
+                pass
+
         else:
             raise TypeError(
                 f"Series object can only be added to Series object. {type(other)} object is not supported."
@@ -1367,6 +1374,10 @@ class Series(object):
         )
         introns_key = f"{self.start_node.chrom}-{introns_key}"
         return introns_key
+
+    def get_double_node_key(self):
+        for index in range(len(self.nodes) - 1):
+            yield f"{index}-{self.nodes[index].unique_key}{self.nodes[index+1].unique_key}"
 
 
 class Blat(object):
@@ -2239,8 +2250,9 @@ class MyLogger(object):
 
 
 class Assembler(object):
-    def __init__(self, series_list):
+    def __init__(self, series_list, logger):
         self.series_list = series_list
+        self.logger = logger
 
     def __iter__(self):
         for series in self.series_list:
@@ -2273,34 +2285,26 @@ class Assembler(object):
             end_dict[end_node_intron_key].append(series)
 
             start_another_series = start_dict[end_node_intron_key]
-            if start_another_series:
-                for another in start_another_series:
-                    if (
-                        another.start_node.exons[0][0] > series.end_node.exons[0][0]
-                        and another.start_node.exons[-1][-1]
-                        > series.end_node.exons[-1][-1]
-                    ):
-                        another.is_extended, series.is_extended = True, True
-                        new_series = series.extend_series(another)
-                        start_dict[new_series.start_node_intron_key()].append(
-                            new_series
-                        )
-                        end_dict[new_series.end_node_intron_key()].append(new_series)
+            for another in start_another_series:
+                if (
+                    another.start_node.exons[0][0] > series.end_node.exons[0][0]
+                    and another.start_node.exons[-1][-1] > series.end_node.exons[-1][-1]
+                ):
+                    another.is_extended, series.is_extended = True, True
+                    new_series = series.extend_series(another)
+                    start_dict[new_series.start_node_intron_key()].append(new_series)
+                    end_dict[new_series.end_node_intron_key()].append(new_series)
 
             end_another_series = end_dict[start_node_intron_key]
-            if end_another_series:
-                for another in end_another_series:
-                    if (
-                        series.start_node.exons[0][0] > another.end_node.exons[0][0]
-                        and series.start_node.exons[-1][-1]
-                        > another.end_node.exons[-1][-1]
-                    ):
-                        another.is_extended, series.is_extended = True, True
-                        new_series = another.extend_series(series)
-                        start_dict[new_series.start_node_intron_key()].append(
-                            new_series
-                        )
-                        end_dict[new_series.end_node_intron_key()].append(new_series)
+            for another in end_another_series:
+                if (
+                    series.start_node.exons[0][0] > another.end_node.exons[0][0]
+                    and series.start_node.exons[-1][-1] > another.end_node.exons[-1][-1]
+                ):
+                    another.is_extended, series.is_extended = True, True
+                    new_series = another.extend_series(series)
+                    start_dict[new_series.start_node_intron_key()].append(new_series)
+                    end_dict[new_series.end_node_intron_key()].append(new_series)
 
         start_dict_result = [
             series
@@ -2310,3 +2314,14 @@ class Assembler(object):
         ]
 
         self.series_list = start_dict_result
+
+    def merge(self):
+        result_dict = defaultdict(list)
+        for series in sorted(self.series_list, key=lambda x: len(x), reverse=True):
+            merge_pool = {}
+            double_node_keys = series.get_double_node_key()
+
+            for double_node_key in double_node_keys:
+                another_series_list = result_dict[double_node_key]
+                if another_series_list:
+                    merge_pool[double_node_key] = another_series_list

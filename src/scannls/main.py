@@ -131,7 +131,7 @@ def parse_args():
         action="store",
         dest="min_soft_seg_len",
         type=int,
-        help="minimum softclipped segement length to trigger BLAT alignment (default: %(default)s)",
+        help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
         default=200,
     )
     draft_parser.add_argument(
