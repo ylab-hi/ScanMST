@@ -28,6 +28,7 @@ psutil = "^5.8.0"
 loguru = "^0.5.3"
 pynvim = "^0.4.3"
 rich = "^10.14.0"
+tqdm = "^4.62.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
