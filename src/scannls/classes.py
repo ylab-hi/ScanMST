@@ -647,6 +647,7 @@ class Node(object):
     :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
     :param modes: read modes of connected breakpoints
     :param genes: overlapped genes of connected breakpoints
+    :param insertion_info: insertion information, (True, Insertion) or (False, NovelInsertion) or (False, MicroHomology)
 
     .. note::
         connection-level fields:
@@ -656,26 +657,17 @@ class Node(object):
         * annotation_code
         * splicing_code
     :Example:
-    # TODO
-    >>> previous_breakpoint, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra = 'chr1', 6524193, '+', '5S10M2I5M10N10M15S', 60, 0, 'ATCGAAATTAGCTGGGTGTAGTGGCAGGTACCTATGGTCCTGGCTAC'
-    >>>  read1_node = Node(
-                prev_bp=previous_breakpoint,
-                next_bp=event.bp1,
-                strand=event.strand1,
-                chrom=event.chrom1,
-                ref_start=event.read1_ref_start,
-                ref_end=event.read1_ref_end,
-                exons=event.read1_exons,
+    >>> node1 = Node(
+                prev_bp=None,
+                next_bp='chr10:93636994',
+                strand='+',
+                chrom='chr10',
+                ref_start=93636994
+                ref_end=93637094,
+                exons=[(93636994, 93637094)],
             )
-    >>> read = Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
-    >>> read
-    Read(chr1, 6524193, 6524213, +, 60, 0)
-    >>> read.read_match_size
-    27
-    >>> read.reference_match_size
-    35
-    >>> read.sms
-    5,27,15
+    >>> node1
+    Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
     """
 
     __slots__ = (
@@ -1044,6 +1036,26 @@ class Series(object):
     prev_breakpoint:   None                 bp2                   bp4
     next_breakpoint:    bp1                 bp3                   None
     sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
+
+    :Example:
+    >>> series = Series(blat=None, logger=None)
+    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[(7706250,7708250)],sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'))
+    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)], sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[(15777169,15777589)], sv_type=None))
+    >>> series
+    Series(
+        Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
+        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, chr17:7701656, chr17:7702552)
+        Node(chr1:15872815-15876678:+, 15872815-15876678, TDUP, chr1:15872815, chr1:15876678)
+        Node(chr1:15777169-15777589:+, 15777169-15777589, None, chr1:15777169, None) )
+
+    >>> series_with_novel_insertion = Series(blat=None, logger=None)
+    >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)], sv_type=None)]
+    >>> series_with_novel_insertion
+    Series(
+        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, None, chr17:7702552)
+        Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
     """
 
     def __init__(self, blat: "Blat", logger: logger) -> None:
@@ -2334,14 +2346,34 @@ class MyLogger(object):
         self.logger.complete()
 
 
-class SpliceGraph:
+class SpliceGraph(object):
     """
     the SpliceGraph class is used to trace the path of splice graph
 
     :Example:
+    >>> series1 = Series(blat=None, logger=None)
+    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[(15872815,15873800)], sv_type=None)]
+
+    >>> series2 = Series(blat=None, logger=None)
+    >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[(7701500, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)], sv_type=None)]
+
+    >>> series3 = Series(blat=None, logger=None)
+    >>> series3.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[(15872890, 15873900)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,876678)], sv_type=None)]
+
+    >>> series4 = Series(blat=None, logger=None)
+    >>> series4.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[(15872890, 15873900)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,873400), (875500,876678)], sv_type=None)]
+
+    >>> series5 = Series(blat=None, logger=None)
+    >>> series5.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[(15872815, 15873900)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,876678)], sv_type=None)]
+
+    >>> series6 = Series(blat=None, logger=None)
+    >>> series6.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[(15872815, 15873900)], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,876678)], sv_type=None)]
+
+    >>> series7 = Series(blat=None, logger=None)
+    >>> series7.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[(15872815, 15873900)], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,873400), (875500,876678)], sv_type=None)]
 
     >>> from loguru import logger
-    >>> splice_graph = SpliceGraph(series_list=[], logger=logger)
+    >>> splice_graph = SpliceGraph(series_list=[series1, series2, series3, series4, series5, series6, series7], logger=logger)
     >>> splice_graph.construct()
     >>> splice_graph.trace()
     >>> splice_graph.result_series_list
