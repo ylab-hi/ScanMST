@@ -214,6 +214,7 @@ def infer_nls_from_connected_reads(
                     return NAN
                 elif evt_size < 0:  # deletion
                     return NAN
+                # reads length < tandem duplication size
                 elif evt_size >= query_offset:  # large tandem duplication
                     chrm_start = lt_chrm
                     junc_start = read_lt.ref_start

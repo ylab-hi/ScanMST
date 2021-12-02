@@ -2025,6 +2025,61 @@ class ReadsConnecter(object):
 
         return match_flag, insert_seq
 
+    def determine_microhomology_len(
+        self, read_query_length, prev_sms, next_sms, prev_read_mode, next_read_mode
+    ):
+        """
+        :param read_query_length: reads length
+        :param prev_sms: previous read sms
+        :param next_sms: next read sms
+        :param prev_read_mode: previous predicted connected read mode
+        :param next_read_mode: next predicted connected read mode
+        """
+        _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
+        _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
+        if prev_read_mode == 2:
+            if next_read_mode == 2:
+                bp_region_seq_len = (
+                    read_query_length
+                    - _rt_len_r1
+                    - _rt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
+            elif next_read_mode == 1:
+                bp_region_seq_len = (
+                    read_query_length
+                    - _rt_len_r1
+                    - _lt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
+        else:
+            if next_read_mode == 2:
+                bp_region_seq_len = (
+                    read_query_length
+                    - _lt_len_r1
+                    - _rt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
+            elif next_read_mode == 1:
+                bp_region_seq_len = (
+                    read_query_length
+                    - _lt_len_r1
+                    - _lt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
+        # microinsertion or blunt end
+        if bp_region_seq_len >= 0:
+            is_microhomology = False
+            microhomology_length = 0
+        else:
+            is_microhomology = True
+            microhomology_length = -bp_region_seq_len
+        return is_microhomology, microhomology_length
+
     def test_4case(
         self, start_read: Read, read: Read, is_align_for_ms: bool
     ) -> Tuple[bool, Union[Read, None]]:
@@ -2051,6 +2106,7 @@ class ReadsConnecter(object):
 
         # first case
         self.logger.debug("testing first case M vs LS")
+
         match_flag, insertion_1_seq = self.conduct_glocal_alignment_forMS(
             start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
             read.query_sequence[:_lt_len_r2],
