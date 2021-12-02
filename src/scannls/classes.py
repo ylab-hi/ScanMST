@@ -1973,81 +1973,49 @@ class ReadsConnecter(object):
             return 1
 
     # @staticmethod
-    def conduct_glocal_alignment_forMS(
+    def compare_MS(
         self,
         query_seq: str,
         target_seq: str,
         same_strand: bool,
         is_align: bool,
-        query_threshold: float = 0.7,
-        target_threshold: float = 0.8,
         minimum_s_length: int = 30,
-    ) -> Tuple[bool, Union[None, str]]:
+    ) -> bool:
         """query_seq: M  target_seq: S
         :param minimum_s_length:
-        :param query_threshold:
         :param is_align:
         :param same_strand:
         :param target_seq:
         :param query_seq:
-        :param target_threshold:
         """
         # do not conduct alignment
 
-        insert_seq = None  # None means M is not consist with S
         match_flag = False
+
         self.logger.trace(
             f"query length ={len(query_seq)} target length ={len(target_seq)}"
         )
+
         if not is_align:
             if len(target_seq) <= minimum_s_length:
-                return match_flag, insert_seq
+                return match_flag
             else:
-                return True, insert_seq
+                return True
 
         if len(target_seq) <= minimum_s_length:
-            return match_flag, insert_seq
+            return match_flag
 
         if not same_strand:
             target_seq = reverse_complement(target_seq)
 
-        alignment_result = aligner(query_seq, target_seq, method="semi-global")[0]
-        _query_seq = alignment_result.seq1.decode("utf-8")
-        _target_seq = alignment_result.seq2.decode("utf-8")
-
-        _query_seq_len, _target_seq_len = len(_query_seq), len(_target_seq)
-
-        query_identity = (
-            1
-            - (
-                len(query_seq)
-                - _query_seq_len
-                + alignment_result.n_gaps1
-                + alignment_result.n_gaps2
-                + alignment_result.n_mismatches
-            )
-            / _query_seq_len
-        )
-
-        target_identity = (
-            1
-            - (
-                alignment_result.n_gaps1
-                + alignment_result.n_gaps2
-                + alignment_result.n_mismatches
-            )
-            / _target_seq_len
-        )
-
-        self.logger.trace(f"{alignment_result=}")
-        self.logger.trace(f"{query_identity=} {target_identity=}")
-        if query_identity > query_threshold and target_identity > target_threshold:
+        if query_seq in target_seq:
             match_flag = True
 
-        return match_flag, insert_seq
+        return match_flag
 
-    def determine_microhomology_len(
-        self, read_query_length, prev_sms, next_sms, prev_read_mode, next_read_mode
+    @staticmethod
+    def _determine_microhomology_len(
+        read_query_length, prev_sms, next_sms, prev_read_mode, next_read_mode
     ):
         """
         :param read_query_length: reads length
@@ -2092,14 +2060,32 @@ class ReadsConnecter(object):
                     - _read_match_r1
                     - _read_match_r2
                 )
-        # microinsertion or blunt end
-        if bp_region_seq_len >= 0:
-            is_microhomology = False
-            microhomology_length = 0
-        else:
-            is_microhomology = True
+        is_microhomology = False
+        microhomology_length = 0
+
+        if bp_region_seq_len < 0:
             microhomology_length = -bp_region_seq_len
+            if microhomology_length < read_query_length:
+                is_microhomology = True
         return is_microhomology, microhomology_length
+
+    @staticmethod
+    def update_query_sequence(
+        read_query_sequence, prev_sms, next_sms, prev_read_mode, next_read_mode
+    ):
+        (
+            is_microhomology,
+            microhomology_length,
+        ) = ReadsConnecter._determine_microhomology_len(
+            len(read_query_sequence), prev_sms, next_sms, prev_read_mode, next_read_mode
+        )
+        if is_microhomology:
+            if prev_read_mode == 2:
+                return read_query_sequence[microhomology_length:]
+            elif prev_read_mode == 1:
+                return read_query_sequence[:-microhomology_length]
+        else:
+            return read_query_sequence
 
     def test_4case(
         self, start_read: Read, read: Read, is_align_for_ms: bool
@@ -2111,16 +2097,11 @@ class ReadsConnecter(object):
         :param read:
         :param is_align_for_ms:
         :return:
-
-
-        .. todo::
-            fix the bug of the case 5
         """
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
 
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")
-
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
 
         same_strand = True if start_read.adhocseq == read.query_sequence else False
@@ -2128,8 +2109,20 @@ class ReadsConnecter(object):
         # first case
         self.logger.debug("testing first case M vs LS")
 
-        match_flag, insertion_1_seq = self.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
+        next_read_mode = 2
+        read_query_sequence = start_read.adhocseq[
+            _lt_len_r1 : _lt_len_r1 + _read_match_r1
+        ]
+        read_query_sequence = ReadsConnecter.update_query_sequence(
+            read_query_sequence,
+            start_read.adhocsms,
+            read.sms,
+            start_read.mode,
+            next_read_mode,
+        )
+
+        match_flag = self.compare_MS(
+            read_query_sequence,
             read.query_sequence[:_lt_len_r2],
             same_strand,
             is_align_for_ms,
@@ -2156,8 +2149,20 @@ class ReadsConnecter(object):
 
         self.logger.debug("testing second case M vs RS")
         # second case
-        match_flag, insertion_2_seq = self.conduct_glocal_alignment_forMS(
-            start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1],
+        next_read_mode = 1
+        read_query_sequence = start_read.adhocseq[
+            _lt_len_r1 : _lt_len_r1 + _read_match_r1
+        ]
+        read_query_sequence = ReadsConnecter.update_query_sequence(
+            read_query_sequence,
+            start_read.adhocsms,
+            read.sms,
+            start_read.mode,
+            next_read_mode,
+        )
+
+        match_flag = self.compare_MS(
+            read_query_sequence,
             read.query_sequence[-_rt_len_r2:],
             same_strand,
             is_align_for_ms,
@@ -2185,65 +2190,6 @@ class ReadsConnecter(object):
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
-
-        self.logger.debug("testing third case LS vs M")
-        # third case
-        match_flag, insertion_3_seq = self.conduct_glocal_alignment_forMS(
-            read.query_sequence[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
-            start_read.adhocseq[:_lt_len_r1],
-            same_strand,
-            is_align_for_ms,
-        )
-
-        if match_flag:
-            read, start_read = start_read, read
-
-            read.mode = 1
-            self.logger.debug(f"{read.mode=}, {start_read.mode=}")
-            self.read_pair_mode_dict[(read, start_read)] = (read.mode, start_read.mode)
-
-            self.reads_chain.append(start_read)
-
-            if start_read in self.candidate_nodes:
-                self.candidate_nodes.remove(start_read)
-
-            read.adhocsms = 0, _lt_len_r1 + _read_match_r1, _rt_len_r1
-
-            return True, read
-
-        self.logger.debug("testing fourth case RS vs M")
-        # fourth case
-        match_flag, insertion_4_seq = self.conduct_glocal_alignment_forMS(
-            read.query_sequence[_lt_len_r2 : _lt_len_r2 + _read_match_r2],
-            start_read.adhocseq[-_rt_len_r1:],
-            same_strand,
-            is_align_for_ms,
-        )
-
-        if match_flag:
-            read, start_read = start_read, read
-
-            start_read.mode = 2
-
-            self.logger.debug(f"{read.mode=}, {start_read.mode=}")
-            self.read_pair_mode_dict[(read, start_read)] = (read.mode, start_read.mode)
-
-            self.reads_chain.append(start_read)
-
-            if start_read in self.candidate_nodes:
-                self.candidate_nodes.remove(start_read)
-
-            read.adhocsms = (
-                _lt_len_r1,
-                _rt_len_r1 + _read_match_r1,
-                0,
-            )
-
-            return True, read
-
-        self.logger.debug("testing fifth case ")
-        # # case five
-        # return False, None
 
     def run(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
