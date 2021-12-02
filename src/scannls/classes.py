@@ -7,7 +7,6 @@ import random
 import re
 import subprocess
 import time
-from collections import defaultdict
 from concurrent import futures
 from multiprocessing import Process
 from typing import Any
@@ -580,7 +579,8 @@ class Insertion(Read):
 
         key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
 
-        key = f"{self.chrom}-{key}"
+        # key = f"{self.chrom}-{key}"
+        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
 
         return key
 
@@ -697,13 +697,13 @@ class Node(object):
         chrom: Optional[str] = None,
         ref_start: Optional[int] = None,
         ref_end: Optional[int] = None,
-        exons: Optional[Tuple[int]] = None,
+        exons: Optional[List[int]] = None,
         sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
-        sr: Optional[int] = None,
+        sr: Optional[int] = 1,
         insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
     ) -> None:
         self.chrom = chrom
@@ -791,16 +791,30 @@ class Node(object):
 
         introns = self.introns
 
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
 
-        # key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+        key1 = f"{self.chrom}-{key}-{self.prev_breakpoint}"
+        key2 = f"{self.chrom}-{key}-{self.next_breakpoint}"
 
-        key = f"{self.chrom}-{key}"
+        if self.insertion_info is not None:
+            _, insertion_type = self.insertion_info
+            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
+                key1 = f"{insertion_type.query_sequence}-{key1}"
+                key2 = f"{insertion_type.query_sequence}-{key2}"
+        return key1, key2
 
-        _, insertion_type = self.insertion_info
+    def get_key_for_series(self):
 
-        if insertion_type.__class__.name in ["NovelInsertion", "MicroHomology"]:
-            key += f"-{insertion_type.query_sequence}"
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+
+        key = f"{self.chrom}-{key}-{self.prev_breakpoint}-{self.next_breakpoint}"
+
+        if self.insertion_info is not None:
+            _, insertion_type = self.insertion_info
+            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
+                key = f"{insertion_type.query_sequence}-{key}"
 
         return key
 
@@ -811,6 +825,12 @@ class Node(object):
             new_node.__dict__[attr_key] = attr_value
 
         return new_node
+
+    def compare(self, other) -> bool:
+        key1_self, key2_self = self.unique_key
+        key1_other, key2_other = other.unique_key
+
+        return True if key1_self == key1_other or key2_self == key2_other else False
 
     def is_start_node(self):
         return True if not self.has_predecessor() else False
@@ -825,10 +845,11 @@ class Node(object):
         return True if self.successor else False
 
     def add_successor(self, successor):
-
+        flag = False
         for successor_node in self.successor:
-            if successor_node.unique_key != successor.unique_key:
-                self.successor.append(successor)
+            if successor_node.compare(successor):
+                flag = True
+                break
 
     def add_predecessor(self, predecessor):
         for predecessor_node in self.predecessor:
@@ -1039,10 +1060,10 @@ class Series(object):
 
     :Example:
     >>> series = Series(blat=None, logger=None)
-    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[(7706250,7708250)],sv_type='TDUP'))
-    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'))
-    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)], sv_type='TDUP'))
-    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[(15777169,15777589)], sv_type=None))
+    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
+    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
     >>> series
     Series(
         Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
@@ -1051,14 +1072,14 @@ class Series(object):
         Node(chr1:15777169-15777589:+, 15777169-15777589, None, chr1:15777169, None) )
 
     >>> series_with_novel_insertion = Series(blat=None, logger=None)
-    >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)], sv_type=None)]
+    >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
     >>> series_with_novel_insertion
     Series(
         Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, None, chr17:7702552)
         Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
     """
 
-    def __init__(self, blat: "Blat", logger: logger) -> None:
+    def __init__(self, blat: Union["Blat", None], logger: logger) -> None:
         self.nodes = []
         self.is_extended = False
         self.blat = blat
@@ -1372,45 +1393,6 @@ class Series(object):
 
     __str__ = __repr__
 
-    def decompose(self) -> list:
-        """Decompose the sequence of Nodes into Nodes pair"""
-        paired_breakpoints = []
-        for i, j in zip(self.nodes[::1], self.nodes[1::1]):
-            paired_breakpoints.append(
-                f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
-            )
-        return paired_breakpoints
-
-    def disable_blat_logger(self):
-        self.blat, self.logger = None, None
-
-    @property
-    def start_node(self):
-        return self.nodes[0]
-
-    @start_node.setter
-    def start_node(self, node):
-        self.nodes[0] = node
-
-    @property
-    def end_node(self):
-        return self.nodes[-1]
-
-    @end_node.setter
-    def end_node(self, node):
-        self.nodes[-1] = node
-
-    @property
-    def unique_key(self):
-        return "".join([node.unique_key for node in self.nodes])
-
-    @staticmethod
-    def merge_nodes(node1, node2):
-        node1.exons[0][0] = min(node1.exons[0][0], node2.exons[0][0])
-        node1.exons[-1][1] = max(node1.exons[-1][1], node2.exons[-1][1])
-
-        return node1
-
     def __add__(self, other):
 
         if isinstance(other, Series):
@@ -1456,6 +1438,45 @@ class Series(object):
             raise TypeError(
                 f"Series object can only be extended to Series object. {type(other)} object is not supported."
             )
+
+    def decompose(self) -> list:
+        """Decompose the sequence of Nodes into Nodes pair"""
+        paired_breakpoints = []
+        for i, j in zip(self.nodes[::1], self.nodes[1::1]):
+            paired_breakpoints.append(
+                f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
+            )
+        return paired_breakpoints
+
+    def disable_blat_logger(self):
+        self.blat, self.logger = None, None
+
+    @property
+    def start_node(self):
+        return self.nodes[0]
+
+    @start_node.setter
+    def start_node(self, node):
+        self.nodes[0] = node
+
+    @property
+    def end_node(self):
+        return self.nodes[-1]
+
+    @end_node.setter
+    def end_node(self, node):
+        self.nodes[-1] = node
+
+    @property
+    def unique_key(self):
+        return "".join([node.get_key_for_series() for node in self.nodes])
+
+    @staticmethod
+    def merge_nodes(node1, node2):
+        node1.exons[0][0] = min(node1.exons[0][0], node2.exons[0][0])
+        node1.exons[-1][1] = max(node1.exons[-1][1], node2.exons[-1][1])
+
+        return node1
 
     def end_node_intron_key(self):
         introns_key = "".join(
@@ -2407,27 +2428,21 @@ class SpliceGraph(object):
     the SpliceGraph class is used to trace the path of splice graph
 
     :Example:
+
     >>> series1 = Series(blat=None, logger=None)
-    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[(15872815,15873800)], sv_type=None)]
-
+    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[[15872815,15873800]], sv_type=None)]
     >>> series2 = Series(blat=None, logger=None)
-    >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[(7701500, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)], sv_type=None)]
-
+    >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[[7701500, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
     >>> series3 = Series(blat=None, logger=None)
-    >>> series3.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[(15872890, 15873900)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,876678)], sv_type=None)]
-
+    >>> series3.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
     >>> series4 = Series(blat=None, logger=None)
-    >>> series4.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[(15872890, 15873900)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,873400), (875500,876678)], sv_type=None)]
-
+    >>> series4.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
     >>> series5 = Series(blat=None, logger=None)
-    >>> series5.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[(15872815, 15873900)], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,876678)], sv_type=None)]
-
+    >>> series5.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
     >>> series6 = Series(blat=None, logger=None)
-    >>> series6.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[(15872815, 15873900)], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,876678)], sv_type=None)]
-
+    >>> series6.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
     >>> series7 = Series(blat=None, logger=None)
-    >>> series7.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[(15872815, 15873900)], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[(872815,873400), (875500,876678)], sv_type=None)]
-
+    >>> series7.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
     >>> from loguru import logger
     >>> splice_graph = SpliceGraph(series_list=[series1, series2, series3, series4, series5, series6, series7], logger=logger)
     >>> splice_graph.construct()
@@ -2445,18 +2460,30 @@ class SpliceGraph(object):
     def get_start_nodes(self):
         return [node for node in self.nodes.values() if node.is_start_node]
 
-    def get_node(self, unique_key):
-        return self.nodes.get(unique_key, None)
+    def get_node(self, unique_key: str) -> Optional[Node]:
+        key1, key2 = unique_key
+
+        if self.nodes.get(key1, None) is not None:
+            return self.nodes[key1]
+        elif self.nodes.get(key2, None) is not None:
+            return self.nodes[key2]
+        else:
+            return None
 
     def add_node(self, node):
-        self.nodes[node.unique_key] = node
+        key1, key2 = node.unique_key
+
+        if key1.endswith("None"):
+            self.nodes[key2] = node
+        else:
+            self.nodes[key1] = node
 
     def __iter__(self):
         for node in self.nodes.values():
             yield node
 
     def __contains__(self, node):
-        return True if self.get_node(node.unique_key) is not None else False
+        return False if self.get_node(node.unique_key) is None else True
 
     def reduce(self):
         """
@@ -2471,7 +2498,7 @@ class SpliceGraph(object):
             else:
                 result_dict[series.unique_key] = series
 
-        self.series_list = result_dict.values()
+        self.series_list = list(result_dict.values())
 
     def construct(self):
         self.reduce()
@@ -2484,17 +2511,25 @@ class SpliceGraph(object):
                     node_in_graph = self.get_node(unique_key)
                     node_in_graph.update_sr()
                     node_in_graph.update_first_exon_start(node.exons[0][0])
-                    node_in_graph.update_end_exon_end(node.exons[-1][1])
+                    node_in_graph.update_last_exon_end(node.exons[-1][1])
+                    # TODO: may need to update breakpoint
 
                     if index != len(series) - 1:
                         successor_node = series[index + 1]
                         node_in_graph.add_successor(successor_node)
+                    elif index != 0:
+                        predecessor_node = series[index - 1]
+                        node_in_graph.add_predecessor(predecessor_node)
 
                 else:
                     self.add_node(node)
+
                     if index != len(series) - 1:
                         successor_node = series[index + 1]
                         node.add_successor(successor_node)
+                    elif index != 0:
+                        predecessor_node = series[index - 1]
+                        node.add_predecessor(predecessor_node)
 
     def _trace(self, start_node, path, group_paths):
 
@@ -2502,7 +2537,7 @@ class SpliceGraph(object):
             group_paths.append(path)
 
         else:
-            successors = start_node.successors
+            successors = start_node.successor
             if successors:
                 for successor in successors:
                     self._trace(successor, path + [start_node], group_paths)
@@ -2514,3 +2549,7 @@ class SpliceGraph(object):
             group_paths = []
             self._trace(start_node, [], group_paths)
             self.result_series_list.append(group_paths)
+
+    def run(self):
+        self.construct()
+        self.trace()
