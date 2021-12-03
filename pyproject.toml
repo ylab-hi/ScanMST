@@ -19,7 +19,6 @@ Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-align = {git = "https://github.com/brentp/align.git"}
 biopython = "^1.79"
 pysam = "^0.18.0"
 HTSeq = "^0.13.5"
@@ -54,6 +53,7 @@ sphinx-rtd-theme = "^0.5.2"
 sphinx-click = "^3.0.1"
 Pygments = "^2.9.0"
 pytest-mock = "^3.6.1"
+nox = "^2021.10.1"
 
 [tool.poetry.scripts]
 ScanNLS = "scannls.main:main"
@@ -64,6 +64,10 @@ pretty = true
 show_column_numbers = true
 show_error_codes = true
 show_error_context = true
+exclude = "call"
+#exclude = "isoform"
+#[[tool.mypy.ignore]]
+#module = ["scannls.call"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

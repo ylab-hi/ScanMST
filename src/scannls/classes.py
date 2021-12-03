@@ -878,9 +878,15 @@ class ReadsConnecter(object):
 
     @staticmethod
     def _determine_microhomology_len(
-        read_query_length, prev_sms, next_sms, prev_read_mode, next_read_mode
+        read_match_sequence,
+        read_query_length,
+        prev_sms,
+        next_sms,
+        prev_read_mode,
+        next_read_mode,
     ):
         """
+        :param read_match_sequence:
         :param read_query_length: reads length
         :param prev_sms: previous read sms
         :param next_sms: next read sms
@@ -928,27 +934,37 @@ class ReadsConnecter(object):
 
         if bp_region_seq_len < 0:
             microhomology_length = -bp_region_seq_len
-            if microhomology_length < read_query_length:
+            if microhomology_length < len(read_match_sequence):
                 is_microhomology = True
         return is_microhomology, microhomology_length
 
     @staticmethod
     def update_query_sequence(
-        read_query_sequence, prev_sms, next_sms, prev_read_mode, next_read_mode
+        read_match_sequence,
+        read_query_sequence,
+        prev_sms,
+        next_sms,
+        prev_read_mode,
+        next_read_mode,
     ):
         (
             is_microhomology,
             microhomology_length,
         ) = ReadsConnecter._determine_microhomology_len(
-            len(read_query_sequence), prev_sms, next_sms, prev_read_mode, next_read_mode
+            read_match_sequence,
+            len(read_query_sequence),
+            prev_sms,
+            next_sms,
+            prev_read_mode,
+            next_read_mode,
         )
         if is_microhomology:
             if prev_read_mode == 2:
-                return read_query_sequence[microhomology_length:]
+                return read_match_sequence[microhomology_length:]
             elif prev_read_mode == 1:
-                return read_query_sequence[:-microhomology_length]
+                return read_match_sequence[:-microhomology_length]
         else:
-            return read_query_sequence
+            return read_match_sequence
 
     def test_4case(
         self, start_read: Read, read: Read, is_align_for_ms: bool
@@ -963,6 +979,7 @@ class ReadsConnecter(object):
         """
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+        read_query_sequence = read.query_sequence
 
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
@@ -973,10 +990,11 @@ class ReadsConnecter(object):
         self.logger.debug("testing first case M vs LS")
 
         next_read_mode = 2
-        read_query_sequence = start_read.adhocseq[
+        read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
-        read_query_sequence = ReadsConnecter.update_query_sequence(
+        read_match_sequence = ReadsConnecter.update_query_sequence(
+            read_match_sequence,
             read_query_sequence,
             start_read.adhocsms,
             read.sms,
@@ -985,7 +1003,7 @@ class ReadsConnecter(object):
         )
 
         match_flag = self.compare_MS(
-            read_query_sequence,
+            read_match_sequence,
             read.query_sequence[:_lt_len_r2],
             same_strand,
             is_align_for_ms,
@@ -1013,10 +1031,11 @@ class ReadsConnecter(object):
         self.logger.debug("testing second case M vs RS")
         # second case
         next_read_mode = 1
-        read_query_sequence = start_read.adhocseq[
+        read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
-        read_query_sequence = ReadsConnecter.update_query_sequence(
+        read_match_sequence = ReadsConnecter.update_query_sequence(
+            read_match_sequence,
             read_query_sequence,
             start_read.adhocsms,
             read.sms,
@@ -1025,7 +1044,7 @@ class ReadsConnecter(object):
         )
 
         match_flag = self.compare_MS(
-            read_query_sequence,
+            read_match_sequence,
             read.query_sequence[-_rt_len_r2:],
             same_strand,
             is_align_for_ms,
