@@ -306,7 +306,6 @@ def _scan_bam_helper(
 
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
-        logger.trace(f"{read.query_name= } {read.query_sequence=} {read.cigarstring=}")
         if (
             read.mapq >= mapq_cutoff
             and not read.is_secondary
@@ -394,6 +393,9 @@ def _scan_bam_helper(
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if read.has_tag("SA") and not read.is_supplementary:
+                logger.trace(
+                    f"{read.query_name= } {read.query_sequence=} {read.cigarstring=}"
+                )
                 event_lists, read_chains = detect_sv_from_cigar(
                     read=read,
                     mapq_cutoff=mapq_cutoff,

@@ -27,60 +27,6 @@ from .exception import ReadNotFoundError
 from .utils import reverse_complement
 
 
-class Path(object):
-    """store chimeric reads as nodes in a path (directed acyclic graph)
-    :param nodes: a list of Read as nodes
-    :type nodes: List[Read]
-    :param sms: triple tuple for (left soft-clipped length, middle read matched size, right softclipped length)
-    :type sms: tuple or None
-    :param sequence: reads sequence of last added read
-    :type sequence: str or None
-    :param nm: summation of number-of-mismatches of Reads in the path
-    :type nm: int
-    :param mode: a dictionary of Reads-pair to mode in the path
-    :type mode: dict
-    .. note::
-        We have to pay attention on 'sms':
-            * every path only keep one 'sms' value (per path instead of per node).
-            * every path only keep one 'sequence' value (per path).
-            * once new node added to the path, update the value of 'sms' using the summed 'sms' value from the function 'test_is_connected'
-            * once new node added to the path, update the value of 'sequence' using the summed 'sequence' value from the function 'test_is_connected'
-    """
-
-    __slots__ = ("nodes", "sms", "sequence", "nm", "mode")
-
-    def __init__(self) -> None:
-        self.nodes = []
-        self.sms = None
-        self.sequence = None
-        self.nm = 0
-        self.mode = {}
-
-    def add(self, read) -> None:
-        """add one chimeric read to the path"""
-        self.nodes.append(read)
-        self.nm = self.nm + read.nm
-
-    def add_mode(self, read_pair_dict) -> None:
-        """add read-pair=> mode to the path"""
-        self.mode.update(read_pair_dict)
-
-    def __len__(self) -> int:
-        return len(self.nodes)
-
-    def __lt__(self, other) -> bool:
-        return len(self.nodes) < len(other.nodes)
-
-    def __repr__(self) -> str:
-        return ";".join(map(str, self.nodes))
-
-    def __hash__(self) -> int:
-        return hash(";".join(map(str, self.nodes)))
-
-    def __eq__(self, other) -> bool:
-        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
-
-
 class Read(object):
     """build a read class for storing information of every junction read
 
@@ -413,1089 +359,6 @@ class Read(object):
             return True
         else:
             return False
-
-
-class NovelInsertion(Read):
-    """the class is used to represent reads insertion whose hit is 0 or >1
-
-    :Example:
-
-    >>> novel_insertion = NovelInsertion(hit_num=0, query_sequence='ATCA')
-    >>> novel_insertion
-    NovelInsertion(ATCA:0)
-    >>> novel_insertion.query_sequence
-    ATCA
-    >>> novel_insertion.hit_num
-    0
-
-    .. note::
-        `NovelInsertion` is a subclass of :class:`Read`, and siblings of :class:`Insertion`
-
-    .. seealso::
-        :class:`Insertion`
-    """
-
-    def __init__(self, hit_num: int, query_sequence: str):
-        self.query_sequence = query_sequence
-        self.hit_num = hit_num
-
-    def __repr__(self):
-        return f"NovelInsertion({self.query_sequence}:{self.hit_num})"
-
-    def reverse_completement_query(self):
-        self.query_sequence = reverse_complement(self.query_sequence)
-
-
-class MicroHomology(object):
-    """the class is used to represent microhomology
-
-    :Example:
-
-    >>> microhomology = MicroHomology(query_sequence="ATCA")
-    >>> microhomology
-    MicroHomology(ATCA)
-    >>> microhomology.query_sequence
-    ATCA
-
-    .. seealso::
-        :class:`Insertion` and :class:`NovelInsertion`
-    """
-
-    def __init__(self, query_sequence: str):
-        self.query_sequence = query_sequence
-
-    def __repr__(self):
-        return f"MicroHomology({self.query_sequence})"
-
-    def reverse_completement_query(self):
-        self.query_sequence = reverse_complement(self.query_sequence)
-
-
-class Insertion(Read):
-    """
-    the class is used to represent reads insertion whose hit is 1
-
-    :param chrom: chromosome of genome
-    :param ref_start: start position of chimeric read
-    :param strand: direction of chimeric read (-|+)
-    :param cigarstring: cigar string of chimeric read (-|+)
-    :param mapq: MAPQ of chimeric read
-    :param nm: number of mismatches of chimeric read
-    :param query_sequence: read sequence in the BAM file
-
-    :Example:
-
-    >>> insertion = Insertion(hit_num=1, chrom= '1', ref_start=1, strand='+', cigarstring='1S1M1S',
-    ...                       mapq=60, nm=0, query_sequence='ATCA')
-
-    >>> insertion
-    Insertion(1:1-4:+, 1-2|2-3, TPA, 1, 4)
-
-    .. note::
-        `Insertion` is a subclass of :class:`Read`, and siblings of :class:`NovelInsertion`
-        `Insertion` includes the attributes of :class:`Node` in order to enable us to
-        manipulate the attributes of `Insertion` same as :class:`Node` in :class:`Series`
-
-    .. seealso:: :class:`NovelInsertion`, :class:`Node` and :class:`Read`
-    """
-
-    def __init__(
-        self,
-        hit_num: int,
-        chrom: str,
-        ref_start: int,
-        strand: str,
-        cigarstring: str,
-        mapq: int,
-        nm: int,
-        query_sequence: str,
-    ):
-        (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        ) = Read._calculate_features(cigarstring)
-        super().__init__(
-            chrom,
-            ref_start,
-            strand,
-            cigarstring,
-            mapq,
-            nm,
-            query_sequence,
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        )
-        self.hit_num = hit_num
-        self.sv_type = None
-
-        # add attributes for insertion in order to be compatible with the class Node
-        self.prev_breakpoint = None
-        self.next_breakpoint = None
-        self.modes = None
-        self.genes = None
-        self.annotation_code = None
-        self.splicing_code = None
-        self.sr = None
-
-        self.exons, self.introns = self.get_exons_and_introns()
-        self.successor, self.predecessor = [], []
-
-    def __repr__(self):
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
-
-    def update_cigarstring(self, sms, source_s):
-        _ls, _m, _rs = sms
-        if source_s == "left":
-            ls = _ls - self.query_length
-            rs = _rs + _m
-        else:
-            ls = _ls + _m
-            rs = _rs - self.query_length
-
-        self.cigarstring = cigar_validity(f"{ls}S{self.cigarstring}{rs}S")
-
-    def reverse_completement_query(self):
-        self.query_sequence = reverse_complement(self.query_sequence)
-
-    def reverse_strand(self):
-        self.strand = "-" if self.strand == "+" else "+"
-
-    @property
-    def unique_key(self):
-        introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
-
-        # key = f"{self.chrom}-{key}"
-        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
-
-        return key
-
-    def copy(self):
-        new_node = Node()
-
-        for attr_key, attr_value in self.__dict__:
-            new_node.__dict__[attr_key] = attr_value
-
-        return new_node
-
-    def is_start_node(self):
-        return True if not self.has_predecessor() else False
-
-    def is_end_node(self):
-        return True if not self.has_successor() else False
-
-    def has_predecessor(self):
-        return True if self.predecessor else False
-
-    def has_successor(self):
-        return True if self.successor else False
-
-    def add_successor(self, successor):
-
-        for successor_node in self.successor:
-            if successor_node.unique_key != successor.unique_key:
-                self.successor.append(successor)
-
-    def add_predecessor(self, predecessor):
-        for predecessor_node in self.predecessor:
-            if predecessor_node.unique_key != predecessor.unique_key:
-                self.predecessor.append(predecessor)
-
-    def update_sr(self, key=1):
-        # TODO: may be wrong
-        self.sr += key
-
-    def update_first_exon_start(self, coord):
-        self.exons[0][0] = min(coord, self.exons[0][0])
-
-    def update_last_exon_end(self, coord):
-        self.exons[-1][1] = max(coord, self.exons[-1][1])
-
-
-class LengthAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if values <= 0:
-            parser.error("Minimum length for {0} is 1".format(option_string))
-        setattr(namespace, self.dest, values)
-
-
-class Node(object):
-    """build a breakpoint node class for storing information of every breakpoint
-    :param prev_bp: breakpoint for the previous breakpoints connections
-    :param next_bp: breakpoint for the next breakpoints connections
-    :param strand: direction of chimeric read (-|+)
-    :param chrom: chromosome
-    :param ref_start: reference start position
-    :param ref_end: reference end position
-    :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
-    :param sv_type: one of the SV types (TDUP/INV/TRA)
-    :param annot: gene annotation code
-    :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
-    :param modes: read modes of connected breakpoints
-    :param genes: overlapped genes of connected breakpoints
-    :param insertion_info: insertion information, (True, Insertion) or (False, NovelInsertion) or (False, MicroHomology)
-
-    .. note::
-        connection-level fields:
-        * sv_type
-        * modes
-        * genes
-        * annotation_code
-        * splicing_code
-    :Example:
-    >>> node1 = Node(
-                prev_bp=None,
-                next_bp='chr10:93636994',
-                strand='+',
-                chrom='chr10',
-                ref_start=93636994
-                ref_end=93637094,
-                exons=[(93636994, 93637094)],
-            )
-    >>> node1
-    Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
-    """
-
-    __slots__ = (
-        "next_breakpoint",
-        "prev_breakpoint",
-        "strand",
-        "chrom",
-        "ref_start",
-        "ref_end",
-        "exons",
-        "sv_type",
-        "modes",
-        "genes",
-        "annotation_code",
-        "splicing_code",
-        "sr",
-        "insertion_info",
-        "predecessor",
-        "successor",
-    )
-
-    def __init__(
-        self,
-        prev_bp: Optional[str] = None,
-        next_bp: Optional[str] = None,
-        strand: Optional[str] = None,
-        chrom: Optional[str] = None,
-        ref_start: Optional[int] = None,
-        ref_end: Optional[int] = None,
-        exons: Optional[List[int]] = None,
-        sv_type: Optional[str] = None,
-        annot: Optional[int] = None,
-        canonical: Optional[int] = None,
-        modes: Optional[Tuple[int]] = None,
-        genes: Optional[Tuple[str]] = None,
-        sr: Optional[int] = 1,
-        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
-    ) -> None:
-        self.chrom = chrom
-        self.prev_breakpoint = prev_bp
-        self.next_breakpoint = next_bp
-        self.strand = strand
-        self.ref_start = ref_start
-        self.ref_end = ref_end
-        self.exons = exons
-        self.sv_type = sv_type
-        self.modes = modes
-        self.genes = genes
-        self.annotation_code = annot
-        self.splicing_code = canonical
-        self.sr = sr
-        self.insertion_info = insertion_info
-
-        self.predecessor, self.successor = [], []
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, Node):
-            if (
-                self.chrom == other.chrom
-                and self.ref_start == other.ref_start
-                and self.ref_end == other.ref_end
-                and self.sv_type == other.sv_type
-                and self.prev_breakpoint == other.prev_breakpoint
-                and self.next_breakpoint == other.next_breakpoint
-                and self.strand == other.strand
-            ):
-                return True
-        return False
-
-    def __hash__(self) -> int:
-        return (
-            hash(self.chrom)
-            ^ hash(self.ref_start)
-            ^ hash(self.ref_end)
-            ^ hash(self.sv_type)
-            ^ hash(self.prev_breakpoint)
-            ^ hash(self.next_breakpoint)
-            ^ hash(self.strand)
-        )
-
-    # for debug purpose
-    def __repr__(self) -> str:
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
-
-    def __str__(self) -> str:
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
-
-    def is_next_node(self, other) -> bool:
-        if self.next_breakpoint == other.prev_breakpoint:
-            return True
-        else:
-            return False
-
-    def is_previous_node(self, other) -> bool:
-        if self.prev_breakpoint == other.next_breakpoint:
-            return True
-        else:
-            return False
-
-    @classmethod
-    def create_nodes(cls, number):
-        return [cls() for _ in range(number)]
-
-    @property
-    def introns(self):
-        if len(self.exons) <= 1:
-            return []
-        else:
-            _positions = []
-            for i, j in self.exons:
-                _positions.extend([i, j])
-            _positions.pop(0)
-            _positions.pop(-1)
-            _introns = list(zip(_positions[::2], _positions[1::2]))
-            return _introns
-
-    @property
-    def unique_key(self):
-
-        introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
-
-        key1 = f"{self.chrom}-{key}-{self.prev_breakpoint}"
-        key2 = f"{self.chrom}-{key}-{self.next_breakpoint}"
-
-        if self.insertion_info is not None:
-            _, insertion_type = self.insertion_info
-            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
-                key1 = f"{insertion_type.query_sequence}-{key1}"
-                key2 = f"{insertion_type.query_sequence}-{key2}"
-        return key1, key2
-
-    def get_key_for_series(self):
-
-        introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
-
-        key = f"{self.chrom}-{key}-{self.prev_breakpoint}-{self.next_breakpoint}"
-
-        if self.insertion_info is not None:
-            _, insertion_type = self.insertion_info
-            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
-                key = f"{insertion_type.query_sequence}-{key}"
-
-        return key
-
-    def copy(self) -> "Node":
-        new_node = Node()
-
-        for attr_key, attr_value in self.__dict__:
-            new_node.__dict__[attr_key] = attr_value
-
-        return new_node
-
-    def compare(self, other) -> bool:
-        key1_self, key2_self = self.unique_key
-        key1_other, key2_other = other.unique_key
-
-        return True if key1_self == key1_other or key2_self == key2_other else False
-
-    def is_start_node(self):
-        return True if not self.has_predecessor() else False
-
-    def is_end_node(self):
-        return True if not self.has_successor() else False
-
-    def has_predecessor(self):
-        return True if self.predecessor else False
-
-    def has_successor(self):
-        return True if self.successor else False
-
-    def add_successor(self, successor):
-        flag = False
-        for successor_node in self.successor:
-            if successor_node.compare(successor):
-                flag = True
-                break
-
-    def add_predecessor(self, predecessor):
-        for predecessor_node in self.predecessor:
-            if predecessor_node.unique_key != predecessor.unique_key:
-                self.predecessor.append(predecessor)
-
-    def update_sr(self, key=1):
-        self.sr += key
-
-    def update_first_exon_start(self, coord):
-        self.exons[0][0] = min(coord, self.exons[0][0])
-
-    def update_last_exon_end(self, coord):
-        self.exons[-1][1] = max(coord, self.exons[-1][1])
-
-
-class Event(object):
-    """the Event class is used to parse the return value from the function nls_inference
-
-    :Example:
-
-    >>> args, kwargs = [], {}
-    >>> event = Event(infer_nls_from_connected_reads(*args, **kwargs))
-    >>> event.sv_type
-    TRA
-    >>> event
-    Event(TRA, )
-
-
-    .. note::
-
-    .. seealso::
-
-    .. todo::
-        add more examples
-    """
-
-    def __init__(self, event):
-        (
-            sv_type,
-            annot,
-            canonical,
-            _positions,
-            read1_info,
-            read2_info,
-            insertion_info,
-            strands,
-            genes,
-        ) = event
-
-        self.sv_type = sv_type
-        if self.sv_type != "NA":
-            self.annotation_code = annot
-            self.splicing_code = canonical
-            self.genes = genes
-            self.insertion_info = insertion_info
-            self.bp1, self.bp2 = _positions[:2]
-            self.mode1, self.mode2 = _positions[2:]
-            self.strand1, self.strand2 = strands
-            self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
-            self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
-
-    def __repr__(self):
-        if self.sv_type != "NA":
-            return (
-                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code})"
-            )
-
-    @property
-    def modes(self) -> List[int]:
-        """
-        :return: the mode of read1 and read2 in the event
-        """
-        return [self.mode1, self.mode2]
-
-    @property
-    def chrom1(self) -> str:
-        return self.bp1.split(":")[0]
-
-    @property
-    def chrom2(self) -> str:
-        return self.bp2.split(":")[0]
-
-    @property
-    def insertion_seq1(self) -> str:
-        return self.insertion_info[0][1:]
-
-    @property
-    def insertion_seq2(self) -> str:
-        return self.insertion_info[1][1:]
-
-    @property
-    def source_s1(self) -> str:
-        """
-        the source of the insertion in read1
-        :return:
-        """
-        return "left" if self.mode1 == 2 else "right"
-
-    @property
-    def source_s2(self) -> str:
-        return "left" if self.mode2 == 2 else "right"
-
-    def is_NA(self) -> bool:
-        return True if self.sv_type == "NA" else False
-
-    def has_insertion(self) -> bool:
-        return True if self.insertion_info[0].startswith("+") else False
-
-    def has_microhomology(self) -> bool:
-        return True if self.insertion_info[0].startswith("-") else False
-
-    def is_same_strand(self) -> bool:
-        return self.strand1 == self.strand2
-
-    def read1(self, read_chains: List[Read]) -> Read:
-        for read in read_chains:
-            if read.ref_start == self.read1_ref_start:
-                return read
-        else:
-            raise ReadNotFoundError
-
-    def read2(self, read_chains: List[Read]) -> Read:
-        for read in read_chains:
-            if read.ref_start == self.read2_ref_start:
-                return read
-        else:
-            raise ReadNotFoundError
-
-    def update_specific_info_within_event(
-        self, node: Union[Node, Insertion], info_key_list: List[str]
-    ) -> Union[Node, Insertion]:
-        """
-        update node info from the event by the info_key_list
-
-        :param node:  Node
-        :param info_key_list: [key1, key2, ...]
-        :return: Node with updated info
-        """
-
-        for key in info_key_list:
-            setattr(node, key, getattr(self, key))
-
-        return node
-
-    def update_node_info(
-        self,
-        flag: bool,
-        new_node: Node,
-        insertion: Union[Insertion, None, MicroHomology],
-        is_update_insertion_info: bool = True,
-    ) -> Node:
-        """
-        update the common info the node in the front, and the common info includes
-
-        sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
-
-        :param flag: the flag indicates whether there is a insertion
-        :param new_node: the new node to be updated
-        :param insertion: the insertion to be updated
-        :param is_update_insertion_info: whether to update the insertion info
-        :return: the updated node
-        """
-        new_node = self.update_specific_info_within_event(
-            new_node, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
-        )
-        if is_update_insertion_info:
-            new_node.insertion_info = (flag, insertion)
-        return new_node
-
-    def update_insertion_info(self, insertion: Insertion) -> Insertion:
-        """
-        update the information of insertion
-
-        :param insertion: the insertion to be updated
-        :return: the updated insertion
-        """
-        insertion.prev_breakpoint = insertion.ref_start
-        insertion.next_breakpoint = insertion.ref_end
-
-        insertion.exons, _ = insertion.get_exons_and_introns()
-        return self.update_specific_info_within_event(
-            insertion, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
-        )
-
-
-class Series(object):
-    """construct a sequence of Nodes for storing information of connected breakpoints
-    :param nodes: sequence of Nodes
-    :type nodes: list
-    :param assemblied: The series is from assembly of reads (True) or a single read (False)
-    :type assemblied: bool or None
-
-    .. note::
-        [('TDUP', 0, 1, ('chr17:7708250', 'chr17:7701656', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
-        ('TRA', 0, 1, ('chr17:7702552', 'chr1:15872815', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
-        ('TDUP', 0, 1, ('chr1:15876678', 'chr1:15777169', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC'])]
-
-        Node(TDUP, None, chr17:7708250, +);Node(TRA, chr17:7701656, chr17:7702552, +);Node(TDUP, chr1:15872815, chr1:15876678, +);Node(None, chr1:15777169, None, +)
-
-
-                         bp1               bp2  bp3                bp4
-                ---------|------    -------|----|------    --------|---------
-                       Node1                 Node2                Node3
-    prev_breakpoint:   None                 bp2                   bp4
-    next_breakpoint:    bp1                 bp3                   None
-    sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
-
-    :Example:
-    >>> series = Series(blat=None, logger=None)
-    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
-    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
-    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
-    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
-    >>> series
-    Series(
-        Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
-        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, chr17:7701656, chr17:7702552)
-        Node(chr1:15872815-15876678:+, 15872815-15876678, TDUP, chr1:15872815, chr1:15876678)
-        Node(chr1:15777169-15777589:+, 15777169-15777589, None, chr1:15777169, None) )
-
-    >>> series_with_novel_insertion = Series(blat=None, logger=None)
-    >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
-    >>> series_with_novel_insertion
-    Series(
-        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, None, chr17:7702552)
-        Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
-    """
-
-    def __init__(self, blat: Union["Blat", None], logger: logger) -> None:
-        self.nodes = []
-        self.is_extended = False
-        self.blat = blat
-        self.logger = logger
-
-    def add_node(self, node: Union[Node, Insertion]) -> None:
-        self.nodes.append(node)
-
-    def init(
-        self,
-        event_list,
-        read_chains,
-        splice_bin,
-        genome_fasta,
-        cvg,
-        gene_iv,
-        motif_required,
-    ) -> None:
-        """add event list as Node to self.nodes"""
-        event_list = [
-            Event(event)
-            for event in self.order_events_by_trancription_direction(event_list)
-            if event[0] != "NA"
-        ]
-        event_list_len = len(event_list)
-        previous_breakpoint = None
-        for index, event in enumerate(event_list):
-
-            read1_node = Node(
-                prev_bp=previous_breakpoint,
-                next_bp=event.bp1,
-                strand=event.strand1,
-                chrom=event.chrom1,
-                ref_start=event.read1_ref_start,
-                ref_end=event.read1_ref_end,
-                exons=event.read1_exons,
-            )
-            previous_breakpoint = event.bp2
-
-            # is insertions
-            if event.has_insertion():
-
-                insertion_seq = event.insertion_seq1  # pick from the first read
-                flag, insertion = self.blat.query_insertion(insertion_seq)
-                if flag:  # only one hit
-                    # add first node and insertion node
-                    source_s = event.source_s1
-
-                    # get type of insertion between first node and insertion node
-                    read1 = event.read1(read_chains)
-                    insertion.update_cigarstring(read1.sms, source_s=source_s)
-
-                    insertion_mode = 2 if event.mode1 == 1 else 1
-
-                    read1_insertion_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=read1,
-                            read_rt=insertion,
-                            lt_mode=event.mode1,
-                            rt_mode=insertion_mode,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                            logger=self.logger,
-                        )
-                    )
-
-                    # get type of insertion between insertion node and second node
-                    read2 = event.read2(read_chains)
-                    insertion_mode = 2 if event.mode2 == 1 else 1
-
-                    if event.strand1 != event.strand2:
-                        insertion.reverse_completement_query()
-                        insertion.reverse_strand()
-
-                    insertion_read2_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=insertion,
-                            read_rt=read2,
-                            lt_mode=insertion_mode,
-                            rt_mode=event.mode2,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                            logger=self.logger,
-                        )
-                    )
-
-                    if event.strand1 != event.strand2 and event.strand1 == "+":
-                        insertion.reverse_completement_query()
-                        insertion.reverse_strand()
-
-                    if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
-                        # only add read1
-                        read1_node = event.update_node_info(flag, read1_node, insertion)
-                        self.add_node(read1_node)
-                    else:
-                        # add read1 and insertion
-                        read1_node = read1_insertion_event.update_node_info(
-                            flag, read1_node, insertion
-                        )
-                        self.add_node(read1_node)
-
-                        insertion = insertion_read2_event.update_insertion_info(
-                            insertion
-                        )
-                        self.logger.trace(f"Add {insertion} to Series")
-                        self.add_node(insertion)
-
-                else:  # no hits or multiple hits
-
-                    if event.strand1 == "-":
-                        insertion.reverse_completement_query()
-                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
-                    # only add read1 with insertion
-                    read1_node = event.update_node_info(flag, read1_node, insertion)
-                    self.add_node(read1_node)
-            # no insertion
-            elif event.has_microhomology():
-                # add read 1 with on insertion
-                microhomology = MicroHomology(event.insertion_seq1)
-
-                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
-                if event.strand1 == "-":
-                    microhomology.reverse_completement_query()
-
-                read1_node = event.update_node_info(
-                    False, read1_node, microhomology, False
-                )
-                self.add_node(read1_node)
-
-            else:
-                read1_node = event.update_node_info(False, read1_node, None, False)
-                self.add_node(read1_node)
-
-            # add final node
-            if index == event_list_len - 1:
-                final_node = Node(
-                    prev_bp=previous_breakpoint,
-                    strand=event.strand2,
-                    chrom=event.chrom2,
-                    ref_start=event.read2_ref_start,
-                    ref_end=event.read2_ref_end,
-                    exons=event.read2_exons,
-                )
-
-                self.add_node(final_node)
-
-    @staticmethod
-    def reorder_event(event):
-        """
-        order breakpoints pairs following the transcription direction using
-        information of reads 'mode' and 'strand'
-        +1;-1 => up;down
-        +2;-2 => down;up
-        """
-        (
-            sv_type,
-            annot,
-            canonical,
-            _positions,
-            read1_info,
-            read2_info,
-            insertion_info,
-            strands,
-            genes,
-        ) = event
-        bp1 = _positions[0]
-        bp2 = _positions[1]
-        mode1 = _positions[2]
-        mode2 = _positions[3]
-        strand1 = strands[0]
-        strand2 = strands[1]
-        if strand1 == "+" and strand2 == "-":
-            if mode1 == 1 and mode2 == 1:
-                is_bp1_upstream = True
-            elif mode1 == 2 and mode2 == 2:
-                is_bp1_upstream = False
-        elif strand1 == "-" and strand2 == "+":
-            if mode1 == 1 and mode2 == 1:
-                is_bp1_upstream = False
-            elif mode1 == 2 and mode2 == 2:
-                is_bp1_upstream = True
-        elif strand1 == "+" and strand2 == "+":
-            if mode1 == 1 and mode2 == 2:
-                is_bp1_upstream = True
-            elif mode1 == 2 and mode2 == 1:
-                is_bp1_upstream = False
-        elif strand1 == "-" and strand2 == "-":
-            if mode1 == 1 and mode2 == 2:
-                is_bp1_upstream = False
-            elif mode1 == 2 and mode2 == 1:
-                is_bp1_upstream = True
-
-        if not is_bp1_upstream:
-            if annot == 1:
-                annot = 2
-            elif annot == 2:
-                annot = 1
-            _positions = (bp2, bp1, mode2, mode1)
-            strands = (strand2, strand1)
-            genes = list(reversed(genes))
-            return (
-                sv_type,
-                annot,
-                canonical,
-                _positions,
-                read2_info,
-                read1_info,
-                insertion_info[::-1],
-                strands,
-                genes,
-            )
-        else:
-            return event
-
-    @staticmethod
-    def order_events_by_trancription_direction(event_list):
-        """
-        construct breakpoints order following transcription direction for multiple-hop events or one-hop events
-                bp1                bp2   bp3               bp4
-        ---------|------    -------|----|------    --------|---------
-              Node1                 Node2                Node3
-        ..note ::
-               requirements
-               * bp2 and bp3 at the same chromosome
-               * if strand(+): bp3 > bp2
-                 if strand(-): bp3 < bp2
-        """
-        kept_right_pos = None
-        kept_right_chrm = None
-        kept_right_strand = None
-
-        keep_event_list_order = True
-        output_event_list = []
-        for evt in event_list:
-            ordered_evt = Series.reorder_event(evt)
-            output_event_list.append(ordered_evt)
-            (
-                sv_type,
-                annot,
-                canonical,
-                _positions,
-                read1_info,
-                read2_info,
-                insertion_info,
-                strands,
-                genes,
-            ) = ordered_evt
-            chrm1, _pos1 = _positions[0].split(":")
-            chrm2, _pos2 = _positions[1].split(":")
-            pos1 = int(_pos1)
-            pos2 = int(_pos2)
-            strand1 = strands[0]
-            strand2 = strands[1]
-            if not kept_right_pos:
-                kept_right_pos = pos2
-                kept_right_chrm = chrm2
-                kept_right_strand = strand2
-            else:
-                if chrm1 == kept_right_chrm and strand1 == kept_right_strand:
-                    if strand1 == "+" and pos1 > kept_right_pos:
-                        kept_right_pos = pos2
-                        kept_right_chrm = chrm2
-                        kept_right_strand = strand2
-                    elif strand1 == "-" and pos1 < kept_right_pos:
-                        kept_right_pos = pos2
-                        kept_right_chrm = chrm2
-                        kept_right_strand = strand2
-                    else:
-                        keep_event_list_order = False
-                else:
-                    keep_event_list_order = False
-
-        if not keep_event_list_order:
-            output_event_list = list(reversed(output_event_list))
-
-        return output_event_list
-
-    def __getitem__(self, index):
-        return self.nodes[index]
-
-    def __hash__(self) -> int:
-        return hash(";".join(map(str, self.nodes)))
-
-    def __eq__(self, other) -> bool:
-        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
-
-    def __len__(self) -> int:
-        return len(self.nodes)
-
-    def __lt__(self, other) -> bool:
-        return len(self.nodes) < len(other.nodes)
-
-    def __repr__(self) -> str:
-        _repr = "\nSeries("
-        space = " " * 4
-        for n in self.nodes:
-            _repr += f"\n{space}{n!r}"
-
-        _repr += ")"
-        return _repr
-
-    def __iter__(self):
-        for node in self.nodes:
-            yield node
-
-    __str__ = __repr__
-
-    def __add__(self, other):
-
-        if isinstance(other, Series):
-            if len(other) == len(self):
-                # same length and only for reduce to merge two series wit same start node and end node
-
-                self.start_node = Series.merge_nodes(self.start_node, other.start_node)
-                self.end_node = Series.merge_nodes(self.end_node, other.end_node)
-
-                for node1, node2 in zip(self.nodes[:-1], other.nodes[:-1]):
-                    node1.sr += node2.sr
-
-                return self
-
-            else:
-                pass
-
-        else:
-            raise TypeError(
-                f"Series object can only be added to Series object. {type(other)} object is not supported."
-            )
-
-    def extend_series(self, other):
-        new_series = Series(blat=self.blat, logger=self.logger)
-        if isinstance(other, Series):
-
-            for node in self:
-                new_series.add_node(node.copy())
-
-            new_series.end_node.exons[0][0] = min(
-                new_series.end_node.exons[0][0], other.start_node.exons[0][0]
-            )
-            new_series.end_node.exons[-1][1] = max(
-                new_series.end_node.exons[-1][1], other.start_node.exons[-1][1]
-            )
-
-            for node in other[1:]:
-                new_series.add_node(node.copy())
-
-            return new_series
-
-        else:
-            raise TypeError(
-                f"Series object can only be extended to Series object. {type(other)} object is not supported."
-            )
-
-    def decompose(self) -> list:
-        """Decompose the sequence of Nodes into Nodes pair"""
-        paired_breakpoints = []
-        for i, j in zip(self.nodes[::1], self.nodes[1::1]):
-            paired_breakpoints.append(
-                f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
-            )
-        return paired_breakpoints
-
-    def disable_blat_logger(self):
-        self.blat, self.logger = None, None
-
-    @property
-    def start_node(self):
-        return self.nodes[0]
-
-    @start_node.setter
-    def start_node(self, node):
-        self.nodes[0] = node
-
-    @property
-    def end_node(self):
-        return self.nodes[-1]
-
-    @end_node.setter
-    def end_node(self, node):
-        self.nodes[-1] = node
-
-    @property
-    def unique_key(self):
-        return "".join([node.get_key_for_series() for node in self.nodes])
-
-    @staticmethod
-    def merge_nodes(node1, node2):
-        node1.exons[0][0] = min(node1.exons[0][0], node2.exons[0][0])
-        node1.exons[-1][1] = max(node1.exons[-1][1], node2.exons[-1][1])
-
-        return node1
-
-    def end_node_intron_key(self):
-        introns_key = "".join(
-            [f"{start}-{end}" for start, end in self.end_node.introns]
-        )
-        introns_key = f"{self.end_node.chrom}-{introns_key}"
-
-        return introns_key
-
-    def start_node_intron_key(self):
-        introns_key = "".join(
-            [f"{start}-{end}" for start, end in self.start_node.introns]
-        )
-        introns_key = f"{self.start_node.chrom}-{introns_key}"
-        return introns_key
-
-    def get_double_node_key(self):
-        for index in range(len(self.nodes) - 1):
-            yield f"{index}-{self.nodes[index].unique_key}{self.nodes[index + 1].unique_key}"
 
 
 class Blat(object):
@@ -2369,6 +1232,1089 @@ class MyLogger(object):
         self.logger.complete()
 
 
+class LengthAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values <= 0:
+            parser.error("Minimum length for {0} is 1".format(option_string))
+        setattr(namespace, self.dest, values)
+
+
+class NovelInsertion(Read):
+    """the class is used to represent reads insertion whose hit is 0 or >1
+
+    :Example:
+
+    >>> novel_insertion = NovelInsertion(hit_num=0, query_sequence='ATCA')
+    >>> novel_insertion
+    NovelInsertion(ATCA:0)
+    >>> novel_insertion.query_sequence
+    ATCA
+    >>> novel_insertion.hit_num
+    0
+
+    .. note::
+        `NovelInsertion` is a subclass of :class:`Read`, and siblings of :class:`Insertion`
+
+    .. seealso::
+        :class:`Insertion`
+    """
+
+    def __init__(self, hit_num: int, query_sequence: str):
+        self.query_sequence = query_sequence
+        self.hit_num = hit_num
+
+    def __repr__(self):
+        return f"NovelInsertion({self.query_sequence}:{self.hit_num})"
+
+    def reverse_completement_query(self):
+        self.query_sequence = reverse_complement(self.query_sequence)
+
+
+class MicroHomology(object):
+    """the class is used to represent microhomology
+
+    :Example:
+
+    >>> microhomology = MicroHomology(query_sequence="ATCA")
+    >>> microhomology
+    MicroHomology(ATCA)
+    >>> microhomology.query_sequence
+    ATCA
+
+    .. seealso::
+        :class:`Insertion` and :class:`NovelInsertion`
+    """
+
+    def __init__(self, query_sequence: str):
+        self.query_sequence = query_sequence
+
+    def __repr__(self):
+        return f"MicroHomology({self.query_sequence})"
+
+    def reverse_completement_query(self):
+        self.query_sequence = reverse_complement(self.query_sequence)
+
+
+class Insertion(Read):
+    """
+    the class is used to represent reads insertion whose hit is 1
+
+    :param chrom: chromosome of genome
+    :param ref_start: start position of chimeric read
+    :param strand: direction of chimeric read (-|+)
+    :param cigarstring: cigar string of chimeric read (-|+)
+    :param mapq: MAPQ of chimeric read
+    :param nm: number of mismatches of chimeric read
+    :param query_sequence: read sequence in the BAM file
+
+    :Example:
+
+    >>> insertion = Insertion(hit_num=1, chrom= '1', ref_start=1, strand='+', cigarstring='1S1M1S',
+    ...                       mapq=60, nm=0, query_sequence='ATCA')
+
+    >>> insertion
+    Insertion(1:1-4:+, 1-2|2-3, TPA, 1, 4)
+
+    .. note::
+        `Insertion` is a subclass of :class:`Read`, and siblings of :class:`NovelInsertion`
+        `Insertion` includes the attributes of :class:`Node` in order to enable us to
+        manipulate the attributes of `Insertion` same as :class:`Node` in :class:`Series`
+
+    .. seealso:: :class:`NovelInsertion`, :class:`Node` and :class:`Read`
+    """
+
+    def __init__(
+        self,
+        hit_num: int,
+        chrom: str,
+        ref_start: int,
+        strand: str,
+        cigarstring: str,
+        mapq: int,
+        nm: int,
+        query_sequence: str,
+    ):
+        (
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigartuples_without_soft,
+            query_length,
+            cigartuples,
+        ) = Read._calculate_features(cigarstring)
+        super().__init__(
+            chrom,
+            ref_start,
+            strand,
+            cigarstring,
+            mapq,
+            nm,
+            query_sequence,
+            lt_soft_len,
+            rt_soft_len,
+            read_match_size,
+            reference_match_size,
+            indel_size,
+            cigartuples_without_soft,
+            query_length,
+            cigartuples,
+        )
+        self.hit_num = hit_num
+        self.sv_type = None
+
+        # add attributes for insertion in order to be compatible with the class Node
+        self.prev_breakpoint = None
+        self.next_breakpoint = None
+        self.modes = None
+        self.genes = None
+        self.annotation_code = None
+        self.splicing_code = None
+        self.sr = None
+
+        self.exons, self.introns = self.get_exons_and_introns()
+        self.successor, self.predecessor = [], []
+
+    def __repr__(self):
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+
+    def update_cigarstring(self, sms, source_s):
+        _ls, _m, _rs = sms
+        if source_s == "left":
+            ls = _ls - self.query_length
+            rs = _rs + _m
+        else:
+            ls = _ls + _m
+            rs = _rs - self.query_length
+
+        self.cigarstring = cigar_validity(f"{ls}S{self.cigarstring}{rs}S")
+
+    def reverse_completement_query(self):
+        self.query_sequence = reverse_complement(self.query_sequence)
+
+    def reverse_strand(self):
+        self.strand = "-" if self.strand == "+" else "+"
+
+    @property
+    def unique_key(self):
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
+
+        # key = f"{self.chrom}-{key}"
+        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+
+        return key
+
+    def copy(self):
+        new_node = Node()
+
+        for attr_key, attr_value in self.__dict__:
+            new_node.__dict__[attr_key] = attr_value
+
+        return new_node
+
+    def is_start_node(self):
+        return True if not self.has_predecessor() else False
+
+    def is_end_node(self):
+        return True if not self.has_successor() else False
+
+    def has_predecessor(self):
+        return True if self.predecessor else False
+
+    def has_successor(self):
+        return True if self.successor else False
+
+    def add_successor(self, successor):
+
+        for successor_node in self.successor:
+            if successor_node.unique_key != successor.unique_key:
+                self.successor.append(successor)
+
+    def add_predecessor(self, predecessor):
+        for predecessor_node in self.predecessor:
+            if predecessor_node.unique_key != predecessor.unique_key:
+                self.predecessor.append(predecessor)
+
+    def update_sr(self, key=1):
+        # TODO: may be wrong
+        self.sr += key
+
+    def update_first_exon_start(self, coord):
+        self.exons[0][0] = min(coord, self.exons[0][0])
+
+    def update_last_exon_end(self, coord):
+        self.exons[-1][1] = max(coord, self.exons[-1][1])
+
+
+class Node(object):
+    """build a breakpoint node class for storing information of every breakpoint
+    :param prev_bp: breakpoint for the previous breakpoints connections
+    :param next_bp: breakpoint for the next breakpoints connections
+    :param strand: direction of chimeric read (-|+)
+    :param chrom: chromosome
+    :param ref_start: reference start position
+    :param ref_end: reference end position
+    :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
+    :param sv_type: one of the SV types (TDUP/INV/TRA)
+    :param annot: gene annotation code
+    :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
+    :param modes: read modes of connected breakpoints
+    :param genes: overlapped genes of connected breakpoints
+    :param insertion_info: insertion information, (True, Insertion) or (False, NovelInsertion) or (False, MicroHomology)
+
+    .. note::
+        connection-level fields:
+        * sv_type
+        * modes
+        * genes
+        * annotation_code
+        * splicing_code
+    :Example:
+    >>> node1 = Node(
+                prev_bp=None,
+                next_bp='chr10:93636994',
+                strand='+',
+                chrom='chr10',
+                ref_start=93636994
+                ref_end=93637094,
+                exons=[(93636994, 93637094)],
+            )
+    >>> node1
+    Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
+    """
+
+    __slots__ = (
+        "next_breakpoint",
+        "prev_breakpoint",
+        "strand",
+        "chrom",
+        "ref_start",
+        "ref_end",
+        "exons",
+        "sv_type",
+        "modes",
+        "genes",
+        "annotation_code",
+        "splicing_code",
+        "sr",
+        "insertion_info",
+        "predecessor",
+        "successor",
+    )
+
+    def __init__(
+        self,
+        prev_bp: Optional[str] = None,
+        next_bp: Optional[str] = None,
+        strand: Optional[str] = None,
+        chrom: Optional[str] = None,
+        ref_start: Optional[int] = None,
+        ref_end: Optional[int] = None,
+        exons: Optional[List[int]] = None,
+        sv_type: Optional[str] = None,
+        annot: Optional[int] = None,
+        canonical: Optional[int] = None,
+        modes: Optional[Tuple[int]] = None,
+        genes: Optional[Tuple[str]] = None,
+        sr: Optional[int] = 1,
+        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
+    ) -> None:
+        self.chrom = chrom
+        self.prev_breakpoint = prev_bp
+        self.next_breakpoint = next_bp
+        self.strand = strand
+        self.ref_start = ref_start
+        self.ref_end = ref_end
+        self.exons = exons
+        self.sv_type = sv_type
+        self.modes = modes
+        self.genes = genes
+        self.annotation_code = annot
+        self.splicing_code = canonical
+        self.sr = sr
+        self.insertion_info = insertion_info
+
+        self.predecessor, self.successor = [], []
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, Node):
+            if (
+                self.chrom == other.chrom
+                and self.ref_start == other.ref_start
+                and self.ref_end == other.ref_end
+                and self.sv_type == other.sv_type
+                and self.prev_breakpoint == other.prev_breakpoint
+                and self.next_breakpoint == other.next_breakpoint
+                and self.strand == other.strand
+            ):
+                return True
+        return False
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.sv_type)
+            ^ hash(self.prev_breakpoint)
+            ^ hash(self.next_breakpoint)
+            ^ hash(self.strand)
+        )
+
+    # for debug purpose
+    def __repr__(self) -> str:
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+
+    def __str__(self) -> str:
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+
+    def is_next_node(self, other) -> bool:
+        if self.next_breakpoint == other.prev_breakpoint:
+            return True
+        else:
+            return False
+
+    def is_previous_node(self, other) -> bool:
+        if self.prev_breakpoint == other.next_breakpoint:
+            return True
+        else:
+            return False
+
+    @classmethod
+    def create_nodes(cls, number):
+        return [cls() for _ in range(number)]
+
+    @property
+    def introns(self):
+        if len(self.exons) <= 1:
+            return []
+        else:
+            _positions = []
+            for i, j in self.exons:
+                _positions.extend([i, j])
+            _positions.pop(0)
+            _positions.pop(-1)
+            _introns = list(zip(_positions[::2], _positions[1::2]))
+            return _introns
+
+    @property
+    def unique_key(self):
+
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+
+        key1 = f"{self.chrom}-{key}-{self.prev_breakpoint}"
+        key2 = f"{self.chrom}-{key}-{self.next_breakpoint}"
+
+        if self.insertion_info is not None:
+            _, insertion_type = self.insertion_info
+            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
+                key1 = f"{insertion_type.query_sequence}-{key1}"
+                key2 = f"{insertion_type.query_sequence}-{key2}"
+        return key1, key2
+
+    def get_key_for_series(self):
+
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+
+        key = f"{self.chrom}-{key}-{self.prev_breakpoint}-{self.next_breakpoint}"
+
+        if self.insertion_info is not None:
+            _, insertion_type = self.insertion_info
+            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
+                key = f"{insertion_type.query_sequence}-{key}"
+
+        return key
+
+    def copy(self) -> "Node":
+        new_node = Node()
+
+        for attr_key, attr_value in self.__dict__:
+            new_node.__dict__[attr_key] = attr_value
+
+        return new_node
+
+    def compare(self, other) -> bool:
+        key1_self, key2_self = self.unique_key
+        key1_other, key2_other = other.unique_key
+
+        return True if key1_self == key1_other or key2_self == key2_other else False
+
+    def is_start_node(self):
+        return True if not self.has_predecessor() else False
+
+    def is_end_node(self):
+        return True if not self.has_successor() else False
+
+    def has_predecessor(self):
+        return True if self.predecessor else False
+
+    def has_successor(self):
+        return True if self.successor else False
+
+    def add_successor(self, successor):
+        flag = False
+        for successor_node in self.successor:
+            if successor_node.compare(successor):
+                flag = True
+                break
+
+    def add_predecessor(self, predecessor):
+        for predecessor_node in self.predecessor:
+            if predecessor_node.unique_key != predecessor.unique_key:
+                self.predecessor.append(predecessor)
+
+    def update_sr(self, key=1):
+        self.sr += key
+
+    def update_first_exon_start(self, coord):
+        self.exons[0][0] = min(coord, self.exons[0][0])
+
+    def update_last_exon_end(self, coord):
+        self.exons[-1][1] = max(coord, self.exons[-1][1])
+
+
+class Series(object):
+    """construct a sequence of Nodes for storing information of connected breakpoints
+    :param nodes: sequence of Nodes
+    :type nodes: list
+    :param assemblied: The series is from assembly of reads (True) or a single read (False)
+    :type assemblied: bool or None
+
+    .. note::
+        [('TDUP', 0, 1, ('chr17:7708250', 'chr17:7701656', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
+        ('TRA', 0, 1, ('chr17:7702552', 'chr1:15872815', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC']),
+        ('TDUP', 0, 1, ('chr1:15876678', 'chr1:15777169', 1, 2), ('+', '+'), ['INTERGENIC', 'INTERGENIC'])]
+
+        Node(TDUP, None, chr17:7708250, +);Node(TRA, chr17:7701656, chr17:7702552, +);Node(TDUP, chr1:15872815, chr1:15876678, +);Node(None, chr1:15777169, None, +)
+
+
+                         bp1               bp2  bp3                bp4
+                ---------|------    -------|----|------    --------|---------
+                       Node1                 Node2                Node3
+    prev_breakpoint:   None                 bp2                   bp4
+    next_breakpoint:    bp1                 bp3                   None
+    sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
+
+    :Example:
+    >>> series = Series(blat=None, logger=None)
+    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
+    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
+    >>> series
+    Series(
+        Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
+        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, chr17:7701656, chr17:7702552)
+        Node(chr1:15872815-15876678:+, 15872815-15876678, TDUP, chr1:15872815, chr1:15876678)
+        Node(chr1:15777169-15777589:+, 15777169-15777589, None, chr1:15777169, None) )
+
+    >>> series_with_novel_insertion = Series(blat=None, logger=None)
+    >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
+    >>> series_with_novel_insertion
+    Series(
+        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, None, chr17:7702552)
+        Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
+    """
+
+    def __init__(self, blat: Union["Blat", None], logger: logger) -> None:
+        self.nodes = []
+        self.is_extended = False
+        self.blat = blat
+        self.logger = logger
+
+    def add_node(self, node: Union[Node, Insertion]) -> None:
+        self.nodes.append(node)
+
+    def init(
+        self,
+        event_list,
+        read_chains,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        gene_iv,
+        motif_required,
+    ) -> None:
+        """add event list as Node to self.nodes"""
+        event_list = [
+            Event(event)
+            for event in self.order_events_by_trancription_direction(event_list)
+            if event[0] != "NA"
+        ]
+        event_list_len = len(event_list)
+        previous_breakpoint = None
+        for index, event in enumerate(event_list):
+
+            read1_node = Node(
+                prev_bp=previous_breakpoint,
+                next_bp=event.bp1,
+                strand=event.strand1,
+                chrom=event.chrom1,
+                ref_start=event.read1_ref_start,
+                ref_end=event.read1_ref_end,
+                exons=event.read1_exons,
+            )
+            previous_breakpoint = event.bp2
+
+            # is insertions
+            if event.has_insertion():
+
+                insertion_seq = event.insertion_seq1  # pick from the first read
+                flag, insertion = self.blat.query_insertion(insertion_seq)
+                if flag:  # only one hit
+                    # add first node and insertion node
+                    source_s = event.source_s1
+
+                    # get type of insertion between first node and insertion node
+                    read1 = event.read1(read_chains)
+                    insertion.update_cigarstring(read1.sms, source_s=source_s)
+
+                    insertion_mode = 2 if event.mode1 == 1 else 1
+
+                    read1_insertion_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=read1,
+                            read_rt=insertion,
+                            lt_mode=event.mode1,
+                            rt_mode=insertion_mode,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            logger=self.logger,
+                        )
+                    )
+
+                    # get type of insertion between insertion node and second node
+                    read2 = event.read2(read_chains)
+                    insertion_mode = 2 if event.mode2 == 1 else 1
+
+                    if event.strand1 != event.strand2:
+                        insertion.reverse_completement_query()
+                        insertion.reverse_strand()
+
+                    insertion_read2_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=insertion,
+                            read_rt=read2,
+                            lt_mode=insertion_mode,
+                            rt_mode=event.mode2,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            logger=self.logger,
+                        )
+                    )
+
+                    if event.strand1 != event.strand2 and event.strand1 == "+":
+                        insertion.reverse_completement_query()
+                        insertion.reverse_strand()
+
+                    if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
+                        # only add read1
+                        read1_node = event.update_node_info(flag, read1_node, insertion)
+                        self.add_node(read1_node)
+                    else:
+                        # add read1 and insertion
+                        read1_node = read1_insertion_event.update_node_info(
+                            flag, read1_node, insertion
+                        )
+                        self.add_node(read1_node)
+
+                        insertion = insertion_read2_event.update_insertion_info(
+                            insertion
+                        )
+                        self.logger.trace(f"Add {insertion} to Series")
+                        self.add_node(insertion)
+
+                else:  # no hits or multiple hits
+
+                    if event.strand1 == "-":
+                        insertion.reverse_completement_query()
+                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
+                    # only add read1 with insertion
+                    read1_node = event.update_node_info(flag, read1_node, insertion)
+                    self.add_node(read1_node)
+            # no insertion
+            elif event.has_microhomology():
+                # add read 1 with on insertion
+                microhomology = MicroHomology(event.insertion_seq1)
+
+                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
+                if event.strand1 == "-":
+                    microhomology.reverse_completement_query()
+
+                read1_node = event.update_node_info(
+                    False, read1_node, microhomology, False
+                )
+                self.add_node(read1_node)
+
+            else:
+                read1_node = event.update_node_info(False, read1_node, None, False)
+                self.add_node(read1_node)
+
+            # add final node
+            if index == event_list_len - 1:
+                final_node = Node(
+                    prev_bp=previous_breakpoint,
+                    strand=event.strand2,
+                    chrom=event.chrom2,
+                    ref_start=event.read2_ref_start,
+                    ref_end=event.read2_ref_end,
+                    exons=event.read2_exons,
+                )
+
+                self.add_node(final_node)
+
+    @staticmethod
+    def reorder_event(event):
+        """
+        order breakpoints pairs following the transcription direction using
+        information of reads 'mode' and 'strand'
+        +1;-1 => up;down
+        +2;-2 => down;up
+        """
+        (
+            sv_type,
+            annot,
+            canonical,
+            _positions,
+            read1_info,
+            read2_info,
+            insertion_info,
+            strands,
+            genes,
+        ) = event
+        bp1 = _positions[0]
+        bp2 = _positions[1]
+        mode1 = _positions[2]
+        mode2 = _positions[3]
+        strand1 = strands[0]
+        strand2 = strands[1]
+        if strand1 == "+" and strand2 == "-":
+            if mode1 == 1 and mode2 == 1:
+                is_bp1_upstream = True
+            elif mode1 == 2 and mode2 == 2:
+                is_bp1_upstream = False
+        elif strand1 == "-" and strand2 == "+":
+            if mode1 == 1 and mode2 == 1:
+                is_bp1_upstream = False
+            elif mode1 == 2 and mode2 == 2:
+                is_bp1_upstream = True
+        elif strand1 == "+" and strand2 == "+":
+            if mode1 == 1 and mode2 == 2:
+                is_bp1_upstream = True
+            elif mode1 == 2 and mode2 == 1:
+                is_bp1_upstream = False
+        elif strand1 == "-" and strand2 == "-":
+            if mode1 == 1 and mode2 == 2:
+                is_bp1_upstream = False
+            elif mode1 == 2 and mode2 == 1:
+                is_bp1_upstream = True
+
+        if not is_bp1_upstream:
+            if annot == 1:
+                annot = 2
+            elif annot == 2:
+                annot = 1
+            _positions = (bp2, bp1, mode2, mode1)
+            strands = (strand2, strand1)
+            genes = list(reversed(genes))
+            return (
+                sv_type,
+                annot,
+                canonical,
+                _positions,
+                read2_info,
+                read1_info,
+                insertion_info[::-1],
+                strands,
+                genes,
+            )
+        else:
+            return event
+
+    @staticmethod
+    def order_events_by_trancription_direction(event_list):
+        """
+        construct breakpoints order following transcription direction for multiple-hop events or one-hop events
+                bp1                bp2   bp3               bp4
+        ---------|------    -------|----|------    --------|---------
+              Node1                 Node2                Node3
+        ..note ::
+               requirements
+               * bp2 and bp3 at the same chromosome
+               * if strand(+): bp3 > bp2
+                 if strand(-): bp3 < bp2
+        """
+        kept_right_pos = None
+        kept_right_chrm = None
+        kept_right_strand = None
+
+        keep_event_list_order = True
+        output_event_list = []
+        for evt in event_list:
+            ordered_evt = Series.reorder_event(evt)
+            output_event_list.append(ordered_evt)
+            (
+                sv_type,
+                annot,
+                canonical,
+                _positions,
+                read1_info,
+                read2_info,
+                insertion_info,
+                strands,
+                genes,
+            ) = ordered_evt
+            chrm1, _pos1 = _positions[0].split(":")
+            chrm2, _pos2 = _positions[1].split(":")
+            pos1 = int(_pos1)
+            pos2 = int(_pos2)
+            strand1 = strands[0]
+            strand2 = strands[1]
+            if not kept_right_pos:
+                kept_right_pos = pos2
+                kept_right_chrm = chrm2
+                kept_right_strand = strand2
+            else:
+                if chrm1 == kept_right_chrm and strand1 == kept_right_strand:
+                    if strand1 == "+" and pos1 > kept_right_pos:
+                        kept_right_pos = pos2
+                        kept_right_chrm = chrm2
+                        kept_right_strand = strand2
+                    elif strand1 == "-" and pos1 < kept_right_pos:
+                        kept_right_pos = pos2
+                        kept_right_chrm = chrm2
+                        kept_right_strand = strand2
+                    else:
+                        keep_event_list_order = False
+                else:
+                    keep_event_list_order = False
+
+        if not keep_event_list_order:
+            output_event_list = list(reversed(output_event_list))
+
+        return output_event_list
+
+    def __getitem__(self, index):
+        return self.nodes[index]
+
+    def __hash__(self) -> int:
+        return hash(";".join(map(str, self.nodes)))
+
+    def __eq__(self, other) -> bool:
+        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
+
+    def __len__(self) -> int:
+        return len(self.nodes)
+
+    def __lt__(self, other) -> bool:
+        return len(self.nodes) < len(other.nodes)
+
+    def __repr__(self) -> str:
+        _repr = "\nSeries("
+        space = " " * 4
+        for n in self.nodes:
+            _repr += f"\n{space}{n!r}"
+
+        _repr += ")"
+        return _repr
+
+    def __iter__(self):
+        for node in self.nodes:
+            yield node
+
+    __str__ = __repr__
+
+    def __add__(self, other):
+
+        if isinstance(other, Series):
+            if len(other) == len(self):
+                # same length and only for reduce to merge two series wit same start node and end node
+
+                self.start_node = Series.merge_nodes(self.start_node, other.start_node)
+                self.end_node = Series.merge_nodes(self.end_node, other.end_node)
+
+                for node1, node2 in zip(self.nodes[:-1], other.nodes[:-1]):
+                    node1.sr += node2.sr
+
+                return self
+
+            else:
+                pass
+
+        else:
+            raise TypeError(
+                f"Series object can only be added to Series object. {type(other)} object is not supported."
+            )
+
+    def extend_series(self, other):
+        new_series = Series(blat=self.blat, logger=self.logger)
+        if isinstance(other, Series):
+
+            for node in self:
+                new_series.add_node(node.copy())
+
+            new_series.end_node.exons[0][0] = min(
+                new_series.end_node.exons[0][0], other.start_node.exons[0][0]
+            )
+            new_series.end_node.exons[-1][1] = max(
+                new_series.end_node.exons[-1][1], other.start_node.exons[-1][1]
+            )
+
+            for node in other[1:]:
+                new_series.add_node(node.copy())
+
+            return new_series
+
+        else:
+            raise TypeError(
+                f"Series object can only be extended to Series object. {type(other)} object is not supported."
+            )
+
+    def decompose(self) -> list:
+        """Decompose the sequence of Nodes into Nodes pair"""
+        paired_breakpoints = []
+        for i, j in zip(self.nodes[::1], self.nodes[1::1]):
+            paired_breakpoints.append(
+                f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
+            )
+        return paired_breakpoints
+
+    def disable_blat_logger(self):
+        self.blat, self.logger = None, None
+
+    @property
+    def start_node(self):
+        return self.nodes[0]
+
+    @start_node.setter
+    def start_node(self, node):
+        self.nodes[0] = node
+
+    @property
+    def end_node(self):
+        return self.nodes[-1]
+
+    @end_node.setter
+    def end_node(self, node):
+        self.nodes[-1] = node
+
+    @property
+    def unique_key(self):
+        return "".join([node.get_key_for_series() for node in self.nodes])
+
+    @staticmethod
+    def merge_nodes(node1, node2):
+        node1.exons[0][0] = min(node1.exons[0][0], node2.exons[0][0])
+        node1.exons[-1][1] = max(node1.exons[-1][1], node2.exons[-1][1])
+
+        return node1
+
+    def end_node_intron_key(self):
+        introns_key = "".join(
+            [f"{start}-{end}" for start, end in self.end_node.introns]
+        )
+        introns_key = f"{self.end_node.chrom}-{introns_key}"
+
+        return introns_key
+
+    def start_node_intron_key(self):
+        introns_key = "".join(
+            [f"{start}-{end}" for start, end in self.start_node.introns]
+        )
+        introns_key = f"{self.start_node.chrom}-{introns_key}"
+        return introns_key
+
+    def get_double_node_key(self):
+        for index in range(len(self.nodes) - 1):
+            yield f"{index}-{self.nodes[index].unique_key}{self.nodes[index + 1].unique_key}"
+
+
+class Event(object):
+    """the Event class is used to parse the return value from the function nls_inference
+
+    :Example:
+
+    >>> args, kwargs = [], {}
+    >>> event = Event(infer_nls_from_connected_reads(*args, **kwargs))
+    >>> event.sv_type
+    TRA
+    >>> event
+    Event(TRA, )
+
+
+    .. note::
+
+    .. seealso::
+
+    .. todo::
+        add more examples
+    """
+
+    def __init__(self, event):
+        (
+            sv_type,
+            annot,
+            canonical,
+            _positions,
+            read1_info,
+            read2_info,
+            insertion_info,
+            strands,
+            genes,
+        ) = event
+
+        self.sv_type = sv_type
+        if self.sv_type != "NA":
+            self.annotation_code = annot
+            self.splicing_code = canonical
+            self.genes = genes
+            self.insertion_info = insertion_info
+            self.bp1, self.bp2 = _positions[:2]
+            self.mode1, self.mode2 = _positions[2:]
+            self.strand1, self.strand2 = strands
+            self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
+            self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+
+    def __repr__(self):
+        if self.sv_type != "NA":
+            return (
+                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code})"
+            )
+
+    @property
+    def modes(self) -> List[int]:
+        """
+        :return: the mode of read1 and read2 in the event
+        """
+        return [self.mode1, self.mode2]
+
+    @property
+    def chrom1(self) -> str:
+        return self.bp1.split(":")[0]
+
+    @property
+    def chrom2(self) -> str:
+        return self.bp2.split(":")[0]
+
+    @property
+    def insertion_seq1(self) -> str:
+        return self.insertion_info[0][1:]
+
+    @property
+    def insertion_seq2(self) -> str:
+        return self.insertion_info[1][1:]
+
+    @property
+    def source_s1(self) -> str:
+        """
+        the source of the insertion in read1
+        :return:
+        """
+        return "left" if self.mode1 == 2 else "right"
+
+    @property
+    def source_s2(self) -> str:
+        return "left" if self.mode2 == 2 else "right"
+
+    def is_NA(self) -> bool:
+        return True if self.sv_type == "NA" else False
+
+    def has_insertion(self) -> bool:
+        return True if self.insertion_info[0].startswith("+") else False
+
+    def has_microhomology(self) -> bool:
+        return True if self.insertion_info[0].startswith("-") else False
+
+    def is_same_strand(self) -> bool:
+        return self.strand1 == self.strand2
+
+    def read1(self, read_chains: List[Read]) -> Read:
+        for read in read_chains:
+            if read.ref_start == self.read1_ref_start:
+                return read
+        else:
+            raise ReadNotFoundError
+
+    def read2(self, read_chains: List[Read]) -> Read:
+        for read in read_chains:
+            if read.ref_start == self.read2_ref_start:
+                return read
+        else:
+            raise ReadNotFoundError
+
+    def update_specific_info_within_event(
+        self, node: Union[Node, Insertion], info_key_list: List[str]
+    ) -> Union[Node, Insertion]:
+        """
+        update node info from the event by the info_key_list
+
+        :param node:  Node
+        :param info_key_list: [key1, key2, ...]
+        :return: Node with updated info
+        """
+
+        for key in info_key_list:
+            setattr(node, key, getattr(self, key))
+
+        return node
+
+    def update_node_info(
+        self,
+        flag: bool,
+        new_node: Node,
+        insertion: Union[Insertion, None, MicroHomology],
+        is_update_insertion_info: bool = True,
+    ) -> Node:
+        """
+        update the common info the node in the front, and the common info includes
+
+        sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
+
+        :param flag: the flag indicates whether there is a insertion
+        :param new_node: the new node to be updated
+        :param insertion: the insertion to be updated
+        :param is_update_insertion_info: whether to update the insertion info
+        :return: the updated node
+        """
+        new_node = self.update_specific_info_within_event(
+            new_node, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
+        )
+        if is_update_insertion_info:
+            new_node.insertion_info = (flag, insertion)
+        return new_node
+
+    def update_insertion_info(self, insertion: Insertion) -> Insertion:
+        """
+        update the information of insertion
+
+        :param insertion: the insertion to be updated
+        :return: the updated insertion
+        """
+        insertion.prev_breakpoint = insertion.ref_start
+        insertion.next_breakpoint = insertion.ref_end
+
+        insertion.exons, _ = insertion.get_exons_and_introns()
+        return self.update_specific_info_within_event(
+            insertion, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
+        )
+
+
 class SpliceGraph(object):
     """
     the SpliceGraph class is used to trace the path of splice graph
@@ -2429,6 +2375,10 @@ class SpliceGraph(object):
             yield node
 
     def __contains__(self, node):
+        """
+        :param node:
+        :return:
+        """
         return False if self.get_node(node.unique_key) is None else True
 
     def reduce(self):
