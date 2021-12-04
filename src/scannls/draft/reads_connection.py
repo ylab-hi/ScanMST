@@ -1,10 +1,16 @@
 __funcs__ = {"detect_read_read_connections_from_cigar"}
 
-from ..classes import Read, ReadsConnecter
-from ..utils import reverse_complement
+from typing import Any
+
+from loguru._logger import Logger
+from pysam import AlignedSegment  # type: ignore
+from ..classes import ReadsConnecter, Blat, Read  # type: ignore
+from ..utils import reverse_complement  # type: ignore
 
 
-def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> tuple:
+def detect_read_read_connections_from_cigar(
+    read: AlignedSegment, mapq_cutoff: int, blat: Blat, logger: Logger
+) -> Any:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
     :param logger:
@@ -32,7 +38,7 @@ def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> 
     #              TRA,1,160289623,chr17:17189212,1,1,+-
     """
 
-    def format_sa_tag(in_str):
+    def format_sa_tag(in_str: str) -> Any:
         """
         To keep read.reference_start and start position of SA alignment consistent, start position of SA alignment need to substract 1
         :param in_str: string of supplementary read item in the SA tag
@@ -43,15 +49,16 @@ def detect_read_read_connections_from_cigar(read, mapq_cutoff, blat, logger) -> 
              pos_sa, mapq_sa and nm_sa are integral variables now.
         """
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = in_str.split(",")
-        pos_sa = int(pos_sa) - 1
-        mapq_sa = int(mapq_sa)
-        nm_sa = int(nm_sa)
+        pos_sa = int(pos_sa) - 1  # type: ignore
+        mapq_sa = int(mapq_sa)  # type: ignore
+        nm_sa = int(nm_sa)  # type: ignore
         return chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
 
-    def obtain_sa_query_seq_from_ra(query_seq_ra, strand_ra, strand_sa):
+    def obtain_sa_query_seq_from_ra(
+        query_seq_ra: str, strand_ra: str, strand_sa: str
+    ) -> str:
         """a helper function to define query_seq for the supplementary alignment
         :param query_seq_ra: query sequence of representative alignment
-        :type query_seq_ra: str
         :param strand_ra: direction of representative read (-|+)
         :type strand_ra: str
         :param strand_sa: direction of supplementary read (-|+)

@@ -1,11 +1,13 @@
-import HTSeq
-import pyfaidx
-from align import aligner
-from loguru import logger
+from typing import Any
 
-from .helper import gene_annotation
-from .helper import splicing_confirmation
-from .helper import update_breakpoints
+import HTSeq  # type: ignore
+import pyfaidx  # type: ignore
+from loguru._logger import Logger
+
+from .helper import gene_annotation  # type: ignore
+from .helper import splicing_confirmation  # type: ignore
+
+# from align import aligner  # type: ignore
 
 __funcs__ = {"short_TDUP_or_not", "infer_nls_from_connected_reads"}
 
@@ -61,8 +63,8 @@ def infer_nls_from_connected_reads(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    logger,
-) -> tuple:
+    logger: Logger,
+) -> Any:
     """
     :param logger:
     :param read_lt: Read 1
@@ -75,11 +77,12 @@ def infer_nls_from_connected_reads(
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
     :return: putative event from reads-pair
-    .. note::
-        putative event examples:
-            * 'NA', 0, 0, (), (), (), (), (), []
-            * 'TDUP', annotation, canonical/noncanonical, ('bp_chrm1:bp_pos1', 'bp_chrm2:bp_pos2', bp_mode1, bp_mode2),
-            (bp_read1_ref_start, bp_read1_ref_end, bp_read1_exons), (bp_read2_ref_start, bp_read2_ref_end, bp_read2_exons), (lt_bp_seq, rt_bp_seq), (strand1, strand2), [gene1, gene2]
+
+    .. note:: putative event
+
+    examples: * 'NA', 0, 0, (), (), (), (), (), [] * 'TDUP', annotation, canonical/noncanonical, ('bp_chrm1:bp_pos1',
+    'bp_chrm2:bp_pos2', bp_mode1, bp_mode2), (bp_read1_ref_start, bp_read1_ref_end, bp_read1_exons),
+    (bp_read2_ref_start, bp_read2_ref_end, bp_read2_exons), (lt_bp_seq, rt_bp_seq), (strand1, strand2), [gene1, gene2]
 
        annotation explanation:
        3(11) => both breakpoints overlap with coding exons boundary
@@ -107,7 +110,7 @@ def infer_nls_from_connected_reads(
             ins_seq_in_read = read_seq[-read.rt_soft_len :][:indel_size]
         return ins_seq_in_read
 
-    def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> tuple:
+    def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> Any:
         """
         :param bp_region_seq_len: the length of the breakpoint region sequence
         :param read:  the chimeirc read
@@ -147,7 +150,7 @@ def infer_nls_from_connected_reads(
             bp_region_seq = ""
         return bp_region_seq
 
-    NAN = "NA", 0, 0, (), (), (), (), (), []
+    NAN = "NA", 0, 0, (), (), (), (), (), []  # type: ignore
 
     if lt_mode == 3 or rt_mode == 3:
         return NAN

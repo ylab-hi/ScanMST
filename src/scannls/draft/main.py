@@ -9,23 +9,24 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from typing import List
+from typing import Tuple
 
-import pysam
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
-from tqdm import tqdm
+import pysam  # type: ignore
+from pyfaidx import Fasta  # type: ignore
+from pyfaidx import FastaNotFoundError  # type: ignore
 
-from ..classes import Blat
-from ..classes import MyLogger
-from ..classes import ParallelWorker
-from ..classes import Series
-from ..utils import get_softclip_length
-from ..utils import reverse_complement
-from ..utils import write_series_to_file
-from .helper import blat2chimeric_alignment
-from .helper import extract_splice_sites
-from .nls_inference import infer_nls_from_connected_reads
-from .reads_connection import detect_read_read_connections_from_cigar
+from ..classes import Blat  # type: ignore
+from ..classes import MyLogger  # type: ignore
+from ..classes import ParallelWorker  # type: ignore
+from ..classes import Series  # type: ignore
+from ..utils import get_softclip_length  # type: ignore
+from ..utils import reverse_complement  # type: ignore
+from ..utils import write_series_to_file  # type: ignore
+from .helper import blat2chimeric_alignment  # type: ignore
+from .helper import extract_splice_sites  # type: ignore
+from .nls_inference import infer_nls_from_connected_reads  # type: ignore
+from .reads_connection import detect_read_read_connections_from_cigar  # type: ignore
 
 
 class BamScanner:
@@ -203,7 +204,7 @@ def detect_sv_from_cigar(
 
     read_to_read_chains = [read_to_read_chains]
 
-    event_list = []
+    event_list = []  # type: List[Tuple[Any,...]]
     if read_to_read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events

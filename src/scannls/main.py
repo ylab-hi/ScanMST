@@ -6,13 +6,13 @@ import textwrap
 import time
 
 from loguru import logger
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore
 
-from . import __version__
-from .classes import Blat
-from .classes import LengthAction
-from .draft.main import scanbam_run
-from scannls.utils import external_tool_checking
+from . import __version__  # type: ignore
+from .classes import Blat  # type: ignore
+from .classes import LengthAction  # type: ignore
+from .draft.main import scanbam_run  # type: ignore
+from .utils import external_tool_checking  # type: ignore
 
 
 def parse_args():

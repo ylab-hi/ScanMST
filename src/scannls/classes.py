@@ -15,16 +15,16 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-import psutil
-from align import aligner
-from Bio import SearchIO
+import psutil  # type: ignore
+from Bio import SearchIO  # type: ignore
 from loguru import logger
-from tqdm import tqdm
+from loguru._logger import Logger
+from tqdm import tqdm  # type: ignore
 
-from .draft.helper import cigar_validity
-from .draft.nls_inference import infer_nls_from_connected_reads
-from .exception import ReadNotFoundError
-from .utils import reverse_complement
+from .draft.helper import cigar_validity  # type: ignore
+from .draft.nls_inference import infer_nls_from_connected_reads  # type: ignore
+from .exception import ReadNotFoundError  # type: ignore
+from .utils import reverse_complement  # type: ignore
 
 
 class Read(object):
@@ -123,7 +123,7 @@ class Read(object):
         self.mapq = mapq
         self.nm = nm
         self.query_sequence = query_sequence
-        self.linked_paths = []
+        self.linked_paths = []  # type: Any
         self.lt_soft_len = lt_soft_len
         self.rt_soft_len = rt_soft_len
         self.read_match_size = read_match_size
@@ -397,7 +397,7 @@ class Blat(object):
     def __init__(
         self,
         ref_2bit: str,
-        logger: logger,
+        logger: Logger,
         port: int,
         output_dir: str,
         fix_log_file=None,
@@ -500,7 +500,7 @@ class Blat(object):
 
         cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {os.path.basename(self.ref_2bit)}"
         logger.trace(f"{cmd=}")
-        process = Process(target=self._run_cmd, args=[cmd])
+        process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
         process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
@@ -820,13 +820,13 @@ class ReadsConnecter(object):
     ) -> None:
 
         self.reads_chain, self.candidate_nodes = [], []
-        self.read_pair_mode_dict, self.insertion_dict = {}, {}
+        self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = aln_list
         self.logger = logger
         self.blat = blat
 
     @staticmethod
-    def init_mode_judge(sms: Tuple[int, int, int]) -> int:
+    def init_mode_judge(sms: Tuple[Any, ...]) -> int:
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
@@ -1125,8 +1125,8 @@ class ReadsConnecter(object):
 
             if flag:  # False
                 start_read.mode, end_read.mode = (
-                    ReadsConnecter.init_mode_judge(start_read.adhocsms),
-                    ReadsConnecter.init_mode_judge(end_read.sms),
+                    ReadsConnecter.init_mode_judge(start_read.adhocsms),  # type: ignore
+                    ReadsConnecter.init_mode_judge(end_read.sms),  # type: ignore
                 )
                 _, start_read = self.test_4case(
                     start_read, end_read, is_align_for_ms=True
@@ -1174,7 +1174,7 @@ class ParallelWorker(object):
         set the number of jobs to run in parallel in terms of cpu cores
         """
         current_max_processor = os.cpu_count()
-        if n_jobs > current_max_processor:
+        if n_jobs > current_max_processor:  # type: ignore
             self.logger.warning(
                 f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
             )
@@ -1384,8 +1384,8 @@ class Insertion(Read):
         self.sv_type = None
 
         # add attributes for insertion in order to be compatible with the class Node
-        self.prev_breakpoint = None
-        self.next_breakpoint = None
+        self.prev_breakpoint: Optional[int] = None
+        self.next_breakpoint: Optional[int] = None
         self.modes = None
         self.genes = None
         self.annotation_code = None
@@ -1393,7 +1393,8 @@ class Insertion(Read):
         self.sr = None
 
         self.exons, self.introns = self.get_exons_and_introns()
-        self.successor, self.predecessor = [], []
+        self.successor: Optional[List[Node]] = []
+        self.predecessor: Optional[List[Node]] = []
 
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
@@ -1540,7 +1541,7 @@ class Node(object):
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
         sr: Optional[int] = 1,
-        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
+        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,  # type: ignore
     ) -> None:
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
@@ -1556,8 +1557,8 @@ class Node(object):
         self.splicing_code = canonical
         self.sr = sr
         self.insertion_info = insertion_info
-
-        self.predecessor, self.successor = [], []
+        self.successor: Optional[List[Node]] = []
+        self.predecessor: Optional[List[Node]] = []
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
@@ -1586,11 +1587,11 @@ class Node(object):
 
     # for debug purpose
     def __repr__(self) -> str:
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
     def __str__(self) -> str:
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
     def is_next_node(self, other) -> bool:
@@ -1655,10 +1656,11 @@ class Node(object):
         return key
 
     def copy(self) -> "Node":
+        """TODO: May be a error"""
         new_node = Node()
 
-        for attr_key, attr_value in self.__dict__:
-            new_node.__dict__[attr_key] = attr_value
+        for attr_key, attr_value in self.__dict__:  # type: ignore
+            new_node.__dict__[attr_key] = attr_value  # type: ignore
 
         return new_node
 
@@ -1725,7 +1727,7 @@ class Series(object):
     sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
 
     :Example:
-    >>> series = Series(blat=None, logger=None)
+    >>> series = Series(blat=None, logger=logger)
     >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
     >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
     >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
@@ -1737,7 +1739,7 @@ class Series(object):
         Node(chr1:15872815-15876678:+, 15872815-15876678, TDUP, chr1:15872815, chr1:15876678)
         Node(chr1:15777169-15777589:+, 15777169-15777589, None, chr1:15777169, None) )
 
-    >>> series_with_novel_insertion = Series(blat=None, logger=None)
+    >>> series_with_novel_insertion = Series(blat=None, logger=logger)
     >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
     >>> series_with_novel_insertion
     Series(
@@ -1745,8 +1747,8 @@ class Series(object):
         Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
     """
 
-    def __init__(self, blat: Union["Blat", None], logger: logger) -> None:
-        self.nodes = []
+    def __init__(self, blat: Union["Blat", None], logger: Logger) -> None:
+        self.nodes: List[Node] = []
         self.is_extended = False
         self.blat = blat
         self.logger = logger
@@ -1789,7 +1791,7 @@ class Series(object):
             if event.has_insertion():
 
                 insertion_seq = event.insertion_seq1  # pick from the first read
-                flag, insertion = self.blat.query_insertion(insertion_seq)
+                flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
                 if flag:  # only one hit
                     # add first node and insertion node
                     source_s = event.source_s1
@@ -2313,12 +2315,12 @@ class Event(object):
         """
         new_node = self.update_specific_info_within_event(
             new_node, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
-        )
+        )  # type: ignore
         if is_update_insertion_info:
             new_node.insertion_info = (flag, insertion)
         return new_node
 
-    def update_insertion_info(self, insertion: Insertion) -> Insertion:
+    def update_insertion_info(self, insertion: Insertion) -> Union[Node, Insertion]:
         """
         update the information of insertion
 
@@ -2371,7 +2373,7 @@ class SpliceGraph(object):
     def get_start_nodes(self):
         return [node for node in self.nodes.values() if node.is_start_node]
 
-    def get_node(self, unique_key: str) -> Optional[Node]:
+    def get_node(self, unique_key: Tuple) -> Optional[Node]:
         key1, key2 = unique_key
 
         if self.nodes.get(key1, None) is not None:

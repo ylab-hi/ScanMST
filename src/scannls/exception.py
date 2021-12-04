@@ -13,7 +13,7 @@ class ScannlsException(Exception):
 
 
 class ToolNotFoundError(ScannlsException):
-    def __init__(self, tool):
+    def __init__(self, tool: str) -> None:
         super(ToolNotFoundError, self).__init__(
             f"external tool: {tool} not found, please install that!"
         )
@@ -21,7 +21,7 @@ class ToolNotFoundError(ScannlsException):
 
 
 class ReadNotFoundError(ScannlsException):
-    def __init__(self):
+    def __init__(self) -> None:
         super(ReadNotFoundError, self).__init__(
             f"Current read cannot found in read_chains"
         )

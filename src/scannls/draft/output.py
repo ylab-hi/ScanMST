@@ -10,8 +10,12 @@ modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
 
 __funcs__ = {"output_bedpe_file", "aggregate_candidates", "similar_hit"}
 
+from typing import Dict, TextIO
 
-def output_bedpe_file(sr_dict, group_dict, prefix, splice_bin):
+
+def output_bedpe_file(
+    sr_dict: Dict, group_dict: Dict, prefix: str, splice_bin: int
+) -> TextIO:
     """
     :param sr_dict: sv candidate to number of supporting reads(SR) dictionary
     :param group_dict: sv candidate to group of events dictionary, connected chimeric reads are included in one group
@@ -23,10 +27,8 @@ def output_bedpe_file(sr_dict, group_dict, prefix, splice_bin):
     :type splice_bin: int
     :return: current_output BEDPE file
     :rtype: str
-    .. note::
     """
     output = open("{}.sv.bedpe".format(prefix), "w")
-    count = 0
     for key in sr_dict:
         sr = sr_dict[key]
         num_of_group = group_dict[key]
@@ -45,7 +47,7 @@ def output_bedpe_file(sr_dict, group_dict, prefix, splice_bin):
     return output
 
 
-def aggregate_candidates(in_dict, len_cutoff=10):
+def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Dict:
     if len_cutoff == 0:
         return in_dict
     else:
@@ -76,12 +78,12 @@ def aggregate_candidates(in_dict, len_cutoff=10):
                             discarded_items.add(r1)
         out_dict = {}
         for m in in_dict:
-            if not m in discarded_items:
+            if m not in discarded_items:
                 out_dict[m] = in_dict[m]
         return out_dict
 
 
-def similar_hit(r1, r2, len_cutoff=10):
+def similar_hit(r1: str, r2: str, len_cutoff: int = 10) -> bool:
     r1_type, r1_can, A1, A2, strand_1 = r1.split("\t")
     r2_type, r2_can, B1, B2, strand_2 = r2.split("\t")
 

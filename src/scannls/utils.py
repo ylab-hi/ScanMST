@@ -1,15 +1,19 @@
 import subprocess
 import time
+from typing import Any
+from typing import Callable
+from typing import Tuple
 
-from Bio.Seq import Seq
+from Bio.Seq import Seq  # type: ignore
 from loguru import logger
+from loguru._logger import Logger
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
-from scannls.exception import ToolNotFoundError
+from .exception import ToolNotFoundError  # type: ignore
 
 
-def reverse_complement(in_str):
+def reverse_complement(in_str: str) -> str:
     """
     obtain reverse complement sequence
     """
@@ -17,7 +21,7 @@ def reverse_complement(in_str):
     return str(my_dna.reverse_complement())
 
 
-def external_tool_checking(logger) -> None:
+def external_tool_checking(logger: Logger) -> None:  # type: ignore
     """checking dependencies are installed"""
     software = ["samtools", "gfClient", "gfServer"]
     for tool in software:
@@ -28,7 +32,7 @@ def external_tool_checking(logger) -> None:
             logger.success("Checking for '" + tool + "': found ")
 
 
-def get_softclip_length(read) -> tuple:
+def get_softclip_length(read) -> Tuple:
     """Extract softclipped sequence information from input read
     :param read: reads from pysam
     :type read: pysam.libcalignedsegment.AlignedSegment
@@ -74,7 +78,7 @@ def get_softclip_length(read) -> tuple:
         return 0, "", -1, 0
 
 
-def write_series_to_file(file_name, series):
+def write_series_to_file(file_name: str, series: Any) -> None:
     """
     write series to file
     """
@@ -83,7 +87,7 @@ def write_series_to_file(file_name, series):
             f.write(str(item) + "\n")
 
 
-def timeit(func):
+def timeit(func: Callable) -> Callable:
     def wrapped(*args, **kwargs):
         start = time.time()
         result = func(*args, **kwargs)

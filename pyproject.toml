@@ -28,6 +28,7 @@ loguru = "^0.5.3"
 pynvim = "^0.4.3"
 rich = "^10.14.0"
 tqdm = "^4.62.3"
+align = "^0.0.11"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
@@ -59,12 +60,12 @@ nox = "^2021.10.1"
 ScanNLS = "scannls.main:main"
 
 [tool.mypy]
-strict = true
+strict = false
 pretty = true
 show_column_numbers = true
 show_error_codes = true
 show_error_context = true
-exclude = "call"
+exclude = "call|isoform"
 #exclude = "isoform"
 #[[tool.mypy.ignore]]
 #module = ["scannls.call"]
