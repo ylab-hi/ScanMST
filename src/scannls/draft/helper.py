@@ -8,7 +8,7 @@ __funcs__ = {
     "update_breakpoints",
 }
 
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 import HTSeq  # type: ignore
 
@@ -236,6 +236,7 @@ def gene_annotation(
     :return: overlapped genes for breakpoints
     :rtype: tuple
     """
+    gene1, gene2 = None, None
     try:
         gene1 = "&".join(list(gene_iv[HTSeq.GenomicPosition(chrm1, pos1)]))
     except IndexError:
@@ -253,7 +254,7 @@ def gene_annotation(
         gene1 = "INTERGENIC"
     if not gene2:
         gene2 = "INTERGENIC"
-    return (gene1, gene2)
+    return gene1, gene2
 
 
 def splicing_confirmation(
@@ -278,7 +279,9 @@ def splicing_confirmation(
     :param genome_fasta: reference genome (pyfaidx.Fasta object)
     :param cvg: splice site annotations (HTSeq.GenomicArrayOfSets)
     :param strand_changed: whether breakpoint1 and breakpoint2 use the same strand or not
-    :param motif_required: canonical splice sites required; if True: considering canonical splice sites only; else: considering canonical and noncanonical splice sites both
+    :param motif_required: canonical splice sites required;
+           if True: considering canonical splice sites only;
+           else: considering canonical and noncanonical splice sites both
     :type chrm1: str
     :type chrm2: str
     :type pos1: int
@@ -291,7 +294,7 @@ def splicing_confirmation(
     :return: report/not report, overlapping boundary in bits, canonical splice site/noncanonical splice site
     :rtype: tuple
 
-    .. note::
+    . note::
         Possible current_output scenarios
         * True,  3(11), 1 => reported, both breakpoints overlap with annotated coding exons boundary, using canonical splice motif
         * True,  2(10), 0 => reported, one breakpoint overlap with annotated coding exons boundary, using noncanonical splice motif
@@ -312,7 +315,7 @@ def splicing_confirmation(
         return hit_sites
 
     def splice_paired_checker(
-        hit_sites: List, pair_seq: str, splice_motif_dict
+        hit_sites: List, pair_seq: str, splice_motif_dict: Dict
     ) -> bool:
         """find canonical splice sites in the input sequence
         :param hit_sites: canonical splice site at one end
@@ -660,7 +663,7 @@ def update_breakpoints(
     shift1, shift2 = obtain_bps_shift_len(bp1_pos_dict, bp2_pos_dict, bp1_is_upstream)
 
     # No canonical splice sites found, so change the annotation to noncanonical splice site
-    if shift1 == None and shift2 == None:
+    if shift1 is None and shift2 is None:
         return 0, 0
 
     new_bp1_pos = bp1_pos
@@ -691,10 +694,10 @@ def transcript_upstream_part_determiner(strand1, strand2, mode1, mode2) -> bool:
     :type strand2: str(-/+)
     :type mode1: int(1/2)
     :type mode2: int(1/2)
-    :return: wheather breakpoint1 is the upstream segment of the transcript or not
+    :return: whether breakpoint1 is the upstream segment of the transcript or not
     :rtype: bool
     """
-    bp1_is_upstream = None
+    is_bp1_upstream = False
     if strand1 == "+" and strand2 == "-":
         if mode1 == 1 and mode2 == 1:
             is_bp1_upstream = True

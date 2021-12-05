@@ -7,7 +7,6 @@ from loguru._logger import Logger
 from .helper import gene_annotation  # type: ignore
 from .helper import splicing_confirmation  # type: ignore
 
-# from align import aligner  # type: ignore
 
 __funcs__ = {"short_TDUP_or_not", "infer_nls_from_connected_reads"}
 

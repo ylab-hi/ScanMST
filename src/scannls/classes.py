@@ -7,6 +7,7 @@ import random
 import re
 import subprocess
 import time
+from collections import defaultdict
 from concurrent import futures
 from multiprocessing import Process
 from typing import Any
@@ -64,6 +65,7 @@ class Read(object):
     :type query_length: int
 
     :Example:
+
     >>> chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra = 'chr1', 6524193, '+', '5S10M2I5M10N10M15S', 60, 0, 'ATCGAAATTAGCTGGGTGTAGTGGCAGGTACCTATGGTCCTGGCTAC'
     >>> read = Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
     >>> read
@@ -73,7 +75,7 @@ class Read(object):
     >>> read.reference_match_size
     35
     >>> read.sms
-    5,27,15
+    5, 27, 15
     """
 
     __slots__ = (
@@ -1395,6 +1397,8 @@ class Insertion(Read):
         self.exons, self.introns = self.get_exons_and_introns()
         self.successor: Optional[List[Node]] = []
         self.predecessor: Optional[List[Node]] = []
+        self.unique_key = None
+        self.merged_nodes = []
 
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
@@ -1418,13 +1422,23 @@ class Insertion(Read):
         self.strand = "-" if self.strand == "+" else "+"
 
     @property
-    def unique_key(self):
+    def similar_key(self):
         introns = self.introns
 
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else ""
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = f"{self.chrom}-{key}"
 
-        # key = f"{self.chrom}-{key}"
-        key = f"{self.chrom}-{self.prev_breakpoint}-{key}-{self.next_breakpoint}"
+        return key
+
+    def get_key_for_series(self):
+
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+
+        key = f"{self.chrom}-{key}-{self.prev_breakpoint}-{self.next_breakpoint}"
+
+        self.unique_key = key
 
         return key
 
@@ -1451,12 +1465,12 @@ class Insertion(Read):
     def add_successor(self, successor):
 
         for successor_node in self.successor:
-            if successor_node.unique_key != successor.unique_key:
+            if successor_node.similar_key != successor.similar_key:
                 self.successor.append(successor)
 
     def add_predecessor(self, predecessor):
         for predecessor_node in self.predecessor:
-            if predecessor_node.unique_key != predecessor.unique_key:
+            if predecessor_node.similar_key != predecessor.similar_key:
                 self.predecessor.append(predecessor)
 
     def update_sr(self, key=1):
@@ -1524,6 +1538,7 @@ class Node(object):
         "insertion_info",
         "predecessor",
         "successor",
+        "unique_key",
     )
 
     def __init__(
@@ -1560,6 +1575,9 @@ class Node(object):
         self.successor: Optional[List[Node]] = []
         self.predecessor: Optional[List[Node]] = []
 
+        self.unique_key = None
+        self.merged_nodes = []
+
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
             if (
@@ -1590,9 +1608,7 @@ class Node(object):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
-    def __str__(self) -> str:
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+    __str__ = __repr__
 
     def is_next_node(self, other) -> bool:
         if self.next_breakpoint == other.prev_breakpoint:
@@ -1624,21 +1640,14 @@ class Node(object):
             return _introns
 
     @property
-    def unique_key(self):
+    def similar_key(self):
 
         introns = self.introns
 
         key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = f"{self.chrom}-{key}"
 
-        key1 = f"{self.chrom}-{key}-{self.prev_breakpoint}"
-        key2 = f"{self.chrom}-{key}-{self.next_breakpoint}"
-
-        if self.insertion_info is not None:
-            _, insertion_type = self.insertion_info
-            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
-                key1 = f"{insertion_type.query_sequence}-{key1}"
-                key2 = f"{insertion_type.query_sequence}-{key2}"
-        return key1, key2
+        return key
 
     def get_key_for_series(self):
 
@@ -1646,13 +1655,14 @@ class Node(object):
 
         key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
 
-        key = f"{self.chrom}-{key}-{self.prev_breakpoint}-{self.next_breakpoint}"
+        key = f"{self.chrom}-{key}-{self.sv_type}-{self.prev_breakpoint}-{self.next_breakpoint}"
 
         if self.insertion_info is not None:
             _, insertion_type = self.insertion_info
             if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
                 key = f"{insertion_type.query_sequence}-{key}"
 
+        self.unique_key = key
         return key
 
     def copy(self) -> "Node":
@@ -1663,12 +1673,6 @@ class Node(object):
             new_node.__dict__[attr_key] = attr_value  # type: ignore
 
         return new_node
-
-    def compare(self, other) -> bool:
-        key1_self, key2_self = self.unique_key
-        key1_other, key2_other = other.unique_key
-
-        return True if key1_self == key1_other or key2_self == key2_other else False
 
     def is_start_node(self):
         return True if not self.has_predecessor() else False
@@ -1682,6 +1686,12 @@ class Node(object):
     def has_successor(self):
         return True if self.successor else False
 
+    def compare(self, other) -> bool:
+        key1_self, key2_self = self.similar_key
+        key1_other, key2_other = other.similar_key
+
+        return True if key1_self == key1_other or key2_self == key2_other else False
+
     def add_successor(self, successor):
         flag = False
         for successor_node in self.successor:
@@ -1691,7 +1701,7 @@ class Node(object):
 
     def add_predecessor(self, predecessor):
         for predecessor_node in self.predecessor:
-            if predecessor_node.unique_key != predecessor.unique_key:
+            if predecessor_node.similar_key != predecessor.similar_key:
                 self.predecessor.append(predecessor)
 
     def update_sr(self, key=1):
@@ -1728,10 +1738,10 @@ class Series(object):
 
     :Example:
     >>> series = Series(blat=None, logger=logger)
-    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
-    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
-    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
-    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
+    >>> series.add_similar_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
+    >>> series.add_similar_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
+    >>> series.add_similar_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
+    >>> series.add_similar_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
     >>> series
     Series(
         Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
@@ -2163,7 +2173,7 @@ class Series(object):
 
     def get_double_node_key(self):
         for index in range(len(self.nodes) - 1):
-            yield f"{index}-{self.nodes[index].unique_key}{self.nodes[index + 1].unique_key}"
+            yield f"{index}-{self.nodes[index].similar_key}{self.nodes[index + 1].similar_key}"
 
 
 class Event(object):
@@ -2342,21 +2352,21 @@ class SpliceGraph(object):
 
     :Example:
 
-    >>> series1 = Series(blat=None, logger=None)
-    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[[15872815,15873800]], sv_type=None)]
-    >>> series2 = Series(blat=None, logger=None)
-    >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[[7701500, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
-    >>> series3 = Series(blat=None, logger=None)
-    >>> series3.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
-    >>> series4 = Series(blat=None, logger=None)
-    >>> series4.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
-    >>> series5 = Series(blat=None, logger=None)
-    >>> series5.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
-    >>> series6 = Series(blat=None, logger=None)
-    >>> series6.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
-    >>> series7 = Series(blat=None, logger=None)
-    >>> series7.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
     >>> from loguru import logger
+    >>> series1 = Series(blat=None, logger=logger)
+    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[[15872815,15873800]], sv_type=None)]
+    >>> series2 = Series(blat=None, logger=logger)
+    >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[[7701500, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
+    >>> series3 = Series(blat=None, logger=logger)
+    >>> series3.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
+    >>> series4 = Series(blat=None, logger=logger)
+    >>> series4.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
+    >>> series5 = Series(blat=None, logger=logger)
+    >>> series5.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
+    >>> series6 = Series(blat=None, logger=logger)
+    >>> series6.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
+    >>> series7 = Series(blat=None, logger=logger)
+    >>> series7.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
     >>> splice_graph = SpliceGraph(series_list=[series1, series2, series3, series4, series5, series6, series7], logger=logger)
     >>> splice_graph.construct()
     >>> splice_graph.trace()
@@ -2367,86 +2377,186 @@ class SpliceGraph(object):
     def __init__(self, series_list, logger):
         self.series_list = series_list
         self.logger = logger
-        self.nodes = {}
+        self.nodes = defaultdict(list)
+        self.unique_nodes_map = {}
         self.result_series_list = []
 
     def get_start_nodes(self):
-        return [node for node in self.nodes.values() if node.is_start_node]
+        return [
+            node
+            for nodes in self.nodes.values()
+            for node in nodes
+            if node.is_start_node
+        ]
 
-    def get_node(self, unique_key: Tuple) -> Optional[Node]:
-        key1, key2 = unique_key
+    def get_similar_nodes(self, similar_key: str) -> List[Any, ...]:
+        return self.nodes[similar_key]
 
-        if self.nodes.get(key1, None) is not None:
-            return self.nodes[key1]
-        elif self.nodes.get(key2, None) is not None:
-            return self.nodes[key2]
-        else:
-            return None
-
-    def add_node(self, node):
-        key1, key2 = node.unique_key
-
-        if key1.endswith("None"):
-            self.nodes[key2] = node
-        else:
-            self.nodes[key1] = node
-
-    def __iter__(self):
-        for node in self.nodes.values():
-            yield node
+    def add_similar_node(self, node):
+        key = node.similar_key
+        self.nodes[key].append(node)
 
     def __contains__(self, node):
-        """
-        :param node:
+        unique_key = node.unique_key
+
+        for nodes in self.nodes.values():
+            for other_node in nodes:
+                if other_node.unique_key == unique_key:
+                    return True
+                else:
+                    return False
+
+    def __iter__(self):
+        for nodes in self.nodes.values():
+            for node in nodes:
+                yield node
+
+    @staticmethod
+    def _compare_is_merged_helper(node1, node2):
+
+        condition = node1.sv_type == node2.sv_type
+
+        if (
+            condition and node1.prev_bp is None and node2.prev_bp is None
+        ):  # both are start nodel
+            return node1.exons[-1][1] == node2.exons[-1][1]  # check last exon end
+
+        elif (
+            condition and node1.next_bp is None and node2.next_bp is None
+        ):  # both are end nodes
+            return node1.exons[0][0] == node2.exons[0][0]  # check first exon start
+
+        elif (
+            condition and node1.prev_bp is None and node2.prev_bp is not None
+        ):  # node1 is start node, node2 is not
+            return (
+                node1.exons[-1][1] == node2.exons[-1][1]
+                and node1.exons[0][0] >= node2.exons[0][0]
+            )
+
+        elif (
+            condition and node1.next_bp is None and node2.next_bp is not None
+        ):  # node1 is end node, node2 is not
+            return (
+                node1.exons[0][0] == node2.exons[0][0]
+                and node1.exons[-1][1] <= node2.exons[-1][1]
+            )
+
+        elif (
+            node1.next_bp is None and node2.prev_bp is None
+        ):  # node1 is end node, node2 is start node
+            return (
+                node2.exons[0][0] >= node1.exons[0][0]
+                and node2.exons[-1][1] >= node1.exons[-1][1]
+            )
+
+        else:  # both are middle nodes
+            return (
+                node1.exons[0][0] == node2.exons[0][0]
+                and node1.exons[-1][1] == node2.exons[-1][1]
+            )
+
+        return False
+
+    @staticmethod
+    def _compare_is_merged(node1, node2):
+        """node1 is similar as node2 is precommit of the function
+
+         compare if node1 can merge node2
+        :param node1:
+        :param node2:
         :return:
         """
-        return False if self.get_node(node.unique_key) is None else True
+        flag1 = SpliceGraph._compare_is_merged_helper(node1, node2)
+        if flag1:
+            return True
+        flag2 = SpliceGraph._compare_is_merged_helper(node2, node1)
+        if flag2:
+            return True
 
-    def reduce(self):
-        """
-        reduce the series list by merging nodes with same length
-        """
-        result_dict = {}
-
-        for series in self.series_list:
-            another_series = result_dict.get(series.unique_key, None)
-            if another_series is not None:
-                result_dict[series.unique_key] = series + another_series
-            else:
-                result_dict[series.unique_key] = series
-
-        self.series_list = list(result_dict.values())
+    @staticmethod
+    def update_exon_coord_sr(updated_node, current_node):
+        updated_node.exons[0][0] = min(
+            updated_node.exons[0][0], current_node.exons[0][0]
+        )
+        updated_node.exons[-1][1] = max(
+            updated_node.exons[-1][1], current_node.exons[-1][1]
+        )
+        updated_node.update_sr()
 
     def construct(self):
-        self.reduce()
-
         for series in self.series_list:
-            for index, node in enumerate(series):
-                unique_key = node.unique_key
-                if node in self:
+            for index, current_node in enumerate(series):
+                unique_key = current_node.get_key_for_series()
+                self.unique_nodes_map[unique_key] = current_node
 
-                    node_in_graph = self.get_node(unique_key)
-                    node_in_graph.update_sr()
-                    node_in_graph.update_first_exon_start(node.exons[0][0])
-                    node_in_graph.update_last_exon_end(node.exons[-1][1])
-                    # TODO: may need to update breakpoint
+                similar_key = current_node.similar_key
 
-                    if index != len(series) - 1:
-                        successor_node = series[index + 1]
-                        node_in_graph.add_successor(successor_node)
-                    elif index != 0:
-                        predecessor_node = series[index - 1]
-                        node_in_graph.add_predecessor(predecessor_node)
+                similar_nodes_in_graph = self.get_similar_nodes(similar_key)
+
+                if similar_nodes_in_graph:
+                    is_merged = False
+
+                    for similar_node_in_graph in similar_nodes_in_graph:
+                        if SpliceGraph._compare_is_merged(
+                            similar_node_in_graph, current_node
+                        ):
+                            is_merged = True
+                            SpliceGraph.update_exon_coord_sr(
+                                similar_node_in_graph, current_node
+                            )
+                            similar_node_in_graph.merge_nodes.append(current_node)
+                            similar_node_in_graph.predecessors.extend(
+                                current_node.predecessors
+                            )
+
+                            if index <= len(series) - 1:
+                                successor_node = series[index + 1]
+                                current_node.add_successor(successor_node)
+                            if index > 0:
+                                predecessor_node = series[index - 1]
+                                current_node.add_predecessor(predecessor_node)
+
+                        if not is_merged:  # false
+                            for merge_node in similar_node_in_graph.merge_nodes:
+                                if SpliceGraph._compare_is_merged(
+                                    merge_node, current_node
+                                ):
+                                    SpliceGraph.update_exon_coord_sr(
+                                        current_node, merge_node
+                                    )
+                                    current_node.merge_nodes.append(merge_node)
+                                    current_node.successors.extend(
+                                        merge_node.successors
+                                    )
+
+                                    if index <= len(series) - 1:
+                                        successor_node = series[index + 1]
+                                        current_node.add_successor(successor_node)
+                                    if index > 0:
+                                        predecessor_node = series[index - 1]
+                                        current_node.add_predecessor(predecessor_node)
+
+                    # add node to graph
+                    if not is_merged:  # false
+                        self.add_similar_node(current_node)
+
+                        if index <= len(series) - 1:
+                            successor_node = series[index + 1]
+                            current_node.add_successor(successor_node)
+                        if index > 0:
+                            predecessor_node = series[index - 1]
+                            current_node.add_predecessor(predecessor_node)
 
                 else:
-                    self.add_node(node)
+                    self.add_similar_node(current_node)
 
-                    if index != len(series) - 1:
+                    if index <= len(series) - 1:
                         successor_node = series[index + 1]
-                        node.add_successor(successor_node)
-                    elif index != 0:
+                        current_node.add_successor(successor_node)
+                    if index > 0:
                         predecessor_node = series[index - 1]
-                        node.add_predecessor(predecessor_node)
+                        current_node.add_predecessor(predecessor_node)
 
     def _trace(self, start_node, path, group_paths):
 

@@ -2,7 +2,7 @@ __funcs__ = {"detect_read_read_connections_from_cigar"}
 
 from typing import Any
 
-from loguru._logger import Logger
+from loguru._logger import Logger  # lint:ok
 from pysam import AlignedSegment  # type: ignore
 from ..classes import ReadsConnecter, Blat, Read  # type: ignore
 from ..utils import reverse_complement  # type: ignore

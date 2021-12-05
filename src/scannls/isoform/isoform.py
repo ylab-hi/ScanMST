@@ -1415,7 +1415,7 @@ def gtf_clustering(inlist):
     length = len(inlist)
     for x in range(length):
         node_x = inlist[x]
-        g.add_node(node_x)
+        g.add_similar_node(node_x)
         for y in range(length):
             if x < y:
                 node_y = inlist[y]
