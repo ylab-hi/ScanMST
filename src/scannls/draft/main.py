@@ -364,7 +364,6 @@ def _scan_bam_helper(
             if not read.has_tag("SA") and not read.is_supplementary:
                 read_strand = "-" if read.is_reverse else "+"
                 read_length = int(read.query_length)
-                # assert read.cigarstring, f"{read.query_name}" # TEST
                 _, _soft_seq, _, read_mode = get_softclip_length(read)
 
                 if read.is_reverse:

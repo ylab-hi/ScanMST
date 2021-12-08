@@ -1,5 +1,7 @@
 # ScanNLS
 
+<div align="center">
+
 [![PyPI](https://img.shields.io/pypi/v/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "PyPI")
 [![Status](https://img.shields.io/pypi/status/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "Status")
 [![Python Version](https://img.shields.io/pypi/pyversions/ScanNLS)](https://pypi.org/project/ScanNLS "Python Version")
@@ -10,22 +12,46 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit "pre-commit")
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black "Black")
 
+</div>
+
 ## Features
 
 - TODO
 
 ## Requirements
 
-- Python3.7 and above
-- [align (https://github.com/brentp/align)](https://github.com/brentp/align)
-- Biopython
+<details>
+<summary> Python </summary>
+</details>
+
+<details>
+<summary> Biopython </summary>
+</details>
+
+<details>
+<summary> gapmis </summary>
+We use the <em>gmapmis</em> package, a tool based on <em>C</em>,  to perform the alignment. you can find the gapmis package <a href="https://github.com/xflouris/gapmis">here</a> Install that:
+
+```bash
+$ git clone https://github.com/xflouris/gapmis
+$ cd gapmis
+$ make
+```
+
+You may need to add the path to the gapmis folder to your `$PATH` environment variable.
+
+```bash
+$ export PATH=$PATH:$HOME/<gapmis folder>
+```
+
+</details>
 
 ## Installation
 
 You can install _ScanNLS_ via pip* from PyPI*:
 
 ```bash
-$ pip install ScanNLS
+$ pip install scannls
 ```
 
 ## Usage

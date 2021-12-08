@@ -31,10 +31,10 @@ class AlignerResult:
 
 
 class Aligner:
-    def __init__(self, seqa, seqb):
+    def __init__(self, seqa: str, seqb: str):
         self.seqa = seqa
         self.seqb = seqb
-        self.cmd = "./gapmis -a {seqa}  -b {seqb} -o {out}".format
+        self.cmd = "gapmis -a {seqa}  -b {seqb} -o {out}".format
 
     def __repr__(self):
         return f"Aligner(seqa={self.seqa}, seqb={self.seqb})"
