@@ -529,12 +529,12 @@ class Blat(object):
         for proc in procs:
             proc.kill()
 
-    def _query(self, in_seq: str, miniIdentity: int = 90) -> str:
+    def _query(self, in_seq: str, mini_identity: int = 90) -> str:
         """
         the function is help function in order to using gfClient
         to query 'in_seq' to generate alignment file (in PSL format).
 
-        :param miniIdentity: the threshold of the identity for aligning
+        :param mini_identity: the threshold of the identity for aligning
         :param in_seq: sequence of softclipped segment
         :return: the path for PSL file
         """
@@ -554,11 +554,11 @@ class Blat(object):
         logger.trace(f"{self.ref_dir=}")
         logger.trace(os.getcwd())
         cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} > /dev/null".format(
-            miniIdentity, self.port, in_fasta, out_psl
+            mini_identity, self.port, in_fasta, out_psl
         )
         logger.trace(f"{cmd=}")
         try:
-            ret = subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
+            subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as err:
             raise SystemExit(f"{err} {err.output}")
 
@@ -577,23 +577,23 @@ class Blat(object):
         while not self.is_ready():
             time.sleep(interval)
 
-    def query(self, in_seq: str, miniIdentity: int = 90) -> str:
+    def query(self, in_seq: str, mini_identity: int = 90) -> str:
         """
         the function for querying the sequence to the server service
 
         :param in_seq: the sequence of input sequence
-        :param miniIdentity: the threshold of the identity for aligning
+        :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
 
         if self.is_start_server:
             if self.is_ready():
-                out_psl = self._query(in_seq, miniIdentity)
+                out_psl = self._query(in_seq, mini_identity)
             else:
                 self._wait_ready()
-                out_psl = self._query(in_seq, miniIdentity)
+                out_psl = self._query(in_seq, mini_identity)
         else:
-            out_psl = self._query(in_seq, miniIdentity)
+            out_psl = self._query(in_seq, mini_identity)
 
         return out_psl
 
@@ -638,9 +638,6 @@ class Blat(object):
         if hit == 1:
             top_hsp = keep_hsp[0]
             flag = True
-            # start_end = top_hsp.hit_range_all
-            # strand = "+" if top_hsp.hit_strand_all[0] == 1 else "-"
-            # chrom = top_hsp.hit_id
 
             ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
                 top_hsp, in_seq_len=len(insert_seq)
@@ -721,7 +718,8 @@ class Blat(object):
             mapq = Blat._calculate_mapq(hsps, len(in_seq), threshold_identity)
         return top_hsp, mapq
 
-    def psl2sam(self, hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
+    @staticmethod
+    def psl2sam(hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
         """
         Convert the top HSP in PSL file to SAM fields chrom, reference_start,
         strand, cigarstring, num_of_mismatch. The function try to implement
@@ -742,13 +740,11 @@ class Blat(object):
         ref_chrom = hsp.hit_id
         num_of_mismatch = hsp.mismatch_num
 
-        soft_len = 0
         if _strand == -1:
             query_start = in_seq_len - hsp.query_end
             query_end = in_seq_len - hsp.query_start
         if query_start:
             # 5'-end clipping
-            soft_len = query_start
             cigar += str(query_start) + "S"
         x = hsp.query_span_all
         if _strand == -1:
@@ -779,15 +775,11 @@ class Blat(object):
                 y0, z0 = y[i], z[i]
 
         cigar += str(query_end - y0) + "M"
-        # print(cigar)
-        # return cigar, soft_len
+
         if in_seq_len != query_end:
             # 3'-end clipping
             end3 = in_seq_len - query_end
-            if end3 > soft_len:
-                soft_len = end3
             cigar += str(end3) + "S"
-        # return cigar, soft_len
         strand = "+" if _strand == 1 else "-"
 
         return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
@@ -838,7 +830,7 @@ class ReadsConnecter(object):
             return 1
 
     # @staticmethod
-    def compare_MS(
+    def compare_ms(
         self,
         query_seq: str,
         target_seq: str,
@@ -895,6 +887,7 @@ class ReadsConnecter(object):
         :param prev_read_mode: previous predicted connected read mode
         :param next_read_mode: next predicted connected read mode
         """
+        bp_region_seq_len = 0
         _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
         if prev_read_mode == 2:
@@ -1004,7 +997,7 @@ class ReadsConnecter(object):
             next_read_mode,
         )
 
-        match_flag = self.compare_MS(
+        match_flag = self.compare_ms(
             read_match_sequence,
             read.query_sequence[:_lt_len_r2],
             same_strand,
@@ -1012,9 +1005,6 @@ class ReadsConnecter(object):
         )
 
         if match_flag:  # may same
-            # if insertion_1_seq is not None:  # insertion exist
-            #     insertion = self.map_with_blat_for_genome(insertion_1_seq)
-            #     self.insertion_dict[(start_read, read)] = insertion
 
             read.mode = 2
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
@@ -1045,7 +1035,7 @@ class ReadsConnecter(object):
             next_read_mode,
         )
 
-        match_flag = self.compare_MS(
+        match_flag = self.compare_ms(
             read_match_sequence,
             read.query_sequence[-_rt_len_r2:],
             same_strand,
@@ -1160,9 +1150,6 @@ class ParallelWorker(object):
     >>> result = parallel_worker.run(*args, **kwargs)
     >>> result
     {1: 5, 2: 6, 3: 7}
-    """
-
-    """
     """
 
     def __init__(self, func, logger, n_jobs: int = 1):
@@ -1400,6 +1387,10 @@ class Insertion(Read):
         self.unique_key = None
         self.merged_nodes = []
 
+        self.next_node_in_series = None
+        self.previous_node_in_series = None
+        self.is_merged, self.is_in_graph = False, False
+
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
@@ -1430,7 +1421,7 @@ class Insertion(Read):
 
         return key
 
-    def get_key_for_series(self):
+    def get_unique_key(self):
 
         introns = self.introns
 
@@ -1477,11 +1468,14 @@ class Insertion(Read):
         # TODO: may be wrong
         self.sr += key
 
-    def update_first_exon_start(self, coord):
-        self.exons[0][0] = min(coord, self.exons[0][0])
-
-    def update_last_exon_end(self, coord):
-        self.exons[-1][1] = max(coord, self.exons[-1][1])
+    def update_next_and_previous_node_in_series(self, index, series):
+        if index == 0:
+            self.next_node_in_series = series[index + 1]
+        elif index == len(series) - 1:
+            self.previous_node_in_series = series[index - 1]
+        else:
+            self.next_node_in_series = series[index + 1]
+            self.previous_node_in_series = series[index - 1]
 
 
 class Node(object):
@@ -1539,6 +1533,11 @@ class Node(object):
         "predecessor",
         "successor",
         "unique_key",
+        "merged_nodes",
+        "next_node_in_series",
+        "previous_node_in_series",
+        "is_merged",
+        "is_in_graph",
     )
 
     def __init__(
@@ -1577,6 +1576,9 @@ class Node(object):
 
         self.unique_key = None
         self.merged_nodes = []
+        self.next_node_in_series = None
+        self.previous_node_in_series = None
+        self.is_merged, self.is_in_graph = False, False
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Node):
@@ -1649,7 +1651,7 @@ class Node(object):
 
         return key
 
-    def get_key_for_series(self):
+    def get_unique_key(self):
 
         introns = self.introns
 
@@ -1707,11 +1709,14 @@ class Node(object):
     def update_sr(self, key=1):
         self.sr += key
 
-    def update_first_exon_start(self, coord):
-        self.exons[0][0] = min(coord, self.exons[0][0])
-
-    def update_last_exon_end(self, coord):
-        self.exons[-1][1] = max(coord, self.exons[-1][1])
+    def update_next_and_previous_node_in_series(self, index, series):
+        if index == 0:
+            self.next_node_in_series = series[index + 1]
+        elif index == len(series) - 1:
+            self.previous_node_in_series = series[index - 1]
+        else:
+            self.next_node_in_series = series[index + 1]
+            self.previous_node_in_series = series[index - 1]
 
 
 class Series(object):
@@ -1854,7 +1859,10 @@ class Series(object):
                         insertion.reverse_completement_query()
                         insertion.reverse_strand()
 
-                    if read1_insertion_event.is_NA() or insertion_read2_event.is_NA():
+                    if (
+                        read1_insertion_event.is_type_na()
+                        or insertion_read2_event.is_type_na()
+                    ):
                         # only add read1
                         read1_node = event.update_node_info(flag, read1_node, insertion)
                         self.add_node(read1_node)
@@ -2023,11 +2031,9 @@ class Series(object):
                 kept_right_strand = strand2
             else:
                 if chrm1 == kept_right_chrm and strand1 == kept_right_strand:
-                    if strand1 == "+" and pos1 > kept_right_pos:
-                        kept_right_pos = pos2
-                        kept_right_chrm = chrm2
-                        kept_right_strand = strand2
-                    elif strand1 == "-" and pos1 < kept_right_pos:
+                    if (strand1 == "+" and pos1 > kept_right_pos) or (
+                        strand1 == "-" and pos1 < kept_right_pos
+                    ):
                         kept_right_pos = pos2
                         kept_right_chrm = chrm2
                         kept_right_strand = strand2
@@ -2071,52 +2077,6 @@ class Series(object):
 
     __str__ = __repr__
 
-    def __add__(self, other):
-
-        if isinstance(other, Series):
-            if len(other) == len(self):
-                # same length and only for reduce to merge two series wit same start node and end node
-
-                self.start_node = Series.merge_nodes(self.start_node, other.start_node)
-                self.end_node = Series.merge_nodes(self.end_node, other.end_node)
-
-                for node1, node2 in zip(self.nodes[:-1], other.nodes[:-1]):
-                    node1.sr += node2.sr
-
-                return self
-
-            else:
-                pass
-
-        else:
-            raise TypeError(
-                f"Series object can only be added to Series object. {type(other)} object is not supported."
-            )
-
-    def extend_series(self, other):
-        new_series = Series(blat=self.blat, logger=self.logger)
-        if isinstance(other, Series):
-
-            for node in self:
-                new_series.add_node(node.copy())
-
-            new_series.end_node.exons[0][0] = min(
-                new_series.end_node.exons[0][0], other.start_node.exons[0][0]
-            )
-            new_series.end_node.exons[-1][1] = max(
-                new_series.end_node.exons[-1][1], other.start_node.exons[-1][1]
-            )
-
-            for node in other[1:]:
-                new_series.add_node(node.copy())
-
-            return new_series
-
-        else:
-            raise TypeError(
-                f"Series object can only be extended to Series object. {type(other)} object is not supported."
-            )
-
     def decompose(self) -> list:
         """Decompose the sequence of Nodes into Nodes pair"""
         paired_breakpoints = []
@@ -2147,7 +2107,7 @@ class Series(object):
 
     @property
     def unique_key(self):
-        return "".join([node.get_key_for_series() for node in self.nodes])
+        return "".join([node.get_unique_key() for node in self.nodes])
 
     @staticmethod
     def merge_nodes(node1, node2):
@@ -2263,7 +2223,7 @@ class Event(object):
     def source_s2(self) -> str:
         return "left" if self.mode2 == 2 else "right"
 
-    def is_NA(self) -> bool:
+    def is_type_na(self) -> bool:
         return True if self.sv_type == "NA" else False
 
     def has_insertion(self) -> bool:
@@ -2354,7 +2314,8 @@ class SpliceGraph(object):
 
     >>> from loguru import logger
     >>> series1 = Series(blat=None, logger=logger)
-    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[[15872815,15873800]], sv_type=None)]
+    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,
+    ...                 exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[[15872815,15873800]], sv_type=None)]
     >>> series2 = Series(blat=None, logger=logger)
     >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[[7701500, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
     >>> series3 = Series(blat=None, logger=logger)
@@ -2428,7 +2389,7 @@ class SpliceGraph(object):
 
         elif (
             condition and node1.prev_bp is None and node2.prev_bp is not None
-        ):  # node1 is start node, node2 is not
+        ):  # node1 is start node, node2 is middle node
             return (
                 node1.exons[-1][1] == node2.exons[-1][1]
                 and node1.exons[0][0] >= node2.exons[0][0]
@@ -2436,7 +2397,7 @@ class SpliceGraph(object):
 
         elif (
             condition and node1.next_bp is None and node2.next_bp is not None
-        ):  # node1 is end node, node2 is not
+        ):  # node1 is end node, node2 is middle node
             return (
                 node1.exons[0][0] == node2.exons[0][0]
                 and node1.exons[-1][1] <= node2.exons[-1][1]
@@ -2484,38 +2445,56 @@ class SpliceGraph(object):
         )
         updated_node.update_sr()
 
+    @staticmethod
+    def add_predecessor(node: Node, predecessor: Node):
+        if node is None:
+            node.predecessor.append(predecessor)
+
+    @staticmethod
+    def add_successor(node, successor):
+        if node is None:
+            node.successor.append(successor)
+
     def construct(self):
+        # iterate all series
         for series in self.series_list:
+            # iterate all nodes in series
             for index, current_node in enumerate(series):
-                unique_key = current_node.get_key_for_series()
+                # update next and previous node in series
+                current_node.update_next_and_previsous_node_in_series(index, series)
+                # get unique key of current node
+                unique_key = current_node.get_unique_key()
                 self.unique_nodes_map[unique_key] = current_node
 
+                # get similar key(chrom and intron) of current node
                 similar_key = current_node.similar_key
-
+                # get similar nodes in the graph
                 similar_nodes_in_graph = self.get_similar_nodes(similar_key)
-
+                # iterate all similar nodes in the graph
                 if similar_nodes_in_graph:
-                    is_merged = False
-
+                    is_merged = False  # flag to check if current node is merged
+                    # iterate all similar nodes in the graph
                     for similar_node_in_graph in similar_nodes_in_graph:
+                        # check if current node is merged into similar node in the graph
                         if SpliceGraph._compare_is_merged(
                             similar_node_in_graph, current_node
                         ):
                             is_merged = True
+                            current_node.is_merged = True
+
                             SpliceGraph.update_exon_coord_sr(
                                 similar_node_in_graph, current_node
                             )
+
                             similar_node_in_graph.merge_nodes.append(current_node)
+
                             similar_node_in_graph.predecessors.extend(
                                 current_node.predecessors
                             )
 
-                            if index <= len(series) - 1:
-                                successor_node = series[index + 1]
-                                current_node.add_successor(successor_node)
-                            if index > 0:
-                                predecessor_node = series[index - 1]
-                                current_node.add_predecessor(predecessor_node)
+                            current_node.next_node_in_series.predecessors.append(
+                                similar_node_in_graph
+                            )
 
                         if not is_merged:  # false
                             for merge_node in similar_node_in_graph.merge_nodes:
