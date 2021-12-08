@@ -7,17 +7,6 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "align"
-version = "0.0.11"
-description = "Analyzing Linguistic Interaction with Generalizable techNiques"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.extras]
-alldeps = ["numpy (>=1.17.2)", "scipy (>=1.3.1)", "gensim (>=3.8.0)", "pandas (>=0.25.1)", "nltk (>=3.4.5)", "ipython (>=7.8.0)"]
-
-[[package]]
 name = "appdirs"
 version = "1.4.4"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
@@ -242,7 +231,7 @@ python-versions = ">=3.6,<4.0"
 
 [[package]]
 name = "distlib"
-version = "0.3.3"
+version = "0.3.4"
 description = "Distribution utilities"
 category = "dev"
 optional = false
@@ -1223,16 +1212,12 @@ tests = ["codecov", "scikit-build", "cmake", "ninja", "pybind11", "pytest", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "d18b098e5753fa68902dd1db25122a8e4de865cc75c38967ab47ea515d3ec4fe"
+content-hash = "4137e6320d0c97212fa8e08eca832bdef035079105e38c79886961d306bd9586"
 
 [metadata.files]
 alabaster = [
     {file = "alabaster-0.7.12-py2.py3-none-any.whl", hash = "sha256:446438bdcca0e05bd45ea2de1668c1d9b032e1a9154c2c259092d77031ddd359"},
     {file = "alabaster-0.7.12.tar.gz", hash = "sha256:a661d72d58e6ea8a57f7a86e37d86716863ee5e92788398526d58b26a4e4dc02"},
-]
-align = [
-    {file = "align-0.0.11-py3-none-any.whl", hash = "sha256:ea29755d3e9c7aba44736668e1d4dafda74240173ccb2f1cbe6058a170c2c214"},
-    {file = "align-0.0.11.tar.gz", hash = "sha256:06025a8733e8d10a39b4f563df70f426fb9055a432d831fa8e134fe410bbdf0c"},
 ]
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
@@ -1387,8 +1372,8 @@ darglint = [
     {file = "darglint-1.8.1.tar.gz", hash = "sha256:080d5106df149b199822e7ee7deb9c012b49891538f14a11be681044f0bb20da"},
 ]
 distlib = [
-    {file = "distlib-0.3.3-py2.py3-none-any.whl", hash = "sha256:c8b54e8454e5bf6237cc84c20e8264c3e991e824ef27e8f1e81049867d861e31"},
-    {file = "distlib-0.3.3.zip", hash = "sha256:d982d0751ff6eaaab5e2ec8e691d949ee80eddf01a62eaa96ddb11531fe16b05"},
+    {file = "distlib-0.3.4-py2.py3-none-any.whl", hash = "sha256:6564fe0a8f51e734df6333d08b8b94d4ea8ee6b99b5ed50613f731fd4089f34b"},
+    {file = "distlib-0.3.4.zip", hash = "sha256:e4b58818180336dc9c529bfb9a0b58728ffc09ad92027a3f30b7cd91e3458579"},
 ]
 docutils = [
     {file = "docutils-0.16-py2.py3-none-any.whl", hash = "sha256:0c5b78adfbf7762415433f5515cd5c9e762339e23369dbe8000d84a4bf4ab3af"},
