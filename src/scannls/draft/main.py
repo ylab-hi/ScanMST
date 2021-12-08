@@ -394,9 +394,7 @@ def _scan_bam_helper(
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if read.has_tag("SA") and not read.is_supplementary:
-                logger.trace(
-                    f"{read.query_name= } {read.query_sequence=} {read.cigarstring=}"
-                )
+                logger.trace(f"{read.query_name= } {read.cigarstring=}")
                 event_lists, read_chains = detect_sv_from_cigar(
                     read=read,
                     mapq_cutoff=mapq_cutoff,
