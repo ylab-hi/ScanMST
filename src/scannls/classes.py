@@ -6,9 +6,11 @@ import os
 import random
 import re
 import subprocess
+import tempfile
 import time
 from collections import defaultdict
 from concurrent import futures
+from dataclasses import dataclass
 from multiprocessing import Process
 from typing import Any
 from typing import List
@@ -19,7 +21,7 @@ from typing import Union
 import psutil  # type: ignore
 from Bio import SearchIO  # type: ignore
 from loguru import logger
-from loguru._logger import Logger
+from loguru._logger import Logger  # type: ignore
 from tqdm import tqdm  # type: ignore
 
 from .draft.helper import cigar_validity  # type: ignore
@@ -140,16 +142,15 @@ class Read(object):
         self.mode = None
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, Read):
-            if (
-                self.chrom == other.chrom
-                and self.ref_start == other.ref_start
-                and self.ref_end == other.ref_end
-                and self.strand == other.strand
-                and self.mapq == other.mapq
-                and self.nm == other.nm
-            ):
-                return True
+        if isinstance(other, Read) and (
+            self.chrom == other.chrom
+            and self.ref_start == other.ref_start
+            and self.ref_end == other.ref_end
+            and self.strand == other.strand
+            and self.mapq == other.mapq
+            and self.nm == other.nm
+        ):
+            return True
         return False
 
     def __hash__(self) -> int:
@@ -312,10 +313,9 @@ class Read(object):
                 start_pos = current_pos
         exons.append([start_pos, current_pos])
 
+        introns = []
         # No 'N' in the cigar
-        if len(exons) == 1:
-            introns = []
-        elif len(exons) > 1:
+        if len(exons) > 1:
             _positions = []
             for i, j in exons:
                 _positions.extend([i, j])
@@ -473,9 +473,8 @@ class Blat(object):
         result = []
         self.logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
-            if "gfServer".lower() == proc.name().lower():
-                if proc.cmdline():
-                    result.append(proc)
+            if "gfServer".lower() == proc.name().lower() and proc.cmdline():
+                result.append(proc)
         return result
 
     def _run_cmd(self, cmd: str) -> None:
@@ -1548,7 +1547,7 @@ class Node(object):
         chrom: Optional[str] = None,
         ref_start: Optional[int] = None,
         ref_end: Optional[int] = None,
-        exons: Optional[List[int]] = None,
+        exons: Optional[List[List[int]]] = None,
         sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
@@ -1581,17 +1580,16 @@ class Node(object):
         self.is_merged, self.is_in_graph = False, False
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, Node):
-            if (
-                self.chrom == other.chrom
-                and self.ref_start == other.ref_start
-                and self.ref_end == other.ref_end
-                and self.sv_type == other.sv_type
-                and self.prev_breakpoint == other.prev_breakpoint
-                and self.next_breakpoint == other.next_breakpoint
-                and self.strand == other.strand
-            ):
-                return True
+        if isinstance(other, Node) and (
+            self.chrom == other.chrom
+            and self.ref_start == other.ref_start
+            and self.ref_end == other.ref_end
+            and self.sv_type == other.sv_type
+            and self.prev_breakpoint == other.prev_breakpoint
+            and self.next_breakpoint == other.next_breakpoint
+            and self.strand == other.strand
+        ):
+            return True
         return False
 
     def __hash__(self) -> int:
@@ -1743,10 +1741,10 @@ class Series(object):
 
     :Example:
     >>> series = Series(blat=None, logger=logger)
-    >>> series.add_similar_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
-    >>> series.add_similar_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
-    >>> series.add_similar_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
-    >>> series.add_similar_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
+    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
+    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]], sv_type=None))
     >>> series
     Series(
         Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
@@ -1943,6 +1941,8 @@ class Series(object):
         mode2 = _positions[3]
         strand1 = strands[0]
         strand2 = strands[1]
+
+        is_bp1_upstream = None
         if strand1 == "+" and strand2 == "-":
             if mode1 == 1 and mode2 == 1:
                 is_bp1_upstream = True
@@ -2411,13 +2411,12 @@ class SpliceGraph(object):
                 and node2.exons[-1][1] >= node1.exons[-1][1]
             )
 
-        else:  # both are middle nodes
+        else:  # both are middle nodes TODO: the condition may need to more tight
+
             return (
                 node1.exons[0][0] == node2.exons[0][0]
                 and node1.exons[-1][1] == node2.exons[-1][1]
             )
-
-        return False
 
     @staticmethod
     def _compare_is_merged(node1, node2):
@@ -2559,3 +2558,73 @@ class SpliceGraph(object):
     def run(self):
         self.construct()
         self.trace()
+
+
+@dataclass
+class AlignerResult:
+    seq1: str
+    seq2: str
+    start1: int
+    start2: int
+    end1: int
+    end2: int
+    score: float
+    n_gaps: float
+    n_mismatches: float
+
+
+class Aligner:
+    def __init__(self, seqa, seqb):
+        self.seqa = seqa
+        self.seqb = seqb
+        self.cmd = "./gapmis -a {seqa}  -b {seqb} -o {out}".format
+
+    def __repr__(self):
+        return f"Aligner(seqa={self.seqa}, seqb={self.seqb})"
+
+    def run(self):
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tempfile_seq1 = os.path.join(tmpdirname, "seq1.fa")
+            tempfile_seq2 = os.path.join(tmpdirname, "seq2.fa")
+            with open(tempfile_seq1, "w") as f1, open(tempfile_seq2, "w") as f2:
+                f1.write(f">seq1\n{self.seqa}\n")
+                f2.write(f">seq2\n{self.seqb}\n")
+            tempfile_name = os.path.join(tmpdirname, "tempfile.txt")
+            subprocess.check_call(
+                self.cmd(seqa=tempfile_seq1, seqb=tempfile_seq2, out=tempfile_name),
+                shell=True,
+            )
+            align_result = self.parse_gapmis_result(tempfile_name)
+        return align_result
+
+    def parse_gapmis_result(self, result_file: str):
+        seqa_coords: Optional[List[Tuple]] = []
+        seqb_coords: Optional[List[Tuple]] = []
+        with open(result_file, "r") as f:
+            for line in [line.strip() for line in f if not line.startswith("#")]:
+                if line.startswith("seq1"):
+                    # (1, 50)
+                    seqa_coords.append(
+                        (int(line.split()[1]) - 1, int(line.split()[-1]))
+                    )
+                elif line.startswith("seq2"):
+                    seqb_coords.append(
+                        (int(line.split()[1]) - 1, int(line.split()[-1]))
+                    )
+                elif line.startswith("Alignment"):
+                    score = float(line.split()[-1])
+                elif line.startswith("Number"):
+                    mismatches = float(line.split()[-1])
+                elif line.startswith("Length"):
+                    gaps = float(line.split()[-1])
+        return AlignerResult(
+            seq1=self.seqa[seqa_coords[0][0] : seqa_coords[-1][-1]],
+            seq2=self.seqb[seqb_coords[0][0] : seqb_coords[-1][-1]],
+            start1=seqa_coords[0][0],
+            start2=seqb_coords[0][0],
+            end1=seqa_coords[-1][-1],
+            end2=seqb_coords[-1][-1],
+            score=score,
+            gaps=gaps,
+            mismatches=mismatches,
+        )

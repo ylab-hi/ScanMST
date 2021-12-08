@@ -4,18 +4,18 @@ import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 from loguru._logger import Logger
 
+from ..classes import Aligner
 from .helper import gene_annotation  # type: ignore
 from .helper import splicing_confirmation  # type: ignore
 
+__funcs__ = {"short_tdup_or_not", "infer_nls_from_connected_reads"}
 
-__funcs__ = {"short_TDUP_or_not", "infer_nls_from_connected_reads"}
 
-
-def short_TDUP_or_not(
+def short_tdup_or_not(
     chrm, ra_mode, sa_start, sa_end, ins_seq_in_read, fastafile
 ) -> bool:
     """judge the ins_seq_in_read is a TDUP (TDUP size < reads length)
-    OR novel sequence insertion using reference sequence infered
+    OR novel sequence insertion using reference sequence inferred
     from chimeric alignment start position and indel_size from 'query_offset - target_offset'
 
     :param chrm: the chromosome
@@ -34,22 +34,22 @@ def short_TDUP_or_not(
     :rtype: bool
     """
     indel_size = len(ins_seq_in_read)
-    if ra_mode == 1:
-        ref_seq = fastafile[chrm][sa_start - 10 : sa_start + indel_size].seq
-    elif ra_mode == 2:
-        ref_seq = fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
 
-    alignment_result = aligner(ins_seq_in_read, ref_seq, method="glocal")[0]
-    search_seq = alignment_result.seq1.decode("utf-8")
-    target_seq = alignment_result.seq2.decode("utf-8")
-    search_start, search_end = alignment_result.start1, alignment_result.end1 - 1
-    target_start, target_end = alignment_result.start2, alignment_result.end2 - 1
-    aln_len = search_end - search_start + 1
+    ref_seq = (
+        fastafile[chrm][sa_start - 10 : sa_start + indel_size].seq
+        if ra_mode == 1
+        else fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
+    )
+
+    aligner = Aligner(ref_seq, ins_seq_in_read)
+    alignment_result = aligner.run()
+    search_seq = alignment_result.seq1
+
+    search_start, search_end = alignment_result.start1, alignment_result.end1
+    aln_len = search_end - search_start
+
     total_mismatches = len(search_seq) - aln_len + alignment_result.n_mismatches
-    if total_mismatches <= 3:
-        return True
-    else:
-        return False
+    return True if total_mismatches <= 3 else False
 
 
 def infer_nls_from_connected_reads(
@@ -92,9 +92,9 @@ def infer_nls_from_connected_reads(
 
     def obtain_ins_seq_from_softclipped_part_read(read, mode, indel_size) -> str:
         """
-        :param read: a chimeirc read
-        :param mode: mode for the chimeirc read
-        :param indel_size: indel size infered from 'query_offset - target_offset'
+        :param read: a chimeric read
+        :param mode: mode for the chimeric read
+        :param indel_size: indel size inferred from 'query_offset - target_offset'
         :type read : Read
         :type mode: int
         :type indel_size: int
@@ -262,8 +262,8 @@ def infer_nls_from_connected_reads(
                         read_lt, lt_mode, evt_size
                     )
 
-                    is_DUP = None
-                    if short_TDUP_or_not(
+                    is_dup = None
+                    if short_tdup_or_not(
                         lt_chrm,
                         lt_mode,
                         rt_start,
@@ -271,10 +271,10 @@ def infer_nls_from_connected_reads(
                         ins_seq_in_read,
                         genome_fasta,
                     ):
-                        is_DUP = True
+                        is_dup = True
                     else:
-                        is_DUP = False
-                    if is_DUP:
+                        is_dup = False
+                    if is_dup:
                         chrm_start = lt_chrm
                         junc_start = read_lt.ref_start
                         chrm_end = lt_chrm
@@ -405,9 +405,9 @@ def infer_nls_from_connected_reads(
                         read_lt, lt_mode, evt_size
                     )
 
-                    is_DUP = None
+                    is_dup = None
 
-                    if short_TDUP_or_not(
+                    if short_tdup_or_not(
                         lt_chrm,
                         lt_mode,
                         rt_start,
@@ -415,10 +415,10 @@ def infer_nls_from_connected_reads(
                         ins_seq_in_read,
                         genome_fasta,
                     ):
-                        is_DUP = True
+                        is_dup = True
                     else:
-                        is_DUP = False
-                    if is_DUP:
+                        is_dup = False
+                    if is_dup:
                         chrm_start = rt_chrm
                         junc_start = rt_start
                         chrm_end = rt_chrm
