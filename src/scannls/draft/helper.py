@@ -8,7 +8,7 @@ __funcs__ = {
     "update_breakpoints",
 }
 
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Any
 
 import HTSeq  # type: ignore
 
@@ -743,40 +743,32 @@ def cigar_validity(cigar_str: str) -> str:
 
     valid_cigar = ""
     for len_str, op_str in cigartuple:
-        valid_cigar = valid_cigar + len_str + op_str
+        valid_cigar = valid_cigar + int(len_str) + int(op_str)  # type: ignore
     return valid_cigar
 
 
 def blat2chimeric_alignment(
-    in_seq,
-    read_length,
-    read_strand,
-    read_mode,
-    blat,
-    mapq_cutoff,
-    max_allowed_nm,
-    blat_ident_pct_cutoff=0.95,
+    in_seq: str,
+    read_length: int,
+    read_strand: str,
+    read_mode: int,
+    blat: Any,
+    mapq_cutoff: int,
+    max_allowed_nm: int,
+    blat_ident_pct_cutoff: float = 0.95,
 ) -> str:
     """
     create chimeric alignments from the alignments which has a long softclipped segment but without SA tag
 
     :param blat:
     :param in_seq: softclipped segment of the aligned read
-    :type in_seq: str
     :param read_length: the length of the aligned read
-    :type read_length: int
     :param read_strand: the strand of the aligned read (-/+)
-    :type read_strand: str
     :param read_mode: mode of the aligned read (1/2)
-    :type read_mode: int
     :param mapq_cutoff: MAPQ cutoff
-    :type mapq_cutoff: int
     :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
-    :type max_allowed_nm: int
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
-    :type blat_ident_pct_cutoff: float
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
-    :rtype: str
     """
 
     chimeric_aln_str = ""

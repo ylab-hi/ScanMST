@@ -55,8 +55,8 @@ class Aligner:
         return align_result
 
     def parse_gapmis_result(self, result_file: str):
-        seqa_coords: Optional[List[Tuple]] = []
-        seqb_coords: Optional[List[Tuple]] = []
+        seqa_coords: List[Tuple] = []
+        seqb_coords: List[Tuple] = []
         with open(result_file, "r") as f:
             for line in [line.strip() for line in f if not line.startswith("#")]:
                 if line.startswith("seq1"):

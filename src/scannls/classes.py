@@ -135,9 +135,9 @@ class Read(object):
         self.query_length = query_length
         self.cigartuples = cigartuples
 
-        self.adhocsms = None
-        self.adhocseq = None
-        self.mode = None
+        self.adhocsms: Any = None
+        self.adhocseq: Any = None
+        self.mode: Any = None
 
     def __eq__(self, other) -> bool:
         if isinstance(other, Read) and (
@@ -807,17 +807,18 @@ class ReadsConnecter(object):
         self,
         aln_list: List[Read],
         blat: Blat,
-        logger: logger,
+        logger: Logger,
     ) -> None:
 
-        self.reads_chain, self.candidate_nodes = [], []
+        self.candidate_nodes: List = []
+        self.reads_chain: List = []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = aln_list
         self.logger = logger
         self.blat = blat
 
     @staticmethod
-    def init_mode_judge(sms: Tuple[Any, ...]) -> int:
+    def init_mode_judge(sms: Any) -> int:
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
@@ -848,7 +849,7 @@ class ReadsConnecter(object):
 
         self.logger.trace(
             f"query length ={len(query_seq)} target length ={len(target_seq)}"
-        )
+        )  # type: ignore
 
         if not is_align:
             if len(target_seq) <= minimum_s_length:
@@ -958,9 +959,7 @@ class ReadsConnecter(object):
         else:
             return read_match_sequence
 
-    def test_4case(
-        self, start_read: Read, read: Read, is_align_for_ms: bool
-    ) -> Tuple[bool, Union[Read, None]]:
+    def test_4case(self, start_read: Read, read: Read, is_align_for_ms: bool) -> Any:
 
         """
 
@@ -969,12 +968,12 @@ class ReadsConnecter(object):
         :param is_align_for_ms:
         :return:
         """
-        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
+        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms  # type: ignore
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
         read_query_sequence = read.query_sequence
 
-        self.logger.debug(f"{start_read.mode=}, {read.mode=}")
-        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
+        self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
+        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")  # type: ignore
 
         same_strand = True if start_read.adhocseq == read.query_sequence else False
 
@@ -984,7 +983,7 @@ class ReadsConnecter(object):
         next_read_mode = 2
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
-        ]
+        ]  # type: ignore
         read_match_sequence = ReadsConnecter.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -1012,17 +1011,17 @@ class ReadsConnecter(object):
                 self.candidate_nodes.remove(read)
 
             start_read = read
-            start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2
+            start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2  # type: ignore
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
 
-        self.logger.debug("testing second case M vs RS")
+        self.logger.debug("testing second case M vs RS")  # type: ignore
         # second case
         next_read_mode = 1
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
-        ]
+        ]  # type: ignore
         read_match_sequence = ReadsConnecter.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -1084,7 +1083,7 @@ class ReadsConnecter(object):
         start_read = start_nodes[0]
         end_read = start_nodes[1]
 
-        start_read.adhocsms = start_read.sms
+        start_read.adhocsms = start_read.sms  # type: ignore
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)
@@ -1114,8 +1113,8 @@ class ReadsConnecter(object):
 
             if flag:  # False
                 start_read.mode, end_read.mode = (
-                    ReadsConnecter.init_mode_judge(start_read.adhocsms),  # type: ignore
-                    ReadsConnecter.init_mode_judge(end_read.sms),  # type: ignore
+                    ReadsConnecter.init_mode_judge(start_read.adhocsms),
+                    ReadsConnecter.init_mode_judge(end_read.sms),
                 )
                 _, start_read = self.test_4case(
                     start_read, end_read, is_align_for_ms=True
@@ -1382,7 +1381,7 @@ class Insertion(Read):
         self.successor: Optional[List[Node]] = []
         self.predecessor: Optional[List[Node]] = []
         self.unique_key = None
-        self.merged_nodes = []
+        self.merged_nodes: List = []
 
         self.next_node_in_series = None
         self.previous_node_in_series = None
@@ -1572,7 +1571,7 @@ class Node(object):
         self.predecessor: Optional[List[Node]] = []
 
         self.unique_key = None
-        self.merged_nodes = []
+        self.merged_nodes: List = []
         self.next_node_in_series = None
         self.previous_node_in_series = None
         self.is_merged, self.is_in_graph = False, False
@@ -1759,7 +1758,7 @@ class Series(object):
     """
 
     def __init__(self, blat: Union["Blat", None], logger: Logger) -> None:
-        self.nodes: List[Node] = []
+        self.nodes: List[Union[Node, Insertion]] = []
         self.is_extended = False
         self.blat = blat
         self.logger = logger
@@ -2285,7 +2284,7 @@ class Event(object):
             new_node, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
         )  # type: ignore
         if is_update_insertion_info:
-            new_node.insertion_info = (flag, insertion)
+            new_node.insertion_info = (flag, insertion)  # type: ignore
         return new_node
 
     def update_insertion_info(self, insertion: Insertion) -> Union[Node, Insertion]:
