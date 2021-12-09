@@ -743,7 +743,7 @@ def cigar_validity(cigar_str: str) -> str:
 
     valid_cigar = ""
     for len_str, op_str in cigartuple:
-        valid_cigar = valid_cigar + int(len_str) + int(op_str)  # type: ignore
+        valid_cigar = valid_cigar + len_str + op_str  # type: ignore
     return valid_cigar
 
 
