@@ -88,7 +88,7 @@ class Aligner:
 
 
 def short_tdup_or_not(
-    chrm, ra_mode, sa_start, sa_end, ins_seq_in_read, fastafile
+    chrm, ra_mode, sa_start, sa_end, ins_seq_in_read, fastafile, logger
 ) -> bool:
     """judge the ins_seq_in_read is a TDUP (TDUP size < reads length)
     OR novel sequence insertion using reference sequence inferred
@@ -116,7 +116,7 @@ def short_tdup_or_not(
         if ra_mode == 1
         else fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
     )
-
+    logger.trace(f"{ref_seq=} {ins_seq_in_read=}")
     aligner = Aligner(ref_seq, ins_seq_in_read)
     alignment_result = aligner.run()
     search_seq = alignment_result.seq1
@@ -249,9 +249,6 @@ def infer_nls_from_connected_reads(
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
     rt_exons, rt_introns = read_rt.get_exons_and_introns()
 
-    target_start = 0
-    target_end = 0
-
     logger.trace(f"{lt_chrm=} {rt_chrm=}")
     logger.trace(f"{lt_strand=} {rt_strand=}")
     logger.trace(f"{lt_mode=} {rt_mode=}")
@@ -346,6 +343,7 @@ def infer_nls_from_connected_reads(
                         rt_end,
                         ins_seq_in_read,
                         genome_fasta,
+                        logger,
                     ):
                         is_dup = True
                     else:
@@ -490,6 +488,7 @@ def infer_nls_from_connected_reads(
                         rt_end,
                         ins_seq_in_read,
                         genome_fasta,
+                        logger,
                     ):
                         is_dup = True
                     else:

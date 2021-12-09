@@ -775,7 +775,8 @@ def blat2chimeric_alignment(
     in_seq_len = len(in_seq)
 
     top_hsp, __mapq = blat.fetch_mapq(in_seq, blat_ident_pct_cutoff)
-
+    if top_hsp is None:
+        return ""
     if (
         top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
         and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff

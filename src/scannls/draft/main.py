@@ -312,13 +312,14 @@ def _scan_bam_helper(
             and not read.is_secondary
             and not read.has_tag("XA")
             and not read.is_unmapped
+            and not read.is_supplementary
         ):
             chrom = read.reference_name
             # update SA tag of representative alignments (START)
-            if read.has_tag("SA") and not read.is_supplementary:
+            if read.has_tag("SA"):
+                logger.trace(f"has SA and {read.is_supplementary} {read.query_name= }")
                 updated_chimeric_alns = []
                 chimeric_alns = read.get_tag("SA")[:-1].split(";")
-                # print(read.get_tag('SA'))
                 # one representative alignment could have multiple corresponding supplementary alignments
                 for _aln in chimeric_alns:
                     (
@@ -361,7 +362,10 @@ def _scan_bam_helper(
                 # update SA tag of representative alignments (END)
 
             # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
-            if not read.has_tag("SA") and not read.is_supplementary:
+            elif not read.has_tag("SA"):
+                logger.trace(
+                    f" not has SA and {read.is_supplementary} {read.query_name= }"
+                )
                 read_strand = "-" if read.is_reverse else "+"
                 read_length = int(read.query_length)
                 _, _soft_seq, _, read_mode = get_softclip_length(read)
@@ -392,8 +396,9 @@ def _scan_bam_helper(
             # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
-            if read.has_tag("SA") and not read.is_supplementary:
-                logger.trace(f"{read.query_name= } {read.cigarstring=}")
+            if read.has_tag("SA"):
+
+                logger.trace(f"has SA and {read.is_supplementary} {read.query_name= }")
                 event_lists, read_chains = detect_sv_from_cigar(
                     read=read,
                     mapq_cutoff=mapq_cutoff,

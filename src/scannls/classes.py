@@ -705,8 +705,8 @@ class Blat(object):
         try:
             blat = SearchIO.read(psl_file, "blat-psl")
         except ValueError:
-            self.logger.error(f"No Blat hit found {in_seq}")
-            raise SystemExit
+            self.logger.warning(f"No Blat hit found {in_seq}")
+            return None, None
         else:
             hsps = blat.hsps
             hsps.sort(key=lambda k: k.score, reverse=True)
@@ -1801,6 +1801,11 @@ class Series(object):
             if event.has_insertion():
 
                 insertion_seq = event.insertion_seq1  # pick from the first read
+                insertion_seq = (
+                    reverse_complement(insertion_seq)
+                    if event.strand1 == "-"
+                    else insertion_seq
+                )
                 flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
                 if flag:  # only one hit
                     # add first node and insertion node
@@ -1810,7 +1815,10 @@ class Series(object):
                     read1 = event.read1(read_chains)
                     insertion.update_cigarstring(read1.sms, source_s=source_s)
 
-                    insertion_mode = 2 if event.mode1 == 1 else 1
+                    if event.strand1 == insertion.strand:
+                        insertion_mode = 2 if event.mode1 == 1 else 1
+                    else:
+                        insertion_mode = event.mode1
 
                     read1_insertion_event = Event(
                         infer_nls_from_connected_reads(
@@ -1829,11 +1837,11 @@ class Series(object):
 
                     # get type of insertion between insertion node and second node
                     read2 = event.read2(read_chains)
-                    insertion_mode = 2 if event.mode2 == 1 else 1
 
-                    if event.strand1 != event.strand2:
-                        insertion.reverse_completement_query()
-                        insertion.reverse_strand()
+                    if insertion.strand == read2.strand:
+                        insertion_mode = 2 if event.mode2 == 1 else 1
+                    else:
+                        insertion_mode = event.mode2
 
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
@@ -1849,10 +1857,6 @@ class Series(object):
                             logger=self.logger,
                         )
                     )
-
-                    if event.strand1 != event.strand2 and event.strand1 == "+":
-                        insertion.reverse_completement_query()
-                        insertion.reverse_strand()
 
                     if (
                         read1_insertion_event.is_type_na()
@@ -1876,8 +1880,6 @@ class Series(object):
 
                 else:  # no hits or multiple hits
 
-                    if event.strand1 == "-":
-                        insertion.reverse_completement_query()
                     self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
                     # only add read1 with insertion
                     read1_node = event.update_node_info(flag, read1_node, insertion)
