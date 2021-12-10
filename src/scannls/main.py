@@ -140,7 +140,7 @@ def parse_args():
         dest="max_allowed_nm",
         type=int,
         help="Maximum allowed NM to keep AS tag (default: %(default)s)",
-        default=100,
+        default=60,
     )
     draft_parser.add_argument(
         "--identity",
