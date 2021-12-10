@@ -835,16 +835,16 @@ class ReadsConnecter(object):
         same_strand: bool,
         is_align: bool,
         minimum_s_length: int = 30,
+        minimum_terminal_length: int = 5,
     ) -> bool:
         """query_seq: M  target_seq: S
+        :param minimum_terminal_length:
         :param minimum_s_length:
         :param is_align:
         :param same_strand:
         :param target_seq:
         :param query_seq:
         """
-        # do not conduct alignment
-
         match_flag = False
 
         self.logger.trace(
@@ -864,7 +864,10 @@ class ReadsConnecter(object):
             target_seq = reverse_complement(target_seq)
 
         if query_seq in target_seq:
-            match_flag = True
+            temp_index = target_seq.index(query_seq)
+            index = min(temp_index, len(target_seq) - len(query_seq) - temp_index)
+            if index <= minimum_terminal_length:
+                match_flag = True
 
         return match_flag
 
@@ -1819,7 +1822,7 @@ class Series(object):
                         insertion_mode = 2 if event.mode1 == 1 else 1
                     else:
                         insertion_mode = event.mode1
-
+                    self.logger.trace(f"nls reference for read1 and insertion")
                     read1_insertion_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=read1,
@@ -1843,6 +1846,7 @@ class Series(object):
                     else:
                         insertion_mode = event.mode2
 
+                    self.logger.trace(f"nls reference for read1 and insertion")
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=insertion,
@@ -1875,7 +1879,9 @@ class Series(object):
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
-                        self.logger.trace(f"Add {insertion} to Series")
+
+                        self.logger.trace(f"Add  {insertion=} to Series")
+
                         self.add_node(insertion)
 
                 else:  # no hits or multiple hits

@@ -116,7 +116,7 @@ def short_tdup_or_not(
         if ra_mode == 1
         else fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
     )
-    logger.trace(f"{ref_seq=} {ins_seq_in_read=}")
+    logger.trace("Aligner is working")
     aligner = Aligner(ref_seq, ins_seq_in_read)
     alignment_result = aligner.run()
     search_seq = alignment_result.seq1
