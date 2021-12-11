@@ -4,7 +4,6 @@ import tempfile
 from dataclasses import dataclass
 from typing import Any
 from typing import List
-from typing import Optional
 from typing import Tuple
 
 import HTSeq  # type: ignore
