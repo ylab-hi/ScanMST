@@ -315,11 +315,13 @@ def _scan_bam_helper(
             and not read.is_supplementary
         ):
             chrom = read.reference_name
+            chimeric_alns_num = 2
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(f"has SA and {read.is_supplementary} {read.query_name= }")
                 updated_chimeric_alns = []
                 chimeric_alns = read.get_tag("SA")[:-1].split(";")
+                chimeric_alns_num = len(chimeric_alns) + 1
                 # one representative alignment could have multiple corresponding supplementary alignments
                 for _aln in chimeric_alns:
                     (
@@ -455,7 +457,8 @@ def _scan_bam_helper(
                             f"{_type}\t{_anno}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:{_end_pos}\t{_strand1}{_strand2}"
                         ] += 1
 
-                if nls_event_list:
+                if nls_event_list and (len(nls_event_list) + 1 == chimeric_alns_num):
+
                     series = Series(blat=blat, logger=logger)
                     logger.debug(f"{nls_event_list=}")
                     series.init(

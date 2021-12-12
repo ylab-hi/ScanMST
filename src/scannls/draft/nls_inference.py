@@ -18,6 +18,8 @@ __funcs__ = {"short_tdup_or_not", "infer_nls_from_connected_reads"}
 
 @dataclass
 class AlignerResult:
+    """ Class to store the result of aligner. """
+
     seq1: str
     seq2: str
     start1: int
@@ -30,6 +32,16 @@ class AlignerResult:
 
 
 class Aligner:
+    """Aligner class for aligning two sequences by semi-global algorithm
+
+    :param seqa: the sequence to be aligned
+    :param seqb:  another sequence to be aligned
+
+    .. note::
+        This class is wrapper of `gapmis` based on C implementation so that
+        we can simply call it from Python.
+    """
+
     def __init__(self, seqa: str, seqb: str):
         self.seqa = seqa
         self.seqb = seqb
@@ -38,7 +50,16 @@ class Aligner:
     def __repr__(self):
         return f"Aligner(seqa={self.seqa}, seqb={self.seqb})"
 
-    def run(self):
+    def run(self) -> AlignerResult:
+        """Run the aligner with temp file and return the result
+
+        .. note::
+           1. Using gapmis to align two sequences
+           2. Using `module::subprocess` to run the shell command of gapmis
+           3. All files are stored in temp directory and will be deleted after aligning
+           4. Return the result of aligning including the aligned sequence, start, end,
+               score, number of gaps, number of mismatches for two sequences
+        """
         with tempfile.TemporaryDirectory() as tmpdirname:
             tempfile_seq1 = os.path.join(tmpdirname, "seq1.fa")
             tempfile_seq2 = os.path.join(tmpdirname, "seq2.fa")
@@ -53,7 +74,15 @@ class Aligner:
             align_result = self.parse_gapmis_result(tempfile_name)
         return align_result
 
-    def parse_gapmis_result(self, result_file: str):
+    def parse_gapmis_result(self, result_file: str) -> AlignerResult:
+        """Parse the result of gapmis
+
+        .. note::
+            1. Return the result of aligning including the aligned sequence, start, end,
+                score, number of gaps, number of mismatches for two sequences
+            2. start and end coordinates are 0-based and end is not included, same as Python
+
+        """
         seqa_coords: List[Tuple] = []
         seqb_coords: List[Tuple] = []
         with open(result_file, "r") as f:

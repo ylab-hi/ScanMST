@@ -98,6 +98,7 @@ class Read(object):
         "adhocsms",
         "adhocseq",
         "mode",
+        "sms",
     )
 
     def __init__(
@@ -135,6 +136,7 @@ class Read(object):
         self.query_length = query_length
         self.cigartuples = cigartuples
 
+        self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
         self.adhocsms: Any = None
         self.adhocseq: Any = None
         self.mode: Any = None
@@ -285,10 +287,6 @@ class Read(object):
     def reference_span(self) -> int:
         """M+N+D"""
         return self.reference_match_size
-
-    @property
-    def sms(self) -> tuple:
-        return self.lt_soft_len, self.read_match_size, self.rt_soft_len
 
     def add_path(self, path) -> None:
         """path is an instance of Path class"""
@@ -816,6 +814,13 @@ class ReadsConnecter(object):
         self.aln_list = aln_list
         self.logger = logger
         self.blat = blat
+        self.index = 0
+
+    def reset_index(self):
+        self.index = 0
+
+    def increment_index(self):
+        self.index += 1
 
     @staticmethod
     def init_mode_judge(sms: Any) -> int:
@@ -962,7 +967,7 @@ class ReadsConnecter(object):
         else:
             return read_match_sequence
 
-    def test_4case(self, start_read: Read, read: Read, is_align_for_ms: bool) -> Any:
+    def test_2case(self, start_read: Read, read: Read, is_align_for_ms: bool) -> Any:
 
         """
 
@@ -1012,6 +1017,7 @@ class ReadsConnecter(object):
 
             if read in self.candidate_nodes:
                 self.candidate_nodes.remove(read)
+                self.reset_index()
 
             start_read = read
             start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2  # type: ignore
@@ -1053,6 +1059,7 @@ class ReadsConnecter(object):
 
             if read in self.candidate_nodes:
                 self.candidate_nodes.remove(read)
+                self.reset_index()
 
             start_read = read
             start_read.adhocsms = (
@@ -1063,6 +1070,8 @@ class ReadsConnecter(object):
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
+
+        return False, start_read  # not match
 
     def run(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
@@ -1099,29 +1108,32 @@ class ReadsConnecter(object):
                 ReadsConnecter.init_mode_judge(end_read.sms),
             )
 
-            flag, _ = self.test_4case(start_read, end_read, is_align_for_ms=False)
+            flag, _ = self.test_2case(start_read, end_read, is_align_for_ms=False)
 
         else:
-            for read in self.candidate_nodes:
+            candidate_read_len = len(self.candidate_nodes)
+            while self.candidate_nodes:
+                if self.index == candidate_read_len:
+                    raise SystemExit(
+                        "ReadsConnecter: cannot connect all reads in candidate_nodes"
+                    )
+                read = self.candidate_nodes[self.index]
                 start_read.mode, read.mode = (
                     ReadsConnecter.init_mode_judge(start_read.adhocsms),
                     ReadsConnecter.init_mode_judge(read.sms),
                 )
-                flag, start_read = self.test_4case(
+                flag, start_read = self.test_2case(
                     start_read, read, is_align_for_ms=True
                 )
 
                 if not flag:  # False
-                    break
+                    self.increment_index()
 
-            if flag:  # False
-                start_read.mode, end_read.mode = (
-                    ReadsConnecter.init_mode_judge(start_read.adhocsms),
-                    ReadsConnecter.init_mode_judge(end_read.sms),
-                )
-                _, start_read = self.test_4case(
-                    start_read, end_read, is_align_for_ms=True
-                )
+            start_read.mode, end_read.mode = (
+                ReadsConnecter.init_mode_judge(start_read.adhocsms),
+                ReadsConnecter.init_mode_judge(end_read.sms),
+            )
+            _, start_read = self.test_2case(start_read, end_read, is_align_for_ms=True)
 
         return flag
 
@@ -1394,7 +1406,7 @@ class Insertion(Read):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
 
-    def update_cigarstring(self, sms, source_s):
+    def update_cigarstring_sms(self, sms, source_s, source_strand):
         _ls, _m, _rs = sms
         if source_s == "left":
             ls = _ls - self.query_length
@@ -1402,6 +1414,13 @@ class Insertion(Read):
         else:
             ls = _ls + _m
             rs = _rs - self.query_length
+
+        if source_strand != self.strand:
+            rs, ls = ls, rs
+
+        self.lt_soft_len = ls
+        self.rt_soft_len = rs
+        self.sms = (ls, self.query_length, rs)
 
         self.cigarstring = cigar_validity(f"{ls}S{self.cigarstring}{rs}S")
 
@@ -1816,7 +1835,9 @@ class Series(object):
 
                     # get type of insertion between first node and insertion node
                     read1 = event.read1(read_chains)
-                    insertion.update_cigarstring(read1.sms, source_s=source_s)
+                    insertion.update_cigarstring_sms(
+                        read1.sms, source_s=source_s, source_strand=event.strand1
+                    )
 
                     if event.strand1 == insertion.strand:
                         insertion_mode = 2 if event.mode1 == 1 else 1
