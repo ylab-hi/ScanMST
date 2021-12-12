@@ -782,8 +782,7 @@ class Blat(object):
 
 
 class ReadsConnecter(object):
-    """
-    the ReadsConnecter class is used to connect the reads and identify the mode of the reads
+    """the ReadsConnecter class is used to connect the reads and identify the mode of the reads
 
     :param aln_list: the list of the alignment
     :param blat: `class.Blat` for the BLAT search
@@ -818,13 +817,21 @@ class ReadsConnecter(object):
         self.index = 0
 
     def reset_index(self):
+        """ reset the index in order to fetch read in  candidate reads in new iteration """
         self.index = 0
 
     def increment_index(self):
+        """ increment the index in order to fetch read in  candidate nodes """
         self.index += 1
 
     @staticmethod
     def init_mode_judge(sms: Any) -> int:
+        """initialize the mode of the reads
+
+        .. note::
+            the length of left s more than right s, the mode is 2
+            the length of left s less than right s, the mode is 1
+        """
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
@@ -839,17 +846,25 @@ class ReadsConnecter(object):
         query_seq: str,
         target_seq: str,
         same_strand: bool,
-        is_align: bool,
+        is_compare_by_in: bool,
         minimum_s_length: int = 30,
         minimum_terminal_length: int = 5,
     ) -> bool:
-        """query_seq: M  target_seq: S
-        :param minimum_terminal_length:
-        :param minimum_s_length:
-        :param is_align:
-        :param same_strand:
-        :param target_seq:
-        :param query_seq:
+        """compare m of start read with s of read
+
+        query_seq: M  target_seq: S
+
+        :param minimum_terminal_length: the minimum length away from the terminal
+        :param minimum_s_length: the minimum length of the s
+        :param is_compare_by_in: whether to compare m and s by in
+        :param same_strand: whether the start read and read are on the same strand
+        :param target_seq: the s of the read
+        :param query_seq: the m of the start read
+
+        .. note::
+
+            `is_compare_by_in=False` means candidate reads is empty -> two hop
+
         """
         match_flag = False
 
@@ -857,7 +872,7 @@ class ReadsConnecter(object):
             f"query length ={len(query_seq)} target length ={len(target_seq)}"
         )  # type: ignore
 
-        if not is_align:
+        if not is_compare_by_in:
             if len(target_seq) <= minimum_s_length:
                 return match_flag
             else:
@@ -887,8 +902,8 @@ class ReadsConnecter(object):
         next_read_mode,
     ):
         """
-        :param read_match_sequence:
-        :param read_query_length: reads length
+        :param read_match_sequence: the match sequence of the read
+        :param read_query_length: whole reads length
         :param prev_sms: previous read sms
         :param next_sms: next read sms
         :param prev_read_mode: previous predicted connected read mode
@@ -1071,7 +1086,7 @@ class ReadsConnecter(object):
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
-
+        self.logger.debug("start read cannot connect with read")  # type: ignore
         return False, start_read  # not match
 
     def run(self) -> bool:
@@ -1096,7 +1111,19 @@ class ReadsConnecter(object):
         start_read = start_nodes[0]
         end_read = start_nodes[1]
 
-        start_read.adhocsms = start_read.sms  # type: ignore
+        if start_read.lt_soft_len > start_read.rt_soft_len:
+            start_read.adhocsms = (
+                start_read.lt_soft_len,
+                start_read.rt_soft_len + start_read.read_match_size,
+                0,
+            )
+        else:
+            start_read.adhocsms = (
+                0,
+                start_read.lt_soft_len + start_read.read_match_size,
+                start_read.rt_soft_len,
+            )
+
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)

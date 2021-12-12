@@ -10,12 +10,9 @@ import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 from loguru._logger import Logger
 
+from ..exception import SeqNotFoundError  # type: ignore
 from .helper import gene_annotation  # type: ignore
 from .helper import splicing_confirmation  # type: ignore
-
-__funcs__ = {"short_tdup_or_not", "infer_nls_from_connected_reads"}
-
-from ..exception import SeqNotFoundError
 
 
 @dataclass
