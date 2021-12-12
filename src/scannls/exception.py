@@ -25,3 +25,17 @@ class ReadNotFoundError(ScannlsException):
         super(ReadNotFoundError, self).__init__(
             f"Current read cannot found in read_chains"
         )
+
+
+class ReadNotConnectedError(ScannlsException):
+    def __init__(self) -> None:
+        super(ReadNotConnectedError, self).__init__(
+            "Start read cannot connect all reads in candidate_nodes"
+        )
+
+
+class SeqNotFoundError(ScannlsException):
+    def __init__(self) -> None:
+        super(SeqNotFoundError, self).__init__(
+            "Gapmis: Sequence not found for semi-global alignment"
+        )

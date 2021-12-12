@@ -358,10 +358,12 @@ def main():
         # add logger
         logger.remove()
         logger.add(
-            lambda msg: tqdm.write(msg, end=""),
+            sys.stdout,
             level=options.log.upper(),
             enqueue=True,
             colorize=True,
+            backtrace=True,
+            diagnose=True,
         )
 
         # check external tools used
@@ -404,42 +406,10 @@ def main():
         end = time.time()
         logger.info(f"ScanNLS build takes {end - start} seconds.")
 
-    elif options.sub_command == "call":
-        pass
-        # print(
-        #     "ScanNLS calling NLS events starts running: "
-        #     + time.strftime("%Y-%m-%d %H:%M:%S")
-        # )
-        # start = time.time()
-        # event_dict = joint_call(
-        #     options.input,
-        #     options.current_output,
-        #     options.sr,
-        #     options.depth,
-        #     options.pso,
-        #     options.length,
-        #     options.soft_len,
-        #     options.region,
-        #     options.mapq,
-        #     options.mismatch,
-        #     options.alignment_fraction,
-        #     options.seed,
-        # )
-        # print(
-        #     "ScanNLS calling NLS events running done: "
-        #     + time.strftime("%Y-%m-%d %H:%M:%S")
-        # )
-        # end = time.time()
-        # print("ScanNLS calling NLS events takes " + str(end - start) + " seconds.")
-    # infer transcript forms (GTF) and the corresponding sequences (FASTA)
-    elif options.sub_command == "isoform":
-        pass
-
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        # stop gfserver
         sys.stderr.write("User interrupt me ^_^ \n")
         sys.exit(1)

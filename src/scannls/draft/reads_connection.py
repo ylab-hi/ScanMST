@@ -66,10 +66,9 @@ def detect_read_read_connections_from_cigar(
         :return: query sequence of supplementary alignment
         :rtype: str
         """
-        if strand_ra == strand_sa:
-            return query_seq_ra
-        else:
-            return reverse_complement(query_seq_ra)
+        return (
+            query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
+        )
 
     if read.has_tag("SV"):
         return [], {}
@@ -120,8 +119,10 @@ def detect_read_read_connections_from_cigar(
         )
         flag = read_connecter.run()
         if flag:
-            logger.debug(f"reads chain: {read_connecter.reads_chain}")
-            logger.debug(f"reads pair mode: {read_connecter.read_pair_mode_dict}")
+            logger.debug(
+                f"reads chain: {read_connecter.reads_chain};"
+                f" reads pair mode: {read_connecter.read_pair_mode_dict}"
+            )
             return (
                 read_connecter.reads_chain,
                 read_connecter.read_pair_mode_dict,

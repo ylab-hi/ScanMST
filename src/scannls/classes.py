@@ -24,7 +24,8 @@ from tqdm import tqdm  # type: ignore
 
 from .draft.helper import cigar_validity  # type: ignore
 from .draft.nls_inference import infer_nls_from_connected_reads  # type: ignore
-from .exception import ReadNotFoundError  # type: ignore
+from .exception import ReadNotConnectedError
+from .exception import ReadNotFoundError
 from .utils import reverse_complement  # type: ignore
 
 
@@ -1114,9 +1115,10 @@ class ReadsConnecter(object):
             candidate_read_len = len(self.candidate_nodes)
             while self.candidate_nodes:
                 if self.index == candidate_read_len:
-                    raise SystemExit(
+                    logger.error(
                         "ReadsConnecter: cannot connect all reads in candidate_nodes"
                     )
+                    raise ReadNotConnectedError
                 read = self.candidate_nodes[self.index]
                 start_read.mode, read.mode = (
                     ReadsConnecter.init_mode_judge(start_read.adhocsms),

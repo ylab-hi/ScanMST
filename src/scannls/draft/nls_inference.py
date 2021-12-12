@@ -15,6 +15,8 @@ from .helper import splicing_confirmation  # type: ignore
 
 __funcs__ = {"short_tdup_or_not", "infer_nls_from_connected_reads"}
 
+from ..exception import SeqNotFoundError
+
 
 @dataclass
 class AlignerResult:
@@ -145,6 +147,9 @@ def short_tdup_or_not(
         else fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
     )
     logger.trace("Aligner is working")
+    if not ref_seq or not ins_seq_in_read:
+        logger.error("Gapmis: Sequence not found for semi-global alignment")
+        raise SeqNotFoundError
     aligner = Aligner(ref_seq, ins_seq_in_read)
     alignment_result = aligner.run()
     search_seq = alignment_result.seq1
