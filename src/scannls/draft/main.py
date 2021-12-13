@@ -360,6 +360,8 @@ def _scan_bam_helper(
                     read.set_tag("SA", None)
                 else:
                     read.set_tag("SA", "{};".format(";".join(updated_chimeric_alns)))
+                    after_set_sa_chimeric_alns = read.get_tag("SA")[:-1].split(";")
+                    after_set_sa_chimeric_alns_num = len(after_set_sa_chimeric_alns) + 1
                 # remove SA tags of representative alignments with too much mismatches
                 # update SA tag of representative alignments (END)
 
@@ -368,6 +370,7 @@ def _scan_bam_helper(
                 logger.trace(
                     f" not has SA and {read.is_supplementary} {read.query_name= }"
                 )
+                chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
                 read_length = int(read.query_length)
                 _, _soft_seq, _, read_mode = get_softclip_length(read)
@@ -394,11 +397,16 @@ def _scan_bam_helper(
                     )
                     if chimeric_aln_str:
                         read.set_tag("SA", chimeric_aln_str)
-            # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
+                        after_set_sa_chimeric_alns_num = 1
+
+                        # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
             # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
-            if read.has_tag("SA"):
+            if (
+                read.has_tag("SA")
+                and chimeric_alns_num == after_set_sa_chimeric_alns_num
+            ):
 
                 logger.trace(f"has SA and {read.is_supplementary} {read.query_name= }")
                 event_lists, read_chains = detect_sv_from_cigar(
