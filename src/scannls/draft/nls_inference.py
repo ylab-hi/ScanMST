@@ -30,21 +30,21 @@ class AlignerResult:
     n_mismatches: float
 
 
-class Aligner:
+class Aligner(object):
     """Aligner class for aligning two sequences by semi-global algorithm
 
     :param seqa: the sequence to be aligned
     :param seqb:  another sequence to be aligned
 
     .. note::
-        This class is wrapper of `gapmis` based on C implementation so that
+        This class is wrapper of `gapsmis` based on C implementation so that
         we can simply call it from Python.
     """
 
     def __init__(self, seqa: str, seqb: str):
         self.seqa = seqa
         self.seqb = seqb
-        self.cmd = "gapmis -a {seqa}  -b {seqb} -o {out}".format
+        self.cmd = "gapsmis -a {seqa}  -b {seqb} -o {out}".format
 
     def __repr__(self):
         return f"Aligner(seqa={self.seqa}, seqb={self.seqb})"
@@ -53,8 +53,8 @@ class Aligner:
         """Run the aligner with temp file and return the result
 
         .. note::
-           1. Using gapmis to align two sequences
-           2. Using `module::subprocess` to run the shell command of gapmis
+           1. Using gapsmis to align two sequences
+           2. Using `module::subprocess` to run the shell command of gapsmis
            3. All files are stored in temp directory and will be deleted after aligning
            4. Return the result of aligning including the aligned sequence, start, end,
                score, number of gaps, number of mismatches for two sequences
@@ -70,11 +70,11 @@ class Aligner:
                 self.cmd(seqa=tempfile_seq1, seqb=tempfile_seq2, out=tempfile_name),
                 shell=True,
             )
-            align_result = self.parse_gapmis_result(tempfile_name)
+            align_result = self.parse_gapsmis_result(tempfile_name)
         return align_result
 
-    def parse_gapmis_result(self, result_file: str) -> AlignerResult:
-        """Parse the result of gapmis
+    def parse_gapsmis_result(self, result_file: str) -> AlignerResult:
+        """Parse the result of gapsmis
 
         .. note::
             1. Return the result of aligning including the aligned sequence, start, end,
@@ -145,7 +145,7 @@ def short_tdup_or_not(
     )
     logger.trace("Aligner is working")
     if not ref_seq or not ins_seq_in_read:
-        logger.error("Gapmis: Sequence not found for semi-global alignment")
+        logger.error("Gapsmis: Sequence not found for semi-global alignment")
         raise SeqNotFoundError
     aligner = Aligner(ref_seq, ins_seq_in_read)
     alignment_result = aligner.run()
