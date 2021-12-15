@@ -253,6 +253,15 @@ def detect_sv_from_cigar(
                             genes,
                         )
                     )
+                else:  # temporary solution
+                    if (
+                        _lt.strand == _rt.strand
+                        and (_lt.ref_start <= _rt.ref_start)
+                        and reads_pair_mode_dict[(_lt, _rt)] == (1, 2)
+                    ):
+                        pass
+                    else:
+                        logger.warning(f"{nls_type=}")
     return event_list, read_to_read_chains[0]
 
 
@@ -466,7 +475,6 @@ def _scan_bam_helper(
                         ] += 1
 
                 if nls_event_list and (len(nls_event_list) + 1 == chimeric_alns_num):
-
                     series = Series(blat=blat, logger=logger)
                     logger.debug(f"{nls_event_list=}")
                     series.init(
