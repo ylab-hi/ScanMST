@@ -23,7 +23,7 @@ def reverse_complement(in_str: str) -> str:
 
 def external_tool_checking(logger: Logger) -> None:  # type: ignore
     """checking dependencies are installed"""
-    software = ["samtools", "gfClient", "gfServer", "gapmis"]
+    software = ["samtools", "gfClient", "gfServer", "gapsmis"]
     for tool in software:
         output = subprocess.getoutput(tool)
         if "command not found" in output:
