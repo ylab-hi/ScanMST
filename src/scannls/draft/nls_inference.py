@@ -10,7 +10,7 @@ import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 from loguru._logger import Logger
 
-from ..exception import SeqNotFoundError  # type: ignore
+from .._class.exception import SeqNotFoundError  # type: ignore
 from .helper import gene_annotation  # type: ignore
 from .helper import splicing_confirmation  # type: ignore
 

@@ -16,17 +16,17 @@ import pysam  # type: ignore
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError  # type: ignore
 
-from ..classes import Blat  # type: ignore
-from ..classes import MyLogger  # type: ignore
-from ..classes import ParallelWorker  # type: ignore
-from ..classes import Series  # type: ignore
+from .._class.basicClass import Series  # type: ignore
+from .._class.blat import Blat  # type: ignore
+from .._class.myLogger import MyLogger  # type: ignore
+from .._class.parallel import ParallelWorker  # type: ignore
+from .._class.readConnecter import detect_read_read_connections_from_cigar  # type: ignore
 from ..utils import get_softclip_length  # type: ignore
 from ..utils import reverse_complement  # type: ignore
 from ..utils import write_series_to_file  # type: ignore
 from .helper import blat2chimeric_alignment  # type: ignore
 from .helper import extract_splice_sites  # type: ignore
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
-from .reads_connection import detect_read_read_connections_from_cigar  # type: ignore
 
 
 class BamScanner:

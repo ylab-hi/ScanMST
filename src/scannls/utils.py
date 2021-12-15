@@ -10,7 +10,7 @@ from loguru._logger import Logger
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
-from .exception import ToolNotFoundError  # type: ignore
+from ._class.exception import ToolNotFoundError  # type: ignore
 
 
 def reverse_complement(in_str: str) -> str:

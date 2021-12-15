@@ -1,27 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import argparse
-import copy
-import glob
-import logging
-import math
-import os
-import random
-import re
-import subprocess
 import sys
-import time
 from collections import defaultdict
 from collections import OrderedDict
-from typing import Iterable
 
-from align import aligner
-from Bio import SearchIO
-from Bio.Seq import Seq
-from pyfaidx import Fasta
-
-from .. import __version__
-from ..classes import Path
 from ..utils import get_softclip_length
 from .helper import vcf_header
 
