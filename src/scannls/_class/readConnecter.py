@@ -94,14 +94,9 @@ class ReadsConnecter(object):
 
         :param minimum_terminal_length: the minimum length away from the terminal
         :param minimum_s_length: the minimum length of the s
-        :param is_compare_by_in: whether to compare m and s by in
         :param same_strand: whether the start read and read are on the same strand
         :param target_seq: the s of the read
         :param query_seq: the m of the start read
-
-        .. note::
-
-            `is_compare_by_in=False` means candidate reads is empty -> two hop
 
         """
         match_flag = False
@@ -255,10 +250,7 @@ class ReadsConnecter(object):
         )
 
         match_flag = self.compare_ms(
-            read_match_sequence,
-            read.query_sequence[:_lt_len_r2],
-            same_strand,
-            is_align_for_ms,
+            read_match_sequence, read.query_sequence[:_lt_len_r2], same_strand
         )
 
         if match_flag:  # may same
@@ -294,10 +286,7 @@ class ReadsConnecter(object):
         )
 
         match_flag = self.compare_ms(
-            read_match_sequence,
-            read.query_sequence[-_rt_len_r2:],
-            same_strand,
-            is_align_for_ms,
+            read_match_sequence, read.query_sequence[-_rt_len_r2:], same_strand
         )
 
         if match_flag:
