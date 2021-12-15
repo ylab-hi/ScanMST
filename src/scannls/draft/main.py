@@ -253,14 +253,7 @@ def detect_sv_from_cigar(
                         )
                     )
                 else:  # temporary solution
-                    if (
-                        _lt.strand == _rt.strand
-                        and (_lt.ref_start <= _rt.ref_start)
-                        and reads_pair_mode_dict[(_lt, _rt)] == (1, 2)
-                    ):
-                        pass
-                    else:
-                        logger.warning(f"{nls_type=}")
+                    logger.warning(f"{nls_type=}")
     return event_list, read_to_read_chains[0]
 
 
