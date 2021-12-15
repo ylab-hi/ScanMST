@@ -6,7 +6,6 @@ __funcs__ = {
     "gene_annotation",
     "splicing_confirmation",
     "update_breakpoints",
-    "similarity_distance",
 }
 
 from typing import Tuple, List, Dict, Any

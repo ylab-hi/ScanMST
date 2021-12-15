@@ -318,7 +318,39 @@ def infer_nls_from_connected_reads(
                 if evt_size == 0:  # micro-inversion
                     return NAN
                 elif evt_size < 0:  # deletion
-                    return NAN
+                    del_start = read_rt.ref_start + read_rt.reference_match_size
+                    del_end = del_start + abs(evt_size)
+                    _, _anno, _can = splicing_confirmation(
+                        lt_chrm,
+                        del_start,
+                        lt_chrm,
+                        del_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        False,
+                        motif_required,
+                    )
+                    _genes = gene_annotation(
+                        lt_chrm, del_start, lt_chrm, del_end, gene_iv
+                    )
+                    return (
+                        "DEL",
+                        _anno,
+                        _can,
+                        (
+                            f"{lt_chrm}:{del_start}",
+                            f"{lt_chrm}:{del_end}",
+                            1,
+                            2,
+                        ),
+                        (rt_start, rt_end, rt_exons),
+                        (lt_start, lt_end, lt_exons),
+                        (rt_bp_seq, lt_bp_seq),
+                        (rt_strand, lt_strand),
+                        [*_genes],
+                    )
+
                 # reads length < tandem duplication size
                 elif evt_size >= query_offset:  # large tandem duplication
                     chrm_start = lt_chrm
@@ -462,7 +494,38 @@ def infer_nls_from_connected_reads(
                 if evt_size == 0:  # micro-inversion
                     return NAN
                 elif evt_size < 0:  # deletion
-                    return NAN
+                    del_start = read_lt.ref_start + read_lt.reference_match_size
+                    del_end = del_start + abs(evt_size)
+                    _, _anno, _can = splicing_confirmation(
+                        lt_chrm,
+                        del_start,
+                        lt_chrm,
+                        del_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        False,
+                        motif_required,
+                    )
+                    _genes = gene_annotation(
+                        lt_chrm, del_start, lt_chrm, del_end, gene_iv
+                    )
+                    return (
+                        "DEL",
+                        _anno,
+                        _can,
+                        (
+                            f"{lt_chrm}:{del_start}",
+                            f"{lt_chrm}:{del_end}",
+                            1,
+                            2,
+                        ),
+                        (lt_start, lt_end, lt_exons),
+                        (rt_start, rt_end, rt_exons),
+                        (lt_bp_seq, rt_bp_seq),
+                        (lt_strand, rt_strand),
+                        [*_genes],
+                    )
                 elif evt_size >= query_offset:
                     chrm_start = rt_chrm
                     junc_start = read_rt.ref_start

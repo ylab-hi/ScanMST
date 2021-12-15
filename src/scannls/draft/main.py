@@ -378,7 +378,7 @@ def _scan_bam_helper(
             # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
             elif not read.has_tag("SA"):
                 logger.trace(
-                    f"Pre-cheking: {read.query_name= } does not has SA and supplementary read: {read.is_supplementary}"
+                    f"Pre-checking: {read.query_name= } does not has SA and supplementary read: {read.is_supplementary}"
                 )
                 chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
@@ -450,7 +450,7 @@ def _scan_bam_helper(
                     _bp1, _bp2, _mode1, _mode2 = _positions
                     _strand1, _strand2 = strands
                     _gene1, _gene2 = genes
-                    if _type in {"TDUP", "INV", "TRA"}:
+                    if _type in {"TDUP", "INV", "TRA", "DEL"}:
                         _chrm1, _pos1 = _bp1.split(":")
                         _chrm2, _pos2 = _bp2.split(":")
                         # SV tag uses SA tag corrdinate system (start with 1)
