@@ -112,6 +112,7 @@ class BamScanner:
         self.logger.info("Iter bam file and Extracting supplementary alignments")
         try:
             for read in self.in_bam.fetch():
+                self._count_chrom_info(read)
                 if read.is_supplementary:
                     sup_aln_cigar = read.cigarstring
                     left_mat = self.pat_left_S.search(sup_aln_cigar)
@@ -127,8 +128,6 @@ class BamScanner:
                     self.representative_alignments_new_cigar[
                         "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
                     ] = sup_aln_cigar
-                else:
-                    self._count_chrom_info(read)
         except ValueError as e:
             self.logger.error(
                 f"BAM index file is not found in supplementary alignments! {e}"
