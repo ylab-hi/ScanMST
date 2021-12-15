@@ -6,7 +6,5 @@ try:
     import HTSeq  # type: ignore
 except ModuleNotFoundError as e:
     raise SystemExit(e.msg)
-#
-# from rich.traceback import install
-#
-# install()
+
+from . import _class

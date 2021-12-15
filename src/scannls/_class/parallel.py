@@ -1,0 +1,80 @@
+# !/usr/bin/env python
+# -*- coding:utf-8 -*-
+"""
+@Filename:    parallel.py
+@license:     MIT Licence
+@Time:        12/15/21 1:58 PM
+"""
+import os
+from concurrent import futures
+
+from tqdm import tqdm  # type: ignore
+
+
+class ParallelWorker(object):
+    """
+    the ParallelWorker class is used to run function in parallel
+    args include the unique parameter of the function and  keyword arguments include
+    the common parameters of the function
+
+
+    :param func: the function to be run in parallel
+    :param n_jobs: the number of jobs to run in parallel
+    :param logger: the logger object
+
+    :Example:
+
+    >>> from loguru import logger
+    >>> def func(x, *, y=1):
+    ...     z = x + y
+    ...     return z
+    >>> args, kwargs = [1, 2, 3], {'y': 4}
+    >>> n_jobs = 3
+    >>> parallel_worker = ParallelWorker(func=func, logger=logger, n_jobs=n_jobs)
+    >>> result = parallel_worker.run(*args, **kwargs)
+    >>> result
+    {1: 5, 2: 6, 3: 7}
+    """
+
+    def __init__(self, func, logger, n_jobs: int = 1):
+        self.func = func
+        self.logger = logger
+
+        self.n_jobs = self.setter_n_jobs(n_jobs)
+
+    def setter_n_jobs(self, n_jobs: int) -> int:
+        """
+        set the number of jobs to run in parallel in terms of cpu cores
+        """
+        current_max_processor = os.cpu_count()
+        if n_jobs > current_max_processor:  # type: ignore
+            self.logger.warning(
+                f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
+            )
+            return n_jobs  # the max processor is decided by ProcessPoolExecutor
+        else:
+            return n_jobs
+
+    def run(self, *args, **kwargs) -> dict:
+        """
+        using concurrent.future to parallel process
+        """
+        tasks = {}
+        result = {}
+        self.logger.info(f"ParallelWorker: {self.n_jobs} jobs")
+        with tqdm(
+            total=len(args), desc=f"ParallelWorker[{self.func.__name__}]", unit="contig"
+        ) as pbar:
+            with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
+                for key in args:
+                    self.logger.debug(f"ParallelWorker: {key} submitted")
+                    future = executor.submit(self.func, key, **kwargs)
+                    tasks[future] = key
+
+                for future in futures.as_completed(tasks):
+                    self.logger.trace(f"ParallelWorker: {tasks[future]} done")
+                    key = tasks[future]
+                    result[key] = future.result()
+                    pbar.update(1)
+
+        return result

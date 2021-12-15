@@ -10,9 +10,10 @@ from typing import Any
 from typing import List
 from typing import Union
 
-from classes import Node
-from classes import Series
 from loguru._logger import Logger
+
+from .basicClass import Node
+from .basicClass import Series
 
 
 class Ruler:
@@ -83,10 +84,10 @@ class Ruler:
             distance = 1.0
             #       [xxxx]-->--
             # -->--[xxxx]
-            first_node_first_exon_start = first_node.exons[0][0]
-            first_node_last_exon_end = first_node.exons[-1][1]
-            last_node_first_exon_start = last_node.exons[0][0]
-            last_node_last_exon_end = last_node.exons[-1][1]
+            first_node_first_exon_start = first_node.exons[0][0]  # type: ignore
+            first_node_last_exon_end = first_node.exons[-1][1]  # type: ignore
+            last_node_first_exon_start = last_node.exons[0][0]  # type: ignore
+            last_node_last_exon_end = last_node.exons[-1][1]  # type: ignore
 
             if _ft_strand == _lt_strand == "+":
                 if (
@@ -174,10 +175,10 @@ class Ruler:
         if left_subject_node:
             if (
                 left_query_node.strand == left_subject_node.strand == "+"
-                and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]
+                and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
             ) or (
                 left_query_node.strand == left_subject_node.strand == "-"
-                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]
+                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]  # type: ignore
             ):
                 flag = True
             else:
@@ -186,10 +187,10 @@ class Ruler:
         if right_subject_node:
             if (
                 right_query_node.strand == right_subject_node.strand == "+"
-                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]
+                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
             ) or (
                 right_query_node.strand == right_subject_node.strand == "-"
-                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]
+                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]  # type: ignore
             ):
                 flag = True
             else:
