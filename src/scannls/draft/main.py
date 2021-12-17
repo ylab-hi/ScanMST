@@ -370,9 +370,6 @@ def _scan_bam_helper(
 
             # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
             elif not read.has_tag("SA"):
-                logger.trace(
-                    f"Pre-checking: {read.query_name= } does not has SA and supplementary read: {read.is_supplementary}"
-                )
                 chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
                 read_length = int(read.query_length)
@@ -399,6 +396,9 @@ def _scan_bam_helper(
                         blat_ident_pct_cutoff,
                     )
                     if chimeric_aln_str:
+                        logger.trace(
+                            f"Pre-checking: {read.query_name= } does not has SA, after BLAT it has one SA tag"
+                        )
                         read.set_tag("SA", chimeric_aln_str)
                         after_set_sa_chimeric_alns_num = 1
 
