@@ -20,7 +20,7 @@ from .._class.basicClass import Series  # type: ignore
 from .._class.blat import Blat  # type: ignore
 from .._class.myLogger import MyLogger  # type: ignore
 from .._class.parallel import ParallelWorker  # type: ignore
-from .._class.readConnecter import detect_read_read_connections_from_cigar  # type: ignore
+from .._class.readConnector import detect_read_read_connections_from_cigar  # type: ignore
 from ..utils import get_softclip_length  # type: ignore
 from ..utils import reverse_complement  # type: ignore
 from ..utils import write_series_to_file  # type: ignore
@@ -163,6 +163,7 @@ def detect_sv_from_cigar(
     *,
     read,
     mapq_cutoff,
+    max_allowed_nm,
     splice_bin,
     genome_fasta,
     cvg,
@@ -176,6 +177,7 @@ def detect_sv_from_cigar(
     :param blat: `class.Blat`
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
+    :param max_allowed_nm: NM cutoff
     :param splice_bin: a small bin for splice site searching
     :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
@@ -183,6 +185,7 @@ def detect_sv_from_cigar(
     :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
     :type read: pysam.AlignedSegment
     :type mapq_cutoff: int
+    :type max_allowed_nm: int
     :type splice_bin: int
     :type genome_fasta: pyfaidx.Fasta
     :type cvg: HTSeq.GenomicArrayOfSets
@@ -197,6 +200,7 @@ def detect_sv_from_cigar(
     ) = detect_read_read_connections_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
+        max_allowed_nm=max_allowed_nm,
         blat=blat,
         logger=logger,
     )
@@ -417,6 +421,7 @@ def _scan_bam_helper(
                 event_lists, read_chains = detect_sv_from_cigar(
                     read=read,
                     mapq_cutoff=mapq_cutoff,
+                    max_allowed_nm=max_allowed_nm,
                     splice_bin=splice_bin,
                     genome_fasta=genome_fasta,
                     cvg=cvg,

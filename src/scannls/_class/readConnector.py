@@ -1,7 +1,7 @@
 # !/usr/bin/env python
 # -*- coding:utf-8 -*-
 """
-@Filename:    readConnecter.py
+@Filename:    readConnector.py
 @Author:      YangyangLi
 @contact:     li002252@umn.edu
 @license:     MIT Licence
@@ -20,8 +20,8 @@ from .blat import Blat
 from .exception import ReadNotConnectedError
 
 
-class ReadsConnecter(object):
-    """the ReadsConnecter class is used to connect the reads and identify the mode of the reads
+class ReadsConnector(object):
+    """the ReadsConnector class is used to connect the reads and identify the mode of the reads
 
     :param aln_list: the list of the alignment
     :param blat: `class.Blat` for the BLAT search
@@ -32,11 +32,11 @@ class ReadsConnecter(object):
     >>> from loguru import  logger
     >>> aln_list = []
     >>> blat = Blat(ref_2bit='reference.2bit', logger= logger, port=88888, output_dir='/tmp')
-    >>> readconnecter = ReadsConnecter(aln_list=aln_list, blat=blat, logger=logger)
-    >>> readconnecter.run()
-    >>> readconnecter.reads_chain
+    >>> readconnector = ReadsConnector(aln_list=aln_list, blat=blat, logger=logger)
+    >>> readconnector.run()
+    >>> readconnector.reads_chain
     [Read(chr1, 6524193, 6524850, +, 60, 8), Read(chr1, 6522473, 6522883, +, 60, 4)]
-    >>> readconnecter.read_pair_mode_dict
+    >>> readconnector.read_pair_mode_dict
     {(Read(chr1, 6524193, 6524850, +, 60, 8), Read(chr1, 6522473, 6522883, +, 60, 4)): (1, 2)}
     """
 
@@ -194,7 +194,7 @@ class ReadsConnecter(object):
         (
             is_microhomology,
             microhomology_length,
-        ) = ReadsConnecter._determine_microhomology_len(
+        ) = ReadsConnector._determine_microhomology_len(
             read_match_sequence,
             len(read_query_sequence),
             prev_sms,
@@ -240,7 +240,7 @@ class ReadsConnecter(object):
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]  # type: ignore
-        read_match_sequence = ReadsConnecter.update_query_sequence(
+        read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
             start_read.adhocsms,
@@ -276,7 +276,7 @@ class ReadsConnecter(object):
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]  # type: ignore
-        read_match_sequence = ReadsConnecter.update_query_sequence(
+        read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
             start_read.adhocsms,
@@ -356,10 +356,10 @@ class ReadsConnecter(object):
         flag = True
         if not self.candidate_nodes:  # []
 
-            self.logger.debug("ReadsConnecter: candidate_nodes is []")
+            self.logger.debug("ReadsConnector: candidate_nodes is []")
             start_read.mode, end_read.mode = (
-                ReadsConnecter.init_mode_judge(start_read.adhocsms),
-                ReadsConnecter.init_mode_judge(end_read.sms),
+                ReadsConnector.init_mode_judge(start_read.adhocsms),
+                ReadsConnector.init_mode_judge(end_read.sms),
             )
 
             flag, _ = self.test_2case(start_read, end_read, is_align_for_ms=False)
@@ -369,13 +369,13 @@ class ReadsConnecter(object):
             while self.candidate_nodes:
                 if self.index == candidate_read_len:
                     logger.error(
-                        "ReadsConnecter: cannot connect all reads in candidate_nodes"
+                        "ReadsConnector: cannot connect all reads in candidate_nodes"
                     )
                     raise ReadNotConnectedError
                 read = self.candidate_nodes[self.index]
                 start_read.mode, read.mode = (
-                    ReadsConnecter.init_mode_judge(start_read.adhocsms),
-                    ReadsConnecter.init_mode_judge(read.sms),
+                    ReadsConnector.init_mode_judge(start_read.adhocsms),
+                    ReadsConnector.init_mode_judge(read.sms),
                 )
                 flag, start_read = self.test_2case(
                     start_read, read, is_align_for_ms=True
@@ -385,8 +385,8 @@ class ReadsConnecter(object):
                     self.increment_index()
 
             start_read.mode, end_read.mode = (
-                ReadsConnecter.init_mode_judge(start_read.adhocsms),
-                ReadsConnecter.init_mode_judge(end_read.sms),
+                ReadsConnector.init_mode_judge(start_read.adhocsms),
+                ReadsConnector.init_mode_judge(end_read.sms),
             )
             _, start_read = self.test_2case(start_read, end_read, is_align_for_ms=True)
 
@@ -394,15 +394,21 @@ class ReadsConnecter(object):
 
 
 def detect_read_read_connections_from_cigar(
-    read: AlignedSegment, mapq_cutoff: int, blat: Blat, logger: Logger
+    read: AlignedSegment,
+    mapq_cutoff: int,
+    max_allowed_nm: int,
+    blat: Blat,
+    logger: Logger,
 ) -> Any:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
     :param logger:
     :param blat:
     :param mapq_cutoff: MAPQ cutoff
+    :param max_allowed_nm: NM cutoff
     :type read: pysam.AlignedSegment object
     :type mapq_cutoff: int
+    :type max_allowed_nm: int
     :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) => mode-of-Read1, mode-of-Read2
     :rtype: tuple
     .. note::
@@ -482,7 +488,7 @@ def detect_read_read_connections_from_cigar(
     nm_ra = read.get_tag("NM")
     seq_ra = read.query_sequence
 
-    if mapq_ra > mapq_cutoff:
+    if mapq_ra > mapq_cutoff and nm_ra > max_allowed_nm:
         chimeric_aln_list.append(
             Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
         )
@@ -490,7 +496,7 @@ def detect_read_read_connections_from_cigar(
     for sa_string in chimeric_aln:
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
-        if mapq_sa > mapq_cutoff:
+        if mapq_sa > mapq_cutoff and nm_sa > max_allowed_nm:
             chimeric_aln_list.append(
                 Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa)
             )
@@ -499,18 +505,18 @@ def detect_read_read_connections_from_cigar(
         return [], {}
     else:
 
-        read_connecter = ReadsConnecter(
+        read_connector = ReadsConnector(
             aln_list=chimeric_aln_list, blat=blat, logger=logger
         )
-        flag = read_connecter.run()
+        flag = read_connector.run()
         if flag:
             logger.debug(
-                f"reads chain: {read_connecter.reads_chain};"
-                f" reads pair mode: {read_connecter.read_pair_mode_dict}"
+                f"reads chain: {read_connector.reads_chain};"
+                f" reads pair mode: {read_connector.read_pair_mode_dict}"
             )
             return (
-                read_connecter.reads_chain,
-                read_connecter.read_pair_mode_dict,
+                read_connector.reads_chain,
+                read_connector.read_pair_mode_dict,
             )
         else:
             return [], {}
