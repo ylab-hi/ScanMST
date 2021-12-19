@@ -64,8 +64,11 @@ class ReadsConnector(object):
         self.index += 1
 
     @staticmethod
-    def init_mode_judge(sms: Any) -> int:
-        """initialize the mode of the reads
+    def _get_mode(sms: Any) -> int:
+        """get the mode of the reads
+
+        :param sms:
+        :return: mode
 
         .. note::
             the length of left s more than right s, the mode is 2
@@ -79,7 +82,27 @@ class ReadsConnector(object):
         else:
             return 1
 
-    # @staticmethod
+    @staticmethod
+    def init_mode_judge(read1: Read, read2: Read) -> None:
+        """initialize the mode of the reads"""
+        sorted_by_s_length = sorted(
+            [read1, read2], key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
+        )[0]
+
+        if read1 == sorted_by_s_length[0]:
+            read1.mode = ReadsConnector._get_mode(read1.adhocsms)
+            if read1.strand == read2.strand:
+                read2.mode = 1 if read1.mode == 2 else 2
+            else:
+                read2.mode = read1.mode
+
+        else:
+            read2.mode = ReadsConnector._get_mode(read2.sms)
+            if read1.strand == read2.strand:
+                read1.mode = 1 if read2.mode == 2 else 2
+            else:
+                read1.mode = read2.mode
+
     def compare_ms(
         self,
         query_seq: str,
@@ -357,11 +380,7 @@ class ReadsConnector(object):
         if not self.candidate_nodes:  # []
 
             self.logger.debug("ReadsConnector: candidate_nodes is []")
-            start_read.mode, end_read.mode = (
-                ReadsConnector.init_mode_judge(start_read.adhocsms),
-                ReadsConnector.init_mode_judge(end_read.sms),
-            )
-
+            ReadsConnector.init_mode_judge(start_read, end_read)
             flag, _ = self.test_2case(start_read, end_read, is_align_for_ms=False)
 
         else:
@@ -373,10 +392,7 @@ class ReadsConnector(object):
                     )
                     raise ReadNotConnectedError
                 read = self.candidate_nodes[self.index]
-                start_read.mode, read.mode = (
-                    ReadsConnector.init_mode_judge(start_read.adhocsms),
-                    ReadsConnector.init_mode_judge(read.sms),
-                )
+                ReadsConnector.init_mode_judge(start_read, read)
                 flag, start_read = self.test_2case(
                     start_read, read, is_align_for_ms=True
                 )
@@ -384,10 +400,7 @@ class ReadsConnector(object):
                 if not flag:  # False
                     self.increment_index()
 
-            start_read.mode, end_read.mode = (
-                ReadsConnector.init_mode_judge(start_read.adhocsms),
-                ReadsConnector.init_mode_judge(end_read.sms),
-            )
+            ReadsConnector.init_mode_judge(start_read, end_read)
             _, start_read = self.test_2case(start_read, end_read, is_align_for_ms=True)
 
         return flag
@@ -479,10 +492,8 @@ def detect_read_read_connections_from_cigar(
 
     chrm_ra = read.reference_name
     pos_ra = read.reference_start
-    if read.is_reverse:
-        strand_ra = "-"
-    else:
-        strand_ra = "+"
+    strand_ra = "-" if read.is_reverse else "+"
+
     cigar_ra = read.cigarstring
     mapq_ra = read.mapping_quality
     nm_ra = read.get_tag("NM")

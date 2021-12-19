@@ -208,11 +208,13 @@ def infer_nls_from_connected_reads(
         :rtype: str
         """
         read_seq = read.query_sequence
-        ins_seq_in_read = ""
-        if mode == 2:  # SM
-            ins_seq_in_read = read_seq[: read.lt_soft_len][-indel_size:]
-        elif mode == 1:  # MS
-            ins_seq_in_read = read_seq[-read.rt_soft_len :][:indel_size]
+
+        ins_seq_in_read = (
+            read_seq[: read.lt_soft_len][-indel_size:]
+            if mode == 2
+            else read_seq[-read.rt_soft_len :][:indel_size]
+        )
+
         return ins_seq_in_read
 
     def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> Any:
