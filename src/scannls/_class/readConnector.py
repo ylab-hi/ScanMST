@@ -10,10 +10,12 @@
 from typing import Any
 from typing import List
 
+from Bio import SearchIO  # type: ignore
 from loguru import logger
 from loguru._logger import Logger
 from pysam import AlignedSegment  # type: ignore
 
+from ..draft.helper import cigar_validity  # type: ignore
 from ..utils import reverse_complement
 from .basicClass import Read
 from .blat import Blat
@@ -24,8 +26,8 @@ class ReadsConnector(object):
     """the ReadsConnector class is used to connect the reads and identify the mode of the reads
 
     :param aln_list: the list of the alignment
-    :param blat: `class.Blat` for the BLAT search
-    :param logger: `loguru.logger` for logging
+    :param blat: :class: `class.Blat` for the BLAT search
+    :param logger: :class: `loguru.logger` for logging
 
     :Example:
 
@@ -233,26 +235,27 @@ class ReadsConnector(object):
         else:
             return read_match_sequence
 
-    def test_2case(self, start_read: Read, read: Read, is_align_for_ms: bool) -> Any:
+    def test_2case(self, start_read: Read, read: Read, is_compare_for_ms: bool) -> Any:
 
         """
 
         :param start_read:
         :param read:
-        :param is_align_for_ms:
+        :param is_compare_for_ms:
         :return:
         """
-        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms  # type: ignore
-        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
-        read_query_sequence = read.query_sequence
 
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")  # type: ignore
 
-        if not is_align_for_ms:
+        if not is_compare_for_ms:  # one hop
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
             return True, start_read
+
+        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms  # type: ignore
+        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+        read_query_sequence = read.query_sequence
 
         same_strand = True if start_read.adhocseq == read.query_sequence else False
 
@@ -338,6 +341,95 @@ class ReadsConnector(object):
         self.logger.debug("start read cannot connect with read")  # type: ignore
         return False, start_read  # not match
 
+    def _double_check_for_one_hop_add_new_read(
+        self, read: Read, new_read: Read
+    ) -> None:
+        self.reads_chain.append(new_read)
+        if new_read.strand == read.strand:
+            new_read.mode = 1 if read.mode == 2 else 2
+        else:
+            new_read.mode = 1 if read.mode == 1 else 2
+        self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
+
+    def _double_check_for_one_hop_creat_new_read_and_calculate_sms(
+        self, hsp: Any, query_seq: str, read: Read
+    ) -> Read:
+
+        mapq = 60
+        chrom, position, strand, cigar_str, num_of_mismatch = self.blat.psl2sam(
+            hsp, len(query_seq)
+        )
+
+        lt_s_len = hsp.query_start
+        rt_s_len = len(query_seq) - hsp.query_end - 1
+
+        if read.mode == 1:
+            cigar_str = (
+                f"{lt_s_len}S"
+                + cigar_str
+                + f"{rt_s_len}S"
+                + f"{read.read_match_size + read.rt_soft_len}S"
+            )
+            cigar_str = cigar_str[2:] if cigar_str.startswith("0S") else cigar_str
+        else:
+            cigar_str = (
+                f"{read.lt_soft_len + read.read_match_size}S"
+                + f"{lt_s_len}S"
+                + cigar_str
+                + f"{rt_s_len}S"
+            )
+            cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
+
+        new_read = Read.init(
+            chrom,
+            position,
+            strand,
+            cigar_validity(cigar_str),
+            mapq,
+            num_of_mismatch,
+            read.query_sequence,
+        )
+
+        return new_read
+
+    def _double_check_for_one_hop(
+        self,
+        read: Read,
+        align_len_threshold: int = 20,
+        threshold_identity: float = 0.99,
+    ) -> bool:
+
+        flag = False  # flag for checking the insertion  if its hit is only one
+
+        query_sequence = (
+            read.query_sequence[: read.lt_soft_len]
+            if read.mode == 1
+            else read.query_sequence[-read.rt_soft_len :]
+        )
+
+        if len(query_sequence) < align_len_threshold:
+            return flag
+
+        out_blat = self.blat.query(in_seq=query_sequence)
+        try:
+            blat_result = SearchIO.read(out_blat, "blat-psl")
+        except ValueError:
+            return flag
+
+        hit, keep_hsp = self.blat._query_insertion(
+            blat_result, query_sequence, threshold_identity, top=3
+        )
+
+        self.logger.debug(f"{blat_result=}")
+        if hit == 1:
+            flag = True
+            hsp = keep_hsp[0]
+            new_read = self._double_check_for_one_hop_creat_new_read_and_calculate_sms(
+                hsp, query_sequence, read
+            )
+            self._double_check_for_one_hop_add_new_read(read, new_read)
+        return flag
+
     def run(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
         .. note::
@@ -381,7 +473,8 @@ class ReadsConnector(object):
 
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_mode_judge(start_read, end_read)
-            flag, _ = self.test_2case(start_read, end_read, is_align_for_ms=False)
+            _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
+            _ = self._double_check_for_one_hop(end_read)
 
         else:
             candidate_read_len = len(self.candidate_nodes)
@@ -394,14 +487,16 @@ class ReadsConnector(object):
                 read = self.candidate_nodes[self.index]
                 ReadsConnector.init_mode_judge(start_read, read)
                 flag, start_read = self.test_2case(
-                    start_read, read, is_align_for_ms=True
+                    start_read, read, is_compare_for_ms=True
                 )
 
                 if not flag:  # False
                     self.increment_index()
 
             ReadsConnector.init_mode_judge(start_read, end_read)
-            _, start_read = self.test_2case(start_read, end_read, is_align_for_ms=True)
+            _, start_read = self.test_2case(
+                start_read, end_read, is_compare_for_ms=True
+            )
 
         return flag
 

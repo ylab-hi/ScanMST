@@ -265,6 +265,10 @@ class Ruler:
         return min(calculated_distance_list) if calculated_distance_list else 1.0
 
 
+class Graph:
+    pass
+
+
 class SpliceGraph(object):
     """
     the SpliceGraph class is used to trace the path of splice graph

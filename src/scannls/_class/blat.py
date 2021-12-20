@@ -256,6 +256,22 @@ class Blat(object):
 
         return out_psl
 
+    @staticmethod
+    def _query_insertion(
+        blat_result: Any, insert_seq: str, threshold_identity: float, top: int
+    ) -> Any:
+
+        hsps = blat_result.hsps
+        hsps.sort(key=lambda x: x.score, reverse=True)
+        hsps = hsps[:top]
+        keep_hsp = []
+        for hsp in hsps:
+            if sum(hsp.hit_span_all) / len(insert_seq) > threshold_identity:
+                keep_hsp.append(hsp)
+        hit = len(keep_hsp)
+
+        return hit, keep_hsp
+
     def query_insertion(
         self,
         insert_seq: str,
@@ -281,18 +297,13 @@ class Blat(object):
 
         out_blat = self.query(in_seq=insert_seq)
         try:
-            blat = SearchIO.read(out_blat, "blat-psl")
+            blat_result = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
-        hsps = blat.hsps
-        hsps.sort(key=lambda x: x.score, reverse=True)
-        hsps = hsps[:top]
-        keep_hsp = []
-        for hsp in hsps:
-            if sum(hsp.hit_span_all) / len(insert_seq) > threshold_identity:
-                keep_hsp.append(hsp)
-        hit = len(keep_hsp)
+        hit, keep_hsp = Blat._query_insertion(
+            blat_result, insert_seq, threshold_identity, top
+        )
 
         if hit == 1:
             top_hsp = keep_hsp[0]
@@ -388,6 +399,9 @@ class Blat(object):
         :param hsp: the selected HSP form BLAT
         :param in_seq_len: the length of the input sequence
         :return: chrom, reference_start, strand, cigarstring, num_of_mismatch
+
+        .. note::
+            hsp is 0-based, as same as python [ )
         """
 
         cigar = ""
