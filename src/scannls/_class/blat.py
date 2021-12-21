@@ -266,7 +266,9 @@ class Blat(object):
         hsps = hsps[:top]
         keep_hsp = []
         for hsp in hsps:
-            if sum(hsp.hit_span_all) / len(insert_seq) > threshold_identity:
+            if (sum(hsp.hit_span_all) - hsp.mismatch_num) / len(
+                insert_seq
+            ) > threshold_identity:
                 keep_hsp.append(hsp)
         hit = len(keep_hsp)
 

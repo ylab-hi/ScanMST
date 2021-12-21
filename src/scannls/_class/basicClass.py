@@ -584,14 +584,22 @@ class Insertion(Read):
         return True if self.successors else False
 
     def add_successor(self, successor):
-        # TODO: May be we should check if the successor is already in the list
-        self.successors.append(successor)
+        if (
+            successor is not None
+            and successor.is_in_graph
+            and successor not in self.successors
+        ):
+            self.successors.append(successor)
 
     def add_predecessor(self, predecessor):
-        self.predecessors.append(predecessor)
+        if (
+            predecessor is not None
+            and predecessor.is_in_graph
+            and predecessor not in self.predecessors
+        ):
+            self.predecessors.append(predecessor)
 
     def update_sr(self, key=1):
-        # TODO: may be wrong
         self.sr += key
 
     def update_next_and_previous_node_in_series(self, index, series):
@@ -820,10 +828,20 @@ class Node(object):
         return True if key1_self == key1_other or key2_self == key2_other else False
 
     def add_successor(self, successor):
-        self.successors.append(successor)
+        if (
+            successor is not None
+            and successor.is_in_graph
+            and successor not in self.successors
+        ):
+            self.successors.append(successor)
 
     def add_predecessor(self, predecessor):
-        self.predecessors.append(predecessor)
+        if (
+            predecessor is not None
+            and predecessor.is_in_graph
+            and predecessor not in self.predecessors
+        ):
+            self.predecessors.append(predecessor)
 
     def update_sr(self, key=1):
         self.sr += key
