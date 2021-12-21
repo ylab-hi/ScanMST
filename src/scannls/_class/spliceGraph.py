@@ -296,7 +296,7 @@ class CliqueFinder:
     >>> clique_finder.find_clique()
     """
 
-    def __init__(self, intact_series_list: Any, logger: Logger, threshold: float = 0.5):
+    def __init__(self, intact_series_list: Any, logger: Logger, threshold: float = 0.2):
         self.ruler = Ruler(logger)
         self.intact_series_list = intact_series_list
         self.distance_dict: Dict[Any, float] = dict()

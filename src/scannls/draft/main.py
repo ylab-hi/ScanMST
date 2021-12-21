@@ -195,6 +195,7 @@ def detect_sv_from_cigar(
     (
         read_to_read_chains,
         reads_pair_mode_dict,
+        num_added_reads,
     ) = detect_read_read_connections_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
@@ -256,7 +257,7 @@ def detect_sv_from_cigar(
                     )
                 else:  # temporary solution
                     logger.warning(f"{nls_type=}")
-    return event_list, read_to_read_chains[0]
+    return event_list, read_to_read_chains[0], num_added_reads
 
 
 def _scan_bam_helper(
@@ -416,7 +417,7 @@ def _scan_bam_helper(
                 logger.trace(
                     f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}"
                 )
-                event_lists, read_chains = detect_sv_from_cigar(
+                event_lists, read_chains, num_added_reads = detect_sv_from_cigar(
                     read=read,
                     mapq_cutoff=mapq_cutoff,
                     max_allowed_nm=max_allowed_nm,
@@ -473,6 +474,7 @@ def _scan_bam_helper(
                             f"{_type}\t{_anno}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:{_end_pos}\t{_strand1}{_strand2}"
                         ] += 1
 
+                chimeric_alns_num += num_added_reads
                 if nls_event_list and (len(nls_event_list) + 1 == chimeric_alns_num):
                     series = Series(blat=blat, logger=logger)
                     logger.debug(f"{nls_event_list=}")
