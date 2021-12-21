@@ -7,13 +7,21 @@
 """
 from collections import defaultdict
 from typing import Any
+from typing import Dict
+from typing import Iterable
 from typing import List
+from typing import Tuple
 from typing import Union
 
+import networkx as nx  # type: ignore
 from loguru._logger import Logger
+from networkx.algorithms.clique import find_cliques  # type: ignore
 
+from .basicClass import Insertion
 from .basicClass import Node
 from .basicClass import Series
+
+NodeType = Union[Node, Insertion]
 
 
 class Ruler:
@@ -23,6 +31,9 @@ class Ruler:
 
     def __init__(self, logger: Logger) -> None:
         self.logger = logger
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
 
     @staticmethod
     def obtain_breakpoint_pairs(series: Series) -> List:
@@ -63,7 +74,9 @@ class Ruler:
                 return float("inf")
 
     @staticmethod
-    def first_node_last_node_distance(first_node: Node, last_node: Node) -> float:
+    def first_node_last_node_distance(
+        first_node: NodeType, last_node: NodeType
+    ) -> float:
         """calculate distance between first node of Series A and last node of Series B
 
         :param first_node: the first node of Series A
@@ -156,15 +169,15 @@ class Ruler:
                 )
                 effect_num_pair += 1
         ave_distance = sum(distance_list) / (effect_num_pair * 2)
-        distance = ave_distance / (max(distance_list) - min(distance_list))
+        distance = ave_distance / (max(distance_list) - min(distance_list) + 1e-6)
         return distance
 
     @staticmethod
     def __decide_flag(
-        left_query_node: Node,
-        right_query_node: Node,
-        left_subject_node: Node,
-        right_subject_node: Node,
+        left_query_node: NodeType,
+        right_query_node: NodeType,
+        left_subject_node: NodeType,
+        right_subject_node: NodeType,
     ):
 
         flag = False
@@ -265,8 +278,96 @@ class Ruler:
         return min(calculated_distance_list) if calculated_distance_list else 1.0
 
 
-class Graph:
-    pass
+class CliqueFinder:
+    """Find cliques in a graph based on series level, which will help to construct
+    splice graph base on nodes level in the future.
+
+    :param intact_series_list: list of intact series for a bam file of one sample
+    :param logger: logger
+    :param threshold: threshold to determine whether two series are connected
+
+    .. note::
+        :function: `networkx.algorithms.clique.find_cliques` is used to find cliques.
+
+    :Example:
+
+    >>> from loguru import  logger
+    >>> clique_finder = CliqueFinder([], logger)
+    >>> clique_finder.find_clique()
+    """
+
+    def __init__(self, intact_series_list: Any, logger: Logger, threshold: float = 0.5):
+        self.ruler = Ruler(logger)
+        self.intact_series_list = intact_series_list
+        self.distance_dict: Dict[Any, float] = dict()
+        self.graph = nx.Graph()
+        self.threshold = threshold
+
+    def _calculate_distance(self, x: Series, y: Series) -> Tuple[bool, float]:
+        """Calculate distance between two series. If distance has been calculated before,
+        return True and distance value. Otherwise, calculate distance and return False and
+        distance value.
+
+        :param x: series x
+        :param y: series y
+        :return: is_calculated, distance value
+        """
+        distance1 = self.distance_dict.get((x, y), None)
+        if distance1 is not None:
+            return True, distance1
+        distance2 = self.distance_dict.get((y, x), None)
+        if distance2 is not None:
+            return True, distance2
+
+        distance = self.ruler(x, y)
+        self.distance_dict[(x, y)] = distance
+        return False, distance
+
+    def _add_edge_between_two_series(self, x: Series, y: Series) -> None:
+        """add edge between two series according to the distance between them.
+        if the distance is less than threshold, add edge. Otherwise, do nothing.
+
+        :param x: series x
+        :param y: series y
+        :return: None
+
+        .. note::
+            if `is_calculated` is True, distance value is stored in distance_dict, which
+            indicates that the two series have been checked and determined if they
+            should be connected in graph.
+        """
+        if x != y:
+            is_calculated, distance = self._calculate_distance(x, y)
+            if not is_calculated and distance < self.threshold:
+                self.graph.add_edge(x, y)
+
+    def _creat_graph_for_series(self) -> None:
+        """create graph for all series in intact_series_list.
+        add edge between two series in terms of the distance value
+
+        :return: None
+        """
+        for x in self.intact_series_list:
+            for y in self.intact_series_list:
+                self._add_edge_between_two_series(x, y)
+
+    def find_clique(self) -> Any:
+        """find clique in graph with help of networkx.algorithms.clique.find_clique
+
+        :return:  every clique in graph as a iterator (List[Series])
+
+        :Example:
+
+        >>> from loguru import logger
+        >>> clique_finder = CliqueFinder([], logger)
+        >>> cliques = clique_finder.find_clique()
+        >>> for clique in cliques:
+        ...     for series_list in clique:
+        ...         assert isinstance(series_list, Series)
+        """
+        self._creat_graph_for_series()
+
+        return list(find_cliques(self.graph))
 
 
 class SpliceGraph(object):
@@ -275,35 +376,16 @@ class SpliceGraph(object):
 
     :Example:
 
-    >>> from loguru import logger
-    >>> series1 = Series(blat=None, logger=logger)
-    >>> series1.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,
-    ...                 exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15873800,exons=[[15872815,15873800]], sv_type=None)]
-    >>> series2 = Series(blat=None, logger=logger)
-    >>> series2.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701500,ref_end=7702552,exons=[[7701500, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]], sv_type=None)]
-    >>> series3 = Series(blat=None, logger=logger)
-    >>> series3.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
-    >>> series4 = Series(blat=None, logger=logger)
-    >>> series4.nodes = [ Node(prev_bp=None,next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872890,ref_end=15873900,exons=[[15872890, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
-    >>> series5 = Series(blat=None, logger=logger)
-    >>> series5.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1, query_sequence='ATCGATCG'))), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
-    >>> series6 = Series(blat=None, logger=logger)
-    >>> series6.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,876678]], sv_type=None)]
-    >>> series7 = Series(blat=None, logger=logger)
-    >>> series7.nodes = [Node(prev_bp=None,next_bp='chr17:7702552',strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'), Node(prev_bp='chr1:15872815',next_bp='chr1:15873900',strand='+',chrom='chr1',ref_start=15872815,ref_end=15873900,exons=[[15872815, 15873900]], sv_type='TRA', insertion_info=None), Node(prev_bp='chr17:872815',next_bp=None,strand='+',chrom='chr17',ref_start=872815,ref_end=876678,exons=[[872815,873400], [875500,876678]], sv_type=None)]
-    >>> splice_graph = SpliceGraph(series_list=[series1, series2, series3, series4, series5, series6, series7], logger=logger)
-    >>> splice_graph.construct()
-    >>> splice_graph.trace()
-    >>> splice_graph.result_series_list
-
     """
 
-    def __init__(self, series_list, logger):
-        self.series_list = series_list
+    def __init__(self, logger: Logger):
         self.logger = logger
-        self.nodes = defaultdict(list)
-        self.unique_nodes_map = {}
-        self.result_series_list = []
+
+    def __call__(self, series_list: Iterable[Series]) -> Any:
+        self.series_list = series_list
+        self.nodes: Dict[str, List[NodeType]] = defaultdict(list)
+        self.construct()
+        return self.trace()
 
     def get_start_nodes(self):
         return [
@@ -313,22 +395,27 @@ class SpliceGraph(object):
             if node.is_start_node
         ]
 
-    def get_similar_nodes(self, similar_key: str) -> List[Any]:
+    def get_similar_nodes(self, similar_key: str) -> List[NodeType]:
         return self.nodes[similar_key]
 
-    def add_similar_node(self, node):
-        key = node.similar_key
-        self.nodes[key].append(node)
+    def add_similar_node(self, node: NodeType) -> None:
+        self.nodes[node.similar_key].append(node)
 
-    def __contains__(self, node):
-        unique_key = node.unique_key
+    def __contains__(self, node: NodeType) -> bool:
+        """check if node is in graph
+        :param node:
+        :return: True if node is in graph, otherwise False
 
-        for nodes in self.nodes.values():
-            for other_node in nodes:
-                if other_node.unique_key == unique_key:
-                    return True
-                else:
-                    return False
+        .. note::
+            please ensure that node has run :function: `Node.get_unique_key` before. So
+            node.unique_key is not None.
+
+        """
+        for other_node in self.get_similar_nodes(node.similar_key):
+            if other_node.unique_key == node.unique_key:
+                return True
+
+        return False
 
     def __iter__(self):
         for nodes in self.nodes.values():
@@ -336,22 +423,28 @@ class SpliceGraph(object):
                 yield node
 
     @staticmethod
-    def _compare_is_merged_helper(node1, node2):
+    def _compare_is_merged_helper(node1: NodeType, node2: NodeType) -> Any:
 
         condition = node1.sv_type == node2.sv_type
 
         if (
-            condition and node1.prev_bp is None and node2.prev_bp is None
+            condition
+            and node1.prev_breakpoint is None
+            and node2.prev_breakpoint is None
         ):  # both are start nodel
             return node1.exons[-1][1] == node2.exons[-1][1]  # check last exon end
 
         elif (
-            condition and node1.next_bp is None and node2.next_bp is None
+            condition
+            and node1.next_breakpoint is None
+            and node2.next_breakpoint is None
         ):  # both are end nodes
             return node1.exons[0][0] == node2.exons[0][0]  # check first exon start
 
         elif (
-            condition and node1.prev_bp is None and node2.prev_bp is not None
+            condition
+            and node1.prev_breakpoint is None
+            and node2.prev_breakpoint is not None
         ):  # node1 is start node, node2 is middle node
             return (
                 node1.exons[-1][1] == node2.exons[-1][1]
@@ -359,7 +452,9 @@ class SpliceGraph(object):
             )
 
         elif (
-            condition and node1.next_bp is None and node2.next_bp is not None
+            condition
+            and node1.next_breakpoint is None
+            and node2.next_breakpoint is not None
         ):  # node1 is end node, node2 is middle node
             return (
                 node1.exons[0][0] == node2.exons[0][0]
@@ -367,7 +462,7 @@ class SpliceGraph(object):
             )
 
         elif (
-            node1.next_bp is None and node2.prev_bp is None
+            node1.next_breakpoint is None and node2.prev_breakpoint is None
         ):  # node1 is end node, node2 is start node
             return (
                 node2.exons[0][0] >= node1.exons[0][0]
@@ -382,7 +477,7 @@ class SpliceGraph(object):
             )
 
     @staticmethod
-    def _compare_is_merged(node1, node2):
+    def _compare_is_merged(node1: NodeType, node2: NodeType) -> bool:
         """node1 is similar as node2 is precommit of the function
 
          compare if node1 can merge node2
@@ -398,7 +493,13 @@ class SpliceGraph(object):
             return True
 
     @staticmethod
-    def update_exon_coord_sr(updated_node, current_node):
+    def update_exon_coord_sr(updated_node: NodeType, current_node: NodeType) -> None:
+        """
+
+        :param updated_node:  node has been inserted into graph
+        :param current_node: node has not been inserted into graph
+        :return:
+        """
         updated_node.exons[0][0] = min(
             updated_node.exons[0][0], current_node.exons[0][0]
         )
@@ -407,117 +508,108 @@ class SpliceGraph(object):
         )
         updated_node.update_sr()
 
-    @staticmethod
-    def add_predecessor(node: Node, predecessor: Node):
-        if node is None:
-            node.predecessor.append(predecessor)
-
-    @staticmethod
-    def add_successor(node, successor):
-        if node is None:
-            node.successor.append(successor)
-
     def construct(self):
         # iterate all series
         for series in self.series_list:
             # iterate all nodes in series
+            nodes_merge_others_in_graph = []
             for index, current_node in enumerate(series):
-                # update next and previous node in series
+                # TODO: Change
+                current_node.add_predecessor(nodes_merge_others_in_graph)
+                # add information about  next and previous node in series to current node
                 current_node.update_next_and_previsous_node_in_series(index, series)
-                # get unique key of current node
-                unique_key = current_node.get_unique_key()
-                self.unique_nodes_map[unique_key] = current_node
+                # initialize and get unique key of current node and set node.unique_key if not set when
+                # you reach node.unique_key, will return None
+                _ = current_node.get_unique_key()
 
                 # get similar key(chrom and intron) of current node
                 similar_key = current_node.similar_key
+
                 # get similar nodes in the graph
                 similar_nodes_in_graph = self.get_similar_nodes(similar_key)
+
                 # iterate all similar nodes in the graph
                 if similar_nodes_in_graph:
-                    is_merged = False  # flag to check if current node is merged
                     # iterate all similar nodes in the graph
                     for similar_node_in_graph in similar_nodes_in_graph:
                         # check if current node is merged into similar node in the graph
                         if SpliceGraph._compare_is_merged(
                             similar_node_in_graph, current_node
                         ):
-                            is_merged = True
+                            nodes_merge_others_in_graph.append(similar_node_in_graph)
                             current_node.is_merged = True
 
                             SpliceGraph.update_exon_coord_sr(
                                 similar_node_in_graph, current_node
                             )
 
-                            similar_node_in_graph.merge_nodes.append(current_node)
+                            similar_node_in_graph.merged_nodes.append(current_node)
 
-                            similar_node_in_graph.predecessors.extend(
-                                current_node.predecessors
+                            # TODO: modify node.add_predecessor to check if the node is already in the list or the
+                            # node is None. Also, check predecessor is in graph or not
+                            # same as add_successor
+                            similar_node_in_graph.add_predecessor(
+                                current_node.previous_node_in_series
                             )
-
-                            current_node.next_node_in_series.predecessors.append(
+                            # TODO:  may be delete this line
+                            current_node.next_node_in_series.add_predecessor(
                                 similar_node_in_graph
                             )
 
-                        if not is_merged:  # false
-                            for merge_node in similar_node_in_graph.merge_nodes:
+                        if not current_node.is_merged:  # false
+                            for merge_node in similar_node_in_graph.merged_nodes:
                                 if SpliceGraph._compare_is_merged(
                                     merge_node, current_node
                                 ):
                                     SpliceGraph.update_exon_coord_sr(
                                         current_node, merge_node
                                     )
+                                    # TODO : may delete this line
                                     current_node.merge_nodes.append(merge_node)
-                                    current_node.successors.extend(
-                                        merge_node.successors
+                                    current_node.add_successor(merge_node.successors)
+
+                                    current_node.add_successor(
+                                        current_node.next_node_in_series
+                                    )
+                                    current_node.add_predecessor(
+                                        current_node.previous_node_in_series
                                     )
 
-                                    if index <= len(series) - 1:
-                                        successor_node = series[index + 1]
-                                        current_node.add_successor(successor_node)
-                                    if index > 0:
-                                        predecessor_node = series[index - 1]
-                                        current_node.add_predecessor(predecessor_node)
-
                     # add node to graph
-                    if not is_merged:  # false
+                    if not current_node.is_merged:  # false
+                        current_node.is_in_graph = True  # check if node is in graph
                         self.add_similar_node(current_node)
 
-                        if index <= len(series) - 1:
-                            successor_node = series[index + 1]
-                            current_node.add_successor(successor_node)
-                        if index > 0:
-                            predecessor_node = series[index - 1]
-                            current_node.add_predecessor(predecessor_node)
+                        current_node.add_successor(current_node.next_node_in_series)
+                        current_node.add_predecessor(
+                            current_node.previous_node_in_series
+                        )
 
                 else:
+
+                    current_node.is_in_graph = True
                     self.add_similar_node(current_node)
 
-                    if index <= len(series) - 1:
-                        successor_node = series[index + 1]
-                        current_node.add_successor(successor_node)
-                    if index > 0:
-                        predecessor_node = series[index - 1]
-                        current_node.add_predecessor(predecessor_node)
+                    current_node.add_successor(current_node.next_node_in_series)
+                    current_node.add_predecessor(current_node.previous_node_in_series)
 
-    def _trace(self, start_node, path, group_paths):
+    def _trace(self, start_node: NodeType, path: List, group_paths: List) -> None:
 
         if not start_node:
             group_paths.append(path)
 
         else:
-            successors = start_node.successor
+            successors = start_node.successors
             if successors:
                 for successor in successors:
                     self._trace(successor, path + [start_node], group_paths)
             else:
                 self._trace(successors, path + [start_node], group_paths)
 
-    def trace(self):
+    def trace(self) -> Any:
+        result_series_list = []
         for start_node in self.get_start_nodes():
             group_paths = []
             self._trace(start_node, [], group_paths)
-            self.result_series_list.append(group_paths)
-
-    def run(self):
-        self.construct()
-        self.trace()
+            result_series_list.append(group_paths)
+        return result_series_list

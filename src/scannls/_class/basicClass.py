@@ -494,8 +494,8 @@ class Insertion(Read):
         self.sr = None
 
         self.exons, self.introns = self.get_exons_and_introns()
-        self.successor: Optional[List[Node]] = []
-        self.predecessor: Optional[List[Node]] = []
+        self.successors: Any = []
+        self.predecessors: Any = []
         self.unique_key = None
         self.merged_nodes: List = []
 
@@ -506,6 +506,17 @@ class Insertion(Read):
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+
+    def __hash__(self) -> int:
+        return (
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.sv_type)
+            ^ hash(self.prev_breakpoint)
+            ^ hash(self.next_breakpoint)
+            ^ hash(self.strand)
+        )
 
     def update_cigarstring_sms(self, sms, source_s, source_strand):
         _ls, _m, _rs = sms
@@ -567,21 +578,17 @@ class Insertion(Read):
         return True if not self.has_successor() else False
 
     def has_predecessor(self):
-        return True if self.predecessor else False
+        return True if self.predecessors else False
 
     def has_successor(self):
-        return True if self.successor else False
+        return True if self.successors else False
 
     def add_successor(self, successor):
-
-        for successor_node in self.successor:
-            if successor_node.similar_key != successor.similar_key:
-                self.successor.append(successor)
+        # TODO: May be we should check if the successor is already in the list
+        self.successors.append(successor)
 
     def add_predecessor(self, predecessor):
-        for predecessor_node in self.predecessor:
-            if predecessor_node.similar_key != predecessor.similar_key:
-                self.predecessor.append(predecessor)
+        self.predecessors.append(predecessor)
 
     def update_sr(self, key=1):
         # TODO: may be wrong
@@ -599,7 +606,7 @@ class Insertion(Read):
 
 class Node(object):
     """build a breakpoint node class for storing information of every breakpoint
-    :param prev_bp: breakpoint for the previous breakpoints connections
+    :param prev_breakpoint: breakpoint for the previous breakpoints connections
     :param next_bp: breakpoint for the next breakpoints connections
     :param strand: direction of chimeric read (-|+)
     :param chrom: chromosome
@@ -649,8 +656,8 @@ class Node(object):
         "splicing_code",
         "sr",
         "insertion_info",
-        "predecessor",
-        "successor",
+        "predecessors",
+        "successors",
         "unique_key",
         "merged_nodes",
         "next_node_in_series",
@@ -690,8 +697,8 @@ class Node(object):
         self.splicing_code = canonical
         self.sr = sr
         self.insertion_info = insertion_info
-        self.successor: Optional[List[Node]] = []
-        self.predecessor: Optional[List[Node]] = []
+        self.successors: Any = []
+        self.predecessors: Any = []
 
         self.unique_key = None
         self.merged_nodes: List = []
@@ -801,10 +808,10 @@ class Node(object):
         return True if not self.has_successor() else False
 
     def has_predecessor(self):
-        return True if self.predecessor else False
+        return True if self.predecessors else False
 
     def has_successor(self):
-        return True if self.successor else False
+        return True if self.successors else False
 
     def compare(self, other) -> bool:
         key1_self, key2_self = self.similar_key
@@ -813,16 +820,10 @@ class Node(object):
         return True if key1_self == key1_other or key2_self == key2_other else False
 
     def add_successor(self, successor):
-        flag = False
-        for successor_node in self.successor:
-            if successor_node.compare(successor):
-                flag = True
-                break
+        self.successors.append(successor)
 
     def add_predecessor(self, predecessor):
-        for predecessor_node in self.predecessor:
-            if predecessor_node.similar_key != predecessor.similar_key:
-                self.predecessor.append(predecessor)
+        self.predecessors.append(predecessor)
 
     def update_sr(self, key=1):
         self.sr += key

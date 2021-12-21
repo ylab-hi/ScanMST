@@ -30,8 +30,6 @@ from .nls_inference import infer_nls_from_connected_reads  # type: ignore
 
 
 class BamScanner:
-    """"""
-
     def __init__(
         self,
         input_bam,
