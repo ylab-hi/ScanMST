@@ -35,7 +35,7 @@ class ReadsConnector(object):
     >>> aln_list = []
     >>> blat = Blat(ref_2bit='reference.2bit', logger= logger, port=88888, output_dir='/tmp')
     >>> readconnector = ReadsConnector(aln_list=aln_list, blat=blat, logger=logger)
-    >>> readconnector.run()
+    >>> readconnector.connect()
     >>> readconnector.reads_chain
     [Read(chr1, 6524193, 6524850, +, 60, 8), Read(chr1, 6522473, 6522883, +, 60, 4)]
     >>> readconnector.read_pair_mode_dict
@@ -351,27 +351,27 @@ class ReadsConnector(object):
         self.logger.debug("start read cannot connect with read and try to connect other reads")  # type: ignore
         return False, start_read, compare_mode  # not match
 
-    def _double_check_for_one_hop_for_end_read_add_new_read(
+    def _double_check_for_end_read_add_new_read(
         self, read: Read, new_read: Read
     ) -> None:
+        if new_read.strand == read.strand:
+            new_read.mode = 1 if read.mode == 2 else 2
+        else:
+            new_read.mode = 1 if read.mode == 1 else 2
         self.reads_chain.append(new_read)
-        if new_read.strand == read.strand:
-            new_read.mode = 1 if read.mode == 2 else 2
-        else:
-            new_read.mode = 1 if read.mode == 1 else 2
         self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
 
-    def _double_check_for_one_hop_for_start_read_add_new_read(
+    def _double_check_for_start_read_add_new_read(
         self, read: Read, new_read: Read
     ) -> None:
-        self.reads_chain.insert(0, new_read)
         if new_read.strand == read.strand:
             new_read.mode = 1 if read.mode == 2 else 2
         else:
             new_read.mode = 1 if read.mode == 1 else 2
-        self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
+        self.reads_chain.insert(0, new_read)
+        self.read_pair_mode_dict[(new_read, read)] = (new_read.mode, read.mode)
 
-    def _double_check_for_one_hop_creat_new_read_and_calculate_sms(
+    def _double_check_creat_new_read_and_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read
     ) -> Read:
 
@@ -412,7 +412,7 @@ class ReadsConnector(object):
 
         return new_read
 
-    def __double_check_for_one_hop_blat_query(
+    def __double_check_blat_query(
         self, query_sequence, align_len_threshold, threshold_identity, top
     ):
         flag = False
@@ -431,7 +431,7 @@ class ReadsConnector(object):
         )
         return True, hit, keep_hsp
 
-    def _double_check_for_one_hop_for_end_read(
+    def _double_check_for_end_read(
         self,
         read: Read,
     ) -> None:
@@ -442,16 +442,16 @@ class ReadsConnector(object):
             else read.query_sequence[-read.rt_soft_len :]
         )
 
-        flag, hit, keep_hsp = self.__double_check_for_one_hop_blat_query(
+        flag, hit, keep_hsp = self.__double_check_blat_query(
             query_sequence, self.align_len_threshold, self.threshold_identity, self.top
         )
         if flag and hit == 1:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
-            new_read = self._double_check_for_one_hop_creat_new_read_and_calculate_sms(
+            new_read = self._double_check_creat_new_read_and_calculate_sms(
                 hsp, query_sequence, read
             )
-            self._double_check_for_one_hop_for_end_read_add_new_read(read, new_read)
+            self._double_check_for_end_read_add_new_read(read, new_read)
 
     @staticmethod
     def _double_check_for_start_read_determine_s_source_for_blat(
@@ -476,21 +476,19 @@ class ReadsConnector(object):
             else start_read.query_sequence[-start_read.rt_soft_len :]
         )
 
-        flag, hit, keep_hsp = self.__double_check_for_one_hop_blat_query(
+        flag, hit, keep_hsp = self.__double_check_blat_query(
             query_sequence, self.align_len_threshold, self.threshold_identity, self.top
         )
 
         if flag and hit == 1:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
-            new_read = self._double_check_for_one_hop_creat_new_read_and_calculate_sms(
+            new_read = self._double_check_creat_new_read_and_calculate_sms(
                 hsp, query_sequence, start_read
             )
-            self._double_check_for_one_hop_for_start_read_add_new_read(
-                start_read, new_read
-            )
+            self._double_check_for_start_read_add_new_read(start_read, new_read)
 
-    def run(self) -> bool:
+    def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
         .. note::
             Read-to-Read chain scenarios
@@ -533,8 +531,8 @@ class ReadsConnector(object):
 
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_mode_judge(start_read, end_read)
-            _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
-            self._double_check_for_one_hop_for_end_read(end_read)
+            _, _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
+            self._double_check_for_end_read(end_read)
 
         else:
             candidate_read_len = len(self.candidate_nodes)
@@ -562,7 +560,7 @@ class ReadsConnector(object):
             _, start_read, compare_mode = self.test_2case(
                 start_read, end_read, is_compare_for_ms=True
             )
-            self._double_check_for_one_hop_for_end_read(end_read)
+            self._double_check_for_end_read(end_read)
 
         return flag
 
@@ -679,7 +677,7 @@ def detect_read_read_connections_from_cigar(
         read_connector = ReadsConnector(
             aln_list=chimeric_aln_list, blat=blat, logger=logger
         )
-        flag = read_connector.run()
+        flag = read_connector.connect()
         if flag:
             logger.debug(
                 f"reads chain: {read_connector.reads_chain};"
