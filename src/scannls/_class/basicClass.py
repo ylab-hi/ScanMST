@@ -92,6 +92,7 @@ class Read(object):
         "adhocseq",
         "mode",
         "sms",
+        "ref_end",
     )
 
     def __init__(
@@ -128,6 +129,7 @@ class Read(object):
         self.cigartuples_without_soft = cigartuples_without_soft
         self.query_length = query_length
         self.cigartuples = cigartuples
+        self.ref_end = self.ref_start + self.query_length
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
         self.adhocsms: Any = None
@@ -241,7 +243,7 @@ class Read(object):
         )
 
     @classmethod
-    def init(cls, chrom, position, strand, cigar_str, mapq, nm, query_seq):
+    def init(cls, chrom, ref_start, strand, cigar_str, mapq, nm, query_seq):
 
         (
             lt_soft_len,
@@ -256,7 +258,7 @@ class Read(object):
 
         return cls(
             chrom,
-            position,
+            ref_start,
             strand,
             cigar_str,
             mapq,
@@ -273,10 +275,6 @@ class Read(object):
         )
 
     @property
-    def ref_end(self) -> int:
-        return self.ref_start + self.reference_match_size
-
-    @property
     def reference_span(self) -> int:
         """M+N+D"""
         return self.reference_match_size
@@ -285,7 +283,7 @@ class Read(object):
         """path is an instance of Path class"""
         self.linked_paths.append(path)
 
-    def get_exons_and_introns(self) -> tuple:
+    def get_exons_and_introns(self) -> Any:
         """get the coordinates for reads matched part (without softclipping)
         :return: exons coordinates and introns coordinates
         :rtype: tuple
@@ -705,7 +703,7 @@ class Node(object):
         chrom: Optional[str] = None,
         ref_start: Optional[int] = None,
         ref_end: Optional[int] = None,
-        exons: Any = None,
+        exons: List[Any] = None,
         sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
@@ -770,18 +768,6 @@ class Node(object):
 
     __str__ = __repr__
 
-    def is_next_node(self, other) -> bool:
-        if self.next_breakpoint == other.prev_breakpoint:
-            return True
-        else:
-            return False
-
-    def is_previous_node(self, other) -> bool:
-        if self.prev_breakpoint == other.next_breakpoint:
-            return True
-        else:
-            return False
-
     @classmethod
     def create_nodes(cls, number):
         return [cls() for _ in range(number)]
@@ -825,15 +811,6 @@ class Node(object):
         self.unique_key = key
         return key
 
-    def copy(self) -> "Node":
-        """TODO: May be a error"""
-        new_node = Node()
-
-        for attr_key, attr_value in self.__dict__:  # type: ignore
-            new_node.__dict__[attr_key] = attr_value  # type: ignore
-
-        return new_node
-
     def is_start_node(self):
         return False if self.has_predecessor() else True
 
@@ -845,12 +822,6 @@ class Node(object):
 
     def has_successor(self):
         return True if self.successors else False
-
-    def compare(self, other) -> bool:
-        key1_self, key2_self = self.similar_key
-        key1_other, key2_other = other.similar_key
-
-        return True if key1_self == key1_other or key2_self == key2_other else False
 
     def add_successor_from_list(self, successors):
         for successor in successors:
@@ -898,6 +869,9 @@ class Node(object):
         else:
             self.next_node_in_series = series[index + 1]
             self.previous_node_in_series = series[index - 1]
+
+
+NodeType = Union[Node, Insertion]
 
 
 class Series(object):
@@ -951,6 +925,15 @@ class Series(object):
 
     def add_node(self, node: Union[Node, Insertion]) -> None:
         self.nodes.append(node)
+
+    @classmethod
+    def create_series_from_node_list(
+        cls, node_list: List[NodeType], logger: Logger
+    ) -> "Series":
+        series_instance = cls(None, logger)
+        for node in node_list:
+            series_instance.add_node(node)
+        return series_instance
 
     def init(
         self,
@@ -1271,15 +1254,6 @@ class Series(object):
 
     __str__ = __repr__
 
-    def decompose(self) -> list:
-        """Decompose the sequence of Nodes into Nodes pair"""
-        paired_breakpoints = []
-        for i, j in zip(self.nodes[::1], self.nodes[1::1]):
-            paired_breakpoints.append(
-                f"{i.sv_type}-{i.next_breakpoint}-{j.prev_breakpoint}-{i.strand}-{j.strand}"
-            )
-        return paired_breakpoints
-
     def disable_blat_logger(self):
         self.blat, self.logger = None, None
 
@@ -1302,32 +1276,6 @@ class Series(object):
     @property
     def unique_key(self):
         return "".join([node.get_unique_key() for node in self.nodes])
-
-    @staticmethod
-    def merge_nodes(node1, node2):
-        node1.exons[0][0] = min(node1.exons[0][0], node2.exons[0][0])
-        node1.exons[-1][1] = max(node1.exons[-1][1], node2.exons[-1][1])
-
-        return node1
-
-    def end_node_intron_key(self):
-        introns_key = "".join(
-            [f"{start}-{end}" for start, end in self.end_node.introns]
-        )
-        introns_key = f"{self.end_node.chrom}-{introns_key}"
-
-        return introns_key
-
-    def start_node_intron_key(self):
-        introns_key = "".join(
-            [f"{start}-{end}" for start, end in self.start_node.introns]
-        )
-        introns_key = f"{self.start_node.chrom}-{introns_key}"
-        return introns_key
-
-    def get_double_node_key(self):
-        for index in range(len(self.nodes) - 1):
-            yield f"{index}-{self.nodes[index].similar_key}{self.nodes[index + 1].similar_key}"
 
 
 class Event(object):

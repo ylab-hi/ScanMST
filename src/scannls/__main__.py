@@ -27,18 +27,8 @@ def parse_args():
     parser.add_argument(
         "-v", "--version", action="version", version="%(prog)s {}".format(__version__)
     )
-    sub_parsers = parser.add_subparsers(help="sub-command help", dest="sub_command")
 
-    draft_parser = sub_parsers.add_parser(
-        "draft",
-        help="add additional tags to build.BAM",
-        description="%(prog)s -i input_bam_file -o output_bam_file -r ref_genome_fasta -g gtf_file [opts]",
-        epilog=textwrap.dedent(
-            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute, University of Minnesota, 2021"""
-        ),
-    )
-
-    draft_parser.add_argument(
+    parser.add_argument(
         "-i",
         "--input",
         action="store",
@@ -46,7 +36,7 @@ def parse_args():
         help="Input BAM file",
         required=True,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-r",
         "--ref",
         action="store",
@@ -54,7 +44,7 @@ def parse_args():
         help="reference genome in FASTA format (with fai index)",
         required=True,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-g",
         "--gtf",
         action="store",
@@ -62,7 +52,7 @@ def parse_args():
         help="gene annotations in GTF format",
         required=True,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-o",
         "--output",
         action="store",
@@ -70,7 +60,7 @@ def parse_args():
         help="output BAM file",
         required=True,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-s",
         "--splice_bin",
         action="store",
@@ -79,7 +69,7 @@ def parse_args():
         help="minimal observation count for ITD (default: %(default)s)",
         default=5,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-m",
         "--mapq",
         action="store",
@@ -88,7 +78,7 @@ def parse_args():
         help="minimal MAPQ in BAM for calling NLS (default: %(default)s)",
         default=15,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-n",
         "--noncanonical",
         action="store_true",
@@ -96,7 +86,7 @@ def parse_args():
         default=False,
         help="Considering Non-canonical spliced sites",
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--log_level",
         action="store",
         dest="log",
@@ -104,7 +94,7 @@ def parse_args():
         default="info",
         help="set log level (default: %(default)s)",
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--parallel",
         action="store",
         dest="parallel",
@@ -112,14 +102,14 @@ def parse_args():
         default=1,
         help="set working mode in processor (default: %(default)s)",
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--2bit",
         action="store",
         dest="two_bit",
         help="reference genome in 2bit format",
         required=True,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "-p",
         "--port",
         action="store",
@@ -128,7 +118,7 @@ def parse_args():
         help="port for BLAT server (default: %(default)s)",
         default=88888,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--min_soft_seg_len",
         action="store",
         dest="min_soft_seg_len",
@@ -136,7 +126,7 @@ def parse_args():
         help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
         default=200,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--max_allowed_nm",
         action="store",
         dest="max_allowed_nm",
@@ -144,7 +134,7 @@ def parse_args():
         help="Maximum allowed NM to keep AS tag (default: %(default)s)",
         default=60,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--identity",
         action="store",
         dest="ident_cutoff",
@@ -152,7 +142,7 @@ def parse_args():
         help="blat_ident_pct_cutoff (default: %(default)s)",
         default=0.99,
     )
-    draft_parser.add_argument(
+    parser.add_argument(
         "--tmp",
         action="store",
         dest="tmp_dir",
@@ -177,64 +167,62 @@ def main():
     else:
         options = parser.parse_args()
 
-    if options.sub_command == "draft":
-        # add logger
-        logger.remove()
-        logger.add(
-            sys.stdout,
-            level=options.log.upper(),
-            enqueue=True,
-            colorize=True,
-            backtrace=True,
-            diagnose=True,
-        )
+    # add logger
+    logger.remove()
+    logger.add(
+        sys.stdout,
+        level=options.log.upper(),
+        enqueue=True,
+        colorize=True,
+        backtrace=True,
+        diagnose=True,
+    )
 
-        # check external tools used
-        external_tool_checking(logger=logger)
+    # check external tools used
+    external_tool_checking(logger=logger)
 
-        if options.parallel > 1:
-            logger.info("ScanNLS draft starts running in parallel mode")
-        else:
-            logger.info("ScanNLS draft starts running in normal mode")
+    if options.parallel > 1:
+        logger.info("ScanNLS draft starts running in parallel mode")
+    else:
+        logger.info("ScanNLS draft starts running in normal mode")
 
-        logger.info(f"{options.input=}")
-        start = time.time()
-        blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
-        blat.start_server()
-        blat_info = blat.log_file, blat.is_start_server
-        # CIGAR string refinement or add SV tag
-        motif_required = not options.noncanonical
+    logger.info(f"{options.input=}")
+    start = time.time()
+    blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
+    blat.start_server()
+    blat_info = blat.log_file, blat.is_start_server
+    # CIGAR string refinement or add SV tag
+    motif_required = not options.noncanonical
 
-        intact_series_list = scanbam_run(
-            two_bit=options.two_bit,
-            port=options.port,
-            tmp_dir=options.tmp_dir,
-            blat_info=blat_info,
-            in_bam_path=options.input,
-            mapq_cutoff=options.mapq,
-            output=options.output,
-            ref_genome=options.ref,
-            gtf=options.gtf,
-            splice_bin=options.splice_bin,
-            blat=blat,
-            logger=logger,
-            motif_required=motif_required,
-            parallel=options.parallel,
-            max_allowed_nm=options.max_allowed_nm,
-            min_soft_seg_len=options.min_soft_seg_len,
-            blat_ident_pct_cutoff=options.ident_cutoff,
-        )
-        splice_graph = SpliceGraph(logger)
-        clique_finder = CliqueFinder(intact_series_list, logger)
-        cliques = clique_finder.find_clique()
-        # clique_finder.debug()
-        for clique in cliques:
-            if len(clique) == 3:
-                splice_graph(clique)
+    intact_series_list = scanbam_run(
+        two_bit=options.two_bit,
+        port=options.port,
+        tmp_dir=options.tmp_dir,
+        blat_info=blat_info,
+        in_bam_path=options.input,
+        mapq_cutoff=options.mapq,
+        output=options.output,
+        ref_genome=options.ref,
+        gtf=options.gtf,
+        splice_bin=options.splice_bin,
+        blat=blat,
+        logger=logger,
+        motif_required=motif_required,
+        parallel=options.parallel,
+        max_allowed_nm=options.max_allowed_nm,
+        min_soft_seg_len=options.min_soft_seg_len,
+        blat_ident_pct_cutoff=options.ident_cutoff,
+    )
+    splice_graph = SpliceGraph(logger)
+    clique_finder = CliqueFinder(intact_series_list, logger)
+    cliques = clique_finder.find_clique()
+    # clique_finder.debug()
+    for clique in cliques:
+        logger.debug(list(splice_graph(clique)))
 
-        logger.info("ScanNLS build running done")
-        end = time.time()
-        logger.info(f"ScanNLS build takes {end - start} seconds.")
+    logger.info("ScanNLS build running done")
+    end = time.time()
+    logger.info(f"ScanNLS build takes {end - start} seconds.")
 
 
 if __name__ == "__main__":

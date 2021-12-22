@@ -592,7 +592,7 @@ def detect_read_read_connections_from_cigar(
             query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
         )
 
-    noreturn = [], {}, 0
+    noreturn = [], {}, 0  # type: ignore
     if read.has_tag("SV"):
         return noreturn
 
