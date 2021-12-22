@@ -382,6 +382,7 @@ class NovelInsertion(Read):
     def __init__(self, hit_num: int, query_sequence: str):
         self.query_sequence = query_sequence
         self.hit_num = hit_num
+        self.insertion_info = None
 
     def __repr__(self):
         return f"NovelInsertion({self.query_sequence}:{self.hit_num})"
@@ -492,12 +493,14 @@ class Insertion(Read):
         self.annotation_code = None
         self.splicing_code = None
         self.sr = None
+        self.insertion_info = None
 
         self.exons, self.introns = self.get_exons_and_introns()
         self.successors: Any = []
         self.predecessors: Any = []
         self.unique_key = None
-        self.merged_nodes: List = []
+        self.merged_child_nodes: List = []
+        self.merged_parent_nodes: List = []
 
         self.next_node_in_series = None
         self.previous_node_in_series = None
@@ -583,21 +586,40 @@ class Insertion(Read):
     def has_successor(self):
         return True if self.successors else False
 
+    def add_successor_from_list(self, successors):
+        for successor in successors:
+            self.add_successor(successor)
+
+    def add_predecessor_from_list(self, predecessors):
+        for predecessor in predecessors:
+            self.add_predecessor(predecessor)
+
+    def _add_successor(self, successor):
+        self.successors.append(successor)
+        successor.add_predecessor(self)
+
+    def _add_predecessor(self, predecessor):
+        self.predecessors.append(predecessor)
+        predecessor.add_successor(self)
+
     def add_successor(self, successor):
-        if (
-            successor is not None
-            and successor.is_in_graph
-            and successor not in self.successors
-        ):
-            self.successors.append(successor)
+        if successor is not None and successor not in self.successors:
+            if successor.is_in_graph:
+                self._add_successor(successor)
+            else:
+                self.add_successor_from_list(successor.merged_parent_nodes)
 
     def add_predecessor(self, predecessor):
-        if (
-            predecessor is not None
-            and predecessor.is_in_graph
-            and predecessor not in self.predecessors
-        ):
-            self.predecessors.append(predecessor)
+        """the node must be in the graph if the function is called
+
+        :param predecessor:
+        :return:
+        """
+        if predecessor is not None and predecessor not in self.predecessors:
+            if predecessor.is_in_graph:
+                self._add_predecessor(predecessor)
+            else:
+                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
 
     def update_sr(self, key=1):
         self.sr += key
@@ -667,11 +689,12 @@ class Node(object):
         "predecessors",
         "successors",
         "unique_key",
-        "merged_nodes",
+        "merged_child_nodes",
+        "merged_parent_nodes",
         "next_node_in_series",
         "previous_node_in_series",
-        "is_merged",
         "is_in_graph",
+        "is_merged",
     )
 
     def __init__(
@@ -709,7 +732,9 @@ class Node(object):
         self.predecessors: Any = []
 
         self.unique_key = None
-        self.merged_nodes: List = []
+        self.merged_child_nodes: List = []
+        self.merged_parent_nodes: List = []
+
         self.next_node_in_series = None
         self.previous_node_in_series = None
         self.is_merged, self.is_in_graph = False, False
@@ -810,10 +835,10 @@ class Node(object):
         return new_node
 
     def is_start_node(self):
-        return True if not self.has_predecessor() else False
+        return False if self.has_predecessor() else True
 
     def is_end_node(self):
-        return True if not self.has_successor() else False
+        return False if self.has_successor() else True
 
     def has_predecessor(self):
         return True if self.predecessors else False
@@ -827,21 +852,40 @@ class Node(object):
 
         return True if key1_self == key1_other or key2_self == key2_other else False
 
+    def add_successor_from_list(self, successors):
+        for successor in successors:
+            self.add_successor(successor)
+
+    def add_predecessor_from_list(self, predecessors):
+        for predecessor in predecessors:
+            self.add_predecessor(predecessor)
+
+    def _add_successor(self, successor):
+        self.successors.append(successor)
+        successor.add_predecessor(self)
+
+    def _add_predecessor(self, predecessor):
+        self.predecessors.append(predecessor)
+        predecessor.add_successor(self)
+
     def add_successor(self, successor):
-        if (
-            successor is not None
-            and successor.is_in_graph
-            and successor not in self.successors
-        ):
-            self.successors.append(successor)
+        if successor is not None and successor not in self.successors:
+            if successor.is_in_graph:
+                self._add_successor(successor)
+            else:
+                self.add_successor_from_list(successor.merged_parent_nodes)
 
     def add_predecessor(self, predecessor):
-        if (
-            predecessor is not None
-            and predecessor.is_in_graph
-            and predecessor not in self.predecessors
-        ):
-            self.predecessors.append(predecessor)
+        """the node must be in the graph if the function is called
+
+        :param predecessor:
+        :return:
+        """
+        if predecessor is not None and predecessor not in self.predecessors:
+            if predecessor.is_in_graph:
+                self._add_predecessor(predecessor)
+            else:
+                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
 
     def update_sr(self, key=1):
         self.sr += key
@@ -1007,13 +1051,17 @@ class Series(object):
                         read1_insertion_event.is_type_na()
                         or insertion_read2_event.is_type_na()
                     ):
-                        # only add read1
-                        read1_node = event.update_node_info(flag, read1_node, insertion)
+                        # only add read1, False means that the insertion type (hit 1 insertion)
+                        # are not added in series
+                        read1_node = event.update_node_info(
+                            False, read1_node, insertion
+                        )
                         self.add_node(read1_node)
                     else:
                         # add read1 and insertion
+                        # True means that the insertion type(hit 1 insertion) are added in series
                         read1_node = read1_insertion_event.update_node_info(
-                            flag, read1_node, insertion
+                            True, read1_node, insertion
                         )
                         self.add_node(read1_node)
 
@@ -1028,8 +1076,10 @@ class Series(object):
                 else:  # no hits or multiple hits
 
                     self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
-                    # only add read1 with insertion
-                    read1_node = event.update_node_info(flag, read1_node, insertion)
+                    # only add read1 with insertion info
+                    # False means that the insertion type (hit more insertion) are
+                    # not added in series
+                    read1_node = event.update_node_info(False, read1_node, insertion)
                     self.add_node(read1_node)
             # no insertion
             elif event.has_microhomology():
@@ -1040,9 +1090,7 @@ class Series(object):
                 if event.strand1 == "-":
                     microhomology.reverse_completement_query()
 
-                read1_node = event.update_node_info(
-                    False, read1_node, microhomology, False
-                )
+                read1_node = event.update_node_info(False, read1_node, microhomology)
                 self.add_node(read1_node)
 
             else:

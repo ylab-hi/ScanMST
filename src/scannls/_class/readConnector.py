@@ -592,17 +592,18 @@ def detect_read_read_connections_from_cigar(
             query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
         )
 
+    noreturn = [], {}, 0
     if read.has_tag("SV"):
-        return [], {}
+        return noreturn
 
     if read.is_supplementary:
-        return [], {}
+        return noreturn
 
     # if no 'SA' tag was found, read-to-read chain will be empty
     try:
         chimeric_aln = read.get_tag("SA")[:-1].split(";")
     except KeyError:
-        return [], {}
+        return noreturn
 
     # chimeric alignments for a chimeric read
     # a chimeric read can have multiple chimeric alignments
@@ -631,7 +632,7 @@ def detect_read_read_connections_from_cigar(
             )
 
     if len(chimeric_aln_list) < 1 + len(chimeric_aln):
-        return [], {}
+        return noreturn
     else:
         read_connector = ReadsConnector(
             aln_list=chimeric_aln_list, blat=blat, logger=logger
@@ -648,4 +649,4 @@ def detect_read_read_connections_from_cigar(
                 read_connector.num_added_reads,
             )
         else:
-            return [], {}
+            return noreturn

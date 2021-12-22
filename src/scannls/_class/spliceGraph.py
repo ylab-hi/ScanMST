@@ -5,7 +5,7 @@
 @license:     MIT Licence
 @Time:        12/15/21 10:42 AM
 """
-from collections import defaultdict
+import copy
 from typing import Any
 from typing import Dict
 from typing import Iterable
@@ -19,6 +19,7 @@ from networkx.algorithms.clique import find_cliques  # type: ignore
 
 from .basicClass import Insertion
 from .basicClass import Node
+from .basicClass import Read
 from .basicClass import Series
 
 NodeType = Union[Node, Insertion]
@@ -415,8 +416,8 @@ class SpliceGraph(object):
         self.logger = logger
 
     def __call__(self, series_list: Iterable[Series]) -> Any:
-        self.series_list = series_list
-        self.nodes: Dict[str, List[NodeType]] = defaultdict(list)
+        self.series_list = copy.deepcopy(series_list)
+        self.nodes: Dict[str, List[NodeType]] = {}
         self.construct()
         return self.trace()
 
@@ -425,14 +426,21 @@ class SpliceGraph(object):
             node
             for nodes in self.nodes.values()
             for node in nodes
-            if node.is_start_node
+            if node.is_start_node()
         ]
 
-    def get_similar_nodes(self, similar_key: str) -> List[NodeType]:
-        return self.nodes[similar_key]
+    def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
+        return self.nodes.get(similar_key, [])
 
-    def add_similar_node(self, node: NodeType) -> None:
-        self.nodes[node.similar_key].append(node)
+    def add_node_with_similar_key(self, node: NodeType) -> None:
+        """add node to the splice graph
+        :param node:
+        :return:
+        """
+        if similar_nodes := self.get_nodes_with_similar_key(node.similar_key):
+            similar_nodes.append(node)
+        else:
+            self.nodes[node.similar_key] = [node]
 
     def __contains__(self, node: NodeType) -> bool:
         """check if node is in graph
@@ -444,7 +452,7 @@ class SpliceGraph(object):
             node.unique_key is not None.
 
         """
-        for other_node in self.get_similar_nodes(node.similar_key):
+        for other_node in self.get_nodes_with_similar_key(node.similar_key):
             if other_node.unique_key == node.unique_key:
                 return True
 
@@ -456,9 +464,40 @@ class SpliceGraph(object):
                 yield node
 
     @staticmethod
+    def _check_insertion_conditions_for_compare(
+        node1: NodeType, node2: NodeType
+    ) -> bool:
+
+        flag = True
+        insertion_info1 = node1.insertion_info
+        insertion_info2 = node2.insertion_info
+        if insertion_info1 is None and insertion_info2 is None:
+            # None == None
+            return flag
+        elif insertion_info1 is not None and insertion_info2 is not None:
+            if insertion_info1[0] and insertion_info2[0]:
+                # 1 hit insertion that is added in the series
+                return flag
+            if (
+                not insertion_info1[0]
+                and not insertion_info2[0]
+                and isinstance(insertion_info1[1], Read)
+                and isinstance(insertion_info2[1], Read)
+                and (
+                    insertion_info1[1].query_sequence
+                    == insertion_info2[1].query_sequence
+                )
+            ):
+                return flag
+        return False
+
+    @staticmethod
     def _compare_is_merged_helper(node1: NodeType, node2: NodeType) -> Any:
 
-        condition = node1.sv_type == node2.sv_type
+        condition = (
+            node1.sv_type == node2.sv_type
+            and SpliceGraph._check_insertion_conditions_for_compare(node1, node2)
+        )
 
         if (
             condition
@@ -533,24 +572,22 @@ class SpliceGraph(object):
         :param current_node: node has not been inserted into graph
         :return:
         """
-        updated_node.exons[0][0] = min(
+        updated_node.exons[0][0] = updated_node.ref_start = min(
             updated_node.exons[0][0], current_node.exons[0][0]
         )
-        updated_node.exons[-1][1] = max(
+        updated_node.exons[-1][1] = updated_node.ref_end = max(
             updated_node.exons[-1][1], current_node.exons[-1][1]
         )
         updated_node.update_sr()
 
     def construct(self):
         # iterate all series
+        merged_nodes_pool = []
         for series in self.series_list:
             # iterate all nodes in series
-            nodes_merge_others_in_graph = []
             for index, current_node in enumerate(series):
-                # TODO: Change
-                current_node.add_predecessor(nodes_merge_others_in_graph)
                 # add information about  next and previous node in series to current node
-                current_node.update_next_and_previsous_node_in_series(index, series)
+                current_node.update_next_and_previous_node_in_series(index, series)
                 # initialize and get unique key of current node and set node.unique_key if not set when
                 # you reach node.unique_key, will return None
                 _ = current_node.get_unique_key()
@@ -559,72 +596,53 @@ class SpliceGraph(object):
                 similar_key = current_node.similar_key
 
                 # get similar nodes in the graph
-                similar_nodes_in_graph = self.get_similar_nodes(similar_key)
+                similar_nodes_in_graph = self.get_nodes_with_similar_key(similar_key)
 
                 # iterate all similar nodes in the graph
-                if similar_nodes_in_graph:
-                    # iterate all similar nodes in the graph
-                    for similar_node_in_graph in similar_nodes_in_graph:
-                        # check if current node is merged into similar node in the graph
-                        if SpliceGraph._compare_is_merged(
+                for similar_node_in_graph in similar_nodes_in_graph:
+                    # check if current node is merged into similar node in the graph
+                    if SpliceGraph._compare_is_merged(
+                        similar_node_in_graph, current_node
+                    ):
+                        current_node.is_merged = True
+
+                        SpliceGraph.update_exon_coord_sr(
                             similar_node_in_graph, current_node
-                        ):
-                            nodes_merge_others_in_graph.append(similar_node_in_graph)
-                            current_node.is_merged = True
+                        )
 
-                            SpliceGraph.update_exon_coord_sr(
-                                similar_node_in_graph, current_node
-                            )
+                        merged_nodes_pool.append(current_node)
 
-                            similar_node_in_graph.merged_nodes.append(current_node)
+                        # nodes in merged_parent_nodes are all in the graph
+                        current_node.merged_parent_nodes.append(similar_node_in_graph)
 
-                            # TODO: modify node.add_predecessor to check if the node is already in the list or the
-                            # node is None. Also, check predecessor is in graph or not
-                            # same as add_successor
-                            similar_node_in_graph.add_predecessor(
-                                current_node.previous_node_in_series
-                            )
-                            # TODO:  may be delete this line
-                            current_node.next_node_in_series.add_predecessor(
-                                similar_node_in_graph
-                            )
-
-                        if not current_node.is_merged:  # false
-                            for merge_node in similar_node_in_graph.merged_nodes:
-                                if SpliceGraph._compare_is_merged(
-                                    merge_node, current_node
-                                ):
-                                    SpliceGraph.update_exon_coord_sr(
-                                        current_node, merge_node
-                                    )
-                                    # TODO : may delete this line
-                                    current_node.merge_nodes.append(merge_node)
-                                    current_node.add_successor(merge_node.successors)
-
-                                    current_node.add_successor(
-                                        current_node.next_node_in_series
-                                    )
-                                    current_node.add_predecessor(
-                                        current_node.previous_node_in_series
-                                    )
-
-                    # add node to graph
-                    if not current_node.is_merged:  # false
-                        current_node.is_in_graph = True  # check if node is in graph
-                        self.add_similar_node(current_node)
-
-                        current_node.add_successor(current_node.next_node_in_series)
-                        current_node.add_predecessor(
+                        # only consider nodes that has been processed: previous node in current series
+                        # keep in mind next node in current series is not processed yet!!!!
+                        # a -> b and b <- a
+                        similar_node_in_graph.add_predecessor(
                             current_node.previous_node_in_series
                         )
 
-                else:
+                # add node to graph
+                if not current_node.is_merged:  # false
 
-                    current_node.is_in_graph = True
-                    self.add_similar_node(current_node)
+                    current_node.is_in_graph = True  # check if node is in graph
+                    self.add_node_with_similar_key(current_node)
 
-                    current_node.add_successor(current_node.next_node_in_series)
+                    # only consider nodes that has been processed: previous node in series
+                    # keep in mind next node in series is not processed yet!!!!
                     current_node.add_predecessor(current_node.previous_node_in_series)
+
+                    # check merged node to see if merge node can be merged into current node
+                    for merge_node in merged_nodes_pool:
+                        if SpliceGraph._compare_is_merged(merge_node, current_node):
+                            SpliceGraph.update_exon_coord_sr(current_node, merge_node)
+                            merge_node.merged_parent_nodes.append(current_node)
+                            # for merge node whose previous node and next node in series
+                            # has been processed
+                            current_node.add_predecessor(
+                                merge_node.previous_node_in_series
+                            )
+                            current_node.add_successor(merge_node.next_node_in_series)
 
     def _trace(self, start_node: NodeType, path: List, group_paths: List) -> None:
 
@@ -644,5 +662,5 @@ class SpliceGraph(object):
         for start_node in self.get_start_nodes():
             group_paths = []
             self._trace(start_node, [], group_paths)
-            result_series_list.append(group_paths)
+            result_series_list.extend(group_paths)
         return result_series_list

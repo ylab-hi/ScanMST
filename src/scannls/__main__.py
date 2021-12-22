@@ -12,6 +12,7 @@ from . import __version__  # type: ignore
 from ._class.basicClass import LengthAction  # type: ignore
 from ._class.blat import Blat
 from ._class.spliceGraph import CliqueFinder
+from ._class.spliceGraph import SpliceGraph
 from .draft.main import scanbam_run  # type: ignore
 from .utils import external_tool_checking  # type: ignore
 
@@ -223,9 +224,13 @@ def main():
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
+        splice_graph = SpliceGraph(logger)
         clique_finder = CliqueFinder(intact_series_list, logger)
-        # clique_finder.find_clique()
+        cliques = clique_finder.find_clique()
         # clique_finder.debug()
+        for clique in cliques:
+            if len(clique) == 3:
+                splice_graph(clique)
 
         logger.info("ScanNLS build running done")
         end = time.time()
