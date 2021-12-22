@@ -256,7 +256,9 @@ def detect_sv_from_cigar(
                         )
                     )
                 else:  # temporary solution
-                    logger.warning(f"{nls_type=}")
+                    logger.warning(
+                        f"{nls_type=} {positions=} {lt_info=} {rt_info=} {bp_seqs=} {strands=}"
+                    )
     return event_list, read_to_read_chains[0], num_added_reads
 
 

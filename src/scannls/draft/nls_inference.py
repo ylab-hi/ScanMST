@@ -656,8 +656,51 @@ def infer_nls_from_connected_reads(
                     - read_rt.read_match_size
                 )
                 logger.trace(f"{bp_region_seq_len=}")
-                if ra_bp == sa_bp:
-                    return NAN
+
+                if ra_bp == sa_bp:  # inverted duplication (IDUP)
+                    chrm_start = lt_chrm
+                    junc_start = ra_bp
+                    chrm_end = lt_chrm
+                    junc_end = ra_bp
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        True,
+                        motif_required,
+                    )
+                    strands = (lt_strand, rt_strand)
+                    lt_start_end_exons = (lt_start, lt_end, lt_exons)
+                    rt_start_end_exons = (rt_start, rt_end, rt_exons)
+                    lt_bp_seq = obtain_bp_region_seq(
+                        read_lt, lt_mode, bp_region_seq_len
+                    )
+                    rt_bp_seq = obtain_bp_region_seq(
+                        read_rt, rt_mode, bp_region_seq_len
+                    )
+                    if _nls:
+                        return (
+                            "IDUP",
+                            _anno,
+                            _can,
+                            (
+                                f"{lt_chrm}:{junc_start}",
+                                f"{lt_chrm}:{junc_end}",
+                                1,
+                                1,
+                            ),
+                            lt_start_end_exons,
+                            rt_start_end_exons,
+                            (lt_bp_seq, rt_bp_seq),
+                            tuple([*strands]),
+                            [*_genes],
+                        )
+                    else:
+                        return NAN
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -736,8 +779,50 @@ def infer_nls_from_connected_reads(
 
                 logger.trace(f"{bp_region_seq_len=}")
 
-                if ra_bp == sa_bp:
-                    return NAN
+                if ra_bp == sa_bp:  # inverted duplication (IDUP)
+                    chrm_start = lt_chrm
+                    junc_start = ra_bp
+                    chrm_end = lt_chrm
+                    junc_end = ra_bp
+                    _nls, _anno, _can = splicing_confirmation(
+                        chrm_start,
+                        junc_start,
+                        chrm_end,
+                        junc_end,
+                        splice_bin,
+                        genome_fasta,
+                        cvg,
+                        True,
+                        motif_required,
+                    )
+                    strands = (lt_strand, rt_strand)
+                    lt_start_end_exons = (lt_start, lt_end, lt_exons)
+                    rt_start_end_exons = (rt_start, rt_end, rt_exons)
+                    lt_bp_seq = obtain_bp_region_seq(
+                        read_lt, lt_mode, bp_region_seq_len
+                    )
+                    rt_bp_seq = obtain_bp_region_seq(
+                        read_rt, rt_mode, bp_region_seq_len
+                    )
+                    if _nls:
+                        return (
+                            "IDUP",
+                            _anno,
+                            _can,
+                            (
+                                f"{lt_chrm}:{junc_start}",
+                                f"{lt_chrm}:{junc_end}",
+                                2,
+                                2,
+                            ),
+                            lt_start_end_exons,
+                            rt_start_end_exons,
+                            (lt_bp_seq, rt_bp_seq),
+                            tuple([*strands]),
+                            [*_genes],
+                        )
+                    else:
+                        return NAN
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
