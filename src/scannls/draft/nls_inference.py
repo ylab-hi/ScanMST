@@ -683,6 +683,9 @@ def infer_nls_from_connected_reads(
                         read_rt, rt_mode, bp_region_seq_len
                     )
                     if _nls:
+                        _genes = gene_annotation(
+                            chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                        )
                         return (
                             "IDUP",
                             _anno,
@@ -805,6 +808,9 @@ def infer_nls_from_connected_reads(
                         read_rt, rt_mode, bp_region_seq_len
                     )
                     if _nls:
+                        _genes = gene_annotation(
+                            chrm_start, junc_start, chrm_end, junc_end, gene_iv
+                        )
                         return (
                             "IDUP",
                             _anno,
