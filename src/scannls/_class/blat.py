@@ -457,4 +457,4 @@ class Blat(object):
             cigar += str(end3) + "S"
         strand = "+" if _strand == 1 else "-"
 
-        return ref_chrom, ref_start + 1, strand, cigar, num_of_mismatch
+        return ref_chrom, ref_start, strand, cigar, num_of_mismatch

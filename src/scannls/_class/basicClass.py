@@ -901,7 +901,7 @@ class Series(object):
 
     def __init__(self, blat: Any, logger: Logger) -> None:
         self.nodes: List[Union[Node, Insertion]] = []
-        self.is_extended = False
+        self.is_in_graph = False
         self.blat = blat
         self.logger = logger
 
