@@ -533,7 +533,7 @@ class ReadsConnector(object):
 
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_mode_judge(start_read, end_read)
-            _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
+            _, _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
             self._double_check_for_one_hop_for_end_read(end_read)
 
         else:
