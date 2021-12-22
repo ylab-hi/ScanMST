@@ -449,7 +449,7 @@ def _scan_bam_helper(
                     _bp1, _bp2, _mode1, _mode2 = _positions
                     _strand1, _strand2 = strands
                     _gene1, _gene2 = genes
-                    if _type in {"TDUP", "INV", "TRA", "DEL"}:
+                    if _type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
                         _chrm1, _pos1 = _bp1.split(":")
                         _chrm2, _pos2 = _bp2.split(":")
                         # SV tag uses SA tag corrdinate system (start with 1)
