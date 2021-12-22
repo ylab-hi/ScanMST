@@ -252,15 +252,13 @@ class ReadsConnector(object):
         :param is_compare_for_ms:
         :return:
         """
-        compare_mode = None
-
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")  # type: ignore
 
         if not is_compare_for_ms:  # one hop
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
-            return True, start_read, compare_mode
+            return True, start_read
 
         _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms  # type: ignore
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
@@ -289,7 +287,6 @@ class ReadsConnector(object):
         )
 
         if match_flag:  # may same
-            compare_mode = "ls"
             read.mode = 2
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
@@ -303,7 +300,7 @@ class ReadsConnector(object):
             start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2  # type: ignore
             start_read.adhocseq = read.query_sequence
 
-            return True, start_read, compare_mode
+            return True, start_read
 
         self.logger.debug("testing second case M vs RS")  # type: ignore
         # second case
@@ -325,7 +322,6 @@ class ReadsConnector(object):
         )
 
         if match_flag:
-            compare_mode = "rs"
 
             read.mode = 1
 
@@ -347,29 +343,19 @@ class ReadsConnector(object):
             )
             start_read.adhocseq = read.query_sequence
 
-            return True, start_read, compare_mode
+            return True, start_read
         self.logger.debug("start read cannot connect with read and try to connect other reads")  # type: ignore
-        return False, start_read, compare_mode  # not match
+        return False, start_read  # not match
 
-    def _double_check_for_end_read_add_new_read(
-        self, read: Read, new_read: Read
+    @staticmethod
+    def _double_check_for_start_and_end_read_determine_new_read_mode(
+        read: Read, new_read: Read
     ) -> None:
+        read.mode = 1 if read.mode == 2 else 2
         if new_read.strand == read.strand:
             new_read.mode = 1 if read.mode == 2 else 2
         else:
             new_read.mode = 1 if read.mode == 1 else 2
-        self.reads_chain.append(new_read)
-        self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
-
-    def _double_check_for_start_read_add_new_read(
-        self, read: Read, new_read: Read
-    ) -> None:
-        if new_read.strand == read.strand:
-            new_read.mode = 1 if read.mode == 2 else 2
-        else:
-            new_read.mode = 1 if read.mode == 1 else 2
-        self.reads_chain.insert(0, new_read)
-        self.read_pair_mode_dict[(new_read, read)] = (new_read.mode, read.mode)
 
     def _double_check_creat_new_read_and_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read
@@ -431,9 +417,10 @@ class ReadsConnector(object):
         )
         return True, hit, keep_hsp
 
-    def _double_check_for_end_read(
+    def _double_check_for_start_and_end_read(
         self,
         read: Read,
+        read_type: str,
     ) -> None:
 
         query_sequence = (
@@ -451,42 +438,15 @@ class ReadsConnector(object):
             new_read = self._double_check_creat_new_read_and_calculate_sms(
                 hsp, query_sequence, read
             )
-            self._double_check_for_end_read_add_new_read(read, new_read)
-
-    @staticmethod
-    def _double_check_for_start_read_determine_s_source_for_blat(
-        start_read, read, compare_mode: str
-    ) -> str:
-
-        if compare_mode == "ls":
-            return "ls" if start_read.strand == read.strand else "rs"
-
-        elif compare_mode == "rs":
-            return "rs" if start_read.strand == read.strand else "ls"
-
-    def _double_check_for_start_read(
-        self, start_read: Read, read: Read, compare_mode: str
-    ) -> None:
-        s_source_blat = self._double_check_for_start_read_determine_s_source_for_blat(
-            start_read, read, compare_mode
-        )
-        query_sequence = (
-            start_read.query_sequence[: start_read.lt_soft_len]
-            if s_source_blat == "ls"
-            else start_read.query_sequence[-start_read.rt_soft_len :]
-        )
-
-        flag, hit, keep_hsp = self.__double_check_blat_query(
-            query_sequence, self.align_len_threshold, self.threshold_identity, self.top
-        )
-
-        if flag and hit == 1:
-            self.num_added_reads += 1
-            hsp = keep_hsp[0]
-            new_read = self._double_check_creat_new_read_and_calculate_sms(
-                hsp, query_sequence, start_read
+            self._double_check_for_start_and_end_read_determine_new_read_mode(
+                read, new_read
             )
-            self._double_check_for_start_read_add_new_read(start_read, new_read)
+            if read_type == "start":
+                self.reads_chain.insert(0, new_read)
+                self.read_pair_mode_dict[(new_read, read)] = (new_read.mode, read.mode)
+            else:
+                self.reads_chain.append(new_read)
+                self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments
@@ -531,8 +491,9 @@ class ReadsConnector(object):
 
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_mode_judge(start_read, end_read)
-            _, _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
-            self._double_check_for_end_read(end_read)
+            _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
+            self._double_check_for_start_and_end_read(start_read, "start")
+            self._double_check_for_start_and_end_read(end_read, "end")
 
         else:
             candidate_read_len = len(self.candidate_nodes)
@@ -544,7 +505,7 @@ class ReadsConnector(object):
                     raise ReadNotConnectedError
                 read = self.candidate_nodes[self.index]
                 ReadsConnector.init_mode_judge(start_read, read)
-                flag, start_read, compare_mode = self.test_2case(
+                flag, start_read = self.test_2case(
                     start_read, read, is_compare_for_ms=True
                 )
 
@@ -552,15 +513,13 @@ class ReadsConnector(object):
                     self.increment_index()
 
                 if flag and len(self.candidate_nodes) + 1 == candidate_read_len:
-                    self._double_check_for_start_read(
-                        start_nodes[0], start_read, compare_mode
-                    )
+                    self._double_check_for_start_and_end_read(start_nodes[0], "start")
 
             ReadsConnector.init_mode_judge(start_read, end_read)
-            _, start_read, compare_mode = self.test_2case(
+            _, start_read = self.test_2case(
                 start_read, end_read, is_compare_for_ms=True
             )
-            self._double_check_for_end_read(end_read)
+            self._double_check_for_start_and_end_read(end_read, "end")
 
         return flag
 

@@ -224,7 +224,8 @@ def main():
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
         clique_finder = CliqueFinder(intact_series_list, logger)
-        clique_finder.find_clique()
+        # clique_finder.find_clique()
+        # clique_finder.debug()
 
         logger.info("ScanNLS build running done")
         end = time.time()

@@ -323,6 +323,11 @@ class CliqueFinder:
         self.distance_dict[(x, y)] = distance
         return False, distance
 
+    def _add_single_clique(self):
+        for series in self.intact_series_list:
+            if not series.is_in_graph:
+                self.graph.add_node(series)
+
     def _add_edge_between_two_series(self, x: Series, y: Series) -> None:
         """add edge between two series according to the distance between them.
         if the distance is less than threshold, add edge. Otherwise, do nothing.
@@ -340,6 +345,7 @@ class CliqueFinder:
             is_calculated, distance = self._calculate_distance(x, y)
             if not is_calculated and distance < self.threshold:
                 self.graph.add_edge(x, y)
+                x.is_in_graph = True
 
     def _creat_graph_for_series(self) -> None:
         """create graph for all series in intact_series_list.
@@ -350,6 +356,9 @@ class CliqueFinder:
         for x in self.intact_series_list:
             for y in self.intact_series_list:
                 self._add_edge_between_two_series(x, y)
+
+            if not x.is_in_graph:
+                self.graph.add_node(x)
 
     def find_clique(self) -> Any:
         """find clique in graph with help of networkx.algorithms.clique.find_clique
@@ -368,6 +377,30 @@ class CliqueFinder:
         self._creat_graph_for_series()
 
         return list(find_cliques(self.graph))
+
+    def debug(self):
+        names = {
+            7705301: "B",
+            7705151: "A",
+            93566621: "D",
+            93566821: "E",
+            93566721: "C",
+        }
+
+        cliques = self.find_clique()
+
+        def get_name(series, names=names):
+            return names[series[0].ref_start]
+
+        for x in self.intact_series_list:
+            for y in self.intact_series_list:
+                if x != y:
+                    print(get_name(x), get_name(y), self.ruler(x, y))
+
+        for i in cliques:
+            print("\n")
+            for j in i:
+                print(f"{get_name(j, names)}")
 
 
 class SpliceGraph(object):
