@@ -33,7 +33,7 @@ rich = "^10.14.0"
 pytest = "^6.2.4"
 coverage = {extras = ["toml"], version = "^5.4"}
 safety = "^1.10.3"
-mypy = "^0.920"
+mypy = "^0.921"
 typeguard = "^2.13.3"
 xdoctest = {extras = ["colors"], version = "^0.15.5"}
 sphinx = "^4.3.2"
