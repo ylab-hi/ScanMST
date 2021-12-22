@@ -26,6 +26,7 @@ from ..utils import reverse_complement  # type: ignore
 from ..utils import write_series_to_file  # type: ignore
 from .helper import blat2chimeric_alignment  # type: ignore
 from .helper import extract_splice_sites  # type: ignore
+from .helper import strand_mode_checker  # type: ignore
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
 
 
@@ -218,6 +219,12 @@ def detect_sv_from_cigar(
                     _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
                 elif (_rt, _lt) in reads_pair_mode_dict:
                     _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
+
+                if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
+                    logger.warning(
+                        f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}"
+                    )
+
                 (
                     nls_type,
                     _anno,

@@ -817,3 +817,14 @@ def blat2chimeric_alignment(
             chimeric_aln_str = ""
 
     return chimeric_aln_str
+
+
+def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
+    flag = False
+    if strand1 == strand2 and mode1 != mode2:
+        flag = True
+    elif strand1 != strand2 and mode1 == mode2:
+        flag = True
+    else:
+        flag = False
+    return flag
