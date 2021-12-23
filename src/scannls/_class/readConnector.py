@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Connecter Reads.
 
 @Filename:    readConnector.py
@@ -23,7 +22,7 @@ from .blat import Blat
 from .exception import ReadNotConnectedError
 
 
-class ReadsConnector(object):
+class ReadsConnector:
     """ReadsConnector class is used to connect the reads and identify the mode of the reads.
 
     :param aln_list: the list of the alignment

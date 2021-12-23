@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Module for the exception class.
 
 @version: 0.0.1
@@ -20,9 +19,7 @@ class ToolNotFoundError(ScannlsExceptionError):
 
     def __init__(self, tool: str) -> None:
         """Initialize the exception."""
-        super(ToolNotFoundError, self).__init__(
-            f"external tool: {tool} not found, please install that!"
-        )
+        super().__init__(f"external tool: {tool} not found, please install that!")
         self.tool = tool
 
 
@@ -31,9 +28,7 @@ class ReadNotFoundError(ScannlsExceptionError):
 
     def __init__(self) -> None:
         """Initialize the exception."""
-        super(ReadNotFoundError, self).__init__(
-            "Current read cannot found in read_chains"
-        )
+        super().__init__("Current read cannot found in read_chains")
 
 
 class ReadNotConnectedError(ScannlsExceptionError):
@@ -41,9 +36,7 @@ class ReadNotConnectedError(ScannlsExceptionError):
 
     def __init__(self) -> None:
         """Initialize the exception."""
-        super(ReadNotConnectedError, self).__init__(
-            "Start read cannot connect all reads in candidate_nodes"
-        )
+        super().__init__("Start read cannot connect all reads in candidate_nodes")
 
 
 class SeqNotFoundError(ScannlsExceptionError):
@@ -51,6 +44,4 @@ class SeqNotFoundError(ScannlsExceptionError):
 
     def __init__(self) -> None:
         """Initialize the exception."""
-        super(SeqNotFoundError, self).__init__(
-            "Gapmis: Sequence not found for semi-global alignment"
-        )
+        super().__init__("Gapmis: Sequence not found for semi-global alignment")

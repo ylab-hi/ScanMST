@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Main function for scannls."""
 import argparse
 import sys
@@ -27,7 +26,7 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "-v", "--version", action="version", version="%(prog)s {}".format(__version__)
+        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
     )
 
     parser.add_argument(

@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Module for BLAT.
 
 @Filename:    blat.py
@@ -24,7 +23,7 @@ from .basicClass import Insertion
 from .basicClass import NovelInsertion
 
 
-class Blat(object):
+class Blat:
     """Blat class is used to integrate the blat service.
 
      (gfServer and gfClient) so that we can query certain sequences from the genome shamelessly
@@ -199,12 +198,12 @@ class Blat(object):
         """
         self.logger.debug("querying the sequence")
         ran_id = random.getrandbits(30)
-        in_fasta = os.path.join(self.output_dir, "{}.fasta".format(ran_id))
+        in_fasta = os.path.join(self.output_dir, f"{ran_id}.fasta")
         with open(in_fasta, "w", buffering=1) as fasta_file:
-            fasta_file.write(">{}\n".format(ran_id))
-            fasta_file.write("{}\n".format(in_seq))
+            fasta_file.write(f">{ran_id}\n")
+            fasta_file.write(f"{in_seq}\n")
 
-        out_psl = os.path.join(self.output_dir, "{}.psl".format(ran_id))
+        out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
 
         cwd = os.path.abspath(os.getcwd())
         logger.trace(os.getcwd())

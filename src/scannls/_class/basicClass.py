@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# ===========================================================
 import re
 from typing import Any
 from typing import List
@@ -16,7 +14,7 @@ from ..utils import reverse_complement  # type: ignore
 from .exception import ReadNotFoundError  # type: ignore
 
 
-class Read(object):
+class Read:
     """Build a read class for storing information of every junction read.
 
     :param chrom: chromosome of genome
@@ -417,7 +415,7 @@ class NovelInsertion(Read):
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
-class MicroHomology(object):
+class MicroHomology:
     """MicroHomology is used to represent microhomology.
 
     :Example:
@@ -682,7 +680,7 @@ class Insertion(Read):
             self.previous_node_in_series = series[index - 1]
 
 
-class Node(object):
+class Node:
     """Build a breakpoint node class for storing information of every breakpoint.
 
     :param prev_breakpoint: breakpoint for the previous breakpoints connections
@@ -952,7 +950,7 @@ class Node(object):
 NodeType = Union[Node, Insertion]
 
 
-class Series(object):
+class Series:
     """Construct a sequence of Nodes for storing information of connected breakpoints.
 
     :param nodes: sequence of Nodes
@@ -1357,8 +1355,7 @@ class Series(object):
 
     def __iter__(self):
         """Return an iterator over the events."""
-        for node in self.nodes:
-            yield node
+        yield from self.nodes
 
     __str__ = __repr__
 
@@ -1392,7 +1389,7 @@ class Series(object):
         return "".join([node.get_unique_key() for node in self.nodes])
 
 
-class Event(object):
+class Event:
     """Event class is used to parse the return value from the function nls_inference.
 
     :Example:

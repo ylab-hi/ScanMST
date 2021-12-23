@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Wrapper for loguru.logger.
 
 @Filename:    mylogger.py
@@ -8,7 +7,7 @@
 """
 
 
-class MyLogger(object):
+class MyLogger:
     """Wrapper for logger in order to use in multiprocessing.
 
     to show contig name in logging information before message.

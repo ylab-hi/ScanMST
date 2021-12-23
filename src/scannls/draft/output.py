@@ -55,7 +55,7 @@ def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Dict:
     if len_cutoff == 0:
         return in_dict
     else:
-        discarded_items = set([])
+        discarded_items = set()
         in_dict_len = len(in_dict)
         items = list(in_dict.keys())
         for i in range(in_dict_len):

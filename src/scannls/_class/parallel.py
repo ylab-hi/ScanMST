@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Module for parallel worker.
 
 @Filename:    parallel.py
@@ -12,7 +11,7 @@ from concurrent import futures
 from tqdm import tqdm  # type: ignore
 
 
-class ParallelWorker(object):
+class ParallelWorker:
     """ParallelWorker class is used to run function in parallel.
 
     args include the unique parameter of the function and  keyword arguments include

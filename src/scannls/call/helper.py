@@ -52,7 +52,7 @@ def vcf_header(output_prefix, bam_header):
         "bowtie2",
         "minimap2",
     }
-    avail_aligners = set([x.upper() for x in _aligners])
+    avail_aligners = {x.upper() for x in _aligners}
     if "PG" in bam_header:
         for j in bam_header["PG"]:
             if j["ID"].upper() in avail_aligners:

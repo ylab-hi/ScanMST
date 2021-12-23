@@ -49,3 +49,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: prettier
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.29.1
+    hooks:
+      - id: pyupgrade
