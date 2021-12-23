@@ -7,6 +7,7 @@
 @license:     MIT Licence
 @Time:        12/15/21 2:14 PM
 """
+import re
 from typing import Any
 from typing import List
 
@@ -43,13 +44,13 @@ class ReadsConnector(object):
     """
 
     def __init__(
-        self,
-        aln_list: List[Read],
-        blat: Blat,
-        logger: Logger,
-        align_len_threshold: int = 20,
-        threshold_identity: float = 0.99,
-        top: int = 3,
+            self,
+            aln_list: List[Read],
+            blat: Blat,
+            logger: Logger,
+            align_len_threshold: int = 20,
+            threshold_identity: float = 0.99,
+            top: int = 3,
     ) -> None:
 
         self.candidate_nodes: List = []
@@ -114,12 +115,12 @@ class ReadsConnector(object):
                 read1.mode = read2.mode
 
     def compare_ms(
-        self,
-        query_seq: str,
-        target_seq: str,
-        same_strand: bool,
-        minimum_s_length: int = 30,
-        minimum_terminal_length: int = 5,
+            self,
+            query_seq: str,
+            target_seq: str,
+            same_strand: bool,
+            minimum_s_length: int = 30,
+            minimum_terminal_length: int = 5,
     ) -> bool:
         """compare m of start read with s of read
 
@@ -144,9 +145,14 @@ class ReadsConnector(object):
         if not same_strand:
             target_seq = reverse_complement(target_seq)
 
-        if query_seq in target_seq:
-            temp_index = target_seq.index(query_seq)
-            index = min(temp_index, len(target_seq) - len(query_seq) - temp_index)
+        pattern = re.compile(f"({query_seq})")
+        temp_indices = [item.span() for item in re.finditer(pattern, target_seq)]
+        if temp_indices:
+            min_indices = [
+                min(temp_index[0], len(target_seq) - temp_index[1])
+                for temp_index in temp_indices
+            ]
+            index = min(min_indices)
             if index <= minimum_terminal_length:
                 match_flag = True
 
@@ -154,12 +160,12 @@ class ReadsConnector(object):
 
     @staticmethod
     def _determine_microhomology_len(
-        read_match_sequence,
-        read_query_length,
-        prev_sms,
-        next_sms,
-        prev_read_mode,
-        next_read_mode,
+            read_match_sequence,
+            read_query_length,
+            prev_sms,
+            next_sms,
+            prev_read_mode,
+            next_read_mode,
     ):
         """
         :param read_match_sequence: the match sequence of the read
@@ -175,36 +181,36 @@ class ReadsConnector(object):
         if prev_read_mode == 2:
             if next_read_mode == 2:
                 bp_region_seq_len = (
-                    read_query_length
-                    - _rt_len_r1
-                    - _rt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
+                        read_query_length
+                        - _rt_len_r1
+                        - _rt_len_r2
+                        - _read_match_r1
+                        - _read_match_r2
                 )
             elif next_read_mode == 1:
                 bp_region_seq_len = (
-                    read_query_length
-                    - _rt_len_r1
-                    - _lt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
+                        read_query_length
+                        - _rt_len_r1
+                        - _lt_len_r2
+                        - _read_match_r1
+                        - _read_match_r2
                 )
         else:
             if next_read_mode == 2:
                 bp_region_seq_len = (
-                    read_query_length
-                    - _lt_len_r1
-                    - _rt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
+                        read_query_length
+                        - _lt_len_r1
+                        - _rt_len_r2
+                        - _read_match_r1
+                        - _read_match_r2
                 )
             elif next_read_mode == 1:
                 bp_region_seq_len = (
-                    read_query_length
-                    - _lt_len_r1
-                    - _lt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
+                        read_query_length
+                        - _lt_len_r1
+                        - _lt_len_r2
+                        - _read_match_r1
+                        - _read_match_r2
                 )
         is_microhomology = False
         microhomology_length = 0
@@ -217,12 +223,12 @@ class ReadsConnector(object):
 
     @staticmethod
     def update_query_sequence(
-        read_match_sequence,
-        read_query_sequence,
-        prev_sms,
-        next_sms,
-        prev_read_mode,
-        next_read_mode,
+            read_match_sequence,
+            read_query_sequence,
+            prev_sms,
+            next_sms,
+            prev_read_mode,
+            next_read_mode,
     ):
         (
             is_microhomology,
@@ -243,6 +249,26 @@ class ReadsConnector(object):
         else:
             return read_match_sequence
 
+    @staticmethod
+    def _check_strand_mode_for_compare_ms(
+            start_read, read, same_strand, first_is_matched=False, second_is_matched=False
+    ) -> bool:
+
+        flag = True
+        mode1 = start_read.mode
+        mode2 = read.mode
+        if first_is_matched:
+            mode2 = 2
+        if second_is_matched:
+            mode2 = 1
+        if same_strand:
+            if mode1 == mode2:
+                flag = False
+        else:
+            if mode1 != mode2:
+                flag = False
+        return flag
+
     def test_2case(self, start_read: Read, read: Read, is_compare_for_ms: bool) -> Any:
 
         """
@@ -252,6 +278,7 @@ class ReadsConnector(object):
         :param is_compare_for_ms:
         :return:
         """
+        condition1, condition2 = False, False
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")  # type: ignore
 
@@ -271,8 +298,8 @@ class ReadsConnector(object):
 
         next_read_mode = 2
         read_match_sequence = start_read.adhocseq[
-            _lt_len_r1 : _lt_len_r1 + _read_match_r1
-        ]  # type: ignore
+                              _lt_len_r1: _lt_len_r1 + _read_match_r1
+                              ]  # type: ignore
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -282,11 +309,14 @@ class ReadsConnector(object):
             next_read_mode,
         )
 
-        match_flag = self.compare_ms(
+        match_flag1 = self.compare_ms(
             read_match_sequence, read.query_sequence[:_lt_len_r2], same_strand
         )
-
-        if match_flag:  # may same
+        if match_flag1:
+            condition1 = self._check_strand_mode_for_compare_ms(
+                start_read, read, same_strand, match_flag1
+            )
+        if match_flag1 and condition1:  # may same
             read.mode = 2
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
@@ -306,8 +336,8 @@ class ReadsConnector(object):
         # second case
         next_read_mode = 1
         read_match_sequence = start_read.adhocseq[
-            _lt_len_r1 : _lt_len_r1 + _read_match_r1
-        ]  # type: ignore
+                              _lt_len_r1: _lt_len_r1 + _read_match_r1
+                              ]  # type: ignore
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -317,11 +347,15 @@ class ReadsConnector(object):
             next_read_mode,
         )
 
-        match_flag = self.compare_ms(
+        match_flag2 = self.compare_ms(
             read_match_sequence, read.query_sequence[-_rt_len_r2:], same_strand
         )
 
-        if match_flag:
+        if match_flag2:
+            condition2 = self._check_strand_mode_for_compare_ms(
+                start_read, read, same_strand, False, match_flag2
+            )
+        if match_flag2 and condition2:  # may same
 
             read.mode = 1
 
@@ -349,7 +383,7 @@ class ReadsConnector(object):
 
     @staticmethod
     def _double_check_for_start_and_end_read_determine_new_read_mode(
-        read: Read, new_read: Read
+            read: Read, new_read: Read
     ) -> None:
         read.mode = 1 if read.mode == 2 else 2
         if new_read.strand == read.strand:
@@ -358,7 +392,7 @@ class ReadsConnector(object):
             new_read.mode = 1 if read.mode == 1 else 2
 
     def _double_check_creat_new_read_and_calculate_sms(
-        self, hsp: Any, query_seq: str, read: Read
+            self, hsp: Any, query_seq: str, read: Read
     ) -> Read:
 
         mapq = 60
@@ -371,18 +405,18 @@ class ReadsConnector(object):
 
         if read.mode == 1:
             cigar_str = (
-                f"{lt_s_len}S"
-                + cigar_str
-                + f"{rt_s_len}S"
-                + f"{read.read_match_size + read.rt_soft_len}S"
+                    f"{lt_s_len}S"
+                    + cigar_str
+                    + f"{rt_s_len}S"
+                    + f"{read.read_match_size + read.rt_soft_len}S"
             )
             cigar_str = cigar_str[2:] if cigar_str.startswith("0S") else cigar_str
         else:
             cigar_str = (
-                f"{read.lt_soft_len + read.read_match_size}S"
-                + f"{lt_s_len}S"
-                + cigar_str
-                + f"{rt_s_len}S"
+                    f"{read.lt_soft_len + read.read_match_size}S"
+                    + f"{lt_s_len}S"
+                    + cigar_str
+                    + f"{rt_s_len}S"
             )
             cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
@@ -399,7 +433,7 @@ class ReadsConnector(object):
         return new_read
 
     def __double_check_blat_query(
-        self, query_sequence, align_len_threshold, threshold_identity, top
+            self, query_sequence, align_len_threshold, threshold_identity, top
     ):
         flag = False
 
@@ -418,15 +452,15 @@ class ReadsConnector(object):
         return True, hit, keep_hsp
 
     def _double_check_for_start_and_end_read(
-        self,
-        read: Read,
-        read_type: str,
+            self,
+            read: Read,
+            read_type: str,
     ) -> None:
 
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
             if read.mode == 1
-            else read.query_sequence[-read.rt_soft_len :]
+            else read.query_sequence[-read.rt_soft_len:]
         )
 
         flag, hit, keep_hsp = self.__double_check_blat_query(
@@ -525,11 +559,11 @@ class ReadsConnector(object):
 
 
 def detect_read_read_connections_from_cigar(
-    read: AlignedSegment,
-    mapq_cutoff: int,
-    max_allowed_nm: int,
-    blat: Blat,
-    logger: Logger,
+        read: AlignedSegment,
+        mapq_cutoff: int,
+        max_allowed_nm: int,
+        blat: Blat,
+        logger: Logger,
 ) -> Any:
     """Detecting read-read connections with chimeric alignments CIGAR string
 
@@ -577,7 +611,7 @@ def detect_read_read_connections_from_cigar(
         return chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
 
     def obtain_sa_query_seq_from_ra(
-        query_seq_ra: str, strand_ra: str, strand_sa: str
+            query_seq_ra: str, strand_ra: str, strand_sa: str
     ) -> str:
         """a helper function to define query_seq for the supplementary alignment
         :param query_seq_ra: query sequence of representative alignment
