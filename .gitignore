@@ -15,10 +15,9 @@ __pycache__/
 .run/
 # jupyter notebook
 *.ipynb
-# use_blat data dir
-blat/
 # bam
 *.bam
 *.sam
 # debug reprot
 /debuglog/
+.DS*
