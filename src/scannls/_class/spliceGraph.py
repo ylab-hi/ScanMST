@@ -1,6 +1,7 @@
 # !/usr/bin/env python
 # -*- coding:utf-8 -*-
-"""
+"""Splice Graph.
+
 @Filename:    spliceGraph.py
 @license:     MIT Licence
 @Time:        12/15/21 10:42 AM
@@ -27,19 +28,26 @@ NodeType = Union[Node, Insertion]
 
 
 class Ruler:
-    """calculate the similarity distance between two series,
+    """Calculate the similarity distance between two series.
+
     using longer one as the reference
     """
 
     def __init__(self, logger: Logger) -> None:
+        """Initialize Ruler.
+
+        :param logger: logger
+        """
         self.logger = logger
 
     def __repr__(self):
+        """Represent Ruler."""
         return f"{self.__class__.__name__}()"
 
     @staticmethod
     def obtain_breakpoint_pairs(series: Series) -> List:
-        """generate breakpoint pairs from a series
+        """Generate breakpoint pairs from a series.
+
         :param series: a series
         :type series: Series object
         :return: a list of breakpoint pairs
@@ -57,7 +65,7 @@ class Ruler:
     def breakpoints_distance(
         sv_type1: str, sv_type2: str, bp1: str, bp2: str
     ) -> Union[float, int]:
-        """calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2
+        """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
 
         :param sv_type1: sv_type of breakpoint1
         :param sv_type2: sv_type of breakpoint2
@@ -79,7 +87,7 @@ class Ruler:
     def first_node_last_node_distance(
         first_node: NodeType, last_node: NodeType
     ) -> float:
-        """calculate distance between first node of Series A and last node of Series B
+        """Calculate distance between first node of Series A and last node of Series B.
 
         :param first_node: the first node of Series A
         :param last_node: the last node of Series B
@@ -147,13 +155,13 @@ class Ruler:
 
     @staticmethod
     def breakpoint_pairs_distance(bp_pair1: List, bp_pair2: List) -> float:
-        """calculate breakpoint distance
+        """Calculate breakpoint distance.
 
         :param bp_pair1: breakpoint pair list 1: [(sv_type, bp1, bp2), ...]
         :param bp_pair2: breakpoint pair list 2: [(sv_type, bp1, bp2), ...]
         :return: calculated breakpoint distance
 
-        ..note::
+        .. note::
             len(bp_pair1) == len(bp_pair2) should be always true
             The output distance will be [0, 1]
         """
@@ -181,7 +189,14 @@ class Ruler:
         left_subject_node: NodeType,
         right_subject_node: NodeType,
     ):
+        """Decide the flag.
 
+        :param left_query_node: left query node
+        :param right_query_node: right query node
+        :param left_subject_node: left subject node
+        :param right_subject_node: right subject node
+        :return: flag
+        """
         flag = False
 
         if not left_subject_node and not right_subject_node:
@@ -214,7 +229,18 @@ class Ruler:
         return flag
 
     def __call__(self, series_a: Series, series_b: Series) -> float:
+        """Call Ruler to calculate the distance between two series.
 
+        :param series_a: series a
+        :param series_b: series b
+        :return: distance
+
+        :Example:
+
+        >>> ruler = Ruler()
+        >>> ruler(series_a, series_b)
+        0.5
+        """
         if len(series_a) < len(series_b):
             series_a, series_b = series_b, series_a
         series_a_bp_pair = Ruler.obtain_breakpoint_pairs(series_a)
@@ -237,7 +263,7 @@ class Ruler:
         query4:              [x]-[x]-[x]
         """
         sliding_window_size = len(series_b_bp_pair)
-        for i in range(sliding_window_size - 1):
+        for _ in range(sliding_window_size - 1):
             _chrom = "chrN:0"
             series_a_bp_pair.insert(0, ("NA", _chrom, _chrom))
             series_a_bp_pair.append(("NA", _chrom, _chrom))
@@ -281,8 +307,9 @@ class Ruler:
 
 
 class CliqueFinder:
-    """Find cliques in a graph based on series level, which will help to construct
-    splice graph base on nodes level in the future.
+    """Find cliques in a graph based on series level.
+
+     which will help to construct splice graph base on nodes level in the future.
 
     :param intact_series_list: list of intact series for a bam file of one sample
     :param logger: logger
@@ -299,6 +326,7 @@ class CliqueFinder:
     """
 
     def __init__(self, intact_series_list: Any, logger: Logger, threshold: float = 0.2):
+        """Initialize CliqueFinder."""
         self.ruler = Ruler(logger)
         self.intact_series_list = intact_series_list
         self.distance_dict: Dict[Any, float] = dict()
@@ -306,7 +334,8 @@ class CliqueFinder:
         self.threshold = threshold
 
     def _calculate_distance(self, x: Series, y: Series) -> Tuple[bool, float]:
-        """Calculate distance between two series. If distance has been calculated before,
+        """Calculate distance between two series. If distance has been calculated before.
+
         return True and distance value. Otherwise, calculate distance and return False and
         distance value.
 
@@ -326,12 +355,14 @@ class CliqueFinder:
         return False, distance
 
     def _add_single_clique(self):
+        """Add single clique to graph."""
         for series in self.intact_series_list:
             if not series.is_in_graph:
                 self.graph.add_node(series)
 
     def _add_edge_between_two_series(self, x: Series, y: Series) -> None:
-        """add edge between two series according to the distance between them.
+        """Add edge between two series according to the distance between them.
+
         if the distance is less than threshold, add edge. Otherwise, do nothing.
 
         :param x: series x
@@ -350,7 +381,8 @@ class CliqueFinder:
                 x.is_in_graph = True
 
     def _creat_graph_for_series(self) -> None:
-        """create graph for all series in intact_series_list.
+        """Create graph for all series in intact_series_list.
+
         add edge between two series in terms of the distance value
 
         :return: None
@@ -363,7 +395,7 @@ class CliqueFinder:
                 self.graph.add_node(x)
 
     def find_clique(self) -> Any:
-        """find clique in graph with help of networkx.algorithms.clique.find_clique
+        """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
 
         :return:  every clique in graph as a iterator (List[Series])
 
@@ -380,47 +412,28 @@ class CliqueFinder:
 
         return list(find_cliques(self.graph))
 
-    def debug(self):
-        names = {
-            7705301: "B",
-            7705151: "A",
-            93566621: "D",
-            93566821: "E",
-            93566721: "C",
-        }
-
-        cliques = self.find_clique()
-
-        def get_name(series, names=names):
-            return names[series[0].ref_start]
-
-        for x in self.intact_series_list:
-            for y in self.intact_series_list:
-                if x != y:
-                    print(get_name(x), get_name(y), self.ruler(x, y))
-
-        for i in cliques:
-            print("\n")
-            for j in i:
-                print(f"{get_name(j, names)}")
-
 
 class SpliceGraph(object):
-    """
-    the SpliceGraph class is used to trace the path of splice graph
-
-    :Example:
-
-    """
+    """SpliceGraph class is used to trace the path of splice graph."""
 
     dict_factory = dict
 
     def __init__(self, logger: Logger):
+        """Initialize SpliceGraph."""
         self.logger = logger
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
 
     def __call__(self, series_list: Iterable[Series]) -> Any:
+        """Find specific path based on splice graph.
 
+        :param series_list: series list
+
+        :Example:
+
+        >>> from loguru import logger
+        >>> splice_graph = SpliceGraph(logger)
+        >>> splice_graph(series_list)
+        """
         self.series_list = copy.deepcopy(series_list)
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
         self.construct()
@@ -428,6 +441,7 @@ class SpliceGraph(object):
             yield Series.create_series_from_node_list(node_list, self.logger)
 
     def get_start_nodes(self):
+        """Get start nodes based if node has predecessors."""
         return [
             node
             for nodes in self.nodes.values()
@@ -436,12 +450,13 @@ class SpliceGraph(object):
         ]
 
     def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
+        """Get nodes in graph with similar key."""
         return self.nodes.get(similar_key, [])
 
     def add_node_with_similar_key(self, node: NodeType) -> None:
-        """add node to the splice graph
-        :param node:
-        :return:
+        """Add node to the splice graph.
+
+        :param node: node to be added
         """
         if similar_nodes := self.get_nodes_with_similar_key(node.similar_key):
             similar_nodes.append(node)
@@ -449,8 +464,9 @@ class SpliceGraph(object):
             self.nodes[node.similar_key] = [node]
 
     def __contains__(self, node: NodeType) -> bool:
-        """check if node is in graph
-        :param node:
+        """Check if node is in graph.
+
+        :param node: node to be checked
         :return: True if node is in graph, otherwise False
 
         .. note::
@@ -465,6 +481,7 @@ class SpliceGraph(object):
         return False
 
     def __iter__(self):
+        """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             for node in nodes:
                 yield node
@@ -473,7 +490,7 @@ class SpliceGraph(object):
     def _check_insertion_conditions_for_compare(
         node1: NodeType, node2: NodeType
     ) -> bool:
-
+        """Check if node1 and node2 can be merged based on insertion info."""
         flag = True
         insertion_info1 = node1.insertion_info
         insertion_info2 = node2.insertion_info
@@ -504,7 +521,7 @@ class SpliceGraph(object):
 
     @staticmethod
     def _compare_is_merged_helper(node1: NodeType, node2: NodeType) -> Any:
-
+        """Check if node1 and node2 can be merged."""
         condition = (
             node1.sv_type == node2.sv_type
             and SpliceGraph._check_insertion_conditions_for_compare(node1, node2)
@@ -561,11 +578,11 @@ class SpliceGraph(object):
 
     @staticmethod
     def _compare_is_merged(node1: NodeType, node2: NodeType) -> bool:
-        """node1 is similar as node2 is precommit of the function
+        """Node1 is similar as node2 is precommit of the function.
 
          compare if node1 can merge node2
-        :param node1:
-        :param node2:
+        :param node1: node1
+        :param node2: node2
         :return:
         """
         flag1 = SpliceGraph._compare_is_merged_helper(node1, node2)
@@ -578,7 +595,7 @@ class SpliceGraph(object):
 
     @staticmethod
     def update_exon_coord_sr(updated_node: NodeType, current_node: NodeType) -> None:
-        """
+        """Update exon coordinates of the updated node based on current node.
 
         :param updated_node:  node has been inserted into graph
         :param current_node: node has not been inserted into graph
@@ -598,7 +615,7 @@ class SpliceGraph(object):
         similar_key: str,
         merged_nodes_pool: List[NodeType],
     ) -> None:
-
+        """Check if current node is merged in similar nodes in graph."""
         # get similar nodes in the graph
         similar_nodes_in_graph = self.get_nodes_with_similar_key(similar_key)
 
@@ -628,7 +645,7 @@ class SpliceGraph(object):
         similar_key: str,
         merged_nodes_pool: List[NodeType],
     ) -> None:
-
+        """Check if current node is added in graph and update predecessor and successor."""
         if not current_node.is_merged:  # false
 
             current_node.is_in_graph = True  # check if node is in graph
@@ -653,6 +670,7 @@ class SpliceGraph(object):
                     current_node.add_successor(merge_node.next_node_in_series)
 
     def construct(self):
+        """Main function to construct graph."""
         # iterate all series
         merged_nodes_pool = []
         self.logger.trace(f"{self.series_list=}")
@@ -664,8 +682,8 @@ class SpliceGraph(object):
                 self.logger.trace(f"{merged_nodes_pool=}")
                 # add information about  next and previous node in series to current node
                 current_node.update_next_and_previous_node_in_series(index, series)
-                # initialize and get unique key of current node and set node.unique_key if not set when
-                # you reach node.unique_key, will return None
+                # initialize and get unique key of current node and set node.unique_key
+                # if not set when you reach node.unique_key, will return None
                 _ = current_node.get_unique_key()
 
                 # get similar key(chrom and intron) of current node
@@ -679,7 +697,11 @@ class SpliceGraph(object):
                 )
 
     def _trace(self, start_node: NodeType, path: List, group_paths: List) -> None:
+        """Helper function to trace through graph and find all paths.
 
+        .. seealso::
+            :func:`SpliceGraph.trace`
+        """
         if not start_node:
             group_paths.append(path)
 
@@ -692,6 +714,7 @@ class SpliceGraph(object):
                 self._trace(successors, path + [start_node], group_paths)
 
     def trace(self) -> Any:
+        """Trace through graph and find all paths."""
         result_series_list = []
         for start_node in self.get_start_nodes():
             group_paths: Any = []

@@ -1,6 +1,6 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ===========================================================
+"""This module contains the main function of the draft scannls."""
 import copy
 import inspect
 import re
@@ -31,6 +31,8 @@ from .nls_inference import infer_nls_from_connected_reads  # type: ignore
 
 
 class BamScanner:
+    """BcamScanner scan the bam file and output the result to a file."""
+
     def __init__(
         self,
         input_bam,
@@ -46,7 +48,7 @@ class BamScanner:
         min_soft_seg_len,
         blat_ident_pct_cutoff,
     ):
-
+        """Initialize the class."""
         self.in_bam_path = input_bam
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
 
@@ -69,26 +71,22 @@ class BamScanner:
         self.min_soft_seg_len = min_soft_seg_len
         self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
 
-        self.pat_left_S = re.compile(r"^(\d+)S")
-        self.pat_right_S = re.compile(r"(\d+)S$")
+        self.pat_left_s = re.compile(r"^(\d+)S")
+        self.pat_right_s = re.compile(r"(\d+)S$")
         self.header = self._get_bam_header()
 
         self.representative_alignments_new_cigar = {}
 
     def _check_bam_sort(self, header):
-        """
-        check if the bam file is sorted
-        """
+        """Check if the bam file is sorted."""
         try:
             return True if header["HD"]["SO"] == "coordinate" else False
         except KeyError:
             self.logger.error(f"Bam file {self.in_bam} is not sorted")
-            raise SystemExit
+            raise SystemExit from KeyError
 
     def _count_chrom_info(self, read):
-        """
-        count the chrom and the chrom start and the chrom end
-        """
+        """Count the chrom and the chrom start and the chrom end."""
         if read.reference_name in self.bam_chrom_info:
             if read.reference_end > self.bam_chrom_info[read.reference_name][1]:
                 self.bam_chrom_info[read.reference_name][1] = read.reference_end
@@ -99,12 +97,13 @@ class BamScanner:
             ]
 
     def _get_bam_header(self):
-
+        """Get bam header."""
         header = self.in_bam.header.as_dict()
         self._check_bam_sort(header)
         return header
 
     def iter_bam(self):
+        """Iterate the bam file."""
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
@@ -114,46 +113,50 @@ class BamScanner:
                 self._count_chrom_info(read)
                 if read.is_supplementary:
                     sup_aln_cigar = read.cigarstring
-                    left_mat = self.pat_left_S.search(sup_aln_cigar)
-                    right_mat = self.pat_right_S.search(sup_aln_cigar)
+                    left_mat = self.pat_left_s.search(sup_aln_cigar)
+                    right_mat = self.pat_right_s.search(sup_aln_cigar)
                     if left_mat:
-                        l_S_len = left_mat.group(1)
+                        l_s_len = left_mat.group(1)
                     else:
-                        l_S_len = ""
+                        l_s_len = ""
                     if right_mat:
-                        r_S_len = right_mat.group(1)
+                        r_s_len = right_mat.group(1)
                     else:
-                        r_S_len = ""
+                        r_s_len = ""
                     self.representative_alignments_new_cigar[
-                        "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
+                        "{}\t{}\t{}".format(read.qname, l_s_len, r_s_len)
                     ] = sup_aln_cigar
         except ValueError as e:
             self.logger.error(
                 f"BAM index file is not found in supplementary alignments! {e}"
             )
-            raise SystemExit
+            raise SystemExit from ValueError
         else:
             return self.representative_alignments_new_cigar
 
 
 def _get_genome_fasta(ref_genome, logger):
-    """
-    get the genome fasta file
-    """
+    """Get the genome fasta file."""
     try:
         return Fasta(str(ref_genome), sequence_always_upper=True)
     except FastaNotFoundError:
         logger.error(f"Cannot find the reference genome {ref_genome}")
-        raise SystemExit
+        raise SystemExit from FastaNotFoundError
 
 
 def _get_cvg_gene_iv(gtf, splice_bin, logger):
+    """Get the gene coverage interval.
+
+    :param gtf: gtf file
+    :param splice_bin: splice_bin file
+    :param logger: logger
+    """
     try:
         cvg, gene_iv = extract_splice_sites(str(gtf), splice_bin)
         logger.success(f"{gtf} loaded successfully")
     except IOError as e:
         logger.error(f"read GTF file {gtf} error!", e)
-        raise SystemExit
+        raise SystemExit from IOError
     else:
         return cvg, gene_iv
 
@@ -171,7 +174,8 @@ def detect_sv_from_cigar(
     blat,
     logger,
 ) -> Any:
-    """
+    """Detect SV from cigar string.
+
     :param logger: logger for logging
     :param blat: `class.Blat`
     :param read: A read from pysam.AlignedSegment
@@ -179,9 +183,12 @@ def detect_sv_from_cigar(
     :param max_allowed_nm: NM cutoff
     :param splice_bin: a small bin for splice site searching
     :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
-    :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
-    :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
-    :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
+    :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene
+        annotation (GTF file)
+    :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference
+        gene annotation (GTF file)
+    :param motif_required: considering canonical splice sites only OR considering both canonical
+        and noncanonical splice sites
     :type read: pysam.AlignedSegment
     :type mapq_cutoff: int
     :type max_allowed_nm: int
@@ -290,6 +297,7 @@ def _scan_bam_helper(
     splice_bin,
     motif_required,
 ):
+    """Scan BAM file and write output to file."""
     from loguru import logger
 
     if running_mode == "parallel":
@@ -315,8 +323,8 @@ def _scan_bam_helper(
     candidate_ins_dict = defaultdict(int)
     candidate_ao_dict = defaultdict(int)
 
-    pat_left_S = re.compile(r"^(\d+)S")
-    pat_right_S = re.compile(r"(\d+)S$")
+    pat_left_s = re.compile(r"^(\d+)S")
+    pat_right_s = re.compile(r"(\d+)S$")
 
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
@@ -332,12 +340,14 @@ def _scan_bam_helper(
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
-                    f"Pre-checking: {read.query_name= } has SA; supplementary read: {read.is_supplementary}"
+                    f"Pre-checking: {read.query_name= } has SA; supplementary read: "
+                    f"{read.is_supplementary}"
                 )
                 updated_chimeric_alns = []
                 chimeric_alns = read.get_tag("SA")[:-1].split(";")
                 chimeric_alns_num = len(chimeric_alns) + 1
-                # one representative alignment could have multiple corresponding supplementary alignments
+                # one representative alignment could have multiple corresponding
+                # supplementary alignments
                 for _aln in chimeric_alns:
                     (
                         __chr_sa,
@@ -347,13 +357,13 @@ def _scan_bam_helper(
                         __mapq_sa,
                         __nm_sa,
                     ) = _aln.split(",")
-                    left_mat = pat_left_S.search(__cigar_sa)
-                    right_mat = pat_right_S.search(__cigar_sa)
+                    left_mat = pat_left_s.search(__cigar_sa)
+                    right_mat = pat_right_s.search(__cigar_sa)
 
-                    l_S_len = left_mat.group(1) if left_mat else ""
-                    r_S_len = right_mat.group(1) if right_mat else ""
+                    l_s_len = left_mat.group(1) if left_mat else ""
+                    r_s_len = right_mat.group(1) if right_mat else ""
 
-                    tgt_key = "{}\t{}\t{}".format(read.qname, l_S_len, r_S_len)
+                    tgt_key = "{}\t{}\t{}".format(read.qname, l_s_len, r_s_len)
                     if tgt_key in representative_alignments_new_cigar:
                         __updated_cigar = representative_alignments_new_cigar[tgt_key]
                         # discard supplementary alignments with too many mismatches or lower MAPQ
@@ -380,7 +390,8 @@ def _scan_bam_helper(
                 # remove SA tags of representative alignments with too much mismatches
                 # update SA tag of representative alignments (END)
 
-            # Detect novel chimeric alignments for reads with long softclipped segment but without SA tags using BLAT
+            # Detect novel chimeric alignments for reads with long softclipped segment
+            # but without SA tags using BLAT
             elif not read.has_tag("SA"):
                 chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
@@ -409,7 +420,8 @@ def _scan_bam_helper(
                     )
                     if chimeric_aln_str:
                         logger.trace(
-                            f"Pre-checking: {read.query_name= } does not has SA, after BLAT it has one SA tag"
+                            f"Pre-checking: {read.query_name= } "
+                            f"does not has SA, after BLAT it has one SA tag"
                         )
                         read.set_tag("SA", chimeric_aln_str)
                         after_set_sa_chimeric_alns_num = 1
@@ -459,15 +471,24 @@ def _scan_bam_helper(
                     if _type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
                         _chrm1, _pos1 = _bp1.split(":")
                         _chrm2, _pos2 = _bp2.split(":")
-                        # SV tag uses SA tag corrdinate system (start with 1)
+                        # SV tag uses SA tag coordinate system (start with 1)
                         # So, position should always add 1
                         sv_tag_list.append(
-                            f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                            f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},"
+                            f"{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},"
+                            f"{_gene1}|{_gene2};"
                         )
                         nls_event_list.append(event)
 
-                        event_key = f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:{int(_pos2) + 1}\t{_strand1}{_strand2}"
-                        reversed_event_key = f"{_type}\t{_canonical}\t{_chrm2}:{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t{_strand2}{_strand1}"
+                        event_key = (
+                            f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:"
+                            f"{int(_pos2) + 1}\t{_strand1}{_strand2}"
+                        )
+                        reversed_event_key = (
+                            f"{_type}\t{_canonical}\t{_chrm2}:"
+                            f"{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t"
+                            f"{_strand2}{_strand1}"
+                        )
                         if event_key in candidate_ao_dict:
                             candidate_ao_dict[event_key] += 1
                         elif reversed_event_key in candidate_ao_dict:
@@ -476,11 +497,15 @@ def _scan_bam_helper(
                     elif _type in {"INS"}:
                         _end_pos = int(_bp1) + int(_bp2)
                         ot_tag_list.append(
-                            f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
+                            f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},"
+                            f"{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
                         )
 
                         candidate_ins_dict[
-                            f"{_type}\t{_anno}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:{_end_pos}\t{_strand1}{_strand2}"
+                            (
+                                f"{_type}\t{_anno}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:"
+                                f"{_end_pos}\t{_strand1}{_strand2}"
+                            )
                         ] += 1
 
                 chimeric_alns_num += num_added_reads
@@ -509,7 +534,7 @@ def _scan_bam_helper(
 
     output_bam.close()
 
-    subprocess.check_call("samtools index {}".format(current_output), shell=True)
+    subprocess.check_call(f"samtools index {current_output}".split())
     logger.debug(f"{nls_src_forms_list=}")
     logger.complete()
     return current_output, nls_src_forms_list
@@ -534,6 +559,7 @@ def scanbam_run(
     min_soft_seg_len,
     blat_ident_pct_cutoff,
 ):
+    """Main function to run scanbam."""
     bam_scanner = BamScanner(
         input_bam=Path(in_bam_path),
         mapq_cutoff=mapq_cutoff,
@@ -605,7 +631,7 @@ def scanbam_run(
             intact_series_list.extend(contig_series_list)
 
     merge_cmd = f"samtools merge -f {output} {temp_dirname}/*.bam"
-    subprocess.check_call(merge_cmd, shell=True)
+    subprocess.check_call(merge_cmd.split())
 
     write_series_to_file(
         f"{output.parent.joinpath(output.stem)}_series.txt", intact_series_list
