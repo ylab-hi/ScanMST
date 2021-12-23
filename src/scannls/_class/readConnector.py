@@ -7,6 +7,7 @@
 @license:     MIT Licence
 @Time:        12/15/21 2:14 PM
 """
+import re
 from typing import Any
 from typing import List
 
@@ -144,9 +145,14 @@ class ReadsConnector(object):
         if not same_strand:
             target_seq = reverse_complement(target_seq)
 
-        if query_seq in target_seq:
-            temp_index = target_seq.index(query_seq)
-            index = min(temp_index, len(target_seq) - len(query_seq) - temp_index)
+        pattern = re.compile(f"({query_seq})")
+        temp_indices = [item.span() for item in re.finditer(pattern, target_seq)]
+        if temp_indices:
+            min_indices = [
+                min(temp_index[0], len(target_seq) - temp_index[1])
+                for temp_index in temp_indices
+            ]
+            index = min(min_indices)
             if index <= minimum_terminal_length:
                 match_flag = True
 
@@ -243,6 +249,27 @@ class ReadsConnector(object):
         else:
             return read_match_sequence
 
+    @staticmethod
+    def _check_strand_mode_for_compare_ms(
+        start_read, read, same_strand, first_is_matched=False, second_is_matched=False
+    ) -> bool:
+
+        flag = True
+        mode1 = start_read.mode
+        mode2 = read.mode
+        if first_is_matched:
+            mode2 = 2
+        if second_is_matched:
+            mode2 = 1
+
+        if same_strand:
+            if mode1 == mode2:
+                flag = False
+        else:
+            if mode1 != mode2:
+                flag = False
+        return flag
+
     def test_2case(self, start_read: Read, read: Read, is_compare_for_ms: bool) -> Any:
 
         """
@@ -252,6 +279,7 @@ class ReadsConnector(object):
         :param is_compare_for_ms:
         :return:
         """
+        condition1, condition2 = False, False
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")  # type: ignore
 
@@ -282,11 +310,14 @@ class ReadsConnector(object):
             next_read_mode,
         )
 
-        match_flag = self.compare_ms(
+        match_flag1 = self.compare_ms(
             read_match_sequence, read.query_sequence[:_lt_len_r2], same_strand
         )
-
-        if match_flag:  # may same
+        if match_flag1:
+            condition1 = self._check_strand_mode_for_compare_ms(
+                start_read, read, same_strand, match_flag1
+            )
+        if match_flag1 and condition1:  # may same
             read.mode = 2
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
@@ -317,11 +348,15 @@ class ReadsConnector(object):
             next_read_mode,
         )
 
-        match_flag = self.compare_ms(
+        match_flag2 = self.compare_ms(
             read_match_sequence, read.query_sequence[-_rt_len_r2:], same_strand
         )
 
-        if match_flag:
+        if match_flag2:
+            condition2 = self._check_strand_mode_for_compare_ms(
+                start_read, read, same_strand, False, match_flag2
+            )
+        if match_flag2 and condition2:  # may same
 
             read.mode = 1
 
