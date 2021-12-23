@@ -129,7 +129,7 @@ class Read(object):
         self.cigartuples_without_soft = cigartuples_without_soft
         self.query_length = query_length
         self.cigartuples = cigartuples
-        self.ref_end = self.ref_start + self.query_length
+        self.ref_end = self.ref_start + self.reference_match_size
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
         self.adhocsms: Any = None
@@ -490,7 +490,7 @@ class Insertion(Read):
         self.genes = None
         self.annotation_code = None
         self.splicing_code = None
-        self.sr = None
+        self.sr = 1
         self.insertion_info = None
 
         self.exons, self.introns = self.get_exons_and_introns()
@@ -506,7 +506,7 @@ class Insertion(Read):
 
     def __repr__(self):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+        return fr"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}, SR={self.sr})"
 
     def __hash__(self) -> int:
         return (
@@ -764,7 +764,7 @@ class Node(object):
     # for debug purpose
     def __repr__(self) -> str:
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
-        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}) "
+        return fr"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {exons_repr}, {self.sv_type}, {self.prev_breakpoint}, {self.next_breakpoint}, SR={self.sr}) "
 
     __str__ = __repr__
 
