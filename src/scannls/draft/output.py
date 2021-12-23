@@ -54,32 +54,32 @@ def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Dict:
     """Aggregate candidates."""
     if len_cutoff == 0:
         return in_dict
-    else:
-        discarded_items = set()
-        in_dict_len = len(in_dict)
-        items = list(in_dict.keys())
-        for i in range(in_dict_len):
-            for r2 in items[i + 1 :]:
-                r1 = items[i]
-                if similar_hit(r1, r2, len_cutoff):
-                    can_1 = r1.split("\t")[1]
-                    can_2 = r2.split("\t")[1]
-                    ao_1 = in_dict[r1]
-                    ao_2 = in_dict[r2]
-                    new_ao = ao_1 + ao_2
-                    if ao_1 > ao_2:
+
+    discarded_items = set()
+    in_dict_len = len(in_dict)
+    items = list(in_dict.keys())
+    for i in range(in_dict_len):
+        for r2 in items[i + 1 :]:
+            r1 = items[i]
+            if similar_hit(r1, r2, len_cutoff):
+                can_1 = r1.split("\t")[1]
+                can_2 = r2.split("\t")[1]
+                ao_1 = in_dict[r1]
+                ao_2 = in_dict[r2]
+                new_ao = ao_1 + ao_2
+                if ao_1 > ao_2:
+                    in_dict[r1] = new_ao
+                    discarded_items.add(r2)
+                elif ao_1 < ao_2:
+                    in_dict[r2] = new_ao
+                    discarded_items.add(r1)
+                elif ao_1 == ao_2:
+                    if can_1 == 1:
                         in_dict[r1] = new_ao
                         discarded_items.add(r2)
-                    elif ao_1 < ao_2:
+                    elif can_2 == 1:
                         in_dict[r2] = new_ao
                         discarded_items.add(r1)
-                    elif ao_1 == ao_2:
-                        if can_1 == 1:
-                            in_dict[r1] = new_ao
-                            discarded_items.add(r2)
-                        elif can_2 == 1:
-                            in_dict[r2] = new_ao
-                            discarded_items.add(r1)
         out_dict = {}
         for m in in_dict:
             if m not in discarded_items:
