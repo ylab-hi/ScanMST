@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Main function for scannls."""
 import argparse
 import sys
 import textwrap
 import time
 
 from loguru import logger
-from tqdm import tqdm  # type: ignore
 
 from . import __version__  # type: ignore
-from ._class.basicClass import LengthAction  # type: ignore
 from ._class.blat import Blat
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
@@ -18,10 +17,13 @@ from .utils import external_tool_checking  # type: ignore
 
 
 def parse_args():
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic long-reads data",
+        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic"
+        " long-reads data",
         epilog=textwrap.dedent(
-            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute, University of Minnesota, 2021"""
+            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute,
+            University of Minnesota, 2021"""
         ),
     )
     parser.add_argument(
@@ -155,6 +157,7 @@ def parse_args():
 
 
 def main():
+    """Main function."""
     if sys.version_info < (3, 8):
         sys.exit(
             "Sorry, this code need Python 3.8 or higher. Please update. Aborting..."

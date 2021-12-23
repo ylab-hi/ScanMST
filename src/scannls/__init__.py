@@ -1,3 +1,6 @@
+# !/usr/bin/env python
+# -*- coding:utf-8 -*-
+"""Init file for scannls package."""
 __version__ = "0.0.1"
 
 try:
@@ -5,6 +8,6 @@ try:
     import numpy as np
     import HTSeq  # type: ignore
 except ModuleNotFoundError as e:
-    raise SystemExit(e.msg)
+    raise SystemExit from e
 
 from . import _class

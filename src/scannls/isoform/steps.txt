@@ -1,3 +1,0 @@
-0 updated pickle file
-1 prune isoforms using SR cutoff
-2 output (GTF[including novel insertion sequence] and FASTA)
