@@ -216,7 +216,7 @@ class Blat:
         )
         logger.trace(f"{cmd=}")
         try:
-            subprocess.check_call(cmd.split(), stderr=subprocess.STDOUT)
+            subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as err:
             raise SystemExit(f"{err} {err.output}") from err
 

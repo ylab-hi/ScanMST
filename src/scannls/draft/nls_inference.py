@@ -72,9 +72,8 @@ class Aligner(object):
                 f2.write(f">seq2\n{self.seqb}\n")
             tempfile_name = os.path.join(tmpdirname, "tempfile.txt")
             subprocess.check_call(
-                self.cmd(
-                    seqa=tempfile_seq1, seqb=tempfile_seq2, out=tempfile_name
-                ).split()
+                self.cmd(seqa=tempfile_seq1, seqb=tempfile_seq2, out=tempfile_name),
+                shell=True,
             )
             align_result = self.parse_gapmis_result(tempfile_name)
         return align_result
