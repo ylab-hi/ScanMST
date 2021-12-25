@@ -261,7 +261,6 @@ class ReadsConnector(object):
             mode2 = 2
         if second_is_matched:
             mode2 = 1
-
         if same_strand:
             if mode1 == mode2:
                 flag = False
