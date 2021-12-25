@@ -140,16 +140,18 @@ def short_tdup_or_not(
     sa_start = read_sa.ref_start
     sa_end = read_sa.ref_end
 
-    if bp_region_seq_len > 0:
+    if bp_region_seq_len >= 0:
         soft_extension_size = bp_region_seq_len
+        matched_reduced_size = 0
     else:
         soft_extension_size = 0
+        matched_reduced_size = -bp_region_seq_len
 
     ref_seq = (
         read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
-        + fastafile[chrm][sa_start : sa_start + event_size].seq
+        + fastafile[chrm][sa_start - matched_reduced_size : sa_start + event_size].seq
         if ra_mode == 1
-        else fastafile[chrm][sa_end - event_size : sa_end].seq
+        else fastafile[chrm][sa_end - event_size : sa_end - matched_reduced_size].seq
         + read_sa.query_sequence[-read_sa.rt_soft_len :][:soft_extension_size]
     )
 
