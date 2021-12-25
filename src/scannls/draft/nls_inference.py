@@ -115,7 +115,7 @@ class Aligner(object):
 
 
 def short_tdup_or_not(
-    chrm, ra_mode, sa_start, sa_end, ins_seq_in_read, fastafile, logger
+    chrm, ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, fastafile, logger
 ) -> bool:
     """judge the ins_seq_in_read is a TDUP (TDUP size < reads length)
     OR novel sequence insertion using reference sequence inferred
@@ -123,26 +123,36 @@ def short_tdup_or_not(
 
     :param chrm: the chromosome
     :param ra_mode: representative alignment mode
-    :param sa_start: supplementary alignment reference start position
-    :param sa_end: supplementary alignment reference end positions
+    :param read_sa: supplementary read
+    :param bp_region_seq_len: softclipping read size
     :param ins_seq_in_read: putative insertion sequence from the read
     :param fastafile: pyfaidx.Fasta object of reference genome (FASTA file)
     :type chrm: str
     :type ra_mode: int
-    :type sa_start: int
-    :type sa_end: int
+    :type read_sa: Read
+    :type bp_region_seq_len: int
     :type ins_seq_in_read: str
     :type fastafile: pyfaidx.Fasta object
     :returns: True if it is a short TDUP
     :rtype: bool
     """
-    indel_size = len(ins_seq_in_read)
+    event_size = min(len(ins_seq_in_read), read_sa.read_match_size)
+    sa_start = read_sa.ref_start
+    sa_end = read_sa.ref_end
+
+    if bp_region_seq_len > 0:
+        soft_extension_size = bp_region_seq_len
+    else:
+        soft_extension_size = 0
 
     ref_seq = (
-        fastafile[chrm][sa_start - 10 : sa_start + indel_size].seq
+        read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
+        + fastafile[chrm][sa_start : sa_start + event_size].seq
         if ra_mode == 1
-        else fastafile[chrm][sa_end - indel_size : sa_end + 10].seq
+        else fastafile[chrm][sa_end - event_size : sa_end].seq
+        + read_sa.query_sequence[-read_sa.rt_soft_len :][:soft_extension_size]
     )
+
     if not ref_seq or not ins_seq_in_read:
         logger.error("Gapmis: Sequence not found for semi-global alignment")
         raise SeqNotFoundError
@@ -196,23 +206,44 @@ def infer_nls_from_connected_reads(
        0(00) => none breakpoint overlap with coding exons boundary
     """
 
-    def obtain_ins_seq_from_softclipped_part_read(read, mode, indel_size) -> str:
+    def softclipped_length_and_event_size_checker(read, mode, event_size) -> bool:
+        """When read length > predicted tandem duplication size
+        check whether the softclipped length is less than the inferred event size
+        :param read: a chimeric read
+        :param mode: mode for the chimeric read
+        :param event_size: event size inferred from 'query_offset - target_offset'
+        :type read : Read
+        :type mode: int
+        :type event_size: int
+        :return: whether event_size > softclipped_length (If it is True, it will be a TDUP event)
+        :rtype: bool
+        """
+        flag = False
+        if mode == 2:
+            if read.lt_soft_len < event_size:
+                flag = True
+        else:
+            if read.rt_soft_len < event_size:
+                flag = True
+        return flag
+
+    def obtain_ins_seq_from_softclipped_part_read(read, mode, event_size) -> str:
         """
         :param read: a chimeric read
         :param mode: mode for the chimeric read
-        :param indel_size: indel size inferred from 'query_offset - target_offset'
+        :param event_size: event size inferred from 'query_offset - target_offset'
         :type read : Read
         :type mode: int
-        :type indel_size: int
+        :type event_size: int
         :return: putative insertion sequence from the read
         :rtype: str
         """
         read_seq = read.query_sequence
 
         ins_seq_in_read = (
-            read_seq[: read.lt_soft_len][-indel_size:]
+            read_seq[: read.lt_soft_len][-event_size:]
             if mode == 2
-            else read_seq[-read.rt_soft_len :][:indel_size]
+            else read_seq[-read.rt_soft_len :][:event_size]
         )
 
         return ins_seq_in_read
@@ -317,9 +348,9 @@ def infer_nls_from_connected_reads(
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
 
                 evt_size = query_offset - target_offset
-                if evt_size == 0:  # micro-inversion
-                    return NAN
-                elif evt_size < 0:  # deletion
+                # if evt_size == 0:  # micro-inversion
+                #    return NAN
+                if evt_size <= 0:  # deletion
                     del_start = read_rt.ref_start + read_rt.reference_match_size
                     del_end = del_start + abs(evt_size)
                     _, _anno, _can = splicing_confirmation(
@@ -392,26 +423,37 @@ def infer_nls_from_connected_reads(
                         )
                     else:
                         return NAN
-                else:  # read length > tandem duplication size
-                    ins_start = read_lt.ref_start
-                    ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
-                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                # read length > tandem duplication size
+                else:
+                    # softclipped length < tandem duplication size
+                    if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
-                    )
-
-                    is_dup = None
-                    if short_tdup_or_not(
-                        lt_chrm,
-                        lt_mode,
-                        rt_start,
-                        rt_end,
-                        ins_seq_in_read,
-                        genome_fasta,
-                        logger,
                     ):
                         is_dup = True
+                    # softclipped length >= tandem duplication size
+                    # Novel sequence insertion OR TDUP
                     else:
-                        is_dup = False
+                        is_dup = None
+                        ins_start = read_lt.ref_start
+                        ref_allele = genome_fasta[lt_chrm][
+                            ins_start : ins_start + 1
+                        ].seq
+                        ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                            read_lt, lt_mode, evt_size
+                        )
+
+                        if short_tdup_or_not(
+                            lt_chrm,
+                            lt_mode,
+                            read_rt,
+                            bp_region_seq_len,
+                            ins_seq_in_read,
+                            genome_fasta,
+                            logger,
+                        ):
+                            is_dup = True
+                        else:
+                            is_dup = False
                     if is_dup:
                         chrm_start = lt_chrm
                         junc_start = read_lt.ref_start
@@ -493,9 +535,11 @@ def infer_nls_from_connected_reads(
                 lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 evt_size = query_offset - target_offset
-                if evt_size == 0:  # micro-inversion
-                    return NAN
-                elif evt_size < 0:  # deletion
+
+                # logger.trace(f'OK: {evt_size=}')
+                # if evt_size == 0:  # micro-inversion
+                #    return NAN
+                if evt_size <= 0:  # deletion
                     del_start = read_lt.ref_start + read_lt.reference_match_size
                     del_end = del_start + abs(evt_size)
                     _, _anno, _can = splicing_confirmation(
@@ -566,28 +610,37 @@ def infer_nls_from_connected_reads(
                         )
                     else:
                         return NAN
-                # indel_size < query_offset
+                # read length > tandem duplication size
                 else:
-                    ins_start = read_lt.ref_start + read_lt.reference_match_size
-                    ref_allele = genome_fasta[lt_chrm][ins_start : ins_start + 1].seq
-                    ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                    # softclipped length < tandem duplication size
+                    if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
-                    )
-
-                    is_dup = None
-
-                    if short_tdup_or_not(
-                        lt_chrm,
-                        lt_mode,
-                        rt_start,
-                        rt_end,
-                        ins_seq_in_read,
-                        genome_fasta,
-                        logger,
                     ):
                         is_dup = True
+                    # softclipped length >= tandem duplication size
+                    # Novel sequence insertion OR TDUP
                     else:
-                        is_dup = False
+                        is_dup = None
+                        ins_start = read_lt.ref_start + read_lt.reference_match_size
+                        ref_allele = genome_fasta[lt_chrm][
+                            ins_start : ins_start + 1
+                        ].seq
+                        ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
+                            read_lt, lt_mode, evt_size
+                        )
+
+                        if short_tdup_or_not(
+                            lt_chrm,
+                            lt_mode,
+                            read_rt,
+                            bp_region_seq_len,
+                            ins_seq_in_read,
+                            genome_fasta,
+                            logger,
+                        ):
+                            is_dup = True
+                        else:
+                            is_dup = False
                     if is_dup:
                         chrm_start = rt_chrm
                         junc_start = rt_start

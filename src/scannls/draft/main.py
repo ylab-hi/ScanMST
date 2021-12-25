@@ -249,6 +249,9 @@ def detect_sv_from_cigar(
                 )
 
                 if nls_type != "NA":
+                    logger.trace(
+                        f"{nls_type=} {positions=} {lt_info=} {rt_info=} {bp_seqs=} {strands=}"
+                    )
                     event_list.append(
                         (
                             nls_type,
