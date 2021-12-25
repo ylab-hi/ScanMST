@@ -213,13 +213,14 @@ def main():
         min_soft_seg_len=options.min_soft_seg_len,
         blat_ident_pct_cutoff=options.ident_cutoff,
     )
+    """
     splice_graph = SpliceGraph(logger)
     clique_finder = CliqueFinder(intact_series_list, logger)
     cliques = clique_finder.find_clique()
     # clique_finder.debug()
     for clique in cliques:
         logger.debug(list(splice_graph(clique)))
-
+    """
     logger.info("ScanNLS build running done")
     end = time.time()
     logger.info(f"ScanNLS build takes {end - start} seconds.")

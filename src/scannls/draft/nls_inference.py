@@ -350,6 +350,7 @@ def infer_nls_from_connected_reads(
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
 
                 evt_size = query_offset - target_offset
+                logger.trace(f"{evt_size=}")
                 # if evt_size == 0:  # micro-inversion
                 #    return NAN
                 if evt_size <= 0:  # deletion
@@ -538,7 +539,7 @@ def infer_nls_from_connected_reads(
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 evt_size = query_offset - target_offset
 
-                # logger.trace(f'OK: {evt_size=}')
+                logger.trace(f"{evt_size=}")
                 # if evt_size == 0:  # micro-inversion
                 #    return NAN
                 if evt_size <= 0:  # deletion
