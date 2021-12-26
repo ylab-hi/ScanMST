@@ -484,8 +484,8 @@ class Insertion(Read):
         self.sv_type = None
 
         # add attributes for insertion in order to be compatible with the class Node
-        self.prev_breakpoint: Optional[int] = None
-        self.next_breakpoint: Optional[int] = None
+        self.prev_breakpoint: Optional[str] = None
+        self.next_breakpoint: Optional[str] = None
         self.modes = None
         self.genes = None
         self.annotation_code = None
@@ -1439,8 +1439,8 @@ class Event(object):
         :param insertion: the insertion to be updated
         :return: the updated insertion
         """
-        insertion.prev_breakpoint = insertion.ref_start
-        insertion.next_breakpoint = insertion.ref_end
+        insertion.prev_breakpoint = f"{insertion.chrom}:{insertion.ref_start}"
+        insertion.next_breakpoint = f"{insertion.chrom}:{insertion.ref_end}"
 
         insertion.exons, _ = insertion.get_exons_and_introns()
         return self.update_specific_info_within_event(
