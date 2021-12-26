@@ -569,7 +569,7 @@ class Insertion(Read):
         self.lt_soft_len = ls
         self.rt_soft_len = rs
         self.sms = (ls, self.query_length, rs)
-
+        self.query_length = self.query_length + ls + rs
         self.cigarstring = cigar_validity(f"{ls}S{self.cigarstring}{rs}S")
 
     def reverse_completement_query(self):
