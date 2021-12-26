@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# ===========================================================
-"""
+"""Output module for draft scannls.
+
 2021-10-01:
 detect_sv_from_cigar current_output a list of putative NLS events
 modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
-
 """
+from typing import Dict
+from typing import TextIO
 
 __funcs__ = {"output_bedpe_file", "aggregate_candidates", "similar_hit"}
-
-from typing import Dict, TextIO
 
 
 def output_bedpe_file(
     sr_dict: Dict, group_dict: Dict, prefix: str, splice_bin: int
 ) -> TextIO:
-    """
+    """OUTPUT BEDPE FILE.
+
     :param sr_dict: sv candidate to number of supporting reads(SR) dictionary
-    :param group_dict: sv candidate to group of events dictionary, connected chimeric reads are included in one group
+    :param group_dict: sv candidate to group of events dictionary, connected
+        chimeric reads are included in one group
     :param prefix: current_output file prefix
     :param splice_bin: bin size for splice site searching
     :type sr_dict: dict
@@ -41,41 +42,44 @@ def output_bedpe_file(
         pos2 = int(pos2)
         if pos1 - splice_bin > 0 and pos2 - splice_bin > 0:
             output.write(
-                f"{chrm1}\t{pos1 - splice_bin}\t{pos1 + splice_bin}\t{chrm2}\t{pos2 - splice_bin}\t{pos2 + splice_bin}\tgroup_{num_of_group}\t{sr}\t{strand1}\t{strand2}\n"
+                f"{chrm1}\t{pos1 - splice_bin}\t{pos1 + splice_bin}\t{chrm2}"
+                f"\t{pos2 - splice_bin}\t{pos2 + splice_bin}\tgroup_{num_of_group}"
+                f"\t{sr}\t{strand1}\t{strand2}\n"
             )
     output.close()
     return output
 
 
 def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Dict:
+    """Aggregate candidates."""
     if len_cutoff == 0:
         return in_dict
-    else:
-        discarded_items = set([])
-        L = len(in_dict)
-        items = list(in_dict.keys())
-        for i in range(L):
-            for r2 in items[i + 1 :]:
-                r1 = items[i]
-                if similar_hit(r1, r2, len_cutoff):
-                    can_1 = r1.split("\t")[1]
-                    can_2 = r2.split("\t")[1]
-                    ao_1 = in_dict[r1]
-                    ao_2 = in_dict[r2]
-                    new_ao = ao_1 + ao_2
-                    if ao_1 > ao_2:
+
+    discarded_items = set()
+    in_dict_len = len(in_dict)
+    items = list(in_dict.keys())
+    for i in range(in_dict_len):
+        for r2 in items[i + 1 :]:
+            r1 = items[i]
+            if similar_hit(r1, r2, len_cutoff):
+                can_1 = r1.split("\t")[1]
+                can_2 = r2.split("\t")[1]
+                ao_1 = in_dict[r1]
+                ao_2 = in_dict[r2]
+                new_ao = ao_1 + ao_2
+                if ao_1 > ao_2:
+                    in_dict[r1] = new_ao
+                    discarded_items.add(r2)
+                elif ao_1 < ao_2:
+                    in_dict[r2] = new_ao
+                    discarded_items.add(r1)
+                elif ao_1 == ao_2:
+                    if can_1 == 1:
                         in_dict[r1] = new_ao
                         discarded_items.add(r2)
-                    elif ao_1 < ao_2:
+                    elif can_2 == 1:
                         in_dict[r2] = new_ao
                         discarded_items.add(r1)
-                    elif ao_1 == ao_2:
-                        if can_1 == 1:
-                            in_dict[r1] = new_ao
-                            discarded_items.add(r2)
-                        elif can_2 == 1:
-                            in_dict[r2] = new_ao
-                            discarded_items.add(r1)
         out_dict = {}
         for m in in_dict:
             if m not in discarded_items:
@@ -84,31 +88,38 @@ def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Dict:
 
 
 def similar_hit(r1: str, r2: str, len_cutoff: int = 10) -> bool:
-    r1_type, r1_can, A1, A2, strand_1 = r1.split("\t")
-    r2_type, r2_can, B1, B2, strand_2 = r2.split("\t")
+    """Similar hit.
 
-    chrm_a, pos_a = A1.split(":")
-    chrm_b, pos_b = A2.split(":")
+    :param r1: read 1
+    :param r2: read 2
+    :param len_cutoff: length cutoff
+    :return: bool value
+    """
+    r1_type, r1_can, a1, a2, strand_1 = r1.split("\t")
+    r2_type, r2_can, b1, b2, strand_2 = r2.split("\t")
 
-    chrm_A, pos_A = B1.split(":")
-    chrm_B, pos_B = B2.split(":")
+    chrm_a1, pos_a1 = a1.split(":")
+    chrm_b1, pos_b1 = a2.split(":")
+
+    chrm_a2, pos_a2 = b1.split(":")
+    chrm_b2, pos_b2 = b2.split(":")
 
     if r1_type != r2_type:
         return False
     else:
-        if chrm_a == chrm_A and chrm_b == chrm_B:
+        if chrm_a1 == chrm_a2 and chrm_b1 == chrm_b2:
             if (
-                abs(int(pos_a) - int(pos_A)) <= len_cutoff
-                and abs(int(pos_b) - int(pos_B)) <= len_cutoff
+                abs(int(pos_a1) - int(pos_a2)) <= len_cutoff
+                and abs(int(pos_b1) - int(pos_b2)) <= len_cutoff
             ):
                 return True
             else:
                 return False
 
-        elif chrm_a == chrm_B and chrm_b == chrm_A:
+        elif chrm_a1 == chrm_b2 and chrm_b1 == chrm_a2:
             if (
-                abs(int(pos_a) - int(pos_B)) <= len_cutoff
-                and abs(int(pos_b) - int(pos_A)) <= len_cutoff
+                abs(int(pos_a1) - int(pos_b2)) <= len_cutoff
+                and abs(int(pos_b1) - int(pos_a2)) <= len_cutoff
             ):
                 return True
             else:

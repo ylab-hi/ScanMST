@@ -225,9 +225,9 @@ def multiple_sa_tag_selector(sa_tag_list):
         mapq_dict[i] = int(mapq)
         span_nm_dict[i] = float(ref_span / (int(nm) + 1))
     max_mapq = max(mapq_dict.values())
-    span_nm_max_mapq_dict = dict(
-        (j, span_nm_dict[j]) for j in mapq_dict if mapq_dict[j] == max_mapq
-    )
+    span_nm_max_mapq_dict = {
+        j: span_nm_dict[j] for j in mapq_dict if mapq_dict[j] == max_mapq
+    }
     optimal_sa_tag = max(span_nm_max_mapq_dict, key=lambda k: span_nm_max_mapq_dict[k])
 
     return optimal_sa_tag
@@ -489,7 +489,7 @@ def update_cigar(
     if is_can:
         shift_len = 0
         tgt_motif = ""
-        motifs = set([])
+        motifs = set()
         # SM
         if soft_mode == 2:
             soft_bp_pos = ref_start
@@ -1778,7 +1778,7 @@ def GTF_reader(in_gtf, field="exon"):
     gtf_file = HTSeq.GFF_Reader(in_gtf)
     gene_positions = []
     gene_positions_dict = {}
-    available_chroms = set([])
+    available_chroms = set()
     status_message("Loading GTF file!")
     for feature in gtf_file:
         biotype = feature.attr["gene_type"]
@@ -1821,7 +1821,7 @@ def update_gtf(in_gtf, out_gtf, out_fasta, ref_genome):
         sys.exit(1)
 
     trx_to_exons = defaultdict(list)
-    gene_ids = set([])
+    gene_ids = set()
     event_type_dict = {}
     gtf_file = HTSeq.GFF_Reader(in_gtf)
     for feature in gtf_file:

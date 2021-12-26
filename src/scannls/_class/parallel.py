@@ -1,6 +1,6 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
-"""
+"""Module for parallel worker.
+
 @Filename:    parallel.py
 @license:     MIT Licence
 @Time:        12/15/21 1:58 PM
@@ -11,9 +11,9 @@ from concurrent import futures
 from tqdm import tqdm  # type: ignore
 
 
-class ParallelWorker(object):
-    """
-    the ParallelWorker class is used to run function in parallel
+class ParallelWorker:
+    """ParallelWorker class is used to run function in parallel.
+
     args include the unique parameter of the function and  keyword arguments include
     the common parameters of the function
 
@@ -37,15 +37,14 @@ class ParallelWorker(object):
     """
 
     def __init__(self, func, logger, n_jobs: int = 1):
+        """Initialize the ParallelWorker class."""
         self.func = func
         self.logger = logger
 
         self.n_jobs = self.setter_n_jobs(n_jobs)
 
     def setter_n_jobs(self, n_jobs: int) -> int:
-        """
-        set the number of jobs to run in parallel in terms of cpu cores
-        """
+        """Set the number of jobs to run in parallel in terms of cpu cores."""
         current_max_processor = os.cpu_count()
         if n_jobs > current_max_processor:  # type: ignore
             self.logger.warning(
@@ -56,9 +55,7 @@ class ParallelWorker(object):
             return n_jobs
 
     def run(self, *args, **kwargs) -> dict:
-        """
-        using concurrent.future to parallel process
-        """
+        """Using concurrent.future to parallel process."""
         tasks = {}
         result = {}
         self.logger.info(f"ParallelWorker: {self.n_jobs} jobs")

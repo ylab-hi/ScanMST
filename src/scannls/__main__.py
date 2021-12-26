@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+"""Main function for scannls."""
 import argparse
 import sys
 import textwrap
 import time
 
 from loguru import logger
-from tqdm import tqdm  # type: ignore
 
 from . import __version__  # type: ignore
-from ._class.basicClass import LengthAction  # type: ignore
 from ._class.blat import Blat
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
@@ -18,14 +16,17 @@ from .utils import external_tool_checking  # type: ignore
 
 
 def parse_args():
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic long-reads data",
+        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic"
+        " long-reads data",
         epilog=textwrap.dedent(
-            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute, University of Minnesota, 2021"""
+            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute,
+            University of Minnesota, 2021"""
         ),
     )
     parser.add_argument(
-        "-v", "--version", action="version", version="%(prog)s {}".format(__version__)
+        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
     )
 
     parser.add_argument(
@@ -155,6 +156,7 @@ def parse_args():
 
 
 def main():
+    """Main function."""
     if sys.version_info < (3, 8):
         sys.exit(
             "Sorry, this code need Python 3.8 or higher. Please update. Aborting..."
@@ -213,14 +215,12 @@ def main():
         min_soft_seg_len=options.min_soft_seg_len,
         blat_ident_pct_cutoff=options.ident_cutoff,
     )
-    """
     splice_graph = SpliceGraph(logger)
     clique_finder = CliqueFinder(intact_series_list, logger)
     cliques = clique_finder.find_clique()
     # clique_finder.debug()
     for clique in cliques:
         logger.debug(list(splice_graph(clique)))
-    """
     logger.info("ScanNLS build running done")
     end = time.time()
     logger.info(f"ScanNLS build takes {end - start} seconds.")

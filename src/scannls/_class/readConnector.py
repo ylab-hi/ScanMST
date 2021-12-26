@@ -1,15 +1,14 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
-"""
+"""Connecter Reads.
+
 @Filename:    readConnector.py
-@Author:      YangyangLi
-@contact:     li002252@umn.edu
 @license:     MIT Licence
 @Time:        12/15/21 2:14 PM
 """
 import re
 from typing import Any
 from typing import List
+from typing import Tuple
 
 from Bio import SearchIO  # type: ignore
 from loguru import logger
@@ -23,8 +22,8 @@ from .blat import Blat
 from .exception import ReadNotConnectedError
 
 
-class ReadsConnector(object):
-    """the ReadsConnector class is used to connect the reads and identify the mode of the reads
+class ReadsConnector:
+    """ReadsConnector class is used to connect the reads and identify the mode of the reads.
 
     :param aln_list: the list of the alignment
     :param blat: :class: `class.Blat` for the BLAT search
@@ -52,7 +51,7 @@ class ReadsConnector(object):
         threshold_identity: float = 0.99,
         top: int = 3,
     ) -> None:
-
+        """Initialize the ReadsConnector class."""
         self.candidate_nodes: List = []
         self.reads_chain: List = []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
@@ -67,16 +66,16 @@ class ReadsConnector(object):
         self.top: int = top
 
     def reset_index(self):
-        """ reset the index in order to fetch read in  candidate reads in new iteration """
+        """Reset the index in order to fetch read in  candidate reads in new iteration."""
         self.index = 0
 
     def increment_index(self):
-        """ increment the index in order to fetch read in  candidate nodes """
+        """Increment the index in order to fetch read in  candidate nodes."""
         self.index += 1
 
     @staticmethod
     def _get_mode(sms: Any) -> int:
-        """get the mode of the reads
+        """Get the mode of the reads.
 
         :param sms:
         :return: mode
@@ -95,7 +94,7 @@ class ReadsConnector(object):
 
     @staticmethod
     def init_mode_judge(read1: Read, read2: Read) -> None:
-        """initialize the mode of the reads"""
+        """Initialize the mode of the reads."""
         sorted_by_s_length = sorted(
             [read1, read2], key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
         )
@@ -122,7 +121,7 @@ class ReadsConnector(object):
         minimum_s_length: int = 30,
         minimum_terminal_length: int = 5,
     ) -> bool:
-        """compare m of start read with s of read
+        """Compare m of start read with s of read.
 
         query_seq: M  target_seq: S
 
@@ -160,14 +159,15 @@ class ReadsConnector(object):
 
     @staticmethod
     def _determine_microhomology_len(
-        read_match_sequence,
-        read_query_length,
-        prev_sms,
-        next_sms,
-        prev_read_mode,
-        next_read_mode,
-    ):
-        """
+        read_match_sequence: str,
+        read_query_length: int,
+        prev_sms: Tuple[int, int, int],
+        next_sms: Tuple[int, int, int],
+        prev_read_mode: int,
+        next_read_mode: int,
+    ) -> Any:
+        """Determine the length of the microhomology.
+
         :param read_match_sequence: the match sequence of the read
         :param read_query_length: whole reads length
         :param prev_sms: previous read sms
@@ -223,13 +223,14 @@ class ReadsConnector(object):
 
     @staticmethod
     def update_query_sequence(
-        read_match_sequence,
-        read_query_sequence,
-        prev_sms,
-        next_sms,
-        prev_read_mode,
-        next_read_mode,
-    ):
+        read_match_sequence: str,
+        read_query_sequence: str,
+        prev_sms: Tuple[int, int, int],
+        next_sms: Tuple[int, int, int],
+        prev_read_mode: int,
+        next_read_mode: int,
+    ) -> str:
+        """Update the query sequence based on the length of the microhomology."""
         (
             is_microhomology,
             microhomology_length,
@@ -251,9 +252,13 @@ class ReadsConnector(object):
 
     @staticmethod
     def _check_strand_mode_for_compare_ms(
-        start_read, read, same_strand, first_is_matched=False, second_is_matched=False
+        start_read: Read,
+        read: Read,
+        same_strand: bool,
+        first_is_matched: bool = False,
+        second_is_matched: bool = False,
     ) -> bool:
-
+        """Check the strand mode for compare ms."""
         flag = True
         mode1 = start_read.mode
         mode2 = read.mode
@@ -270,13 +275,13 @@ class ReadsConnector(object):
         return flag
 
     def test_2case(self, start_read: Read, read: Read, is_compare_for_ms: bool) -> Any:
+        """Test 2 case for two reads to check if they are connected.
 
-        """
+        start read -> read
 
-        :param start_read:
-        :param read:
-        :param is_compare_for_ms:
-        :return:
+        :param start_read: start read
+        :param read: next read
+        :param is_compare_for_ms: is compare for ms
         """
         condition1, condition2 = False, False
         self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
@@ -378,13 +383,16 @@ class ReadsConnector(object):
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
-        self.logger.debug("start read cannot connect with read and try to connect other reads")  # type: ignore
+        self.logger.debug(
+            "start read cannot connect with read and try to connect other reads"
+        )  # type: ignore
         return False, start_read  # not match
 
     @staticmethod
     def _double_check_for_start_and_end_read_determine_new_read_mode(
         read: Read, new_read: Read
     ) -> None:
+        """Double check for start and end read determine new read mode."""
         read.mode = 1 if read.mode == 2 else 2
         if new_read.strand == read.strand:
             new_read.mode = 1 if read.mode == 2 else 2
@@ -394,7 +402,7 @@ class ReadsConnector(object):
     def _double_check_creat_new_read_and_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read
     ) -> Read:
-
+        """Double check creat new read and calculate sms."""
         mapq = 60
         chrom, position, strand, cigar_str, num_of_mismatch = self.blat.psl2sam(
             hsp, len(query_seq)
@@ -435,6 +443,7 @@ class ReadsConnector(object):
     def __double_check_blat_query(
         self, query_sequence, align_len_threshold, threshold_identity, top
     ):
+        """Double check blat query."""
         flag = False
 
         if len(query_sequence) < align_len_threshold:
@@ -456,7 +465,10 @@ class ReadsConnector(object):
         read: Read,
         read_type: str,
     ) -> None:
+        """Double check for start and end read.
 
+        To see if there are True first read or True end read.
+        """
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
             if read.mode == 1
@@ -483,7 +495,8 @@ class ReadsConnector(object):
                 self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
 
     def connect(self) -> bool:
-        """Find the best connected paths for a list of chimeric alignments
+        """Find the best connected paths for a list of chimeric alignments.
+
         .. note::
             Read-to-Read chain scenarios
             * [[Read1, Read2, Read3]]
@@ -493,7 +506,6 @@ class ReadsConnector(object):
             * (Read1, Read2) => mode-of-Read1, mode-of-Read2
             * (Read2, Read1) => mode-of-Read2, mode-of-Read1
         """
-
         # find start node and end node
         temp_list = sorted(
             self.aln_list, key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
@@ -565,7 +577,7 @@ def detect_read_read_connections_from_cigar(
     blat: Blat,
     logger: Logger,
 ) -> Any:
-    """Detecting read-read connections with chimeric alignments CIGAR string
+    """Detecting read-read connections with chimeric alignments CIGAR string.
 
     :param logger:
     :param blat:
@@ -574,8 +586,10 @@ def detect_read_read_connections_from_cigar(
     :type read: pysam.AlignedSegment object
     :type mapq_cutoff: int
     :type max_allowed_nm: int
-    :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) => mode-of-Read1, mode-of-Read2
+    :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) =>
+        mode-of-Read1, mode-of-Read2
     :rtype: tuple
+
     .. note::
         Read-to-Read chain scenarios
         * [[Read1, Read2, Read3]]
@@ -586,21 +600,21 @@ def detect_read_read_connections_from_cigar(
         * (Read2, Read1) => mode-of-Read2, mode-of-Read1
 
     .. important::
-        If no 'SA' tag is found in this read, read-to-read chain and the read-pair => mode dictionary will become empty.
+        If no 'SA' tag is found in this read, read-to-read chain and the read-pair =>
+        mode dictionary will become empty.
 
-    #return: NLS_type(TDUP/INV), exon_boundary(0/1/2/3), canonical_or_not (1/0), [position, size, rep_aln_mode, sup_aln_mode], [++]
-    #        TRA, canonical_or_not (1/0), [position, sup_position, rep_aln_mode, sup_aln_mode], [+-]
-    #        e.g., INV,1,43947377,181934993,1,1,++
-    #              TRA,1,160289623,chr17:17189212,1,1,+-
     """
 
     def format_sa_tag(in_str: str) -> Any:
-        """
-        To keep read.reference_start and start position of SA alignment consistent, start position of SA alignment need to substract 1
+        """To keep read.reference_start and start position of SA alignment consistent.
+
+        start position of SA alignment need to subtract 1
+
         :param in_str: string of supplementary read item in the SA tag
         :type in_str: str
         :return: chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
         :rtype: tuple
+
         .. note::
              pos_sa, mapq_sa and nm_sa are integral variables now.
         """
@@ -613,7 +627,8 @@ def detect_read_read_connections_from_cigar(
     def obtain_sa_query_seq_from_ra(
         query_seq_ra: str, strand_ra: str, strand_sa: str
     ) -> str:
-        """a helper function to define query_seq for the supplementary alignment
+        """Helper function to define query_seq for the supplementary alignment.
+
         :param query_seq_ra: query sequence of representative alignment
         :param strand_ra: direction of representative read (-|+)
         :type strand_ra: str
@@ -627,10 +642,7 @@ def detect_read_read_connections_from_cigar(
         )
 
     noreturn = [], {}, 0  # type: ignore
-    if read.has_tag("SV"):
-        return noreturn
-
-    if read.is_supplementary:
+    if read.has_tag("SV") or read.is_supplementary:
         return noreturn
 
     # if no 'SA' tag was found, read-to-read chain will be empty

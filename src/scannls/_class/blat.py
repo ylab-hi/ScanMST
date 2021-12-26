@@ -1,6 +1,6 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
-"""
+"""Module for BLAT.
+
 @Filename:    blat.py
 @license:     MIT Licence
 @Time:        12/15/21 2:00 PM
@@ -23,10 +23,10 @@ from .basicClass import Insertion
 from .basicClass import NovelInsertion
 
 
-class Blat(object):
-    """
-    the Blat class is used to integrate the blat service (gfServer and
-    gfClient) so that we can query certain sequences from the genome shamelessly
+class Blat:
+    """Blat class is used to integrate the blat service.
+
+     (gfServer and gfClient) so that we can query certain sequences from the genome shamelessly
 
     :param ref_2bit: the path of reference for blat alignment
     :param logger: the logger for logging
@@ -53,7 +53,6 @@ class Blat(object):
     False, NovelInsertion(ATCCATCC:0)
     >>> blat.query_insertion(insert_seq="ATCG")
     False, NovelInsertion(ATCG:10)
-
     """
 
     def __init__(
@@ -65,7 +64,7 @@ class Blat(object):
         fix_log_file=None,
         is_start_server=True,
     ) -> None:
-
+        """Initialize the blat class."""
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
@@ -75,8 +74,7 @@ class Blat(object):
 
     @property
     def ref_dir(self) -> str:
-        """
-        the property for ref_dir, which is the path of reference for blat
+        """Property for ref_dir, which is the path of reference for blat.
 
         :return: the absolute path of reference dir
         """
@@ -92,9 +90,7 @@ class Blat(object):
 
     @property
     def log_file(self) -> str:
-        """
-        the property for log_file, which is the path of log file for blat
-        """
+        """Property for log_file, which is the path of log file for blat."""
         return (
             f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
             if self.fix_log_file is None
@@ -102,9 +98,10 @@ class Blat(object):
         )
 
     def is_ready(self) -> bool:
-        """
-        the function for checking whether the blat server is ready or not
+        """Function for checking whether the blat server is ready or not.
+
         after starting the server service
+
         :return: the boolean value of whether the server is ready or not
         """
         flag = False
@@ -117,17 +114,17 @@ class Blat(object):
         return flag
 
     def is_running(self) -> bool:
-        """
-        the function for checking whether the blat server is running or not
+        """Function for checking whether the blat server is running or not.
 
         :return: the boolean value of whether the server is running or not
         """
         return True if self._search_processing() else False
 
     def _search_processing(self) -> List:
-        """
-        the function for searching the process of blat server
+        """Function for searching the process of blat server.
+
         in current system
+
         :return: the list of process of blat server
         """
         result = []
@@ -138,16 +135,17 @@ class Blat(object):
         return result
 
     def _run_cmd(self, cmd: str) -> None:
-        """
-        the function is used to run the command in the system
+        """Function is used to run the command in the system.
+
         :param cmd: the command to be run
         """
-        subprocess.run(cmd.split(), check=True)
+        subprocess.check_call(cmd, shell=True)
 
     def _start_server(self) -> Process:
-        """gfServer should run at the directory where gfServer,
-        gfClient and hg38.2bit located"""
+        """The GfServer should run at the directory.
 
+        where gfServer gfClient and hg38.2bit located.
+        """
         cwd = os.path.abspath(os.getcwd())
         logger.debug(os.getcwd())
 
@@ -159,7 +157,10 @@ class Blat(object):
         if os.path.exists(self.log_file):
             os.remove(self.log_file)
 
-        cmd = f"gfServer -canStop -log={self.log_file} -stepSize=5 start localhost {self.port} {os.path.basename(self.ref_2bit)}"
+        cmd = (
+            f"gfServer -canStop -log={self.log_file} -stepSize=5 start "
+            f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
+        )
         logger.trace(f"{cmd=}")
         process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
         process.start()
@@ -169,8 +170,8 @@ class Blat(object):
         return process
 
     def start_server(self) -> None:
-        """
-        the function for starting the server service, if the server is not running,
+        """Function for starting the server service, if the server is not running.
+
         we will start the server service
         """
         running_flag = self.is_running()
@@ -180,17 +181,15 @@ class Blat(object):
             self.is_start_server = False
 
     def stop_server(self) -> None:
-        """
-        the function for stopping the server service, if the server is running,
-        """
+        """Function for stopping the server service, if the server is running."""
         procs = self._search_processing()
         self.logger.debug("stopping server service")
         for proc in procs:
             proc.kill()
 
     def _query(self, in_seq: str, mini_identity: int = 90) -> str:
-        """
-        the function is help function in order to using gfClient
+        """Function is help function in order to using gfClient.
+
         to query 'in_seq' to generate alignment file (in PSL format).
 
         :param mini_identity: the threshold of the identity for aligning
@@ -199,12 +198,12 @@ class Blat(object):
         """
         self.logger.debug("querying the sequence")
         ran_id = random.getrandbits(30)
-        in_fasta = os.path.join(self.output_dir, "{}.fasta".format(ran_id))
+        in_fasta = os.path.join(self.output_dir, f"{ran_id}.fasta")
         with open(in_fasta, "w", buffering=1) as fasta_file:
-            fasta_file.write(">{}\n".format(ran_id))
-            fasta_file.write("{}\n".format(in_seq))
+            fasta_file.write(f">{ran_id}\n")
+            fasta_file.write(f"{in_seq}\n")
 
-        out_psl = os.path.join(self.output_dir, "{}.psl".format(ran_id))
+        out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
 
         cwd = os.path.abspath(os.getcwd())
         logger.trace(os.getcwd())
@@ -219,7 +218,7 @@ class Blat(object):
         try:
             subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as err:
-            raise SystemExit(f"{err} {err.output}")
+            raise SystemExit(f"{err} {err.output}") from err
 
         os.chdir(cwd)
         logger.trace(os.getcwd())
@@ -228,8 +227,7 @@ class Blat(object):
         return out_psl
 
     def _wait_ready(self, interval: int = 30) -> None:
-        """
-        the function for waiting the server service to be ready,
+        """Function for waiting the server service to be ready.
 
         :param interval: the interval time for checking the server service
         """
@@ -237,14 +235,12 @@ class Blat(object):
             time.sleep(interval)
 
     def query(self, in_seq: str, mini_identity: int = 90) -> str:
-        """
-        the function for querying the sequence to the server service
+        """Function for querying the sequence to the server service.
 
         :param in_seq: the sequence of input sequence
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
-
         if self.is_start_server:
             if self.is_ready():
                 out_psl = self._query(in_seq, mini_identity)
@@ -260,7 +256,7 @@ class Blat(object):
     def _query_insertion(
         blat_result: Any, insert_seq: str, threshold_identity: float, top: int
     ) -> Any:
-
+        """Helper function for querying insertion sequence."""
         hsps = blat_result.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
         hsps = hsps[:top]
@@ -281,9 +277,9 @@ class Blat(object):
         top: int = 3,
         align_len_threshold: int = 20,
     ) -> Any:
-        """
-        the function for querying the insertion sequence to the server service, and
-        the function is a specific version of the function 'query'.
+        """Function for querying the insertion sequence to the server service.
+
+        the function is a specific version of the :func: 'Blat.query'.
 
         :param insert_seq: insertion sequence
         :param threshold_identity: the threshold of the identity for aligning
@@ -291,7 +287,6 @@ class Blat(object):
         :param align_len_threshold: the threshold of the insertion sequence length
         :return: insertion sequence alignment in NamedTuple format
         """
-
         flag = False  # flag for checking the insertion  if its hit is only one
 
         if len(insert_seq) < align_len_threshold:
@@ -329,8 +324,7 @@ class Blat(object):
 
     @staticmethod
     def _remove(file):
-        """
-        the function for removing the file
+        """Function for removing the file.
 
         :param file: the path of the file
         """
@@ -339,8 +333,7 @@ class Blat(object):
 
     @staticmethod
     def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float) -> int:
-        """
-        the function is used to calculate map quality of the insertion.
+        """Function is used to calculate map quality of the insertion.
 
         :param hsps: the list of hsp after aligning the insertion sequence
         :param in_seq_len: the length of the input sequence
@@ -368,8 +361,7 @@ class Blat(object):
         return mapq
 
     def fetch_mapq(self, in_seq: str, threshold_identity: float) -> Any:
-        """
-        the function is used to fetch the map quality of the insertion.
+        """Function is used to fetch the map quality of the insertion.
 
         :param in_seq: the input sequence
         :param threshold_identity: the threshold of the identity for aligning
@@ -392,8 +384,8 @@ class Blat(object):
 
     @staticmethod
     def psl2sam(hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
-        """
-        Convert the top HSP in PSL file to SAM fields chrom, reference_start,
+        """Convert the top HSP in PSL file to SAM fields chrom, reference_start.
+
         strand, cigarstring, num_of_mismatch. The function try to implement
         the psl2sam.pl script and return the cigar and mapping position
         estimated from psl file
@@ -405,7 +397,6 @@ class Blat(object):
         .. note::
             hsp is 0-based, as same as python [ )
         """
-
         cigar = ""
         query_start = hsp.query_start
         query_end = hsp.query_end

@@ -1,3 +1,6 @@
+# !/usr/bin/env python
+# -*- coding:utf-8 -*-
+"""Module for nls inference."""
 import os
 import subprocess
 import tempfile
@@ -17,7 +20,7 @@ from .helper import splicing_confirmation  # type: ignore
 
 @dataclass
 class AlignerResult:
-    """ Class to store the result of aligner. """
+    """Class to store the result of aligner."""
 
     seq1: str
     seq2: str
@@ -31,7 +34,7 @@ class AlignerResult:
 
 
 class Aligner(object):
-    """Aligner class for aligning two sequences by semi-global algorithm
+    """Aligner class for aligning two sequences by semi-global algorithm.
 
     :param seqa: the sequence to be aligned
     :param seqb:  another sequence to be aligned
@@ -42,15 +45,17 @@ class Aligner(object):
     """
 
     def __init__(self, seqa: str, seqb: str):
+        """Initialize Aligner class."""
         self.seqa = seqa
         self.seqb = seqb
         self.cmd = "gapmis -a {seqa} -b {seqb} -o {out}".format
 
     def __repr__(self):
+        """Represent Aligner class."""
         return f"Aligner(seqa={self.seqa}, seqb={self.seqb})"
 
     def run(self) -> AlignerResult:
-        """Run the aligner with temp file and return the result
+        """Run the aligner with temp file and return the result.
 
         .. note::
            1. Using gapmis to align two sequences
@@ -74,13 +79,12 @@ class Aligner(object):
         return align_result
 
     def parse_gapmis_result(self, result_file: str) -> AlignerResult:
-        """Parse the result of gapmis
+        """Parse the result of gapmis.
 
         .. note::
             1. Return the result of aligning including the aligned sequence, start, end,
                 score, number of gaps, number of mismatches for two sequences
             2. start and end coordinates are 0-based and end is not included, same as Python
-
         """
         seqa_coords: List[Tuple] = []
         seqb_coords: List[Tuple] = []
@@ -117,7 +121,8 @@ class Aligner(object):
 def short_tdup_or_not(
     chrm, ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, fastafile, logger
 ) -> bool:
-    """judge the ins_seq_in_read is a TDUP (TDUP size < reads length)
+    """Judge the ins_seq_in_read is a TDUP (TDUP size < reads length).
+
     OR novel sequence insertion using reference sequence inferred
     from chimeric alignment start position and indel_size from 'query_offset - target_offset'
 
@@ -146,7 +151,6 @@ def short_tdup_or_not(
     else:
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
-        # matched_reduced_size = 0
 
     logger.trace(f"{event_size=}")
     logger.trace(f"{matched_reduced_size=}")
@@ -192,7 +196,8 @@ def infer_nls_from_connected_reads(
     motif_required: bool,
     logger: Logger,
 ) -> Any:
-    """
+    """Infer novel sequence insertion from connected reads.
+
     :param logger:
     :param read_lt: Read 1
     :param read_rt: Read 2
@@ -200,16 +205,20 @@ def infer_nls_from_connected_reads(
     :param rt_mode: mode of Read 2
     :param splice_bin: a small bin for splice site searching
     :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
-    :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
-    :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation (GTF file)
-    :param motif_required: considering canonical splice sites only OR considering both canonical and noncanonical splice sites
+    :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene annotation
+        (GTF file)
+    :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference gene annotation
+        (GTF file)
+    :param motif_required: considering canonical splice sites only OR considering both canonical
+        and noncanonical splice sites
     :return: putative event from reads-pair
 
     .. note:: putative event
 
-    examples: * 'NA', 0, 0, (), (), (), (), (), [] * 'TDUP', annotation, canonical/noncanonical, ('bp_chrm1:bp_pos1',
-    'bp_chrm2:bp_pos2', bp_mode1, bp_mode2), (bp_read1_ref_start, bp_read1_ref_end, bp_read1_exons),
-    (bp_read2_ref_start, bp_read2_ref_end, bp_read2_exons), (lt_bp_seq, rt_bp_seq), (strand1, strand2), [gene1, gene2]
+    examples: * 'NA', 0, 0, (), (), (), (), (), [] * 'TDUP', annotation, canonical/noncanonical,
+     ('bp_chrm1:bp_pos1', 'bp_chrm2:bp_pos2', bp_mode1, bp_mode2),
+     (bp_read1_ref_start, bp_read1_ref_end, bp_read1_exons), (bp_read2_ref_start, bp_read2_ref_end,
+      bp_read2_exons), (lt_bp_seq, rt_bp_seq), (strand1, strand2), [gene1, gene2]
 
        annotation explanation:
        3(11) => both breakpoints overlap with coding exons boundary
@@ -219,11 +228,14 @@ def infer_nls_from_connected_reads(
     """
 
     def softclipped_length_and_event_size_checker(read, mode, event_size) -> bool:
-        """When read length > predicted tandem duplication size
+        """When read length > predicted tandem duplication size.
+
         check whether the softclipped length is less than the inferred event size
+
         :param read: a chimeric read
         :param mode: mode for the chimeric read
         :param event_size: event size inferred from 'query_offset - target_offset'
+
         :type read : Read
         :type mode: int
         :type event_size: int
@@ -240,15 +252,17 @@ def infer_nls_from_connected_reads(
         return flag
 
     def obtain_ins_seq_from_softclipped_part_read(read, mode, event_size) -> str:
-        """
+        """Obtain insertion sequence from soft-clipped part of read.
+
         :param read: a chimeric read
         :param mode: mode for the chimeric read
         :param event_size: event size inferred from 'query_offset - target_offset'
+
         :type read : Read
         :type mode: int
         :type event_size: int
         :return: putative insertion sequence from the read
-        :rtype: str
+
         """
         read_seq = read.query_sequence
 
@@ -261,13 +275,15 @@ def infer_nls_from_connected_reads(
         return ins_seq_in_read
 
     def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> Any:
-        """
+        """Obtain breakpoint region sequence from read.
+
         :param bp_region_seq_len: the length of the breakpoint region sequence
         :param read:  the chimeirc read
         :param mode: mode for the chimeirc read
         :type mode: int
-        :return: (putative insertion/microhomology sequence from the read; + means insertion, - means microhomology, mode)
-        :rtype: tuple
+        :return: (putative insertion/microhomology sequence from the read; + means insertion,
+            - means microhomology, mode)
+
         ..note:
             * inserted sequence:
               S-----SM---M    M---MS-----S
@@ -300,10 +316,10 @@ def infer_nls_from_connected_reads(
             bp_region_seq = ""
         return bp_region_seq
 
-    NAN = "NA", 0, 0, (), (), (), (), (), []  # type: ignore
+    noreturn = "NA", 0, 0, (), (), (), (), (), []  # type: ignore
 
     if lt_mode == 3 or rt_mode == 3:
-        return NAN
+        return noreturn
     lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (
         read_lt.chrom,
         read_lt.strand,
@@ -360,10 +376,10 @@ def infer_nls_from_connected_reads(
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
 
                 evt_size = query_offset - target_offset
+
                 logger.trace(f"{evt_size=}, {query_offset=}")
-                # if evt_size == 0:  # micro-inversion
-                #    return NAN
                 if evt_size <= 0:  # deletion
+
                     del_start = read_rt.ref_start + read_rt.reference_match_size
                     del_end = del_start + abs(evt_size)
                     _, _anno, _can = splicing_confirmation(
@@ -435,14 +451,14 @@ def infer_nls_from_connected_reads(
                             [*_genes],
                         )
                     else:
-                        return NAN
+                        return noreturn
                 # read length > tandem duplication size
                 else:
                     # softclipped length < tandem duplication size
                     if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
                     ):
-                        logger.trace(f"softclipped length < event size => TDUP")
+                        logger.trace("softclipped length < event size => TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -465,10 +481,10 @@ def infer_nls_from_connected_reads(
                             genome_fasta,
                             logger,
                         ):
-                            logger.trace(f"softclipped length >= event size => TDUP")
+                            logger.trace("softclipped length >= event size => TDUP")
                             is_dup = True
                         else:
-                            logger.trace(f"softclipped length >= event size => INS")
+                            logger.trace("softclipped length >= event size => INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = lt_chrm
@@ -507,7 +523,7 @@ def infer_nls_from_connected_reads(
                                 [*_genes],
                             )
                         else:
-                            return NAN
+                            return noreturn
                     else:  # it's a short insertion
                         _genes = gene_annotation(
                             lt_chrm, ins_start, lt_chrm, ins_start, gene_iv
@@ -553,9 +569,9 @@ def infer_nls_from_connected_reads(
                 evt_size = query_offset - target_offset
 
                 logger.trace(f"{evt_size=}, {query_offset=}")
-                # if evt_size == 0:  # micro-inversion
-                #    return NAN
+
                 if evt_size <= 0:  # deletion
+
                     del_start = read_lt.ref_start + read_lt.reference_match_size
                     del_end = del_start + abs(evt_size)
                     _, _anno, _can = splicing_confirmation(
@@ -625,14 +641,14 @@ def infer_nls_from_connected_reads(
                             [*_genes],
                         )
                     else:
-                        return NAN
+                        return noreturn
                 # read length > tandem duplication size
                 else:
                     # softclipped length < tandem duplication size
                     if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
                     ):
-                        logger.trace(f"softclipped length < event size => TDUP")
+                        logger.trace("softclipped length < event size => TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -655,10 +671,10 @@ def infer_nls_from_connected_reads(
                             genome_fasta,
                             logger,
                         ):
-                            logger.trace(f"softclipped length >= event size => TDUP")
+                            logger.trace("softclipped length >= event size => TDUP")
                             is_dup = True
                         else:
-                            logger.trace(f"softclipped length >= event size => INS")
+                            logger.trace("softclipped length >= event size => INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = rt_chrm
@@ -697,7 +713,7 @@ def infer_nls_from_connected_reads(
                                 [*_genes],
                             )
                         else:
-                            return NAN
+                            return noreturn
                     # it is a short insertion
                     else:
                         _genes = gene_annotation(
@@ -715,7 +731,7 @@ def infer_nls_from_connected_reads(
                             [*_genes],
                         )
             else:
-                return NAN
+                return noreturn
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 ra_bp = read_lt.ref_start + read_lt.reference_match_size
@@ -775,7 +791,7 @@ def infer_nls_from_connected_reads(
                             [*_genes],
                         )
                     else:
-                        return NAN
+                        return noreturn
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -817,7 +833,8 @@ def infer_nls_from_connected_reads(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
                     if _nls:
-                        # check whether the chimeric alignments uses canonical splice sites or not (60% fraction by default)
+                        # check whether the chimeric alignments uses
+                        # canonical splice sites or not (60% fraction by default)
                         if read_lt.splice_site_checker(
                             genome_fasta
                         ) and read_rt.splice_site_checker(genome_fasta):
@@ -838,9 +855,9 @@ def infer_nls_from_connected_reads(
                                 [*_genes],
                             )
                         else:
-                            return NAN
+                            return noreturn
                     else:
-                        return NAN
+                        return noreturn
             elif lt_mode == rt_mode == 2:  # inversion
                 ra_bp = read_lt.ref_start
                 sa_bp = read_rt.ref_start
@@ -900,7 +917,7 @@ def infer_nls_from_connected_reads(
                             [*_genes],
                         )
                     else:
-                        return NAN
+                        return noreturn
                 else:
                     chrm_start = lt_chrm
                     junc_start = min(ra_bp, sa_bp)
@@ -941,7 +958,8 @@ def infer_nls_from_connected_reads(
                         chrm_start, junc_start, chrm_end, junc_end, gene_iv
                     )
                     if _nls:
-                        # check whether the chimeric alignments uses canonical splice sites or not (60% fraction by default)
+                        # check whether the chimeric alignments
+                        # uses canonical splice sites or not (60% fraction by default)
                         if read_lt.splice_site_checker(
                             genome_fasta
                         ) and read_rt.splice_site_checker(genome_fasta):
@@ -962,11 +980,11 @@ def infer_nls_from_connected_reads(
                                 [*_genes],
                             )
                         else:
-                            return NAN
+                            return noreturn
                     else:
-                        return NAN
+                        return noreturn
             else:
-                return NAN
+                return noreturn
     else:  # lt_chrm != rt_chrm
         if lt_strand == rt_strand:
             if lt_mode == 1 and rt_mode == 2:
@@ -1013,7 +1031,7 @@ def infer_nls_from_connected_reads(
                         [*_genes],
                     )
                 else:
-                    return NAN
+                    return noreturn
             elif lt_mode == 2 and rt_mode == 1:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -1056,9 +1074,9 @@ def infer_nls_from_connected_reads(
                         [*_genes],
                     )
                 else:
-                    return NAN
+                    return noreturn
             else:
-                return NAN
+                return noreturn
         else:  # lt_strand != rt_strand
             if lt_mode == rt_mode == 1:
                 chrm_start = lt_chrm
@@ -1102,7 +1120,7 @@ def infer_nls_from_connected_reads(
                         [*_genes],
                     )
                 else:
-                    return NAN
+                    return noreturn
             elif lt_mode == rt_mode == 2:
                 chrm_start = lt_chrm
                 junc_start = read_lt.ref_start
@@ -1146,6 +1164,6 @@ def infer_nls_from_connected_reads(
                         [*_genes],
                     )
                 else:
-                    return NAN
+                    return noreturn
             else:
-                return NAN
+                return noreturn
