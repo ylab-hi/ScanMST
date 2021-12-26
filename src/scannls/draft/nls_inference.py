@@ -146,6 +146,14 @@ def short_tdup_or_not(
     else:
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
+        # matched_reduced_size = 0
+
+    logger.trace(f"{event_size=}")
+    logger.trace(f"{matched_reduced_size=}")
+    logger.trace(f"{ra_mode=}")
+    logger.trace(f"{read_sa=}")
+    logger.trace(f"{read_sa.lt_soft_len=}")
+    logger.trace(f"{read_sa.rt_soft_len=}")
 
     ref_seq = (
         read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
@@ -154,6 +162,8 @@ def short_tdup_or_not(
         else fastafile[chrm][sa_end - event_size : sa_end - matched_reduced_size].seq
         + read_sa.query_sequence[-read_sa.rt_soft_len :][:soft_extension_size]
     )
+    logger.trace(f"{ref_seq=}")
+    logger.trace(f"{ins_seq_in_read=}")
 
     if not ref_seq or not ins_seq_in_read:
         logger.error("Gapmis: Sequence not found for semi-global alignment")
@@ -432,6 +442,7 @@ def infer_nls_from_connected_reads(
                     if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
                     ):
+                        logger.trace(f"softclipped length < event size => TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -454,8 +465,10 @@ def infer_nls_from_connected_reads(
                             genome_fasta,
                             logger,
                         ):
+                            logger.trace(f"softclipped length >= event size => TDUP")
                             is_dup = True
                         else:
+                            logger.trace(f"softclipped length >= event size => INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = lt_chrm
@@ -539,7 +552,7 @@ def infer_nls_from_connected_reads(
                 rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
                 evt_size = query_offset - target_offset
 
-                logger.trace(f"{evt_size=}")
+                logger.trace(f"{evt_size=}, {query_offset=}")
                 # if evt_size == 0:  # micro-inversion
                 #    return NAN
                 if evt_size <= 0:  # deletion
@@ -619,6 +632,7 @@ def infer_nls_from_connected_reads(
                     if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
                     ):
+                        logger.trace(f"softclipped length < event size => TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -641,8 +655,10 @@ def infer_nls_from_connected_reads(
                             genome_fasta,
                             logger,
                         ):
+                            logger.trace(f"softclipped length >= event size => TDUP")
                             is_dup = True
                         else:
+                            logger.trace(f"softclipped length >= event size => INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = rt_chrm

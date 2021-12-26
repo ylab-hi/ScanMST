@@ -985,7 +985,7 @@ class Series(object):
                     insertion.update_cigarstring_sms(
                         read1.sms, source_s=source_s, source_strand=event.strand1
                     )
-
+                    self.logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
                     if event.strand1 == insertion.strand:
                         insertion_mode = 2 if event.mode1 == 1 else 1
                     else:
@@ -1014,7 +1014,7 @@ class Series(object):
                     else:
                         insertion_mode = event.mode2
 
-                    self.logger.trace(f"nls reference for read1 and insertion")
+                    self.logger.trace(f"nls reference for read2 and insertion")
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=insertion,
@@ -1052,7 +1052,7 @@ class Series(object):
                             insertion
                         )
 
-                        self.logger.trace(f"Add  {insertion=} to Series")
+                        self.logger.trace(f"Add {insertion=} to Series")
 
                         self.add_node(insertion)
 
