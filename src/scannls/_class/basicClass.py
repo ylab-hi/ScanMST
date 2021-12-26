@@ -536,7 +536,7 @@ class Insertion(Read):
         """Represent Insertion object."""
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return (
-            f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}"
+            f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
             f"{self.next_breakpoint}, SR={self.sr})"
         )
