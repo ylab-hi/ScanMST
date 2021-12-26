@@ -152,7 +152,6 @@ def short_tdup_or_not(
     else:
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
-        # matched_reduced_size = 0
 
     logger.trace(f"{event_size=}")
     logger.trace(f"{matched_reduced_size=}")
@@ -237,6 +236,7 @@ def infer_nls_from_connected_reads(
         :param read: a chimeric read
         :param mode: mode for the chimeric read
         :param event_size: event size inferred from 'query_offset - target_offset'
+
         :type read : Read
         :type mode: int
         :type event_size: int
@@ -258,6 +258,7 @@ def infer_nls_from_connected_reads(
         :param read: a chimeric read
         :param mode: mode for the chimeric read
         :param event_size: event size inferred from 'query_offset - target_offset'
+
         :type read : Read
         :type mode: int
         :type event_size: int
@@ -456,10 +457,9 @@ def infer_nls_from_connected_reads(
                 else:
                     # softclipped length < tandem duplication size
                     if softclipped_length_and_event_size_checker(
-
                         read_lt, lt_mode, evt_size
                     ):
-                        logger.trace(f"softclipped length < event size => TDUP")
+                        logger.trace("softclipped length < event size => TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -482,10 +482,10 @@ def infer_nls_from_connected_reads(
                             genome_fasta,
                             logger,
                         ):
-                            logger.trace(f"softclipped length >= event size => TDUP")
+                            logger.trace("softclipped length >= event size => TDUP")
                             is_dup = True
                         else:
-                            logger.trace(f"softclipped length >= event size => INS")
+                            logger.trace("softclipped length >= event size => INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = lt_chrm
@@ -650,7 +650,7 @@ def infer_nls_from_connected_reads(
                     if softclipped_length_and_event_size_checker(
                         read_lt, lt_mode, evt_size
                     ):
-                        logger.trace(f"softclipped length < event size => TDUP")
+                        logger.trace("softclipped length < event size => TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -673,10 +673,10 @@ def infer_nls_from_connected_reads(
                             genome_fasta,
                             logger,
                         ):
-                            logger.trace(f"softclipped length >= event size => TDUP")
+                            logger.trace("softclipped length >= event size => TDUP")
                             is_dup = True
                         else:
-                            logger.trace(f"softclipped length >= event size => INS")
+                            logger.trace("softclipped length >= event size => INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = rt_chrm

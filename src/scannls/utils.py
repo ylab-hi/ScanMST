@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Useful functions for scannls."""
 import subprocess
 import time

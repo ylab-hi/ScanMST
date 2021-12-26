@@ -477,7 +477,7 @@ def blat2chimeric_alignment(
             # same strand: different reads mode
             # MS(1) ~ SM(2) or SM(2) ~ MS(1)
             if read_mode == 1:
-                __cigar_sa = "{0}S{1}".format(
+                __cigar_sa = "{}S{}".format(
                     read_length - in_seq_len, __cigar_sa_partial
                 )  # SM
             else:
@@ -492,7 +492,7 @@ def blat2chimeric_alignment(
                     read_length - in_seq_len, __cigar_sa_partial
                 )  # MS
             else:
-                __cigar_sa = "{0}S{1}".format(
+                __cigar_sa = "{}S{}".format(
                     read_length - in_seq_len, __cigar_sa_partial
                 )  # SM
         valid_cigar_sa = cigar_validity(__cigar_sa)
