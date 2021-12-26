@@ -378,14 +378,14 @@ def splicing_confirmation(
         ) or splice_paired_checker(_junc2, junc_seq1, splice_motif_dict):
             return True, 0, 1
         else:
-            return False, 0, 0 if motif_required else True, 0, 0
+            return (False, 0, 0) if motif_required else (True, 0, 0)
     # pos1 in annotated coding exon boundary, pos2 not.
     elif junc1 in splice_motif_dict and junc2 not in splice_motif_dict:
         junc_seq = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
         if splice_motif_dict[junc1] in junc_seq:
             return True, 2, 1
         else:
-            return False, 2, 0 if motif_required else True, 2, 0
+            return (False, 2, 0) if motif_required else (True, 2, 0)
 
     # pos2 in annotated coding exon boundary, pos1 not.
     elif junc1 not in splice_motif_dict and junc2 in splice_motif_dict:
@@ -393,7 +393,7 @@ def splicing_confirmation(
         if splice_motif_dict[junc2] in junc_seq:
             return True, 1, 1
         else:
-            return False, 1, 0 if motif_required else True, 1, 0
+            return (False, 1, 0) if motif_required else (True, 1, 0)
 
     # pos1 and pos2 both in annotated coding exon boundary
     # junc1 in splice_motif_dict and junc2 in splice_motif_dict
@@ -401,7 +401,7 @@ def splicing_confirmation(
         if splice_motif_dict[junc1] == junc2:
             return True, 3, 1
         else:
-            return False, 3, 0 if motif_required else True, 3, 0
+            return (False, 3, 0) if motif_required else (True, 3, 0)
 
 
 def cigar_validity(cigar_str: str) -> str:

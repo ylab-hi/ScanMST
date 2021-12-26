@@ -152,12 +152,8 @@ def short_tdup_or_not(
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
 
-    logger.trace(f"{event_size=}")
-    logger.trace(f"{matched_reduced_size=}")
-    logger.trace(f"{ra_mode=}")
-    logger.trace(f"{read_sa=}")
-    logger.trace(f"{read_sa.lt_soft_len=}")
-    logger.trace(f"{read_sa.rt_soft_len=}")
+    logger.trace(f"{event_size=} {matched_reduced_size=} {ra_mode=} {read_sa=}")
+    logger.trace(f"{read_sa.lt_soft_len=} {read_sa.rt_soft_len=}")
 
     ref_seq = (
         read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
