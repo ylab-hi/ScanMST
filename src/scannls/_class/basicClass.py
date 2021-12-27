@@ -530,7 +530,7 @@ class Insertion(Read):
 
         self.next_node_in_series = None
         self.previous_node_in_series = None
-        self.is_merged, self.is_in_graph = False, False
+        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
     def __repr__(self):
         """Represent Insertion object."""
@@ -745,6 +745,7 @@ class Node:
         "previous_node_in_series",
         "is_in_graph",
         "is_merged",
+        "is_traced",
     )
 
     def __init__(
@@ -789,7 +790,7 @@ class Node:
 
         self.next_node_in_series = None
         self.previous_node_in_series = None
-        self.is_merged, self.is_in_graph = False, False
+        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
     def __eq__(self, other) -> bool:
         """Compare two nodes."""

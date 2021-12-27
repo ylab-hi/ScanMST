@@ -184,9 +184,9 @@ def main():
     external_tool_checking(logger=logger)
 
     if options.parallel > 1:
-        logger.info("ScanNLS draft starts running in parallel mode")
+        logger.info("scannls starts running in parallel mode")
     else:
-        logger.info("ScanNLS draft starts running in normal mode")
+        logger.info("scannls starts running in normal mode")
 
     logger.info(f"{options.input=}")
     start = time.time()

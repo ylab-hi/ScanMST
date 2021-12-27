@@ -208,7 +208,8 @@ class Ruler:
                 and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
             ) or (
                 left_query_node.strand == left_subject_node.strand == "-"
-                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]  # type: ignore
+                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]
+                # type: ignore
             ):
                 flag = True
             else:
@@ -217,10 +218,12 @@ class Ruler:
         if right_subject_node:
             if (
                 right_query_node.strand == right_subject_node.strand == "+"
-                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
+                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]
+                # type: ignore
             ) or (
                 right_query_node.strand == right_subject_node.strand == "-"
-                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]  # type: ignore
+                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]
+                # type: ignore
             ):
                 flag = True
             else:
@@ -702,12 +705,10 @@ class SpliceGraph(object):
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-        if not start_node:
+        if start_node.is_end_node() or start_node in path:
             group_paths.append(path)
-
         else:
-            successors = start_node.successors
-            if successors:
+            if successors := start_node.successors:
                 for successor in successors:
                     self._trace(successor, path + [start_node], group_paths)
             else:
