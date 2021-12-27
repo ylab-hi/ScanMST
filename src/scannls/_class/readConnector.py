@@ -469,11 +469,11 @@ class ReadsConnector:
 
         To see if there are True first read or True end read.
         """
-        query_sequence = (
-            read.query_sequence[: read.lt_soft_len]
-            if read.mode == 1
-            else read.query_sequence[-read.rt_soft_len :]
-        )
+        query_sequence = ""
+        if read.mode == 1 and read.lt_soft_len > 0:
+            query_sequence = read.query_sequence[: read.lt_soft_len]
+        elif read.mode == 2 and read.rt_soft_len > 0:
+            query_sequence = read.query_sequence[-read.rt_soft_len :]
 
         flag, hit, keep_hsp = self.__double_check_blat_query(
             query_sequence, self.align_len_threshold, self.threshold_identity, self.top

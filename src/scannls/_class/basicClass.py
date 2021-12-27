@@ -400,7 +400,7 @@ class NovelInsertion(Read):
         :class:`Insertion`
     """
 
-    def __init__(self, hit_num: int, query_sequence: str):
+    def __init__(self, hit_num: int, query_sequence: str):  # type: ignore
         """Initialize NovelInsertion."""
         self.query_sequence = query_sequence
         self.hit_num = hit_num
@@ -981,6 +981,7 @@ class Series:
 
     :Example:
 
+    >>> from loguru import logger
     >>> series = Series(blat=None, logger=logger)
     >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',
     ... chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
@@ -1022,6 +1023,12 @@ class Series:
     def add_node(self, node: Union[Node, Insertion]) -> None:
         """Add a node to the series."""
         self.nodes.append(node)
+
+    def is_all_type_del(self) -> bool:
+        """Check if sv_type of all nodes in the series are DEL."""
+        return all(
+            node.sv_type == "DEL" for node in self.nodes if node.sv_type is not None
+        )
 
     @classmethod
     def create_series_from_node_list(
@@ -1497,16 +1504,14 @@ class Event:
         for read in read_chains:
             if read.ref_start == self.read1_ref_start:
                 return read
-        else:
-            raise ReadNotFoundError
+        raise ReadNotFoundError
 
     def read2(self, read_chains: List[Read]) -> Read:
         """Return the read2 of the event."""
         for read in read_chains:
             if read.ref_start == self.read2_ref_start:
                 return read
-        else:
-            raise ReadNotFoundError
+        raise ReadNotFoundError
 
     def update_specific_info_within_event(
         self, node: Union[Node, Insertion], info_key_list: List[str]
