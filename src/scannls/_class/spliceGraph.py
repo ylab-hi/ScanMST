@@ -705,7 +705,7 @@ class SpliceGraph(object):
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-        if start_node.is_end_node() or start_node in path:
+        if not start_node or start_node in path:
             group_paths.append(path)
         else:
             if successors := start_node.successors:
