@@ -12,7 +12,6 @@ import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 from loguru._logger import Logger
 
-from .._class.exception import SeqNotFoundError  # type: ignore
 from .helper import gene_annotation  # type: ignore
 from .helper import splicing_confirmation  # type: ignore
 
@@ -118,7 +117,7 @@ class Aligner:
 
 
 def short_tdup_or_not(
-    chrm, ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, fastafile, logger
+    chrm, ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, logger
 ) -> bool:
     """Judge the ins_seq_in_read is a TDUP (TDUP size < reads length).
 
@@ -127,22 +126,20 @@ def short_tdup_or_not(
 
     :param chrm: the chromosome
     :param ra_mode: representative alignment mode
-    :param read_sa: supplementary read
+    :param read_sa: supplementary read mode
     :param bp_region_seq_len: softclipping read size
-    :param ins_seq_in_read: putative insertion sequence from the read
-    :param fastafile: pyfaidx.Fasta object of reference genome (FASTA file)
+    :param ins_seq_in_read: putative insertion sequence from the representative read
+    :param logger: logger
     :type chrm: str
     :type ra_mode: int
     :type read_sa: Read
     :type bp_region_seq_len: int
     :type ins_seq_in_read: str
-    :type fastafile: pyfaidx.Fasta object
+    :type logger: Logger
     :returns: True if it is a short TDUP
     :rtype: bool
     """
-    event_size = min(len(ins_seq_in_read), read_sa.read_match_size)
-    sa_start = read_sa.ref_start
-    sa_end = read_sa.ref_end
+    event_size = len(ins_seq_in_read)
 
     if bp_region_seq_len >= 0:
         soft_extension_size = bp_region_seq_len
@@ -151,32 +148,37 @@ def short_tdup_or_not(
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
 
-    logger.trace(f"{event_size=} {matched_reduced_size=} {ra_mode=} {read_sa=}")
-    logger.trace(f"{read_sa.lt_soft_len=} {read_sa.rt_soft_len=}")
+    # logger.trace(f"{event_size=} {matched_reduced_size=} {ra_mode=} {read_sa=}")
 
-    ref_seq = (
-        read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
-        + fastafile[chrm][sa_start - matched_reduced_size : sa_start + event_size].seq
-        if ra_mode == 1
-        else fastafile[chrm][sa_end - event_size : sa_end - matched_reduced_size].seq
-        + read_sa.query_sequence[-read_sa.rt_soft_len :][:soft_extension_size]
+    read_sa_matched_segment = read_sa.query_sequence[
+        read_sa.lt_soft_len : read_sa.query_length - read_sa.rt_soft_len
+    ]
+    diff_len = (
+        len(read_sa_matched_segment)
+        - matched_reduced_size
+        + soft_extension_size
+        - event_size
     )
-    logger.trace(f"{ref_seq=}")
-    logger.trace(f"{ins_seq_in_read=}")
-
-    if not ref_seq or not ins_seq_in_read:
-        logger.error("Gapmis: Sequence not found for semi-global alignment")
-        raise SeqNotFoundError
-    logger.trace(f"Aligner is working, {ref_seq=}, {ins_seq_in_read=}")
-    aligner = Aligner(ref_seq, ins_seq_in_read)
-    alignment_result = aligner.run()
-    search_seq = alignment_result.seq1
-
-    search_start, search_end = alignment_result.start1, alignment_result.end1
-    aln_len = search_end - search_start
-
-    total_mismatches = len(search_seq) - aln_len + alignment_result.n_mismatches
-    return True if total_mismatches <= 3 else False
+    if diff_len < 0:
+        return False
+    else:
+        compared_seq = (
+            read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
+            + read_sa_matched_segment[
+                matched_reduced_size : len(read_sa_matched_segment) - diff_len
+            ]
+            if ra_mode == 1
+            else read_sa_matched_segment[
+                diff_len : len(read_sa_matched_segment) - matched_reduced_size
+            ]
+            + read_sa.query_sequence[-read_sa.rt_soft_len :][:soft_extension_size]
+        )
+        logger.trace(f"{compared_seq=}")
+        logger.trace(f"{ins_seq_in_read=}")
+        if compared_seq == ins_seq_in_read:
+            return True
+        else:
+            return False
 
 
 def infer_nls_from_connected_reads(
@@ -222,7 +224,9 @@ def infer_nls_from_connected_reads(
        0(00) => none breakpoint overlap with coding exons boundary
     """
 
-    def softclipped_length_and_event_size_checker(read, mode, event_size) -> bool:
+    def softclipped_length_and_event_size_checker(
+        read, mode, event_size, bp_region_seq_len
+    ) -> bool:
         """When read length > predicted tandem duplication size.
 
         check whether the softclipped length is less than the inferred event size
@@ -239,19 +243,22 @@ def infer_nls_from_connected_reads(
         """
         flag = False
         if mode == 2:
-            if read.lt_soft_len < event_size:
+            if read.lt_soft_len < event_size + bp_region_seq_len:
                 flag = True
         else:
-            if read.rt_soft_len < event_size:
+            if read.rt_soft_len < event_size + bp_region_seq_len:
                 flag = True
         return flag
 
-    def obtain_ins_seq_from_softclipped_part_read(read, mode, event_size) -> str:
+    def obtain_ins_seq_from_softclipped_part_read(
+        read, mode, event_size, bp_region_seq_len
+    ) -> str:
         """Obtain insertion sequence from soft-clipped part of read.
 
         :param read: a chimeric read
         :param mode: mode for the chimeric read
         :param event_size: event size inferred from 'query_offset - target_offset'
+        :param bp_region_seq_len: bp_region_seq_len
 
         :type read : Read
         :type mode: int
@@ -262,9 +269,9 @@ def infer_nls_from_connected_reads(
         read_seq = read.query_sequence
 
         ins_seq_in_read = (
-            read_seq[: read.lt_soft_len][-event_size:]
+            read_seq[: read.lt_soft_len][-(event_size + bp_region_seq_len) :]
             if mode == 2
-            else read_seq[-read.rt_soft_len :][:event_size]
+            else read_seq[-read.rt_soft_len :][: (event_size + bp_region_seq_len)]
         )
 
         return ins_seq_in_read
@@ -451,9 +458,9 @@ def infer_nls_from_connected_reads(
                 else:
                     # softclipped length < tandem duplication size
                     if softclipped_length_and_event_size_checker(
-                        read_lt, lt_mode, evt_size
+                        read_lt, lt_mode, evt_size, bp_region_seq_len
                     ):
-                        logger.trace("softclipped length < event size => TDUP")
+                        logger.trace("softclipped length < event size: TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -464,7 +471,7 @@ def infer_nls_from_connected_reads(
                             ins_start : ins_start + 1
                         ].seq
                         ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
-                            read_lt, lt_mode, evt_size
+                            read_lt, lt_mode, evt_size, bp_region_seq_len
                         )
 
                         if short_tdup_or_not(
@@ -473,13 +480,12 @@ def infer_nls_from_connected_reads(
                             read_rt,
                             bp_region_seq_len,
                             ins_seq_in_read,
-                            genome_fasta,
                             logger,
                         ):
-                            logger.trace("softclipped length >= event size => TDUP")
+                            logger.trace("softclipped length >= event size: TDUP")
                             is_dup = True
                         else:
-                            logger.trace("softclipped length >= event size => INS")
+                            logger.trace("softclipped length >= event size: INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = lt_chrm
@@ -566,7 +572,6 @@ def infer_nls_from_connected_reads(
                 logger.trace(f"{evt_size=}, {query_offset=}")
 
                 if evt_size <= 0:  # deletion
-
                     del_start = read_lt.ref_start + read_lt.reference_match_size
                     del_end = del_start + abs(evt_size)
                     _, _anno, _can = splicing_confirmation(
@@ -641,9 +646,9 @@ def infer_nls_from_connected_reads(
                 else:
                     # softclipped length < tandem duplication size
                     if softclipped_length_and_event_size_checker(
-                        read_lt, lt_mode, evt_size
+                        read_lt, lt_mode, evt_size, bp_region_seq_len
                     ):
-                        logger.trace("softclipped length < event size => TDUP")
+                        logger.trace("softclipped length < event size: TDUP")
                         is_dup = True
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
@@ -654,7 +659,7 @@ def infer_nls_from_connected_reads(
                             ins_start : ins_start + 1
                         ].seq
                         ins_seq_in_read = obtain_ins_seq_from_softclipped_part_read(
-                            read_lt, lt_mode, evt_size
+                            read_lt, lt_mode, evt_size, bp_region_seq_len
                         )
 
                         if short_tdup_or_not(
@@ -663,13 +668,12 @@ def infer_nls_from_connected_reads(
                             read_rt,
                             bp_region_seq_len,
                             ins_seq_in_read,
-                            genome_fasta,
                             logger,
                         ):
-                            logger.trace("softclipped length >= event size => TDUP")
+                            logger.trace("softclipped length >= event size: TDUP")
                             is_dup = True
                         else:
-                            logger.trace("softclipped length >= event size => INS")
+                            logger.trace("softclipped length >= event size: INS")
                             is_dup = False
                     if is_dup:
                         chrm_start = rt_chrm

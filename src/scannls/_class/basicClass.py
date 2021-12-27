@@ -185,7 +185,7 @@ class Read:
         :return: representation of the read
         """
         return (
-            f"Read({self.chrom}, {self.ref_start}, {self.ref_end}"
+            f"Read({self.chrom}, {self.ref_start}, {self.ref_end}, "
             f"{self.strand}, {self.mapq}, {self.nm})"
         )
 
@@ -1112,7 +1112,7 @@ class Series:
                     else:
                         insertion_mode = event.mode2
 
-                    self.logger.trace("nls reference for read1 and insertion")
+                    self.logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=insertion,
