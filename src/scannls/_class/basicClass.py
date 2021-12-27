@@ -1023,6 +1023,12 @@ class Series:
         """Add a node to the series."""
         self.nodes.append(node)
 
+    def is_all_type_del(self) -> bool:
+        """Check if sv_type of all nodes in the series are DEL."""
+        return all(
+            node.sv_type == "DEL" for node in self.nodes if node.sv_type is not None
+        )
+
     @classmethod
     def create_series_from_node_list(
         cls, node_list: List[NodeType], logger: Logger

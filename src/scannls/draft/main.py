@@ -524,8 +524,9 @@ def _scan_bam_helper(
                         motif_required,
                     )
                     series.disable_blat_logger()
-                    nls_src_forms_list.append(series)
-                    logger.debug(f"{series=}")
+                    if not series.is_all_type_del():
+                        nls_src_forms_list.append(series)
+                        logger.debug(f"{series=}")
 
                 if sv_tag_list:
                     read.set_tag("SV", "".join(sv_tag_list))
