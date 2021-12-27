@@ -229,7 +229,7 @@ class ReadsConnector:
         next_sms: Tuple[int, int, int],
         prev_read_mode: int,
         next_read_mode: int,
-    ) -> str:
+    ) -> Any:
         """Update the query sequence based on the length of the microhomology."""
         (
             is_microhomology,

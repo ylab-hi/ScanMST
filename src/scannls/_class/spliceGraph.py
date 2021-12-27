@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Splice Graph.
 
 @Filename:    spliceGraph.py
@@ -188,7 +187,7 @@ class Ruler:
         right_query_node: NodeType,
         left_subject_node: NodeType,
         right_subject_node: NodeType,
-    ):
+    ) -> bool:  # type: ignore
         """Decide the flag.
 
         :param left_query_node: left query node
@@ -208,8 +207,7 @@ class Ruler:
                 and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
             ) or (
                 left_query_node.strand == left_subject_node.strand == "-"
-                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]
-                # type: ignore
+                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]  # type: ignore
             ):
                 flag = True
             else:
@@ -218,17 +216,14 @@ class Ruler:
         if right_subject_node:
             if (
                 right_query_node.strand == right_subject_node.strand == "+"
-                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]
-                # type: ignore
+                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
             ) or (
                 right_query_node.strand == right_subject_node.strand == "-"
-                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]
-                # type: ignore
+                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]  # type: ignore
             ):
                 flag = True
             else:
                 flag = False
-
         return flag
 
     def __call__(self, series_a: Series, series_b: Series) -> float:
@@ -416,7 +411,7 @@ class CliqueFinder:
         return list(find_cliques(self.graph))
 
 
-class SpliceGraph(object):
+class SpliceGraph:
     """SpliceGraph class is used to trace the path of splice graph."""
 
     dict_factory = dict
@@ -486,8 +481,7 @@ class SpliceGraph(object):
     def __iter__(self):
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
-            for node in nodes:
-                yield node
+            yield from nodes
 
     @staticmethod
     def _check_insertion_conditions_for_compare(

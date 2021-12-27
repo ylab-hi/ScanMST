@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Init file for the src package.
 
 @Filename:    __init__.py.py

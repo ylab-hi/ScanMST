@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Output module for draft scannls.
 
 2021-10-01:
 detect_sv_from_cigar current_output a list of putative NLS events
 modify SV tag endswith ";", SV:Z:XXX;YYY;ZZZ;
 """
+from typing import Any
 from typing import Dict
 from typing import TextIO
 
@@ -29,7 +29,7 @@ def output_bedpe_file(
     :return: current_output BEDPE file
     :rtype: str
     """
-    output = open("{}.sv.bedpe".format(prefix), "w")
+    output = open(f"{prefix}.sv.bedpe", "w")
     for key in sr_dict:
         sr = sr_dict[key]
         num_of_group = group_dict[key]
@@ -50,7 +50,7 @@ def output_bedpe_file(
     return output
 
 
-def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Dict:
+def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Any:
     """Aggregate candidates."""
     if len_cutoff == 0:
         return in_dict

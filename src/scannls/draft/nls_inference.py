@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Module for nls inference."""
 import os
 import subprocess
@@ -33,7 +32,7 @@ class AlignerResult:
     n_mismatches: float
 
 
-class Aligner(object):
+class Aligner:
     """Aligner class for aligning two sequences by semi-global algorithm.
 
     :param seqa: the sequence to be aligned
@@ -88,7 +87,7 @@ class Aligner(object):
         """
         seqa_coords: List[Tuple] = []
         seqb_coords: List[Tuple] = []
-        with open(result_file, "r") as f:
+        with open(result_file) as f:
             for line in [line.strip() for line in f if not line.startswith("#")]:
                 if line.startswith("seq1"):
                     # (1, 50)
@@ -459,7 +458,7 @@ def infer_nls_from_connected_reads(
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
                     else:
-                        is_dup = None
+                        is_dup = False
                         ins_start = read_lt.ref_start
                         ref_allele = genome_fasta[lt_chrm][
                             ins_start : ins_start + 1
@@ -649,7 +648,7 @@ def infer_nls_from_connected_reads(
                     # softclipped length >= tandem duplication size
                     # Novel sequence insertion OR TDUP
                     else:
-                        is_dup = None
+                        is_dup = False
                         ins_start = read_lt.ref_start + read_lt.reference_match_size
                         ref_allele = genome_fasta[lt_chrm][
                             ins_start : ins_start + 1

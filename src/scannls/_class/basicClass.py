@@ -756,7 +756,7 @@ class Node:
         chrom: Optional[str] = None,
         ref_start: Optional[int] = None,
         ref_end: Optional[int] = None,
-        exons: List[Any] = None,
+        exons: Optional[List[Any]] = None,
         sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
@@ -764,7 +764,6 @@ class Node:
         genes: Optional[Tuple[str]] = None,
         sr: Optional[int] = 1,
         insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
-        # type: ignore
     ) -> None:
         """Initialize a Node object."""
         self.chrom = chrom

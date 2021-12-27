@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # ===============================================================================
 import argparse
 import copy
@@ -436,7 +435,7 @@ def cigartuple2cigarstring(cigartuple):
             __char = cigar_char_dict[_code]
         else:
             __char = "X"
-        cigarstring += "{}{}".format(_len, __char)
+        cigarstring += f"{_len}{__char}"
     return cigarstring
 
 
@@ -885,8 +884,8 @@ def vcf_construction(in_vcf, in_bam, out_gtf, ref_genome, output_prefix):
         _sv_type = record.INFO["SVTYPE"]
         gene_id = str(record.ID)
 
-        region_l = "{}:{}-{}".format(chr1, pos1 - 1, pos1)
-        region_r = "{}:{}-{}".format(chr2, pos2 - 1, pos2)
+        region_l = f"{chr1}:{pos1 - 1}-{pos1}"
+        region_r = f"{chr2}:{pos2 - 1}-{pos2}"
 
         print("DEALING WITH: ", gene_id, region_l, region_r)
         isoform_candidates = []
@@ -921,7 +920,7 @@ def vcf_construction(in_vcf, in_bam, out_gtf, ref_genome, output_prefix):
                         strands,
                         genes,
                     ) = read_ra.get_tag("SV").split(",")
-                    bp1 = "{}:{}".format(chrm, position)
+                    bp1 = f"{chrm}:{position}"
                     if ":" in size_or_sup_position:
                         bp2 = size_or_sup_position
                     else:
@@ -1127,7 +1126,7 @@ def vcf_construction(in_vcf, in_bam, out_gtf, ref_genome, output_prefix):
                         strands,
                         genes,
                     ) = read_ra.get_tag("SV").split(",")
-                    bp1 = "{}:{}".format(chrm, position)
+                    bp1 = f"{chrm}:{position}"
                     if ":" in size_or_sup_position:
                         bp2 = size_or_sup_position
                     else:
@@ -1705,8 +1704,8 @@ def vcf_parser(
         new_pos2 = int(new_chrm_pos2.split(":")[1])
         is_can = False
         if new_pos1 > 0 and new_pos2 > 0:
-            region_l = "{}:{}-{}".format(chrm1, pos1 - 1, pos1)
-            region_r = "{}:{}-{}".format(chrm2, pos2 - 1, pos2)
+            region_l = f"{chrm1}:{pos1 - 1}-{pos1}"
+            region_r = f"{chrm2}:{pos2 - 1}-{pos2}"
             # count += 1
             print(region_l, region_r)
             # Left breakpoint

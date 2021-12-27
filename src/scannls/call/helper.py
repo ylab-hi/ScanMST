@@ -65,9 +65,7 @@ def vcf_header(output_prefix, bam_header):
 
     header = ["##fileformat=VCFv4.1"]
     header.append("##source=ScanNLS " + __version__)
-    header.append(
-        '##reference=<CMD={},Description="Alignment parameters">'.format(aln_cmd)
-    )
+    header.append(f'##reference=<CMD={aln_cmd},Description="Alignment parameters">')
     header.append('##ALT=<ID=TDUP,Description="Tandem duplication">')
     header.append('##ALT=<ID=INV,Description="Inversion">')
     header.append('##ALT=<ID=TRA,Description="Translocation">')

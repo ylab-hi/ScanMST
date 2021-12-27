@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Init file for scannls package."""
 __version__ = "0.0.1"
 

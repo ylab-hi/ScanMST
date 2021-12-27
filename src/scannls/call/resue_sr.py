@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 import sys
 from collections import defaultdict
 from collections import OrderedDict
@@ -278,7 +277,7 @@ def joint_call(
                         "group": group_id,
                     }
     except TypeError as e:
-        sys.stderr.write("Error! BEDPE file {}\n".format(e))
+        sys.stderr.write(f"Error! BEDPE file {e}\n")
 
     # output_NLS_events = OrderedDict()
     ID_count = 1
@@ -383,7 +382,7 @@ def joint_call(
                             INS_count += 1
 
             except ValueError as e:
-                sys.stderr.write("Error in INS! {} at {}\n".format(e, region_l))
+                sys.stderr.write(f"Error in INS! {e} at {region_l}\n")
                 continue
         else:  # DUP/INV/TRA
             sv_ao = regions[(region_l, region_r)]["ao"]
@@ -595,7 +594,7 @@ def joint_call(
                         # print('Left AO:', ao)
                         ao_total_dict[sv_id] = ao
             except ValueError as e:
-                sys.stderr.write("Error! Left:{} at {}\n".format(e, region_l))
+                sys.stderr.write(f"Error! Left:{e} at {region_l}\n")
                 continue
             ##########right breakpoint######################################
             try:
@@ -794,7 +793,7 @@ def joint_call(
                             ao_total_dict[sv_id] = ao
                             # print(ao_total_dict[sv_id])
             except ValueError as e:
-                sys.stderr.write("Error! Right:{} at {}\n".format(e, region_r))
+                sys.stderr.write(f"Error! Right:{e} at {region_r}\n")
                 continue
             ################################################################################
             for sv_id in ao_total_dict:
@@ -805,16 +804,12 @@ def joint_call(
 
                 sr = ao_total_dict[sv_id]
                 try:
-                    dp1 = bam_file.count(
-                        region="{}:{}-{}".format(bp1_chrm, bp1_pos - 1, bp1_pos)
-                    )
+                    dp1 = bam_file.count(region=f"{bp1_chrm}:{bp1_pos - 1}-{bp1_pos}")
                 except ValueError as e:
                     print(f"{e} at {bp1_chrm}:{bp1_pos}")
                     dp1 = 0
                 try:
-                    dp2 = bam_file.count(
-                        region="{}:{}-{}".format(bp2_chrm, bp2_pos - 1, bp2_pos)
-                    )
+                    dp2 = bam_file.count(region=f"{bp2_chrm}:{bp2_pos - 1}-{bp2_pos}")
                 except ValueError as e:
                     print(f"{e} at {bp2_chrm}:{bp2_pos}")
                     dp2 = 0

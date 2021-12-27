@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding:utf-8 -*-
 """Helper functions."""
 import re
 from collections import defaultdict
@@ -419,14 +418,14 @@ def cigar_validity(cigar_str: str) -> str:
     # first two operations are the same
     if cigartuple[0][1] == cigartuple[1][1]:
         cigartuple[1][0] = str(
-            int(cigartuple[0][0]) + int(cigartuple[1][0])
+            int(cigartuple[0][0]) + int(cigartuple[1][0])  # type: ignore
         )  # type: ignore
         del cigartuple[0]
 
     # last two operations are the same
     elif cigartuple[-1][1] == cigartuple[-2][1]:
         cigartuple[-2][0] = str(
-            int(cigartuple[-1][0]) + int(cigartuple[-2][0])
+            int(cigartuple[-1][0]) + int(cigartuple[-2][0])  # type: ignore
         )  # type: ignore
         del cigartuple[-1]
 

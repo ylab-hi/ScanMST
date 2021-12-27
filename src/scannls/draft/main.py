@@ -1,5 +1,4 @@
 # !/usr/bin/env python
-# -*- coding: utf-8 -*-
 """This module contains the main function of the draft scannls."""
 import copy
 import inspect
@@ -124,7 +123,7 @@ class BamScanner:
                     else:
                         r_s_len = ""
                     self.representative_alignments_new_cigar[
-                        "{}\t{}\t{}".format(read.qname, l_s_len, r_s_len)
+                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     ] = sup_aln_cigar
         except ValueError as e:
             self.logger.error(
@@ -154,9 +153,9 @@ def _get_cvg_gene_iv(gtf, splice_bin, logger):
     try:
         cvg, gene_iv = extract_splice_sites(str(gtf), splice_bin)
         logger.success(f"{gtf} loaded successfully")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"read GTF file {gtf} error!", e)
-        raise SystemExit from IOError
+        raise SystemExit from OSError
     else:
         return cvg, gene_iv
 
@@ -366,7 +365,7 @@ def _scan_bam_helper(
                     l_s_len = left_mat.group(1) if left_mat else ""
                     r_s_len = right_mat.group(1) if right_mat else ""
 
-                    tgt_key = "{}\t{}\t{}".format(read.qname, l_s_len, r_s_len)
+                    tgt_key = f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     if tgt_key in representative_alignments_new_cigar:
                         __updated_cigar = representative_alignments_new_cigar[tgt_key]
                         # discard supplementary alignments with too many mismatches or lower MAPQ
