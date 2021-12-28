@@ -217,8 +217,8 @@ def main():
     )
     splice_graph = SpliceGraph(logger)
     clique_finder = CliqueFinder(intact_series_list, logger)
+    # cliques is generator
     cliques = clique_finder.find_clique()
-    # clique_finder.debug()
     for clique in cliques:
         logger.debug(list(splice_graph(clique)))
     logger.info("ScanNLS build running done")

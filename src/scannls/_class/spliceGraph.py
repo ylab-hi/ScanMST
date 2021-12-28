@@ -6,6 +6,7 @@
 @Time:        12/15/21 10:42 AM
 """
 import copy
+import types
 from typing import Any
 from typing import Dict
 from typing import Iterable
@@ -17,6 +18,7 @@ import networkx as nx  # type: ignore
 from loguru._logger import Logger
 from networkx.algorithms.clique import find_cliques  # type: ignore
 
+from ..utils import timeit
 from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
@@ -378,6 +380,7 @@ class CliqueFinder:
                 self.graph.add_edge(x, y)
                 x.is_in_graph = True
 
+    @timeit
     def _creat_graph_for_series(self) -> None:
         """Create graph for all series in intact_series_list.
 
@@ -392,6 +395,7 @@ class CliqueFinder:
             if not x.is_in_graph:
                 self.graph.add_node(x)
 
+    @timeit
     def find_clique(self) -> Any:
         """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
 
@@ -408,7 +412,7 @@ class CliqueFinder:
         """
         self._creat_graph_for_series()
 
-        return list(find_cliques(self.graph))
+        yield from find_cliques(self.graph)
 
 
 class SpliceGraph:
@@ -432,6 +436,8 @@ class SpliceGraph:
         >>> splice_graph = SpliceGraph(logger)
         >>> splice_graph(series_list)
         """
+        if isinstance(series_list, types.GeneratorType):
+            series_list = list(series_list)
         self.series_list = copy.deepcopy(series_list)
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
         self.construct()

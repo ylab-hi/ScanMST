@@ -2,6 +2,7 @@
 """Useful functions for scannls."""
 import subprocess
 import time
+from functools import wraps
 from typing import Any
 from typing import Callable
 from typing import Tuple
@@ -94,6 +95,7 @@ def timeit(func: Callable) -> Callable:
     :param func: the function to be timed
     """
 
+    @wraps(func)
     def wrapped(*args, **kwargs):
         start = time.time()
         result = func(*args, **kwargs)
