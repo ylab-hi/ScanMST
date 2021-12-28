@@ -85,7 +85,7 @@ def infer_nls_from_connected_reads(
     motif_required: bool,
     logger: Logger,
 ) -> Any:
-    """Infer novel sequence insertion from connected reads.
+    """Infer NLS event from connected reads.
 
     :param logger:
     :param read_lt: Read 1
@@ -420,7 +420,7 @@ def infer_nls_from_connected_reads(
                             "INS",
                             ref_allele,
                             ins_seq_in_read,
-                            (ins_start, len(ins_seq_in_read), 2, 1),
+                            (f"{lt_chrm}:{ins_start}", len(ins_seq_in_read), 2, 1),
                             (lt_start, lt_end, lt_exons),
                             (rt_start, rt_end, rt_exons),
                             (lt_bp_seq, rt_bp_seq),
@@ -604,7 +604,7 @@ def infer_nls_from_connected_reads(
                             "INS",
                             ref_allele,
                             ins_seq_in_read,
-                            (ins_start, len(ins_seq_in_read), 1, 2),
+                            (f"{rt_chrm}:{ins_start}", len(ins_seq_in_read), 1, 2),
                             (rt_start, rt_end, rt_exons),
                             (lt_start, lt_end, lt_exons),
                             (rt_bp_seq, lt_bp_seq),

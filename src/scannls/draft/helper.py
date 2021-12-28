@@ -10,6 +10,7 @@ __funcs__ = {
     "update_breakpoints",
     "cigar_validity",
     "blat2chimeric_alignment",
+    "event_to_str",
 }
 
 from typing import Tuple, List, Dict, Any
@@ -503,6 +504,56 @@ def blat2chimeric_alignment(
             chimeric_aln_str = ""
 
     return chimeric_aln_str
+
+
+def event_to_str(event, tag) -> str:
+    """Convert event info to a string adding to the pysam tag.
+
+    :param event: event tuple from infer_nls_from_connected_reads
+    :param tag: SV or OT
+
+    :type event: str
+    :type tag: str
+
+    :return: string of event
+    :rtype: str
+
+    ..note:
+        SV tag uses the coordinate system (start with 1) as SA tag
+    """
+    (
+        _type,
+        _anno,
+        _canonical,
+        _positions,
+        read1_info,
+        read2_info,
+        bp_seqs,
+        strands,
+        genes,
+    ) = event
+
+    _bp1, _bp2, _mode1, _mode2 = _positions
+    _strand1, _strand2 = strands
+    _gene1, _gene2 = genes
+    if tag == "SV":
+        _chrm1, _pos1 = _bp1.split(":")
+        _chrm2, _pos2 = _bp2.split(":")
+        return (
+            f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},"
+            f"{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},"
+            f"{_gene1}|{_gene2};"
+        )
+    else:
+        _chrm, _pos = _bp1.split(":")
+        _ins_length = int(_bp2)
+        # _anno: ref allele
+        # _canonical: ins_seq (with out ref allele)
+        return (
+            f"{_type},{_anno}|{_canonical},{_chrm}:{int(_pos) + 1},"
+            f"{_ins_length},{_mode1}{_mode2},{_strand1}{_strand2},"
+            f"{_gene1}|{_gene2};"
+        )
 
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:

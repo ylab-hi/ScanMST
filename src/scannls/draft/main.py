@@ -5,7 +5,6 @@ import inspect
 import re
 import subprocess
 import time
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -24,6 +23,7 @@ from ..utils import get_softclip_length  # type: ignore
 from ..utils import reverse_complement  # type: ignore
 from ..utils import write_series_to_file  # type: ignore
 from .helper import blat2chimeric_alignment  # type: ignore
+from .helper import event_to_str  # type: ignore
 from .helper import extract_splice_sites  # type: ignore
 from .helper import strand_mode_checker  # type: ignore
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
@@ -322,8 +322,6 @@ def _scan_bam_helper(
     output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
     nls_src_forms_list = []
-    candidate_ins_dict = defaultdict(int)
-    candidate_ao_dict = defaultdict(int)
 
     pat_left_s = re.compile(r"^(\d+)S")
     pat_right_s = re.compile(r"(\d+)S$")
@@ -337,7 +335,6 @@ def _scan_bam_helper(
             and not read.is_unmapped
             and not read.is_supplementary
         ):
-            chrom = read.reference_name
             chimeric_alns_num = 2
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
@@ -452,63 +449,16 @@ def _scan_bam_helper(
                     blat=blat,
                     logger=logger,
                 )
-                sv_tag_list = []
-                ot_tag_list = []
+                sv_tags = []
+                ot_tags = []
                 nls_event_list = []
                 for event in event_lists:
-                    (
-                        _type,
-                        _anno,
-                        _canonical,
-                        _positions,
-                        read1_info,
-                        read2_info,
-                        bp_seqs,
-                        strands,
-                        genes,
-                    ) = event
-                    _bp1, _bp2, _mode1, _mode2 = _positions
-                    _strand1, _strand2 = strands
-                    _gene1, _gene2 = genes
-                    if _type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
-                        _chrm1, _pos1 = _bp1.split(":")
-                        _chrm2, _pos2 = _bp2.split(":")
-                        # SV tag uses SA tag coordinate system (start with 1)
-                        # So, position should always add 1
-                        sv_tag_list.append(
-                            f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},"
-                            f"{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},"
-                            f"{_gene1}|{_gene2};"
-                        )
+                    if event[0] in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
+                        sv_tags.append(event_to_str(event, "SV"))
                         nls_event_list.append(event)
 
-                        event_key = (
-                            f"{_type}\t{_canonical}\t{_chrm1}:{int(_pos1) + 1}\t{_chrm2}:"
-                            f"{int(_pos2) + 1}\t{_strand1}{_strand2}"
-                        )
-                        reversed_event_key = (
-                            f"{_type}\t{_canonical}\t{_chrm2}:"
-                            f"{int(_pos2) + 1}\t{_chrm1}:{int(_pos1) + 1}\t"
-                            f"{_strand2}{_strand1}"
-                        )
-                        if event_key in candidate_ao_dict:
-                            candidate_ao_dict[event_key] += 1
-                        elif reversed_event_key in candidate_ao_dict:
-                            candidate_ao_dict[reversed_event_key] += 1
-
-                    elif _type in {"INS"}:
-                        _end_pos = int(_bp1) + int(_bp2)
-                        ot_tag_list.append(
-                            f"{_type},{_anno}|{_canonical},{_bp1},{_end_pos},"
-                            f"{_mode1}{_mode2},{_strand1}{_strand2},{_gene1}|{_gene2};"
-                        )
-
-                        candidate_ins_dict[
-                            (
-                                f"{_type}\t{_anno}\t{_canonical}\t{chrom}:{_bp1}\t{chrom}:"
-                                f"{_end_pos}\t{_strand1}{_strand2}"
-                            )
-                        ] += 1
+                    elif event[0] in {"INS"}:
+                        ot_tags.append(event_to_str(event, "OT"))
 
                 chimeric_alns_num += num_added_reads
                 if nls_event_list and (len(nls_event_list) + 1 == chimeric_alns_num):
@@ -528,10 +478,10 @@ def _scan_bam_helper(
                         nls_src_forms_list.append(series)
                         logger.debug(f"{series=}")
 
-                if sv_tag_list:
-                    read.set_tag("SV", "".join(sv_tag_list))
-                if ot_tag_list:
-                    read.set_tag("OT", "".join(ot_tag_list))
+                if sv_tags:
+                    read.set_tag("SV", "".join(sv_tags))
+                if ot_tags:
+                    read.set_tag("OT", "".join(ot_tags))
 
         output_bam.write(read)
 
