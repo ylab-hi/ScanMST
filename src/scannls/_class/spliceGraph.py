@@ -520,6 +520,51 @@ class SpliceGraph:
         return False
 
     @staticmethod
+    def _compare_is_merged_helper_check_condition_for_head_tail_node_mode(
+        node1: NodeType,
+        node2: NodeType,
+        threshold: float = 0.8,
+    ) -> bool:
+        """Check if node1 and node2 can be merged based on overlap info.
+
+        node1 is tail node, node2 is head node Using mean overlap ratio to
+        check if they can be merged.
+
+        :param node1:  node1
+        :param node2:  node2
+        :param threshold:  threshold for checking if two nodes are merged
+        :return:  True if two nodes are merged, otherwise False
+
+        .. note::
+
+            -> [node1]
+                [node2] ->
+        """
+        node1_first_exon_start = node1.exons[0][0]  # type: ignore
+        node1_last_exon_end = node1.exons[-1][1]  # type: ignore
+        node2_first_exon_start = node2.exons[0][0]  # type: ignore
+        node2_last_exon_end = node2.exons[-1][1]  # type: ignore
+        expression1 = node1_last_exon_end >= node2_first_exon_start
+        expression2 = (
+            expression1
+            and node1_first_exon_start <= node2_first_exon_start
+            and node1_last_exon_end <= node2_last_exon_end
+        )
+        if expression2:
+            overlap_len = node1_last_exon_end - node2_first_exon_start
+            node1_mean_overlap_ratio = overlap_len / (
+                node1_last_exon_end - node1_first_exon_start
+            )
+            node2_mean_overlap_ratio = overlap_len / (
+                node1_last_exon_end - node1_first_exon_start
+            )
+            return (
+                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
+            )
+
+        return False
+
+    @staticmethod
     def _compare_is_merged_helper(node1: NodeType, node2: NodeType) -> Any:
         """Check if node1 and node2 can be merged."""
         condition = (
@@ -530,11 +575,8 @@ class SpliceGraph:
             if (
                 node1.next_breakpoint is None and node2.prev_breakpoint is None
             ):  # node1 is end node, node2 is start node
-                expression1 = node1.exons[-1][1] >= node2.exons[0][0]  # type: ignore
-                return (
-                    expression1
-                    and node1.exons[0][0] <= node2.exons[0][0]  # type: ignore
-                    and node1.exons[-1][1] <= node2.exons[-1][1]  # type: ignore
+                return SpliceGraph._compare_is_merged_helper_check_condition_for_head_tail_node_mode(
+                    node1, node2
                 )
 
             return condition
