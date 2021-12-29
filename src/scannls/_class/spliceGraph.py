@@ -638,7 +638,9 @@ class SpliceGraph:
         return False
 
     @staticmethod
-    def update_exon_coord_sr(updated_node: NodeType, current_node: NodeType) -> None:
+    def update_exon_coord_sr_svtype_breakpoints(
+        updated_node: NodeType, current_node: NodeType
+    ) -> None:
         """Update exon coordinates of the updated node based on current node.
 
         :param updated_node:  node has been inserted into graph
@@ -652,6 +654,16 @@ class SpliceGraph:
             updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
         )
         updated_node.update_sr()
+        updated_node.sv_type = (
+            current_node.sv_type
+            if current_node.sv_type is not None
+            else updated_node.sv_type
+        )
+
+        if updated_node.prev_breakpoint is None:
+            updated_node.prev_breakpoint = current_node.prev_breakpoint
+        if updated_node.next_breakpoint is None:
+            updated_node.next_breakpoint = current_node.next_breakpoint
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
@@ -669,7 +681,9 @@ class SpliceGraph:
             if SpliceGraph._compare_is_merged(similar_node_in_graph, current_node):
                 current_node.is_merged = True
 
-                SpliceGraph.update_exon_coord_sr(similar_node_in_graph, current_node)
+                SpliceGraph.update_exon_coord_sr_svtype_breakpoints(
+                    similar_node_in_graph, current_node
+                )
 
                 merged_nodes_pool.add(current_node)
 
@@ -706,7 +720,9 @@ class SpliceGraph:
                 if merge_node.similar_key == similar_key
             ]:
                 if SpliceGraph._compare_is_merged(merge_node, current_node):
-                    SpliceGraph.update_exon_coord_sr(current_node, merge_node)
+                    SpliceGraph.update_exon_coord_sr_svtype_breakpoints(
+                        current_node, merge_node
+                    )
                     merge_node.merged_parent_nodes.append(current_node)
                     # for merge node whose previous node and next node in series
                     # has been processed
