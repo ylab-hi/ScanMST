@@ -578,6 +578,13 @@ class SpliceGraph:
                 return SpliceGraph._compare_is_merged_helper_check_condition_for_head_tail_node_mode(
                     node1, node2
                 )
+            elif (
+                node1.next_breakpoint is None and node2.next_breakpoint is not None
+            ):  # node1 is end node, node2 is middle node
+                return (
+                    node1.exons[0][0] == node2.exons[0][0]  # type: ignore
+                    and node1.exons[-1][1] <= node2.exons[-1][1]  # type: ignore
+                )
 
             return condition
 
@@ -600,14 +607,6 @@ class SpliceGraph:
             )
 
         elif (
-            node1.next_breakpoint is None and node2.next_breakpoint is not None
-        ):  # node1 is end node, node2 is middle node
-            return (
-                node1.exons[0][0] == node2.exons[0][0]  # type: ignore
-                and node1.exons[-1][1] <= node2.exons[-1][1]  # type: ignore
-            )
-
-        elif (
             node1.prev_breakpoint is not None
             and node1.next_breakpoint is not None
             and node2.prev_breakpoint is not None
@@ -618,6 +617,7 @@ class SpliceGraph:
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
                 and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
             )
+        # swap node1 and node2 to check if they can be merged again
         return False
 
     @staticmethod
