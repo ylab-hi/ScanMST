@@ -40,22 +40,50 @@ def short_tdup_or_not(
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
 
-    # logger.trace(f"{event_size=} {matched_reduced_size=} {ra_mode=} {read_sa=}")
+    # logger.trace(f"{event_size=} {matched_reduced_size=} {soft_extension_size=}")
 
     read_sa_matched_segment = read_sa.query_sequence[
         read_sa.lt_soft_len : read_sa.query_length - read_sa.rt_soft_len
     ]
+
     diff_len = (
         len(read_sa_matched_segment)
         - matched_reduced_size
         + soft_extension_size
         - event_size
     )
+    # len(ins_seq_in_read) > read_sa_matched_segment
     if diff_len < 0:
-        return False
+        compared_seq = (
+            read_sa.query_sequence[: read_sa.lt_soft_len][
+                read_sa.lt_soft_len - soft_extension_size :
+            ]
+            + read_sa_matched_segment[
+                matched_reduced_size : len(read_sa_matched_segment)
+            ]
+            if ra_mode == 1
+            else read_sa_matched_segment[
+                : len(read_sa_matched_segment) - matched_reduced_size
+            ]
+            + read_sa.query_sequence[-read_sa.rt_soft_len :][:soft_extension_size]
+        )
+        logger.trace(f"{compared_seq=}")
+        # logger.trace(f"{ins_seq_in_read=}")
+        ins_seq_in_read_modified = (
+            ins_seq_in_read[: event_size + diff_len]
+            if ra_mode == 1
+            else ins_seq_in_read[-diff_len:]
+        )
+        logger.trace(f"{ins_seq_in_read_modified=}")
+        if compared_seq == ins_seq_in_read_modified:
+            return True
+        else:
+            return False
     else:
         compared_seq = (
-            read_sa.query_sequence[: read_sa.lt_soft_len][-soft_extension_size:]
+            read_sa.query_sequence[: read_sa.lt_soft_len][
+                read_sa.lt_soft_len - soft_extension_size :
+            ]
             + read_sa_matched_segment[
                 matched_reduced_size : len(read_sa_matched_segment) - diff_len
             ]
