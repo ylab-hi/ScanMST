@@ -11,6 +11,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Set
 from typing import Tuple
 from typing import Union
 
@@ -354,12 +355,6 @@ class CliqueFinder:
         self.distance_dict[(x, y)] = distance
         return False, distance
 
-    def _add_single_clique(self):
-        """Add single clique to graph."""
-        for series in self.intact_series_list:
-            if not series.is_in_graph:
-                self.graph.add_node(series)
-
     def _add_edge_between_two_series(self, x: Series, y: Series) -> None:
         """Add edge between two series according to the distance between them.
 
@@ -419,11 +414,13 @@ class SpliceGraph:
     """SpliceGraph class is used to trace the path of splice graph."""
 
     dict_factory = dict
+    list_factory = list
 
     def __init__(self, logger: Logger):
         """Initialize SpliceGraph."""
         self.logger = logger
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
+        self.list_factory = SpliceGraph.list_factory  # type: ignore
 
     def __call__(self, series_list: Iterable[Series]) -> Any:
         """Find specific path based on splice graph.
@@ -529,25 +526,31 @@ class SpliceGraph:
             node1.sv_type == node2.sv_type
             and SpliceGraph._check_insertion_conditions_for_compare(node1, node2)
         )
+        if not condition:
+            if (
+                node1.next_breakpoint is None and node2.prev_breakpoint is None
+            ):  # node1 is end node, node2 is start node
+                expression1 = node1.exons[-1][1] >= node2.exons[0][0]  # type: ignore
+                return (
+                    expression1
+                    and node1.exons[0][0] <= node2.exons[0][0]  # type: ignore
+                    and node1.exons[-1][1] <= node2.exons[-1][1]  # type: ignore
+                )
+
+            return condition
 
         if (
-            condition
-            and node1.prev_breakpoint is None
-            and node2.prev_breakpoint is None
+            node1.prev_breakpoint is None and node2.prev_breakpoint is None
         ):  # both are start nodel check last exon end
             return node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
 
         elif (
-            condition
-            and node1.next_breakpoint is None
-            and node2.next_breakpoint is None
+            node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
             return node1.exons[0][0] == node2.exons[0][0]  # type: ignore
 
         elif (
-            condition
-            and node1.prev_breakpoint is None
-            and node2.prev_breakpoint is not None
+            node1.prev_breakpoint is None and node2.prev_breakpoint is not None
         ):  # node1 is start node, node2 is middle node
             return (
                 node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
@@ -555,9 +558,7 @@ class SpliceGraph:
             )
 
         elif (
-            condition
-            and node1.next_breakpoint is None
-            and node2.next_breakpoint is not None
+            node1.next_breakpoint is None and node2.next_breakpoint is not None
         ):  # node1 is end node, node2 is middle node
             return (
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
@@ -565,19 +566,17 @@ class SpliceGraph:
             )
 
         elif (
-            node1.next_breakpoint is None and node2.prev_breakpoint is None
-        ):  # node1 is end node, node2 is start node
-            return (
-                node2.exons[0][0] >= node1.exons[0][0]  # type: ignore
-                and node2.exons[-1][1] >= node1.exons[-1][1]  # type: ignore
-            )
-
-        else:  # both are middle nodes TODO: the condition may need to more tight
+            node1.prev_breakpoint is not None
+            and node1.next_breakpoint is not None
+            and node2.prev_breakpoint is not None
+            and node2.next_breakpoint is not None
+        ):  # both are middle nodes
 
             return (
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
                 and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
             )
+        return False
 
     @staticmethod
     def _compare_is_merged(node1: NodeType, node2: NodeType) -> bool:
@@ -616,7 +615,7 @@ class SpliceGraph:
         self,
         current_node: NodeType,
         similar_key: str,
-        merged_nodes_pool: List[NodeType],
+        merged_nodes_pool: Set[NodeType],
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
         # get similar nodes in the graph
@@ -630,7 +629,7 @@ class SpliceGraph:
 
                 SpliceGraph.update_exon_coord_sr(similar_node_in_graph, current_node)
 
-                merged_nodes_pool.append(current_node)
+                merged_nodes_pool.add(current_node)
 
                 # nodes in merged_parent_nodes are all in the graph
                 current_node.merged_parent_nodes.append(similar_node_in_graph)
@@ -646,7 +645,7 @@ class SpliceGraph:
         self,
         current_node: NodeType,
         similar_key: str,
-        merged_nodes_pool: List[NodeType],
+        merged_nodes_pool: Set[NodeType],
     ) -> None:
         """Check if current node is added in graph and update predecessor and successor."""
         if not current_node.is_merged:  # false
@@ -675,7 +674,7 @@ class SpliceGraph:
     def construct(self):
         """Main function to construct graph."""
         # iterate all series
-        merged_nodes_pool = []
+        merged_nodes_pool = set()
         self.logger.trace(f"{self.series_list=}")
         for series in self.series_list:
             # iterate all nodes in series

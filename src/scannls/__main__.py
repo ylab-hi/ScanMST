@@ -12,7 +12,7 @@ from ._class.blat import Blat
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
 from .draft.main import scanbam_run  # type: ignore
-from .utils import external_tool_checking  # type: ignore
+from .utils import external_tool_checking
 
 
 def parse_args():
@@ -215,6 +215,7 @@ def main():
         min_soft_seg_len=options.min_soft_seg_len,
         blat_ident_pct_cutoff=options.ident_cutoff,
     )
+    logger.debug(f"Total Series: {len(intact_series_list)}")
     splice_graph = SpliceGraph(logger)
     clique_finder = CliqueFinder(intact_series_list, logger)
     # cliques is generator
