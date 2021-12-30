@@ -13,6 +13,8 @@ from ..draft.nls_inference import infer_nls_from_connected_reads  # type: ignore
 from ..utils import reverse_complement  # type: ignore
 from .exception import ReadNotFoundError  # type: ignore
 
+NodeType = Union["Node", "Insertion"]
+
 
 class Read:
     """Build a read class for storing information of every junction read.
@@ -443,7 +445,88 @@ class MicroHomology:
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
-class Insertion(Read):
+class BasicNode:
+    """BasicNode is used to represent nodes in the splice graph."""
+
+    def __init__(self):
+        """Initialize BasicNode object."""
+        self.successors: List[NodeType] = []
+        self.predecessors: List[NodeType] = []
+
+        self.merged_child_nodes: List[NodeType] = []
+        self.merged_parent_nodes: List[NodeType] = []
+
+        self.next_node_in_series: Optional[NodeType] = None
+        self.previous_node_in_series: Optional[NodeType] = None
+        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
+
+    def is_start_node(self):
+        """Return True if Insertion object is start node."""
+        return True if not self.has_predecessor() else False
+
+    def is_end_node(self):
+        """Return True if Insertion object is end node."""
+        return True if not self.has_successor() else False
+
+    def has_predecessor(self):
+        """Return True if Insertion object has predecessor."""
+        return True if self.predecessors else False
+
+    def has_successor(self):
+        """Return True if Insertion object has successor."""
+        return True if self.successors else False
+
+    def add_successor_from_list(self, successors):
+        """Add successor from list of Insertion object."""
+        for successor in successors:
+            self.add_successor(successor)
+
+    def add_predecessor_from_list(self, predecessors):
+        """Add predecessor from list of Insertion object."""
+        for predecessor in predecessors:
+            self.add_predecessor(predecessor)
+
+    def _add_successor(self, successor):
+        """Helper function to add successor to Insertion object."""
+        self.successors.append(successor)
+        successor.add_predecessor(self)
+
+    def _add_predecessor(self, predecessor):
+        """Helper function to add predecessor to Insertion object."""
+        self.predecessors.append(predecessor)
+        predecessor.add_successor(self)
+
+    def add_successor(self, successor):
+        """Add successor to Insertion object."""
+        if successor is not None and successor not in self.successors:
+            if successor.is_in_graph:
+                self._add_successor(successor)
+            else:
+                self.add_successor_from_list(successor.merged_parent_nodes)
+
+    def add_predecessor(self, predecessor):
+        """Node must be in the graph if the function is called.
+
+        :param predecessor: predecessor of Insertion object
+        """
+        if predecessor is not None and predecessor not in self.predecessors:
+            if predecessor.is_in_graph:
+                self._add_predecessor(predecessor)
+            else:
+                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
+
+    def update_next_and_previous_node_in_series(self, index, series):
+        """Update next and previous node in series."""
+        if index == 0:
+            self.next_node_in_series = series[index + 1]
+        elif index == len(series) - 1:
+            self.previous_node_in_series = series[index - 1]
+        else:
+            self.next_node_in_series = series[index + 1]
+            self.previous_node_in_series = series[index - 1]
+
+
+class Insertion(Read, BasicNode):
     """Insertion is used to represent reads insertion whose hit is 1.
 
     :param chrom: chromosome of genome
@@ -469,6 +552,55 @@ class Insertion(Read):
     .. seealso:: :class:`NovelInsertion`, :class:`Node` and :class:`Read`
     """
 
+    __slots__ = (
+        # node attributes
+        "hit_num",
+        "sv_type",
+        "prev_breakpoint",
+        "next_breakpoint",
+        "modes",
+        "genes",
+        "annotation_code",
+        "splicing_code",
+        "sr",
+        "insertion_info",
+        "exons",
+        "introns",
+        "unique_key",
+        # parent class: read attributes
+        "chrom",
+        "ref_start",
+        "strand",
+        "cigarstring",
+        "mapq",
+        "nm",
+        "query_sequence",
+        "linked_paths",
+        "lt_soft_len",
+        "rt_soft_len",
+        "read_match_size",
+        "reference_match_size",
+        "indel_size",
+        "cigartuples_without_soft",
+        "cigartuples",
+        "query_length",
+        "adhocsms",
+        "adhocseq",
+        "mode",
+        "sms",
+        "ref_end",
+        # parent class: basic node attributes
+        "successors",
+        "predecessors",
+        "merged_child_nodes",
+        "merged_parent_nodes",
+        "next_node_in_series",
+        "previous_node_in_series",
+        "is_merged",
+        "is_in_graph",
+        "is_traced",
+    )
+
     def __init__(
         self,
         hit_num: int,
@@ -481,17 +613,9 @@ class Insertion(Read):
         query_sequence: str,
     ):
         """Initialize Insertion."""
-        (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        ) = Read._calculate_features(cigarstring)
-        super().__init__(
+        BasicNode.__init__(self)
+        Read.__init__(
+            self,
             chrom,
             ref_start,
             strand,
@@ -499,15 +623,9 @@ class Insertion(Read):
             mapq,
             nm,
             query_sequence,
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
+            *Read._calculate_features(cigarstring),
         )
+
         self.hit_num = hit_num
         self.sv_type = None
 
@@ -522,15 +640,7 @@ class Insertion(Read):
         self.insertion_info = None
 
         self.exons, self.introns = self.get_exons_and_introns()
-        self.successors: Any = []
-        self.predecessors: Any = []
         self.unique_key = None
-        self.merged_child_nodes: List = []
-        self.merged_parent_nodes: List = []
-
-        self.next_node_in_series = None
-        self.previous_node_in_series = None
-        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
     def __repr__(self):
         """Represent Insertion object."""
@@ -610,77 +720,12 @@ class Insertion(Read):
 
         return key
 
-    def is_start_node(self):
-        """Return True if Insertion object is start node."""
-        return True if not self.has_predecessor() else False
-
-    def is_end_node(self):
-        """Return True if Insertion object is end node."""
-        return True if not self.has_successor() else False
-
-    def has_predecessor(self):
-        """Return True if Insertion object has predecessor."""
-        return True if self.predecessors else False
-
-    def has_successor(self):
-        """Return True if Insertion object has successor."""
-        return True if self.successors else False
-
-    def add_successor_from_list(self, successors):
-        """Add successor from list of Insertion object."""
-        for successor in successors:
-            self.add_successor(successor)
-
-    def add_predecessor_from_list(self, predecessors):
-        """Add predecessor from list of Insertion object."""
-        for predecessor in predecessors:
-            self.add_predecessor(predecessor)
-
-    def _add_successor(self, successor):
-        """Helper function to add successor to Insertion object."""
-        self.successors.append(successor)
-        successor.add_predecessor(self)
-
-    def _add_predecessor(self, predecessor):
-        """Helper function to add predecessor to Insertion object."""
-        self.predecessors.append(predecessor)
-        predecessor.add_successor(self)
-
-    def add_successor(self, successor):
-        """Add successor to Insertion object."""
-        if successor is not None and successor not in self.successors:
-            if successor.is_in_graph:
-                self._add_successor(successor)
-            else:
-                self.add_successor_from_list(successor.merged_parent_nodes)
-
-    def add_predecessor(self, predecessor):
-        """Node must be in the graph if the function is called.
-
-        :param predecessor: predecessor of Insertion object
-        """
-        if predecessor is not None and predecessor not in self.predecessors:
-            if predecessor.is_in_graph:
-                self._add_predecessor(predecessor)
-            else:
-                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
-
     def update_sr(self, key=1):
         """Update sr."""
         self.sr += key
 
-    def update_next_and_previous_node_in_series(self, index, series):
-        """Update next and previous node in series."""
-        if index == 0:
-            self.next_node_in_series = series[index + 1]
-        elif index == len(series) - 1:
-            self.previous_node_in_series = series[index - 1]
-        else:
-            self.next_node_in_series = series[index + 1]
-            self.previous_node_in_series = series[index - 1]
 
-
-class Node:
+class Node(BasicNode):
     """Build a breakpoint node class for storing information of every breakpoint.
 
     :param prev_breakpoint: breakpoint for the previous breakpoints connections
@@ -695,8 +740,6 @@ class Node:
     :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
     :param modes: read modes of connected breakpoints
     :param genes: overlapped genes of connected breakpoints
-    :param insertion_info: insertion information, (True, Insertion) or
-        (False, NovelInsertion) or (False, MicroHomology)
 
     .. note::
         connection-level fields:
@@ -736,15 +779,16 @@ class Node:
         "splicing_code",
         "sr",
         "insertion_info",
-        "predecessors",
-        "successors",
         "unique_key",
+        # parent class: basic node fields
+        "successors",
+        "predecessors",
         "merged_child_nodes",
         "merged_parent_nodes",
         "next_node_in_series",
         "previous_node_in_series",
-        "is_in_graph",
         "is_merged",
+        "is_in_graph",
         "is_traced",
     )
 
@@ -763,9 +807,9 @@ class Node:
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
         sr: Optional[int] = 1,
-        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
     ) -> None:
         """Initialize a Node object."""
+        super().__init__()  # initialize BasicNode object
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
@@ -779,17 +823,8 @@ class Node:
         self.annotation_code = annot
         self.splicing_code = canonical
         self.sr = sr
-        self.insertion_info = insertion_info
-        self.successors: Any = []
-        self.predecessors: Any = []
-
+        self.insertion_info = None
         self.unique_key = None
-        self.merged_child_nodes: List = []
-        self.merged_parent_nodes: List = []
-
-        self.next_node_in_series = None
-        self.previous_node_in_series = None
-        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
     def __eq__(self, other) -> bool:
         """Compare two nodes."""
@@ -877,77 +912,9 @@ class Node:
         self.unique_key = key
         return key
 
-    def is_start_node(self):
-        """Check if a node is a start node."""
-        return False if self.has_predecessor() else True
-
-    def is_end_node(self):
-        """Check if a node is an end node."""
-        return False if self.has_successor() else True
-
-    def has_predecessor(self):
-        """Check if a node has a predecessor."""
-        return True if self.predecessors else False
-
-    def has_successor(self):
-        """Check if a node has a successor."""
-        return True if self.successors else False
-
-    def add_successor_from_list(self, successors):
-        """Add successors from a list."""
-        for successor in successors:
-            self.add_successor(successor)
-
-    def add_predecessor_from_list(self, predecessors):
-        """Add predecessors from a list."""
-        for predecessor in predecessors:
-            self.add_predecessor(predecessor)
-
-    def _add_successor(self, successor):
-        """Helper function to add a successor."""
-        self.successors.append(successor)
-        successor.add_predecessor(self)
-
-    def _add_predecessor(self, predecessor):
-        """Helper function to add a predecessor."""
-        self.predecessors.append(predecessor)
-        predecessor.add_successor(self)
-
-    def add_successor(self, successor):
-        """Add a successor."""
-        if successor is not None and successor not in self.successors:
-            if successor.is_in_graph:
-                self._add_successor(successor)
-            else:
-                self.add_successor_from_list(successor.merged_parent_nodes)
-
-    def add_predecessor(self, predecessor):
-        """Node must be in the graph if the function is called.
-
-        :param predecessor: predecessor node
-        """
-        if predecessor is not None and predecessor not in self.predecessors:
-            if predecessor.is_in_graph:
-                self._add_predecessor(predecessor)
-            else:
-                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
-
     def update_sr(self, key=1):
         """Update the sr of a node."""
         self.sr += key
-
-    def update_next_and_previous_node_in_series(self, index, series):
-        """Update the next and previous node in series."""
-        if index == 0:
-            self.next_node_in_series = series[index + 1]
-        elif index == len(series) - 1:
-            self.previous_node_in_series = series[index - 1]
-        else:
-            self.next_node_in_series = series[index + 1]
-            self.previous_node_in_series = series[index - 1]
-
-
-NodeType = Union[Node, Insertion]
 
 
 class Series:
@@ -1198,6 +1165,51 @@ class Series:
 
                 self.add_node(final_node)
 
+    def __getitem__(self, index):
+        """Return the event at the given index."""
+        return self.nodes[index]
+
+    def __hash__(self) -> int:
+        """Return the hash of the event."""
+        return hash(";".join(map(str, self.nodes)))
+
+    def __eq__(self, other) -> bool:
+        """Return True if the events are equal."""
+        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
+
+    def __len__(self) -> int:
+        """Return the number of events."""
+        return len(self.nodes)
+
+    def __lt__(self, other) -> bool:
+        """Return True if the event is less than the other event."""
+        return len(self.nodes) < len(other.nodes)
+
+    def __repr__(self) -> str:
+        """Return the string representation of the event."""
+        _repr = "\nSeries("
+        space = " " * 4
+        for n in self.nodes:
+            _repr += f"\n{space}{n!r}"
+
+        _repr += ")"
+        return _repr
+
+    def __iter__(self):
+        """Return an iterator over the events."""
+        yield from self.nodes
+
+    __str__ = __repr__
+
+    def disable_blat_logger(self):
+        """Disable blat logger."""
+        self.blat, self.logger = None, None
+
+    @property
+    def unique_key(self):
+        """Return the unique key of the event."""
+        return "".join([node.get_unique_key() for node in self.nodes])
+
     @staticmethod
     def reorder_event(event):
         """Order breakpoints pairs following the transcription direction using.
@@ -1329,71 +1341,6 @@ class Series:
             output_event_list = list(reversed(output_event_list))
 
         return output_event_list
-
-    def __getitem__(self, index):
-        """Return the event at the given index."""
-        return self.nodes[index]
-
-    def __hash__(self) -> int:
-        """Return the hash of the event."""
-        return hash(";".join(map(str, self.nodes)))
-
-    def __eq__(self, other) -> bool:
-        """Return True if the events are equal."""
-        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
-
-    def __len__(self) -> int:
-        """Return the number of events."""
-        return len(self.nodes)
-
-    def __lt__(self, other) -> bool:
-        """Return True if the event is less than the other event."""
-        return len(self.nodes) < len(other.nodes)
-
-    def __repr__(self) -> str:
-        """Return the string representation of the event."""
-        _repr = "\nSeries("
-        space = " " * 4
-        for n in self.nodes:
-            _repr += f"\n{space}{n!r}"
-
-        _repr += ")"
-        return _repr
-
-    def __iter__(self):
-        """Return an iterator over the events."""
-        yield from self.nodes
-
-    __str__ = __repr__
-
-    def disable_blat_logger(self):
-        """Disable blat logger."""
-        self.blat, self.logger = None, None
-
-    @property
-    def start_node(self):
-        """Return the start node of the event."""
-        return self.nodes[0]
-
-    @start_node.setter
-    def start_node(self, node):
-        """Set the start node of the event."""
-        self.nodes[0] = node
-
-    @property
-    def end_node(self):
-        """Return the end node of the event."""
-        return self.nodes[-1]
-
-    @end_node.setter
-    def end_node(self, node):
-        """Set the end node of the event."""
-        self.nodes[-1] = node
-
-    @property
-    def unique_key(self):
-        """Return the unique key of the event."""
-        return "".join([node.get_unique_key() for node in self.nodes])
 
 
 class Event:
