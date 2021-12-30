@@ -494,6 +494,16 @@ class ReadsConnector:
                 self.reads_chain.append(new_read)
                 self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
 
+    @staticmethod
+    def __sort_candidate_reads_key(read: Read, start_read: Read) -> int:
+        """Sort candidate reads."""
+        start_read_match_sequence = start_read.adhocsms[1]
+
+        return min(
+            abs(read.lt_soft_len - start_read_match_sequence),
+            abs(read.rt_soft_len - start_read_match_sequence),
+        )
+
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.
 
@@ -529,6 +539,9 @@ class ReadsConnector:
                 start_read.rt_soft_len,
             )
 
+        self.candidate_nodes.sort(
+            key=lambda x: self.__sort_candidate_reads_key(x, start_read)
+        )
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)
