@@ -13,6 +13,8 @@ from ..draft.nls_inference import infer_nls_from_connected_reads  # type: ignore
 from ..utils import reverse_complement  # type: ignore
 from .exception import ReadNotFoundError  # type: ignore
 
+NodeType = Union["Node", "Insertion"]
+
 
 class Read:
     """Build a read class for storing information of every junction read.
@@ -443,7 +445,88 @@ class MicroHomology:
         self.query_sequence = reverse_complement(self.query_sequence)
 
 
-class Insertion(Read):
+class BasicNode:
+    """BasicNode is used to represent nodes in the splice graph."""
+
+    def __init__(self):
+        """Initialize BasicNode object."""
+        self.successors: List[NodeType] = []
+        self.predecessors: List[NodeType] = []
+
+        self.merged_child_nodes: List[NodeType] = []
+        self.merged_parent_nodes: List[NodeType] = []
+
+        self.next_node_in_series: Optional[NodeType] = None
+        self.previous_node_in_series: Optional[NodeType] = None
+        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
+
+    def is_start_node(self):
+        """Return True if Insertion object is start node."""
+        return True if not self.has_predecessor() else False
+
+    def is_end_node(self):
+        """Return True if Insertion object is end node."""
+        return True if not self.has_successor() else False
+
+    def has_predecessor(self):
+        """Return True if Insertion object has predecessor."""
+        return True if self.predecessors else False
+
+    def has_successor(self):
+        """Return True if Insertion object has successor."""
+        return True if self.successors else False
+
+    def add_successor_from_list(self, successors):
+        """Add successor from list of Insertion object."""
+        for successor in successors:
+            self.add_successor(successor)
+
+    def add_predecessor_from_list(self, predecessors):
+        """Add predecessor from list of Insertion object."""
+        for predecessor in predecessors:
+            self.add_predecessor(predecessor)
+
+    def _add_successor(self, successor):
+        """Helper function to add successor to Insertion object."""
+        self.successors.append(successor)
+        successor.add_predecessor(self)
+
+    def _add_predecessor(self, predecessor):
+        """Helper function to add predecessor to Insertion object."""
+        self.predecessors.append(predecessor)
+        predecessor.add_successor(self)
+
+    def add_successor(self, successor):
+        """Add successor to Insertion object."""
+        if successor is not None and successor not in self.successors:
+            if successor.is_in_graph:
+                self._add_successor(successor)
+            else:
+                self.add_successor_from_list(successor.merged_parent_nodes)
+
+    def add_predecessor(self, predecessor):
+        """Node must be in the graph if the function is called.
+
+        :param predecessor: predecessor of Insertion object
+        """
+        if predecessor is not None and predecessor not in self.predecessors:
+            if predecessor.is_in_graph:
+                self._add_predecessor(predecessor)
+            else:
+                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
+
+    def update_next_and_previous_node_in_series(self, index, series):
+        """Update next and previous node in series."""
+        if index == 0:
+            self.next_node_in_series = series[index + 1]
+        elif index == len(series) - 1:
+            self.previous_node_in_series = series[index - 1]
+        else:
+            self.next_node_in_series = series[index + 1]
+            self.previous_node_in_series = series[index - 1]
+
+
+class Insertion(Read, BasicNode):
     """Insertion is used to represent reads insertion whose hit is 1.
 
     :param chrom: chromosome of genome
@@ -469,6 +552,55 @@ class Insertion(Read):
     .. seealso:: :class:`NovelInsertion`, :class:`Node` and :class:`Read`
     """
 
+    __slots__ = (
+        # node attributes
+        "hit_num",
+        "sv_type",
+        "prev_breakpoint",
+        "next_breakpoint",
+        "modes",
+        "genes",
+        "annotation_code",
+        "splicing_code",
+        "sr",
+        "insertion_info",
+        "exons",
+        "introns",
+        "unique_key",
+        # parent class: read attributes
+        "chrom",
+        "ref_start",
+        "strand",
+        "cigarstring",
+        "mapq",
+        "nm",
+        "query_sequence",
+        "linked_paths",
+        "lt_soft_len",
+        "rt_soft_len",
+        "read_match_size",
+        "reference_match_size",
+        "indel_size",
+        "cigartuples_without_soft",
+        "cigartuples",
+        "query_length",
+        "adhocsms",
+        "adhocseq",
+        "mode",
+        "sms",
+        "ref_end",
+        # parent class: basic node attributes
+        "successors",
+        "predecessors",
+        "merged_child_nodes",
+        "merged_parent_nodes",
+        "next_node_in_series",
+        "previous_node_in_series",
+        "is_merged",
+        "is_in_graph",
+        "is_traced",
+    )
+
     def __init__(
         self,
         hit_num: int,
@@ -481,17 +613,9 @@ class Insertion(Read):
         query_sequence: str,
     ):
         """Initialize Insertion."""
-        (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        ) = Read._calculate_features(cigarstring)
-        super().__init__(
+        BasicNode.__init__(self)
+        Read.__init__(
+            self,
             chrom,
             ref_start,
             strand,
@@ -499,15 +623,9 @@ class Insertion(Read):
             mapq,
             nm,
             query_sequence,
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
+            *Read._calculate_features(cigarstring),
         )
+
         self.hit_num = hit_num
         self.sv_type = None
 
@@ -522,15 +640,7 @@ class Insertion(Read):
         self.insertion_info = None
 
         self.exons, self.introns = self.get_exons_and_introns()
-        self.successors: Any = []
-        self.predecessors: Any = []
         self.unique_key = None
-        self.merged_child_nodes: List = []
-        self.merged_parent_nodes: List = []
-
-        self.next_node_in_series = None
-        self.previous_node_in_series = None
-        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
     def __repr__(self):
         """Represent Insertion object."""
@@ -610,77 +720,12 @@ class Insertion(Read):
 
         return key
 
-    def is_start_node(self):
-        """Return True if Insertion object is start node."""
-        return True if not self.has_predecessor() else False
-
-    def is_end_node(self):
-        """Return True if Insertion object is end node."""
-        return True if not self.has_successor() else False
-
-    def has_predecessor(self):
-        """Return True if Insertion object has predecessor."""
-        return True if self.predecessors else False
-
-    def has_successor(self):
-        """Return True if Insertion object has successor."""
-        return True if self.successors else False
-
-    def add_successor_from_list(self, successors):
-        """Add successor from list of Insertion object."""
-        for successor in successors:
-            self.add_successor(successor)
-
-    def add_predecessor_from_list(self, predecessors):
-        """Add predecessor from list of Insertion object."""
-        for predecessor in predecessors:
-            self.add_predecessor(predecessor)
-
-    def _add_successor(self, successor):
-        """Helper function to add successor to Insertion object."""
-        self.successors.append(successor)
-        successor.add_predecessor(self)
-
-    def _add_predecessor(self, predecessor):
-        """Helper function to add predecessor to Insertion object."""
-        self.predecessors.append(predecessor)
-        predecessor.add_successor(self)
-
-    def add_successor(self, successor):
-        """Add successor to Insertion object."""
-        if successor is not None and successor not in self.successors:
-            if successor.is_in_graph:
-                self._add_successor(successor)
-            else:
-                self.add_successor_from_list(successor.merged_parent_nodes)
-
-    def add_predecessor(self, predecessor):
-        """Node must be in the graph if the function is called.
-
-        :param predecessor: predecessor of Insertion object
-        """
-        if predecessor is not None and predecessor not in self.predecessors:
-            if predecessor.is_in_graph:
-                self._add_predecessor(predecessor)
-            else:
-                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
-
     def update_sr(self, key=1):
         """Update sr."""
         self.sr += key
 
-    def update_next_and_previous_node_in_series(self, index, series):
-        """Update next and previous node in series."""
-        if index == 0:
-            self.next_node_in_series = series[index + 1]
-        elif index == len(series) - 1:
-            self.previous_node_in_series = series[index - 1]
-        else:
-            self.next_node_in_series = series[index + 1]
-            self.previous_node_in_series = series[index - 1]
 
-
-class Node:
+class Node(BasicNode):
     """Build a breakpoint node class for storing information of every breakpoint.
 
     :param prev_breakpoint: breakpoint for the previous breakpoints connections
@@ -695,8 +740,6 @@ class Node:
     :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
     :param modes: read modes of connected breakpoints
     :param genes: overlapped genes of connected breakpoints
-    :param insertion_info: insertion information, (True, Insertion) or
-        (False, NovelInsertion) or (False, MicroHomology)
 
     .. note::
         connection-level fields:
@@ -736,15 +779,16 @@ class Node:
         "splicing_code",
         "sr",
         "insertion_info",
-        "predecessors",
-        "successors",
         "unique_key",
+        # parent class: basic node fields
+        "successors",
+        "predecessors",
         "merged_child_nodes",
         "merged_parent_nodes",
         "next_node_in_series",
         "previous_node_in_series",
-        "is_in_graph",
         "is_merged",
+        "is_in_graph",
         "is_traced",
     )
 
@@ -763,9 +807,9 @@ class Node:
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
         sr: Optional[int] = 1,
-        insertion_info: Optional[Tuple[bool, Union[Insertion, NovelInsertion]]] = None,
     ) -> None:
         """Initialize a Node object."""
+        super().__init__()  # initialize BasicNode object
         self.chrom = chrom
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
@@ -779,17 +823,8 @@ class Node:
         self.annotation_code = annot
         self.splicing_code = canonical
         self.sr = sr
-        self.insertion_info = insertion_info
-        self.successors: Any = []
-        self.predecessors: Any = []
-
+        self.insertion_info = None
         self.unique_key = None
-        self.merged_child_nodes: List = []
-        self.merged_parent_nodes: List = []
-
-        self.next_node_in_series = None
-        self.previous_node_in_series = None
-        self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
     def __eq__(self, other) -> bool:
         """Compare two nodes."""
@@ -825,8 +860,6 @@ class Node:
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
             f"{self.next_breakpoint}, SR={self.sr}) "
         )
-
-    __str__ = __repr__
 
     @classmethod
     def create_nodes(cls, number):
@@ -877,77 +910,9 @@ class Node:
         self.unique_key = key
         return key
 
-    def is_start_node(self):
-        """Check if a node is a start node."""
-        return False if self.has_predecessor() else True
-
-    def is_end_node(self):
-        """Check if a node is an end node."""
-        return False if self.has_successor() else True
-
-    def has_predecessor(self):
-        """Check if a node has a predecessor."""
-        return True if self.predecessors else False
-
-    def has_successor(self):
-        """Check if a node has a successor."""
-        return True if self.successors else False
-
-    def add_successor_from_list(self, successors):
-        """Add successors from a list."""
-        for successor in successors:
-            self.add_successor(successor)
-
-    def add_predecessor_from_list(self, predecessors):
-        """Add predecessors from a list."""
-        for predecessor in predecessors:
-            self.add_predecessor(predecessor)
-
-    def _add_successor(self, successor):
-        """Helper function to add a successor."""
-        self.successors.append(successor)
-        successor.add_predecessor(self)
-
-    def _add_predecessor(self, predecessor):
-        """Helper function to add a predecessor."""
-        self.predecessors.append(predecessor)
-        predecessor.add_successor(self)
-
-    def add_successor(self, successor):
-        """Add a successor."""
-        if successor is not None and successor not in self.successors:
-            if successor.is_in_graph:
-                self._add_successor(successor)
-            else:
-                self.add_successor_from_list(successor.merged_parent_nodes)
-
-    def add_predecessor(self, predecessor):
-        """Node must be in the graph if the function is called.
-
-        :param predecessor: predecessor node
-        """
-        if predecessor is not None and predecessor not in self.predecessors:
-            if predecessor.is_in_graph:
-                self._add_predecessor(predecessor)
-            else:
-                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
-
     def update_sr(self, key=1):
         """Update the sr of a node."""
         self.sr += key
-
-    def update_next_and_previous_node_in_series(self, index, series):
-        """Update the next and previous node in series."""
-        if index == 0:
-            self.next_node_in_series = series[index + 1]
-        elif index == len(series) - 1:
-            self.previous_node_in_series = series[index - 1]
-        else:
-            self.next_node_in_series = series[index + 1]
-            self.previous_node_in_series = series[index - 1]
-
-
-NodeType = Union[Node, Insertion]
 
 
 class Series:
@@ -1040,163 +1005,48 @@ class Series:
             series_instance.add_node(node)
         return series_instance
 
-    def init(
-        self,
-        event_list,
-        read_chains,
-        splice_bin,
-        genome_fasta,
-        cvg,
-        gene_iv,
-        motif_required,
-    ) -> None:
-        """Add event list as Node to self.nodes."""
-        event_list = [
-            Event(event)
-            for event in self.order_events_by_trancription_direction(event_list)
-            if event[0] != "NA"
-        ]
-        event_list_len = len(event_list)
-        previous_breakpoint = None
-        for index, event in enumerate(event_list):
+    def __getitem__(self, index):
+        """Return the event at the given index."""
+        return self.nodes[index]
 
-            read1_node = Node(
-                prev_bp=previous_breakpoint,
-                next_bp=event.bp1,
-                strand=event.strand1,
-                chrom=event.chrom1,
-                ref_start=event.read1_ref_start,
-                ref_end=event.read1_ref_end,
-                exons=event.read1_exons,
-            )
-            previous_breakpoint = event.bp2
+    def __hash__(self) -> int:
+        """Return the hash of the event."""
+        return hash(";".join(map(str, self.nodes)))
 
-            # is insertions
-            if event.has_insertion():
+    def __eq__(self, other) -> bool:
+        """Return True if the events are equal."""
+        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
 
-                insertion_seq = event.insertion_seq1  # pick from the first read
-                insertion_seq = (
-                    reverse_complement(insertion_seq)
-                    if event.strand1 == "-"
-                    else insertion_seq
-                )
-                flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
-                if flag:  # only one hit
-                    # add first node and insertion node
-                    source_s = event.source_s1
+    def __len__(self) -> int:
+        """Return the number of events."""
+        return len(self.nodes)
 
-                    # get type of insertion between first node and insertion node
-                    read1 = event.read1(read_chains)
-                    insertion.update_cigarstring_sms(
-                        read1.sms, source_s=source_s, source_strand=event.strand1
-                    )
-                    self.logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
-                    if event.strand1 == insertion.strand:
-                        insertion_mode = 2 if event.mode1 == 1 else 1
-                    else:
-                        insertion_mode = event.mode1
-                    self.logger.trace("nls reference for read1 and insertion")
-                    read1_insertion_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=read1,
-                            read_rt=insertion,
-                            lt_mode=event.mode1,
-                            rt_mode=insertion_mode,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                            logger=self.logger,
-                        )
-                    )
+    def __lt__(self, other) -> bool:
+        """Return True if the event is less than the other event."""
+        return len(self.nodes) < len(other.nodes)
 
-                    # get type of insertion between insertion node and second node
-                    read2 = event.read2(read_chains)
+    def __repr__(self) -> str:
+        """Return the string representation of the event."""
+        _repr = "\nSeries("
+        space = " " * 4
+        for n in self.nodes:
+            _repr += f"\n{space}{n!r}"
 
-                    if insertion.strand == read2.strand:
-                        insertion_mode = 2 if event.mode2 == 1 else 1
-                    else:
-                        insertion_mode = event.mode2
+        _repr += ")"
+        return _repr
 
-                    self.logger.trace("nls reference for read2 and insertion")
-                    insertion_read2_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=insertion,
-                            read_rt=read2,
-                            lt_mode=insertion_mode,
-                            rt_mode=event.mode2,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                            logger=self.logger,
-                        )
-                    )
+    def __iter__(self):
+        """Return an iterator over the events."""
+        yield from self.nodes
 
-                    if (
-                        read1_insertion_event.is_type_na()
-                        or insertion_read2_event.is_type_na()
-                    ):
-                        # only add read1, False means that the insertion type (hit 1 insertion)
-                        # are not added in series
-                        read1_node = event.update_node_info(
-                            False, read1_node, insertion
-                        )
-                        self.add_node(read1_node)
-                    else:
-                        # add read1 and insertion
-                        # True means that the insertion type(hit 1 insertion) are added in series
-                        read1_node = read1_insertion_event.update_node_info(
-                            True, read1_node, insertion
-                        )
-                        self.add_node(read1_node)
+    def disable_blat_logger(self):
+        """Disable blat logger."""
+        self.blat, self.logger = None, None
 
-                        insertion = insertion_read2_event.update_insertion_info(
-                            insertion
-                        )
-
-                        self.logger.trace(f"Add {insertion=} to Series")
-
-                        self.add_node(insertion)
-
-                else:  # no hits or multiple hits
-
-                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
-                    # only add read1 with insertion info
-                    # False means that the insertion type (hit more insertion) are
-                    # not added in series
-                    read1_node = event.update_node_info(False, read1_node, insertion)
-                    self.add_node(read1_node)
-            # no insertion
-            elif event.has_microhomology():
-                # add read 1 with on insertion
-                microhomology = MicroHomology(event.insertion_seq1)
-
-                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
-                if event.strand1 == "-":
-                    microhomology.reverse_completement_query()
-
-                read1_node = event.update_node_info(False, read1_node, microhomology)
-                self.add_node(read1_node)
-
-            else:
-                read1_node = event.update_node_info(False, read1_node, None, False)
-                self.add_node(read1_node)
-
-            # add final node
-            if index == event_list_len - 1:
-                final_node = Node(
-                    prev_bp=previous_breakpoint,
-                    strand=event.strand2,
-                    chrom=event.chrom2,
-                    ref_start=event.read2_ref_start,
-                    ref_end=event.read2_ref_end,
-                    exons=event.read2_exons,
-                )
-
-                self.add_node(final_node)
+    @property
+    def unique_key(self):
+        """Return the unique key of the event."""
+        return "".join([node.get_unique_key() for node in self.nodes])
 
     @staticmethod
     def reorder_event(event):
@@ -1330,70 +1180,164 @@ class Series:
 
         return output_event_list
 
-    def __getitem__(self, index):
-        """Return the event at the given index."""
-        return self.nodes[index]
+    def init(
+        self,
+        event_list,
+        read_chains,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        gene_iv,
+        motif_required,
+    ) -> None:
+        """Add event list as Node to self.nodes."""
+        event_list = [
+            Event(event)
+            for event in self.order_events_by_trancription_direction(event_list)
+            if event[0] != "NA"
+        ]
+        event_list_len = len(event_list)
+        previous_breakpoint = None
+        for index, event in enumerate(event_list):
 
-    def __hash__(self) -> int:
-        """Return the hash of the event."""
-        return hash(";".join(map(str, self.nodes)))
+            read1_node = Node(
+                prev_bp=previous_breakpoint,
+                next_bp=event.bp1,
+                strand=event.strand1,
+                chrom=event.chrom1,
+                ref_start=event.read1_ref_start,
+                ref_end=event.read1_ref_end,
+                exons=event.read1_exons,
+            )
+            previous_breakpoint = event.bp2
 
-    def __eq__(self, other) -> bool:
-        """Return True if the events are equal."""
-        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
+            read1 = event.read1(read_chains)
+            read2 = event.read2(read_chains)
+            self.logger.trace(f"{read1=} {read2=}")
+            # is insertions
+            if event.has_insertion():
 
-    def __len__(self) -> int:
-        """Return the number of events."""
-        return len(self.nodes)
+                insertion_seq = event.insertion_seq1  # pick from the first read
+                insertion_seq = (
+                    reverse_complement(insertion_seq)
+                    if event.strand1 == "-"
+                    else insertion_seq
+                )
+                flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
+                if flag:  # only one hit
+                    # add first node and insertion node
+                    source_s = event.source_s1
 
-    def __lt__(self, other) -> bool:
-        """Return True if the event is less than the other event."""
-        return len(self.nodes) < len(other.nodes)
+                    # get type of insertion between first node and insertion node
+                    insertion.update_cigarstring_sms(
+                        read1.sms, source_s=source_s, source_strand=event.strand1
+                    )
+                    self.logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
+                    if event.strand1 == insertion.strand:
+                        insertion_mode = 2 if event.mode1 == 1 else 1
+                    else:
+                        insertion_mode = event.mode1
+                    self.logger.trace("nls reference for read1 and insertion")
+                    read1_insertion_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=read1,
+                            read_rt=insertion,
+                            lt_mode=event.mode1,
+                            rt_mode=insertion_mode,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            logger=self.logger,
+                        )
+                    )
 
-    def __repr__(self) -> str:
-        """Return the string representation of the event."""
-        _repr = "\nSeries("
-        space = " " * 4
-        for n in self.nodes:
-            _repr += f"\n{space}{n!r}"
+                    # get type of insertion between insertion node and second node
 
-        _repr += ")"
-        return _repr
+                    if insertion.strand == read2.strand:
+                        insertion_mode = 2 if event.mode2 == 1 else 1
+                    else:
+                        insertion_mode = event.mode2
 
-    def __iter__(self):
-        """Return an iterator over the events."""
-        yield from self.nodes
+                    self.logger.trace("nls reference for read2 and insertion")
+                    insertion_read2_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=insertion,
+                            read_rt=read2,
+                            lt_mode=insertion_mode,
+                            rt_mode=event.mode2,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            logger=self.logger,
+                        )
+                    )
 
-    __str__ = __repr__
+                    if (
+                        read1_insertion_event.is_type_na()
+                        or insertion_read2_event.is_type_na()
+                    ):
+                        # only add read1, False means that the insertion type (hit 1 insertion)
+                        # are not added in series
+                        read1_node = event.update_node_info(
+                            False, read1_node, insertion
+                        )
+                        self.add_node(read1_node)
+                    else:
+                        # add read1 and insertion
+                        # True means that the insertion type(hit 1 insertion) are added in series
+                        read1_node = read1_insertion_event.update_node_info(
+                            True, read1_node, insertion
+                        )
+                        self.add_node(read1_node)
 
-    def disable_blat_logger(self):
-        """Disable blat logger."""
-        self.blat, self.logger = None, None
+                        insertion = insertion_read2_event.update_insertion_info(
+                            insertion
+                        )
 
-    @property
-    def start_node(self):
-        """Return the start node of the event."""
-        return self.nodes[0]
+                        self.logger.trace(f"Add {insertion=} to Series")
 
-    @start_node.setter
-    def start_node(self, node):
-        """Set the start node of the event."""
-        self.nodes[0] = node
+                        self.add_node(insertion)
 
-    @property
-    def end_node(self):
-        """Return the end node of the event."""
-        return self.nodes[-1]
+                else:  # no hits or multiple hits
 
-    @end_node.setter
-    def end_node(self, node):
-        """Set the end node of the event."""
-        self.nodes[-1] = node
+                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
+                    # only add read1 with insertion info
+                    # False means that the insertion type (hit more insertion) are
+                    # not added in series
+                    read1_node = event.update_node_info(False, read1_node, insertion)
+                    self.add_node(read1_node)
+            # no insertion
+            elif event.has_microhomology():
+                # add read 1 with on insertion
+                microhomology = MicroHomology(event.insertion_seq1)
 
-    @property
-    def unique_key(self):
-        """Return the unique key of the event."""
-        return "".join([node.get_unique_key() for node in self.nodes])
+                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
+                if event.strand1 == "-":
+                    microhomology.reverse_completement_query()
+
+                read1_node = event.update_node_info(False, read1_node, microhomology)
+                self.add_node(read1_node)
+
+            else:
+                read1_node = event.update_node_info(False, read1_node, None, False)
+                self.add_node(read1_node)
+
+            # add final node
+            if index == event_list_len - 1:
+                final_node = Node(
+                    prev_bp=previous_breakpoint,
+                    strand=event.strand2,
+                    chrom=event.chrom2,
+                    ref_start=event.read2_ref_start,
+                    ref_end=event.read2_ref_end,
+                    exons=event.read2_exons,
+                )
+
+                self.add_node(final_node)
 
 
 class Event:

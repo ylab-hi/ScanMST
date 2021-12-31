@@ -232,7 +232,7 @@ def infer_nls_from_connected_reads(
         return bp_region_seq
 
     noreturn = "NA", 0, 0, (), (), (), (), (), []  # type: ignore
-
+    logger.trace(f"{read_lt=} {read_rt=}")
     if lt_mode == 3 or rt_mode == 3:
         return noreturn
     lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (

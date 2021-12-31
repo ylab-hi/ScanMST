@@ -769,7 +769,7 @@ class SpliceGraph:
                 for successor in successors:
                     self._trace(successor, path + [start_node], group_paths)
             else:
-                self._trace(successors, path + [start_node], group_paths)
+                self._trace(successors, path + [start_node], group_paths)  # type: ignore
 
     def trace(self) -> Any:
         """Trace through graph and find all paths."""
