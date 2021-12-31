@@ -11,6 +11,7 @@ from Bio.Seq import Seq  # type: ignore
 from loguru import logger
 from loguru._logger import Logger
 
+from ._class.basicClass import Read  # tyep: ignore [import]
 from ._class.exception import ToolNotFoundError  # type: ignore
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
@@ -33,7 +34,7 @@ def external_tool_checking(logger: Logger) -> None:  # type: ignore
             logger.success("Checking for '" + tool + "': found ")
 
 
-def get_softclip_length(read) -> Tuple:
+def get_softclip_length(read: Read, mode: int) -> Tuple:
     """Extract softclipped sequence information from input read.
 
     :param read: reads from pysam
@@ -43,43 +44,49 @@ def get_softclip_length(read) -> Tuple:
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
     :rtype: tuple
     """
-    if read.cigartuples[0][0] == 4:
-        # there are soft-clipped segments in left and right both
-        if read.cigartuples[-1][0] == 4:
-            # length of left soft-clipped segment is bigger
-            if read.cigartuples[0][1] > read.cigartuples[-1][1]:
-                return (
-                    read.cigartuples[0][1],
-                    read.query_sequence[: read.cigartuples[0][1]],
-                    read.reference_start,
-                    2,
-                )
-            # length of right soft-clipped segment is bigger
-            else:
-                return (
-                    read.cigartuples[-1][1],
-                    read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
-                    read.reference_end - 1,
-                    1,
-                )
-        # there are soft-clipped segments in left only
-        else:
+    _cigar = read.cigarstring
+    _mapq = read.mapping_quality
+    _nm = read.get_tag("NM")
+    _seq = read.query_sequence
+    _strand = "-" if read.is_reverse else "+"
+    _chrm = read.reference_name
+    _pos = read.reference_start
+    read_obj = Read.init(_chrm, _pos, _strand, _cigar, _mapq, _nm, _seq)
+
+    if not mode:
+        if read_obj.lt_soft_len > read_obj.rt_soft_len:
             return (
-                read.cigartuples[0][1],
-                read.query_sequence[: read.cigartuples[0][1]],
-                read.reference_start,
+                read_obj.lt_soft_len,
+                read_obj.query_sequence[: read_obj.lt_soft_len],
+                read_obj.ref_start,
                 2,
             )
-    # there are soft-clipped segments in right only
-    elif read.cigartuples[-1][0] == 4:
-        return (
-            read.cigartuples[-1][1],
-            read.query_sequence[read.query_length - read.cigartuples[-1][1] :],
-            read.reference_end - 1,
-            1,
-        )
+        elif read_obj.lt_soft_len < read_obj.rt_soft_len:
+            return (
+                read_obj.rt_soft_len,
+                read_obj.query_sequence[read_obj.query_length - read_obj.rt_soft_len :],
+                read_obj.ref_end,
+                1,
+            )
+        else:
+            return (0, "", -1, 0)
     else:
-        return 0, "", -1, 0
+        if mode == 1:
+            return (
+                read_obj.rt_soft_len,
+                read_obj.query_sequence[read_obj.query_length - read_obj.rt_soft_len :],
+                read_obj.ref_end,
+                1,
+            )
+        elif mode == 2:
+            return (
+                read_obj.lt_soft_len,
+                read_obj.query_sequence[: read_obj.lt_soft_len],
+                read_obj.ref_start,
+                2,
+            )
+        else:
+            return (0, "", -1, 0)
 
 
 def write_series_to_file(file_name: str, series: Any) -> None:

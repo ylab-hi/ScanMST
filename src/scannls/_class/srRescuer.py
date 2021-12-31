@@ -53,6 +53,48 @@ class Rescuer:
         """Represent Rescuer."""
         return f"{self.__class__.__name__}()"
 
+    def calculate_sr(self, region: str, mode: int) -> int:
+        """Calculate SR from softclipped reads without SV tag, provided target region.
+
+        region = 'chrm:start-end'
+        """
+        for col in self.in_bam.pileup(
+            region=region, truncate=True, stepper="nofilter", min_base_quality=0
+        ):
+            # dp = col.nsegments
+            sr_list = {1: [], 2: []}
+            for read in col.pileups:
+                # read is an instance of pysam.PileupRead
+                aln = read.alignment
+                if aln.mapq >= self.mapq_cutoff and read.query_position:
+                    # the read has soft-clipped part but no SV tag
+                    if not aln.has_tag("SV"):
+                        if "S" in aln.cigarstring:
+                            (
+                                soft_len,
+                                soft_seq,
+                                soft_pos,
+                                soft_mode,
+                            ) = get_softclip_length(aln, mode)
+                            # the pileup position is equal to the soft-clipped connection point
+                            # xxxxxxxxSyyyyyyyyMzzzzzS
+                            #         ^      ^
+                            # if soft_pos == col.reference_pos and 'N' not in soft_seq:
+                            if "N" not in soft_seq:
+                                if soft_len >= self.soft_len_cutoff:
+                                    if soft_mode == 1:
+                                        softclipped_seq = aln.query_sequence[
+                                            read.query_position + 1 :
+                                        ]
+                                        if abs(len(softclipped_seq), soft_len) < 5:
+                                            sr_list[soft_mode].append(softclipped_seq)
+                                    elif soft_mode == 2:
+                                        softclipped_seq = aln.query_sequence[
+                                            : read.query_position
+                                        ]
+                                        if abs(len(softclipped_seq), soft_len) < 5:
+                                            sr_list[soft_mode].append(softclipped_seq)
+
     def update_sr(self, series: Series) -> Any:
         """Update SR for input series."""
         for node in series:
@@ -61,38 +103,4 @@ class Rescuer:
             next_breakpoint = node.next_breakpoint
 
             _region = f"{chrom}:{prev_breakpoint}-{next_breakpoint}"
-            for col in self.in_bam.pileup(
-                region=_region, truncate=True, stepper="nofilter", min_base_quality=0
-            ):
-                # dp = col.nsegments
-                sr_list = {1: [], 2: []}
-                for read in col.pileups:
-                    # read is an instance of pysam.PileupRead
-                    if read.alignment.mapq >= self.mapq_cutoff and read.query_position:
-                        # the read has soft-clipped part but no SV tag
-                        if not read.alignment.has_tag("SV"):
-                            if "S" in read.alignment.cigarstring:
-                                (
-                                    soft_len,
-                                    soft_seq,
-                                    soft_pos,
-                                    left_or_right,
-                                ) = get_softclip_length(read.alignment)
-                                # the pileup position is equal to the soft-clipped connection point
-                                # xxxxxxxxSyyyyyyyyMzzzzzS
-                                #         ^      ^
-                                # if soft_pos == col.reference_pos and 'N' not in soft_seq:
-                                if "N" not in soft_seq:
-                                    if soft_len >= self.soft_len_cutoff:
-                                        if left_or_right == 1:
-                                            sr_list[left_or_right].append(
-                                                read.alignment.query_sequence[
-                                                    read.query_position + 1 :
-                                                ]
-                                            )
-                                        elif left_or_right == 2:
-                                            sr_list[left_or_right].append(
-                                                read.alignment.query_sequence[
-                                                    : read.query_position
-                                                ]
-                                            )
+            self.calculate_sr(_region)
