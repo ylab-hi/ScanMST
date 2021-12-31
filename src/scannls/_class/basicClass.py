@@ -861,8 +861,6 @@ class Node(BasicNode):
             f"{self.next_breakpoint}, SR={self.sr}) "
         )
 
-    __str__ = __repr__
-
     @classmethod
     def create_nodes(cls, number):
         """Create a list of nodes.
@@ -1007,164 +1005,6 @@ class Series:
             series_instance.add_node(node)
         return series_instance
 
-    def init(
-        self,
-        event_list,
-        read_chains,
-        splice_bin,
-        genome_fasta,
-        cvg,
-        gene_iv,
-        motif_required,
-    ) -> None:
-        """Add event list as Node to self.nodes."""
-        event_list = [
-            Event(event)
-            for event in self.order_events_by_trancription_direction(event_list)
-            if event[0] != "NA"
-        ]
-        event_list_len = len(event_list)
-        previous_breakpoint = None
-        for index, event in enumerate(event_list):
-
-            read1_node = Node(
-                prev_bp=previous_breakpoint,
-                next_bp=event.bp1,
-                strand=event.strand1,
-                chrom=event.chrom1,
-                ref_start=event.read1_ref_start,
-                ref_end=event.read1_ref_end,
-                exons=event.read1_exons,
-            )
-            previous_breakpoint = event.bp2
-
-            # is insertions
-            if event.has_insertion():
-
-                insertion_seq = event.insertion_seq1  # pick from the first read
-                insertion_seq = (
-                    reverse_complement(insertion_seq)
-                    if event.strand1 == "-"
-                    else insertion_seq
-                )
-                flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
-                if flag:  # only one hit
-                    # add first node and insertion node
-                    source_s = event.source_s1
-
-                    # get type of insertion between first node and insertion node
-                    read1 = event.read1(read_chains)
-                    insertion.update_cigarstring_sms(
-                        read1.sms, source_s=source_s, source_strand=event.strand1
-                    )
-                    self.logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
-                    if event.strand1 == insertion.strand:
-                        insertion_mode = 2 if event.mode1 == 1 else 1
-                    else:
-                        insertion_mode = event.mode1
-                    self.logger.trace("nls reference for read1 and insertion")
-                    read1_insertion_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=read1,
-                            read_rt=insertion,
-                            lt_mode=event.mode1,
-                            rt_mode=insertion_mode,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                            logger=self.logger,
-                        )
-                    )
-
-                    # get type of insertion between insertion node and second node
-                    read2 = event.read2(read_chains)
-
-                    if insertion.strand == read2.strand:
-                        insertion_mode = 2 if event.mode2 == 1 else 1
-                    else:
-                        insertion_mode = event.mode2
-
-                    self.logger.trace("nls reference for read2 and insertion")
-                    insertion_read2_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=insertion,
-                            read_rt=read2,
-                            lt_mode=insertion_mode,
-                            rt_mode=event.mode2,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                            logger=self.logger,
-                        )
-                    )
-
-                    if (
-                        read1_insertion_event.is_type_na()
-                        or insertion_read2_event.is_type_na()
-                    ):
-                        # only add read1, False means that the insertion type (hit 1 insertion)
-                        # are not added in series
-                        read1_node = event.update_node_info(
-                            False, read1_node, insertion
-                        )
-                        self.add_node(read1_node)
-                    else:
-                        # add read1 and insertion
-                        # True means that the insertion type(hit 1 insertion) are added in series
-                        read1_node = read1_insertion_event.update_node_info(
-                            True, read1_node, insertion
-                        )
-                        self.add_node(read1_node)
-
-                        insertion = insertion_read2_event.update_insertion_info(
-                            insertion
-                        )
-
-                        self.logger.trace(f"Add {insertion=} to Series")
-
-                        self.add_node(insertion)
-
-                else:  # no hits or multiple hits
-
-                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
-                    # only add read1 with insertion info
-                    # False means that the insertion type (hit more insertion) are
-                    # not added in series
-                    read1_node = event.update_node_info(False, read1_node, insertion)
-                    self.add_node(read1_node)
-            # no insertion
-            elif event.has_microhomology():
-                # add read 1 with on insertion
-                microhomology = MicroHomology(event.insertion_seq1)
-
-                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
-                if event.strand1 == "-":
-                    microhomology.reverse_completement_query()
-
-                read1_node = event.update_node_info(False, read1_node, microhomology)
-                self.add_node(read1_node)
-
-            else:
-                read1_node = event.update_node_info(False, read1_node, None, False)
-                self.add_node(read1_node)
-
-            # add final node
-            if index == event_list_len - 1:
-                final_node = Node(
-                    prev_bp=previous_breakpoint,
-                    strand=event.strand2,
-                    chrom=event.chrom2,
-                    ref_start=event.read2_ref_start,
-                    ref_end=event.read2_ref_end,
-                    exons=event.read2_exons,
-                )
-
-                self.add_node(final_node)
-
     def __getitem__(self, index):
         """Return the event at the given index."""
         return self.nodes[index]
@@ -1198,8 +1038,6 @@ class Series:
     def __iter__(self):
         """Return an iterator over the events."""
         yield from self.nodes
-
-    __str__ = __repr__
 
     def disable_blat_logger(self):
         """Disable blat logger."""
@@ -1341,6 +1179,165 @@ class Series:
             output_event_list = list(reversed(output_event_list))
 
         return output_event_list
+
+    def init(
+        self,
+        event_list,
+        read_chains,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        gene_iv,
+        motif_required,
+    ) -> None:
+        """Add event list as Node to self.nodes."""
+        event_list = [
+            Event(event)
+            for event in self.order_events_by_trancription_direction(event_list)
+            if event[0] != "NA"
+        ]
+        event_list_len = len(event_list)
+        previous_breakpoint = None
+        for index, event in enumerate(event_list):
+
+            read1_node = Node(
+                prev_bp=previous_breakpoint,
+                next_bp=event.bp1,
+                strand=event.strand1,
+                chrom=event.chrom1,
+                ref_start=event.read1_ref_start,
+                ref_end=event.read1_ref_end,
+                exons=event.read1_exons,
+            )
+            previous_breakpoint = event.bp2
+
+            read1 = event.read1(read_chains)
+            read2 = event.read2(read_chains)
+            self.logger.trace(f"{read1=} {read2=}")
+            # is insertions
+            if event.has_insertion():
+
+                insertion_seq = event.insertion_seq1  # pick from the first read
+                insertion_seq = (
+                    reverse_complement(insertion_seq)
+                    if event.strand1 == "-"
+                    else insertion_seq
+                )
+                flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
+                if flag:  # only one hit
+                    # add first node and insertion node
+                    source_s = event.source_s1
+
+                    # get type of insertion between first node and insertion node
+                    insertion.update_cigarstring_sms(
+                        read1.sms, source_s=source_s, source_strand=event.strand1
+                    )
+                    self.logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
+                    if event.strand1 == insertion.strand:
+                        insertion_mode = 2 if event.mode1 == 1 else 1
+                    else:
+                        insertion_mode = event.mode1
+                    self.logger.trace("nls reference for read1 and insertion")
+                    read1_insertion_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=read1,
+                            read_rt=insertion,
+                            lt_mode=event.mode1,
+                            rt_mode=insertion_mode,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            logger=self.logger,
+                        )
+                    )
+
+                    # get type of insertion between insertion node and second node
+
+                    if insertion.strand == read2.strand:
+                        insertion_mode = 2 if event.mode2 == 1 else 1
+                    else:
+                        insertion_mode = event.mode2
+
+                    self.logger.trace("nls reference for read2 and insertion")
+                    insertion_read2_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=insertion,
+                            read_rt=read2,
+                            lt_mode=insertion_mode,
+                            rt_mode=event.mode2,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            logger=self.logger,
+                        )
+                    )
+
+                    if (
+                        read1_insertion_event.is_type_na()
+                        or insertion_read2_event.is_type_na()
+                    ):
+                        # only add read1, False means that the insertion type (hit 1 insertion)
+                        # are not added in series
+                        read1_node = event.update_node_info(
+                            False, read1_node, insertion
+                        )
+                        self.add_node(read1_node)
+                    else:
+                        # add read1 and insertion
+                        # True means that the insertion type(hit 1 insertion) are added in series
+                        read1_node = read1_insertion_event.update_node_info(
+                            True, read1_node, insertion
+                        )
+                        self.add_node(read1_node)
+
+                        insertion = insertion_read2_event.update_insertion_info(
+                            insertion
+                        )
+
+                        self.logger.trace(f"Add {insertion=} to Series")
+
+                        self.add_node(insertion)
+
+                else:  # no hits or multiple hits
+
+                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
+                    # only add read1 with insertion info
+                    # False means that the insertion type (hit more insertion) are
+                    # not added in series
+                    read1_node = event.update_node_info(False, read1_node, insertion)
+                    self.add_node(read1_node)
+            # no insertion
+            elif event.has_microhomology():
+                # add read 1 with on insertion
+                microhomology = MicroHomology(event.insertion_seq1)
+
+                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
+                if event.strand1 == "-":
+                    microhomology.reverse_completement_query()
+
+                read1_node = event.update_node_info(False, read1_node, microhomology)
+                self.add_node(read1_node)
+
+            else:
+                read1_node = event.update_node_info(False, read1_node, None, False)
+                self.add_node(read1_node)
+
+            # add final node
+            if index == event_list_len - 1:
+                final_node = Node(
+                    prev_bp=previous_breakpoint,
+                    strand=event.strand2,
+                    chrom=event.chrom2,
+                    ref_start=event.read2_ref_start,
+                    ref_end=event.read2_ref_end,
+                    exons=event.read2_exons,
+                )
+
+                self.add_node(final_node)
 
 
 class Event:

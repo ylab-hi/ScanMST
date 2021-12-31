@@ -1,2 +1,0 @@
-(1) rescue SR (reads without SA tags) => rescue_sr.py
-(2) output (VCF and SR-updated pickle) [SR cutoff] => output.py
