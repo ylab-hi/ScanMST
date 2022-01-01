@@ -45,7 +45,7 @@ class Aligner:
         self.seqb = seqb
         self.cmd = "gapmis -a {seqa} -b {seqb} -o {out}".format
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent Aligner class."""
         return f"Aligner(seqa={self.seqa}, seqb={self.seqb})"
 
@@ -81,8 +81,8 @@ class Aligner:
                 score, number of gaps, number of mismatches for two sequences
             2. start and end coordinates are 0-based and end is not included, same as Python
         """
-        seqa_coords: List[Tuple] = []
-        seqb_coords: List[Tuple] = []
+        seqa_coords: List[Tuple[int, int]] = []
+        seqb_coords: List[Tuple[int, int]] = []
         with open(result_file) as f:
             for line in [line.strip() for line in f if not line.startswith("#")]:
                 if line.startswith("seq1"):

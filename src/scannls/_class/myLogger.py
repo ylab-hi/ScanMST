@@ -5,6 +5,7 @@
 @license:     MIT Licence
 @Time:        12/15/21 2:08 PM
 """
+from loguru._logger import Logger
 
 
 class MyLogger:
@@ -15,46 +16,46 @@ class MyLogger:
     Hence, it is difficult to debug in parallel mode
     """
 
-    def __init__(self, contig, logger):
+    def __init__(self, contig: str, logger: Logger):
         """Initialize logger with contig name."""
         self.logger = logger
         self.contig = contig
 
-    def debug(self, msg: str):
+    def debug(self, msg: str) -> None:
         """Wrapper for debug method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.debug(msg)
 
-    def info(self, msg: str):
+    def info(self, msg: str) -> None:
         """Wrapper for info method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.info(msg)
 
-    def warning(self, msg: str):
+    def warning(self, msg: str) -> None:
         """Wrapper for warning method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.warning(msg)
 
-    def error(self, msg: str):
+    def error(self, msg: str) -> None:
         """Wrapper for error method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.error(msg)
 
-    def critical(self, msg: str):
+    def critical(self, msg: str) -> None:
         """Wrapper for critical method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.critical(msg)
 
-    def trace(self, msg: str):
+    def trace(self, msg: str) -> None:
         """Wrapper for trace method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.trace(msg)
 
-    def success(self, msg: str):
+    def success(self, msg: str) -> None:
         """Wrapper for success method in logger."""
         msg = f"{self.contig}: {msg}"
         self.logger.success(msg)
 
-    def complete(self):
+    def complete(self) -> None:
         """Wrapper for complete method in logger."""
         self.logger.complete()

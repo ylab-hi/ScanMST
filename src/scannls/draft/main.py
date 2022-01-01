@@ -12,7 +12,7 @@ from typing import Tuple
 
 import pysam  # type: ignore
 from pyfaidx import Fasta  # type: ignore
-from pyfaidx import FastaNotFoundError  # type: ignore
+from pyfaidx import FastaNotFoundError
 
 from .._class.basicClass import Series  # type: ignore
 from .._class.blat import Blat  # type: ignore
@@ -23,9 +23,9 @@ from ..utils import get_softclip_length  # type: ignore
 from ..utils import reverse_complement  # type: ignore
 from ..utils import write_series_to_file  # type: ignore
 from .helper import blat2chimeric_alignment  # type: ignore
-from .helper import event_to_str  # type: ignore
-from .helper import extract_splice_sites  # type: ignore
-from .helper import strand_mode_checker  # type: ignore
+from .helper import event_to_str
+from .helper import extract_splice_sites
+from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
 
 
