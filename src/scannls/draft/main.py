@@ -28,7 +28,7 @@ from .helper import event_to_str
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
-from scannls._class.basicClass import reverse_complement
+from scannls._class.basicClass import reverse_complement  # type: ignore
 from scannls._class.basicClass import Series
 
 
