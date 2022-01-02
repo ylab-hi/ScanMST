@@ -8,5 +8,3 @@ try:
     import HTSeq  # type: ignore
 except ModuleNotFoundError as e:
     raise SystemExit from e
-
-from . import _class
