@@ -10,23 +10,26 @@ from typing import Any
 from typing import List
 from typing import Tuple
 
+import HTSeq  # type: ignore
+import pyfaidx  # type: ignore
 import pysam  # type: ignore
+from loguru._logger import Logger
 from pyfaidx import Fasta  # type: ignore
-from pyfaidx import FastaNotFoundError  # type: ignore
+from pyfaidx import FastaNotFoundError
 
-from .._class.basicClass import Series  # type: ignore
 from .._class.blat import Blat  # type: ignore
 from .._class.myLogger import MyLogger  # type: ignore
 from .._class.parallel import ParallelWorker  # type: ignore
 from .._class.readConnector import detect_read_read_connections_from_cigar  # type: ignore
 from ..utils import get_softclip_length  # type: ignore
-from ..utils import reverse_complement  # type: ignore
 from ..utils import write_series_to_file  # type: ignore
 from .helper import blat2chimeric_alignment  # type: ignore
-from .helper import event_to_str  # type: ignore
-from .helper import extract_splice_sites  # type: ignore
-from .helper import strand_mode_checker  # type: ignore
+from .helper import event_to_str
+from .helper import extract_splice_sites
+from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
+from scannls._class.basicClass import reverse_complement  # type: ignore
+from scannls._class.basicClass import Series
 
 
 class BamScanner:
@@ -162,16 +165,16 @@ def _get_cvg_gene_iv(gtf, splice_bin, logger):
 
 def detect_sv_from_cigar(
     *,
-    read,
-    mapq_cutoff,
-    max_allowed_nm,
-    splice_bin,
-    genome_fasta,
-    cvg,
-    gene_iv,
-    motif_required,
-    blat,
-    logger,
+    read: pysam.AlignedSegment,
+    mapq_cutoff: int,
+    max_allowed_nm: int,
+    splice_bin: int,
+    genome_fasta: pyfaidx.Fasta,
+    cvg: HTSeq.GenomicArrayOfSets,
+    gene_iv: HTSeq.GenomicArrayOfSets,
+    motif_required: bool,
+    blat: Blat,
+    logger: Logger,
 ) -> Any:
     """Detect SV from cigar string.
 
@@ -183,19 +186,11 @@ def detect_sv_from_cigar(
     :param splice_bin: a small bin for splice site searching
     :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
     :param cvg: annotated splice sites (HTSeq.GenomicArrayOfSets) of reference gene
-        annotation (GTF file)
+           annotation (GTF file)
     :param gene_iv: annotated gene region (HTSeq.GenomicArrayOfSets) of reference
-        gene annotation (GTF file)
+           gene annotation (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical
-        and noncanonical splice sites
-    :type read: pysam.AlignedSegment
-    :type mapq_cutoff: int
-    :type max_allowed_nm: int
-    :type splice_bin: int
-    :type genome_fasta: pyfaidx.Fasta
-    :type cvg: HTSeq.GenomicArrayOfSets
-    :type gene_iv: HTSeq.GenomicArrayOfSets
-    :type motif_required: bool
+           and noncanonical splice sites
     :return: event groups in a list, every group is also a list
     :rtype: list (list of lists)
     """

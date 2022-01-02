@@ -13,7 +13,7 @@ __funcs__ = {"output_bedpe_file", "aggregate_candidates", "similar_hit"}
 
 
 def output_bedpe_file(
-    sr_dict: Dict, group_dict: Dict, prefix: str, splice_bin: int
+    sr_dict: Dict[str, int], group_dict: Dict[str, int], prefix: str, splice_bin: int
 ) -> TextIO:
     """OUTPUT BEDPE FILE.
 
@@ -38,19 +38,19 @@ def output_bedpe_file(
         chrm2, pos2 = bp2.split(":")
         strand1 = strands[0]
         strand2 = strands[1]
-        pos1 = int(pos1)
-        pos2 = int(pos2)
-        if pos1 - splice_bin > 0 and pos2 - splice_bin > 0:
+        pos1 = int(pos1)  # type: ignore
+        pos2 = int(pos2)  # type: ignore
+        if pos1 - splice_bin > 0 and pos2 - splice_bin > 0:  # type: ignore
             output.write(
-                f"{chrm1}\t{pos1 - splice_bin}\t{pos1 + splice_bin}\t{chrm2}"
-                f"\t{pos2 - splice_bin}\t{pos2 + splice_bin}\tgroup_{num_of_group}"
+                f"{chrm1}\t{pos1 - splice_bin}\t{pos1 + splice_bin}\t{chrm2}"  # type: ignore
+                f"\t{pos2 - splice_bin}\t{pos2 + splice_bin}\tgroup_{num_of_group}"  # type: ignore
                 f"\t{sr}\t{strand1}\t{strand2}\n"
             )
     output.close()
     return output
 
 
-def aggregate_candidates(in_dict: Dict, len_cutoff: int = 10) -> Any:
+def aggregate_candidates(in_dict: Dict[str, int], len_cutoff: int = 10) -> Any:
     """Aggregate candidates."""
     if len_cutoff == 0:
         return in_dict

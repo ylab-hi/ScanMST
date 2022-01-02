@@ -7,7 +7,11 @@
 """
 import os
 from concurrent import futures
+from typing import Any
+from typing import Callable
+from typing import Dict
 
+from loguru._logger import Logger
 from tqdm import tqdm  # type: ignore
 
 
@@ -36,7 +40,7 @@ class ParallelWorker:
     {1: 5, 2: 6, 3: 7}
     """
 
-    def __init__(self, func, logger, n_jobs: int = 1):
+    def __init__(self, func: Callable, logger: Logger, n_jobs: int = 1) -> None:
         """Initialize the ParallelWorker class."""
         self.func = func
         self.logger = logger
@@ -54,7 +58,7 @@ class ParallelWorker:
         else:
             return n_jobs
 
-    def run(self, *args, **kwargs) -> dict:
+    def run(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """Using concurrent.future to parallel process."""
         tasks = {}
         result = {}

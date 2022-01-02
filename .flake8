@@ -14,4 +14,3 @@ exclude =
     src/scannls/call/*,
     src/scannls/isoform/*,
     noxfile.py,
-    src/scannls/_class/writer.py,
