@@ -649,7 +649,7 @@ class Insertion(Read, BasicNode):
         return (
             f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
-            f"{self.next_breakpoint}, SR={self.sr})"
+            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr})"
         )
 
     def __hash__(self) -> int:
@@ -859,7 +859,7 @@ class Node(BasicNode):
         return (
             f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
-            f"{self.next_breakpoint}, SR={self.sr}) "
+            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}) "
         )
 
     @classmethod
