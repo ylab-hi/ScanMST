@@ -7,21 +7,14 @@ from typing import Any
 from typing import Callable
 from typing import Tuple
 
-import pysam.libcalignedsegment
-from Bio.Seq import Seq  # type: ignore
+import pysam.libcalignedsegment  # type: ignore
 from loguru import logger
 from loguru._logger import Logger
 
-from ._class.basicClass import Read  # tyep: ignore [import]
+from ._class.basicClass import Read  # type: ignore
 from ._class.exception import ToolNotFoundError  # type: ignore
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
-
-
-def reverse_complement(in_str: str) -> str:
-    """Obtain reverse complement sequence."""
-    my_dna = Seq(in_str)
-    return str(my_dna.reverse_complement())
 
 
 def external_tool_checking(logger: Logger) -> None:
@@ -42,11 +35,9 @@ def get_softclip_length(
 
     :param mode:
     :param read: reads from pysam
-    :type read: pysam.libcalignedsegment.AlignedSegment
     :return: length of soft-clipped part, sequence of soft-clipped part,
      the connection point of soft-clipped part (left/right),
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
-    :rtype: tuple
     """
     _cigar = read.cigarstring
     _mapq = read.mapping_quality

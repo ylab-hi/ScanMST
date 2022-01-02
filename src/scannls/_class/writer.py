@@ -17,10 +17,10 @@ from loguru._logger import Logger
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
 
-from ..utils import reverse_complement
 from .basicClass import MicroHomology
 from .basicClass import NodeType
 from .basicClass import NovelInsertion
+from .basicClass import reverse_complement
 from .basicClass import Series
 
 # todo: add comments line

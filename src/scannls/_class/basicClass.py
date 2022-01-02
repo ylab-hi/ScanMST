@@ -7,11 +7,11 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+from Bio.Seq import Seq  # type: ignore
 from loguru._logger import Logger  # type: ignore
 
 from ..draft.helper import cigar_validity  # type: ignore
 from ..draft.nls_inference import infer_nls_from_connected_reads  # type: ignore
-from ..utils import reverse_complement  # type: ignore
 from .exception import ReadNotFoundError  # type: ignore
 
 NodeType = Union["Node", "Insertion"]
@@ -1531,3 +1531,9 @@ class Event:
         return self.update_specific_info_within_event(
             insertion, ["sv_type", "annotation_code", "splicing_code", "modes", "genes"]
         )
+
+
+def reverse_complement(in_str: str) -> str:
+    """Obtain reverse complement sequence."""
+    my_dna = Seq(in_str)
+    return str(my_dna.reverse_complement())

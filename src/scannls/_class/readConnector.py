@@ -16,8 +16,8 @@ from loguru._logger import Logger
 from pysam import AlignedSegment  # type: ignore
 
 from ..draft.helper import cigar_validity  # type: ignore
-from ..utils import reverse_complement
 from .basicClass import Read
+from .basicClass import reverse_complement
 from .blat import Blat
 from .exception import ReadNotConnectedError
 
