@@ -6,7 +6,7 @@
 """
 from abc import ABC
 from abc import abstractmethod
-from functools import singledispatch
+from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any
 from typing import IO
@@ -23,7 +23,7 @@ from .basicClass import NodeType
 from .basicClass import NovelInsertion
 from .basicClass import Series
 
-
+# todo: add comments line
 # todo: add asyncio support
 
 
@@ -110,7 +110,7 @@ class FastaWriter(Writer):
         else:
             self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
-    @singledispatch
+    @singledispatchmethod
     def write_data(self, data_object: Any):
         """Write data to file.
 
@@ -120,6 +120,7 @@ class FastaWriter(Writer):
     @write_data.register
     def _(self, data_object: Series):
         """Write Series to fasta file."""
+        self.logger.trace(f"{self.__class__.__name__}: Writing Series to file.")
         sequence = get_nodes_sequence_from_series(
             data_object, reference_io=self.reference_io
         )
@@ -183,7 +184,7 @@ class GTFWriter(Writer):
         else:
             self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
-    @singledispatch
+    @singledispatchmethod
     def write_data(self, data_object: Any) -> None:
         """Write data to file.
 
@@ -197,6 +198,7 @@ class GTFWriter(Writer):
         :param data_object:
         :return:
         """
+        self.logger.trace(f"{self.__class__.__name__}: Writing Series to file.")
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object, self.id
         ):
@@ -231,8 +233,8 @@ def get_exon_sequence_from_node(node: NodeType, reference_io) -> str:
 
     # positive strand sequence for novel insertion
     microhomology_sequence, novel_insertion_sequence = "", ""
-    if not node.insertion_info and not node.insertion_info[0]:  # type: ignore
-        insertion = node.insertion_info[1]  # type: ignore
+    if node.insertion_info and not node.insertion_info[0]:
+        insertion = node.insertion_info[1]
         if isinstance(insertion, NovelInsertion):
             novel_insertion_sequence += insertion.query_sequence
         if isinstance(insertion, MicroHomology):
@@ -243,7 +245,7 @@ def get_exon_sequence_from_node(node: NodeType, reference_io) -> str:
     for start, end in exons:  # type: ignore
         if node.strand == "-":
             start, end = end, start
-        node_sequence += reference_io.get_seq(node.chrom, start, end)
+        node_sequence += reference_io.get_seq(node.chrom, start, end).seq
 
     node_sequence += novel_insertion_sequence
 

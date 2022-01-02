@@ -1219,7 +1219,7 @@ class Series:
         previous_breakpoint = None
         for index, event in enumerate(event_list):
 
-            read1_node = Node(
+            read1_node: NodeType = Node(
                 prev_bp=previous_breakpoint,
                 next_bp=event.bp1,
                 strand=event.strand1,
@@ -1477,8 +1477,8 @@ class Event:
         raise ReadNotFoundError
 
     def update_specific_info_within_event(
-        self, node: Union[Node, Insertion], info_key_list: List[str]
-    ) -> Union[Node, Insertion]:
+        self, node: NodeType, info_key_list: List[str]
+    ) -> NodeType:
         """Update node info from the event by the info_key_list.
 
         :param node:  Node
@@ -1493,10 +1493,10 @@ class Event:
     def update_node_info(
         self,
         flag: bool,
-        new_node: Node,
+        new_node: NodeType,
         insertion: Union[Insertion, None, MicroHomology],
         is_update_insertion_info: bool = True,
-    ) -> Node:
+    ) -> NodeType:
         """Update the common info the node in the front, and the common info includes.
 
         sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
@@ -1514,7 +1514,7 @@ class Event:
             new_node.insertion_info = (flag, insertion)  # type: ignore
         return new_node
 
-    def update_insertion_info(self, insertion: Insertion) -> Union[Node, Insertion]:
+    def update_insertion_info(self, insertion: Insertion) -> NodeType:
         """Update the information of insertion.
 
         :param insertion: the insertion to be updated
