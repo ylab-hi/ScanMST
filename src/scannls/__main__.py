@@ -11,6 +11,8 @@ from . import __version__  # type: ignore
 from ._class.blat import Blat
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
+from ._class.writer import FastaWriter
+from ._class.writer import GTFWriter
 from .draft.main import scanbam_run  # type: ignore
 from .utils import external_tool_checking
 
@@ -215,6 +217,15 @@ def main():
         min_soft_seg_len=options.min_soft_seg_len,
         blat_ident_pct_cutoff=options.ident_cutoff,
     )
+
+    fasta_writer = FastaWriter("test.fasta", options.ref, logger)
+    with fasta_writer.open() as _:
+        fasta_writer.write_data(intact_series_list[0])
+
+    gtf_writer = GTFWriter("test.gtf", logger)
+    with gtf_writer.open() as _:
+        gtf_writer.write_data(intact_series_list[0])
+
     logger.debug(f"Total Series: {len(intact_series_list)}")
     splice_graph = SpliceGraph(logger)
     clique_finder = CliqueFinder(intact_series_list, logger)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import re
 from typing import Any
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -980,12 +981,12 @@ class Series:
 
     def __init__(self, blat: Any, logger: Logger) -> None:
         """Initialize a Series object."""
-        self.nodes: List[Union[Node, Insertion]] = []
+        self.nodes: List[NodeType] = []
         self.is_in_graph = False
         self.blat = blat
         self.logger = logger
 
-    def add_node(self, node: Union[Node, Insertion]) -> None:
+    def add_node(self, node: NodeType) -> None:
         """Add a node to the series."""
         self.nodes.append(node)
 
@@ -1035,7 +1036,7 @@ class Series:
         _repr += ")"
         return _repr
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[NodeType]:
         """Return an iterator over the events."""
         yield from self.nodes
 
@@ -1047,6 +1048,24 @@ class Series:
     def unique_key(self):
         """Return the unique key of the event."""
         return "".join([node.get_unique_key() for node in self.nodes])
+
+    def get_gtf_feature(self, series_id: int) -> List[str]:
+        """Return the gtf feature of the nls event.
+
+        :return: A list of gtf features for current series(not including nodes
+                in the series).
+        """
+        return [
+            "chrom",
+            "scannls",
+            "nls",
+            f"{self[0].ref_start}",
+            f"{self[-1].ref_end}",
+            "0",
+            "strand",
+            "0",
+            f'series_id "{series_id}"',
+        ]
 
     @staticmethod
     def reorder_event(event):
@@ -1200,7 +1219,7 @@ class Series:
         previous_breakpoint = None
         for index, event in enumerate(event_list):
 
-            read1_node = Node(
+            read1_node: NodeType = Node(
                 prev_bp=previous_breakpoint,
                 next_bp=event.bp1,
                 strand=event.strand1,
@@ -1458,8 +1477,8 @@ class Event:
         raise ReadNotFoundError
 
     def update_specific_info_within_event(
-        self, node: Union[Node, Insertion], info_key_list: List[str]
-    ) -> Union[Node, Insertion]:
+        self, node: NodeType, info_key_list: List[str]
+    ) -> NodeType:
         """Update node info from the event by the info_key_list.
 
         :param node:  Node
@@ -1474,10 +1493,10 @@ class Event:
     def update_node_info(
         self,
         flag: bool,
-        new_node: Node,
+        new_node: NodeType,
         insertion: Union[Insertion, None, MicroHomology],
         is_update_insertion_info: bool = True,
-    ) -> Node:
+    ) -> NodeType:
         """Update the common info the node in the front, and the common info includes.
 
         sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
@@ -1495,7 +1514,7 @@ class Event:
             new_node.insertion_info = (flag, insertion)  # type: ignore
         return new_node
 
-    def update_insertion_info(self, insertion: Insertion) -> Union[Node, Insertion]:
+    def update_insertion_info(self, insertion: Insertion) -> NodeType:
         """Update the information of insertion.
 
         :param insertion: the insertion to be updated

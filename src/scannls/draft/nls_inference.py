@@ -7,11 +7,11 @@ import pyfaidx  # type: ignore
 from loguru._logger import Logger
 
 from .helper import gene_annotation  # type: ignore
-from .helper import splicing_confirmation  # type: ignore
+from .helper import splicing_confirmation
 
 
 def short_tdup_or_not(
-    ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, logger
+    ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, logger  # type: ignore
 ) -> bool:
     """Judge the ins_seq_in_read is a TDUP (TDUP size < reads length).
 

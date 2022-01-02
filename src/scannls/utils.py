@@ -11,7 +11,7 @@ from Bio.Seq import Seq  # type: ignore
 from loguru import logger
 from loguru._logger import Logger
 
-from ._class.exception import ToolNotFoundError  # type: ignore
+from ._class.exception import ToolNotFoundError
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
@@ -22,7 +22,7 @@ def reverse_complement(in_str: str) -> str:
     return str(my_dna.reverse_complement())
 
 
-def external_tool_checking(logger: Logger) -> None:  # type: ignore
+def external_tool_checking(logger: Logger) -> None:
     """Checking dependencies are installed."""
     software = ["samtools", "gfClient", "gfServer", "gapmis"]
     for tool in software:
@@ -30,10 +30,10 @@ def external_tool_checking(logger: Logger) -> None:  # type: ignore
         if "command not found" in output:
             raise ToolNotFoundError(tool)
         else:
-            logger.success("Checking for '" + tool + "': found ")
+            logger.success("Checking for '" + tool + "': found ")  # type: ignore
 
 
-def get_softclip_length(read) -> Tuple:
+def get_softclip_length(read) -> Tuple[int, str, int, int]:
     """Extract softclipped sequence information from input read.
 
     :param read: reads from pysam
@@ -89,14 +89,14 @@ def write_series_to_file(file_name: str, series: Any) -> None:
             f.write(str(item) + "\n")
 
 
-def timeit(func: Callable) -> Callable:
+def timeit(func: Callable[..., Any]) -> Callable[..., Any]:
     """Time the function execution.
 
     :param func: the function to be timed
     """
 
     @wraps(func)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args, **kwargs):  # type: ignore
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()

@@ -16,9 +16,10 @@ __funcs__ = {
 from typing import Tuple, List, Dict, Any
 
 import HTSeq  # type: ignore
+import pyfaidx  # type: ignore
 
 
-def extract_splice_sites(in_file: str, bin_size: int) -> Tuple:
+def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     """Extract splice sites and gene regions from input GTF file.
 
     :param in_file: gene annotation file (GTF file)
@@ -53,7 +54,7 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Tuple:
 
     for trx_id in trx_to_exon:
         exon_list = trx_to_exon[trx_id]
-        exon_list.sort(key=lambda x: x.start)
+        exon_list.sort(key=lambda x: x.start)  # type: ignore
         exon_num = len(exon_list)
         first_exon = exon_list[0]
         last_exon = exon_list[-1]
@@ -228,7 +229,7 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Tuple:
 
 def gene_annotation(
     chrm1: str, pos1: int, chrm2: str, pos2: int, gene_iv: HTSeq.GenomicArrayOfSets
-) -> Tuple:
+) -> Tuple[str, str]:
     """Obtain gene annotations for breakpoints.
 
     :param chrm1: chromosome for breakpoint1
@@ -266,16 +267,16 @@ def gene_annotation(
 
 
 def splicing_confirmation(
-    chrm1,
-    pos1,
-    chrm2,
-    pos2,
-    splice_bin,
-    genome_fasta,
-    cvg,
-    strand_changed,
-    motif_required=True,
-) -> tuple:
+    chrm1: str,
+    pos1: int,
+    chrm2: str,
+    pos2: int,
+    splice_bin: int,
+    genome_fasta: pyfaidx.Fasta,
+    cvg: HTSeq.GenomicArrayOfSets,
+    strand_changed: bool,
+    motif_required: bool = True,
+) -> Tuple[bool, int, int]:
     """Judge whether the breakpoints are NLS events or not.
 
     if motif_required is ON: it will only report NLS events with 'canonical
@@ -294,20 +295,11 @@ def splicing_confirmation(
     :param motif_required: canonical splice sites required;
            if True: considering canonical splice sites only;
            else: considering canonical and noncanonical splice sites both
-    :type chrm1: str
-    :type chrm2: str
-    :type pos1: int
-    :type pos2: int
-    :type splice_bin: int
-    :type genome_fasta: pyfaidx.Fasta
-    :type cvg: HTSeq.GenomicArrayOfSets
-    :type strand_changed: bool
-    :type motif_required: bool
     :return: report/not report, overlapping boundary in bits, canonical
         splice site/noncanonical splice site
     :rtype: tuple
 
-    . note::
+    .. note::
         Possible current_output scenarios
         * True,  3(11), 1 => reported, both breakpoints overlap with annotated
             coding exons boundary, using canonical splice motif
@@ -320,7 +312,7 @@ def splicing_confirmation(
 
     """
 
-    def canonical_site_finder(in_seq: str) -> List:
+    def canonical_site_finder(in_seq: str) -> List[str]:
         """Find canonical splice sites in the input sequence.
 
         :param in_seq: input sequence (usually sequence nearby the breakpoints)
@@ -335,16 +327,13 @@ def splicing_confirmation(
         return hit_sites
 
     def splice_paired_checker(
-        hit_sites: List, pair_seq: str, splice_motif_dict: Dict
+        hit_sites: List[str], pair_seq: str, splice_motif_dict: Dict[str, str]
     ) -> bool:
         """Find canonical splice sites in the input sequence.
 
         :param hit_sites: canonical splice site at one end
         :param pair_seq: sequence at the other pair end
         :param splice_motif_dict: paired splice sites (same strand or different strand)
-        :type hit_sites: list
-        :type pair_seq: str
-        :type splice_motif_dict: dict
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
@@ -420,14 +409,14 @@ def cigar_validity(cigar_str: str) -> str:
     if cigartuple[0][1] == cigartuple[1][1]:
         cigartuple[1][0] = str(
             int(cigartuple[0][0]) + int(cigartuple[1][0])  # type: ignore
-        )  # type: ignore
+        )
         del cigartuple[0]
 
     # last two operations are the same
     elif cigartuple[-1][1] == cigartuple[-2][1]:
         cigartuple[-2][0] = str(
             int(cigartuple[-1][0]) + int(cigartuple[-2][0])  # type: ignore
-        )  # type: ignore
+        )
         del cigartuple[-1]
 
     valid_cigar = ""
@@ -506,19 +495,15 @@ def blat2chimeric_alignment(
     return chimeric_aln_str
 
 
-def event_to_str(event, tag) -> str:
+def event_to_str(event: Any, tag: str) -> str:
     """Convert event info to a string adding to the pysam tag.
 
     :param event: event tuple from infer_nls_from_connected_reads
     :param tag: SV or OT
 
-    :type event: str
-    :type tag: str
-
     :return: string of event
-    :rtype: str
 
-    ..note:
+    .. note:
         SV tag uses the coordinate system (start with 1) as SA tag
     """
     (
