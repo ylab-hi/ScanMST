@@ -33,7 +33,7 @@ def get_softclip_length(
 ) -> Tuple[int, str, int, int]:
     """Extract softclipped sequence information from input read.
 
-    :param mode:
+    :param mode: read mode
     :param read: reads from pysam
     :return: length of soft-clipped part, sequence of soft-clipped part,
      the connection point of soft-clipped part (left/right),
