@@ -40,7 +40,9 @@ class ParallelWorker:
     {1: 5, 2: 6, 3: 7}
     """
 
-    def __init__(self, func: Callable, logger: Logger, n_jobs: int = 1) -> None:
+    def __init__(
+        self, func: Callable[..., Any], logger: Logger, n_jobs: int = 1
+    ) -> None:
         """Initialize the ParallelWorker class."""
         self.func = func
         self.logger = logger

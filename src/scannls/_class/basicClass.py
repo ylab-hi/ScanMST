@@ -1151,51 +1151,25 @@ class Series:
                * if strand(+): bp3 > bp2
                  if strand(-): bp3 < bp2
         """
-        kept_right_pos = None
-        kept_right_chrm = None
-        kept_right_strand = None
-
-        keep_event_list_order = True
+        is_reversed = False
         output_event_list = []
-        for evt in event_list:
+        for index, evt in enumerate(event_list):
             ordered_evt = Series.reorder_event(evt)
-            output_event_list.append(ordered_evt)
-            (
-                sv_type,
-                annot,
-                canonical,
-                _positions,
-                read1_info,
-                read2_info,
-                insertion_info,
-                strands,
-                genes,
-            ) = ordered_evt
-            chrm1, _pos1 = _positions[0].split(":")
-            chrm2, _pos2 = _positions[1].split(":")
-            pos1 = int(_pos1)
-            pos2 = int(_pos2)
-            strand1 = strands[0]
-            strand2 = strands[1]
-            if not kept_right_pos:
-                kept_right_pos = pos2
-                kept_right_chrm = chrm2
-                kept_right_strand = strand2
-            else:
-                if chrm1 == kept_right_chrm and strand1 == kept_right_strand:
-                    if (strand1 == "+" and pos1 > kept_right_pos) or (
-                        strand1 == "-" and pos1 < kept_right_pos
-                    ):
-                        kept_right_pos = pos2
-                        kept_right_chrm = chrm2
-                        kept_right_strand = strand2
-                    else:
-                        keep_event_list_order = False
-                else:
-                    keep_event_list_order = False
+            parsed_evt = Event(ordered_evt)
+            output_event_list.append(parsed_evt)
 
-        if not keep_event_list_order:
-            output_event_list = list(reversed(output_event_list))
+            if index == 1:
+                last_event = output_event_list[-1]
+                if ~(
+                    last_event.chrom2 == parsed_evt.chrom1
+                    and last_event.strand2 == parsed_evt.strand1
+                    and last_event.read2_ref_end == parsed_evt.read1_ref_start
+                    and last_event.read2_ref_start == parsed_evt.read1_ref_end
+                ):
+                    is_reversed = True
+
+        if is_reversed:
+            output_event_list = output_event_list[::-1]
 
         return output_event_list
 
@@ -1210,11 +1184,8 @@ class Series:
         motif_required,
     ) -> None:
         """Add event list as Node to self.nodes."""
-        event_list = [
-            Event(event)
-            for event in self.order_events_by_trancription_direction(event_list)
-            if event[0] != "NA"
-        ]
+        event_list = self.order_events_by_trancription_direction(event_list)
+
         event_list_len = len(event_list)
         previous_breakpoint = None
         for index, event in enumerate(event_list):
@@ -1465,14 +1436,20 @@ class Event:
     def read1(self, read_chains: List[Read]) -> Read:
         """Return the read1 of the event."""
         for read in read_chains:
-            if read.ref_start == self.read1_ref_start:
+            if (
+                read.ref_start == self.read1_ref_start
+                and read.ref_end == self.read1_ref_end
+            ):
                 return read
         raise ReadNotFoundError
 
     def read2(self, read_chains: List[Read]) -> Read:
         """Return the read2 of the event."""
         for read in read_chains:
-            if read.ref_start == self.read2_ref_start:
+            if (
+                read.ref_start == self.read2_ref_start
+                and read.ref_end == self.read2_ref_end
+            ):
                 return read
         raise ReadNotFoundError
 

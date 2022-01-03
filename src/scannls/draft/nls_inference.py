@@ -1,18 +1,19 @@
 # !/usr/bin/env python
 """Module for nls inference."""
 from typing import Any
+from typing import Optional
 
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 from loguru._logger import Logger
 
-from .helper import gene_annotation  # type: ignore
+from .helper import gene_annotation
 from .helper import splicing_confirmation
 
 
 def short_tdup_or_not(
-    ra_mode, read_sa, bp_region_seq_len, ins_seq_in_read, logger  # type: ignore
-) -> bool:
+    ra_mode: int, read_sa, bp_region_seq_len: int, ins_seq_in_read: str, logger: Logger
+) -> Optional[bool]:
     """Judge the ins_seq_in_read is a TDUP (TDUP size < reads length).
 
     OR novel sequence insertion using reference sequence inferred
