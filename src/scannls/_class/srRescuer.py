@@ -5,10 +5,12 @@
 @license:     MIT Licence
 @Time:        12/30/21 15:00 PM
 """
-from typing import Any  # type: ignore
+from typing import Any
+from typing import Dict
+from typing import List
 
-import pysam
-import skbio
+import pysam  # type: ignore
+import skbio  # type: ignore
 from loguru._logger import Logger  # type: ignore [import]
 
 from ..utils import get_softclip_length
@@ -43,7 +45,7 @@ class Rescuer:
         return f"{self.__class__.__name__}()"
 
     @staticmethod
-    def mismatch_count(seq: str, seqs: list, alignment_frac: float, mode: int) -> int:
+    def mismatch_count(seq: str, seqs: list, alignment_frac: float, mode: int) -> float:
         """Local alignment."""
         mismatch = 1e6
         for each_seq in seqs:
@@ -89,7 +91,7 @@ class Rescuer:
         """Check if region in SV tag."""
         tgt_pos = region.split("-")[0]
         tgt_chrm, _tgt_pos = tgt_pos.split(":")
-        tgt_pos = int(_tgt_pos) + 1
+        tgt_pos = int(_tgt_pos) + 1  # type: ignore
         flag = False
         for sv_aln in sv_aln_list:
             _sv_type, _anno_can, _bp1, _bp2, modes, strands, genes = sv_aln.split(",")
@@ -106,8 +108,8 @@ class Rescuer:
 
         region = 'chrm:start-end'
         """
-        sr_list = {1: [], 2: []}
-        sv_list = {1: [], 2: []}
+        sr_list: Dict[int, List[str]] = {1: [], 2: []}
+        sv_list: Dict[int, List[str]] = {1: [], 2: []}
         for col in self.in_bam.pileup(
             region=region, truncate=True, stepper="nofilter", min_base_quality=0
         ):
@@ -129,19 +131,19 @@ class Rescuer:
                             # xxxxxxxxSyyyyyyyyMzzzzzS
                             #         ^      ^
                             # if soft_pos == col.reference_pos and 'N' not in soft_seq:
-                            self.logger(f"{col.reference_pos=}, {soft_pos=}")
+                            self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
                             if soft_len >= self.soft_len_cutoff:
                                 if soft_mode == 1:
                                     softclipped_seq = aln.query_sequence[
                                         read.query_position + 1 :
                                     ]
-                                    if abs(len(softclipped_seq), soft_len) < 5:
+                                    if abs(len(softclipped_seq) - soft_len) < 5:
                                         sr_list[soft_mode].append(softclipped_seq)
                                 elif soft_mode == 2:
                                     softclipped_seq = aln.query_sequence[
                                         : read.query_position
                                     ]
-                                    if abs(len(softclipped_seq), soft_len) < 5:
+                                    if abs(len(softclipped_seq) - soft_len) < 5:
                                         sr_list[soft_mode].append(softclipped_seq)
                     # the read has SV tag
                     else:
@@ -192,3 +194,4 @@ class Rescuer:
             rescued_sr = rescued_sr1 + rescued_sr2
             if rescued_sr > 0:
                 series[idx].update_sr(rescued_sr)
+        yield series
