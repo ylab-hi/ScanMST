@@ -638,32 +638,37 @@ class SpliceGraph:
         return False
 
     @staticmethod
-    def update_exon_coord_sr_svtype_breakpoints(
+    def update_exon_coord_sr_svtype_breakpoints_name(
         updated_node: NodeType, current_node: NodeType
     ) -> None:
         """Update exon coordinates of the updated node based on current node.
 
         :param updated_node:  node has been inserted into graph
         :param current_node: node has not been inserted into graph
-        :return:
+        :return: None
         """
+        # update exon coordinates
         updated_node.exons[0][0] = updated_node.ref_start = min(  # type: ignore
             updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
         )
         updated_node.exons[-1][1] = updated_node.ref_end = max(  # type: ignore
             updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
         )
+        # update sr
         updated_node.update_sr()
+        # update sv_type
         updated_node.sv_type = (
             current_node.sv_type
             if current_node.sv_type is not None
             else updated_node.sv_type
         )
-
+        # update breakpoints
         if updated_node.prev_breakpoint is None:
             updated_node.prev_breakpoint = current_node.prev_breakpoint
         if updated_node.next_breakpoint is None:
             updated_node.next_breakpoint = current_node.next_breakpoint
+        # update query name
+        updated_node.query_name += "," + current_node.query_name
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
@@ -681,7 +686,7 @@ class SpliceGraph:
             if SpliceGraph._compare_is_merged(similar_node_in_graph, current_node):
                 current_node.is_merged = True
 
-                SpliceGraph.update_exon_coord_sr_svtype_breakpoints(
+                SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name(
                     similar_node_in_graph, current_node
                 )
 
@@ -720,7 +725,7 @@ class SpliceGraph:
                 if merge_node.similar_key == similar_key
             ]:
                 if SpliceGraph._compare_is_merged(merge_node, current_node):
-                    SpliceGraph.update_exon_coord_sr_svtype_breakpoints(
+                    SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name(
                         current_node, merge_node
                     )
                     merge_node.merged_parent_nodes.append(current_node)
