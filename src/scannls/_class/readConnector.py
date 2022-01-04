@@ -429,6 +429,7 @@ class ReadsConnector:
             cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
         new_read = Read.init(
+            read.query_name,
             chrom,
             position,
             strand,
@@ -679,7 +680,16 @@ def detect_read_read_connections_from_cigar(
 
     if mapq_ra > mapq_cutoff and nm_ra < max_allowed_nm:
         chimeric_aln_list.append(
-            Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
+            Read.init(
+                read.query_name,
+                chrm_ra,
+                pos_ra,
+                strand_ra,
+                cigar_ra,
+                mapq_ra,
+                nm_ra,
+                seq_ra,
+            )
         )
 
     for sa_string in chimeric_aln:
@@ -687,7 +697,16 @@ def detect_read_read_connections_from_cigar(
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
         if mapq_sa > mapq_cutoff and nm_sa < max_allowed_nm:
             chimeric_aln_list.append(
-                Read.init(chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa, seq_sa)
+                Read.init(
+                    read.query_name,
+                    chrm_sa,
+                    pos_sa,
+                    strand_sa,
+                    cigar_sa,
+                    mapq_sa,
+                    nm_sa,
+                    seq_sa,
+                )
             )
 
     if len(chimeric_aln_list) < 1 + len(chimeric_aln):

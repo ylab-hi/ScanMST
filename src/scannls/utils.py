@@ -46,7 +46,9 @@ def get_softclip_length(
     _strand = "-" if read.is_reverse else "+"
     _chrm = read.reference_name
     _pos = read.reference_start
-    read_obj = Read.init(_chrm, _pos, _strand, _cigar, _mapq, _nm, _seq)
+    read_obj = Read.init(
+        read.query_name, _chrm, _pos, _strand, _cigar, _mapq, _nm, _seq
+    )
 
     if not mode:
         if read_obj.lt_soft_len > read_obj.rt_soft_len:

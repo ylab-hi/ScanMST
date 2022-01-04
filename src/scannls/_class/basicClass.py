@@ -78,6 +78,7 @@ class Read:
         "mapq",
         "nm",
         "query_sequence",
+        "query_name",
         "linked_paths",
         "lt_soft_len",
         "rt_soft_len",
@@ -96,6 +97,7 @@ class Read:
 
     def __init__(
         self,
+        query_name,
         chrom,
         ref_start,
         strand,
@@ -113,6 +115,7 @@ class Read:
         cigartuples,
     ) -> None:
         """Initialize a read class."""
+        self.query_name = query_name
         self.chrom = chrom
         self.ref_start = ref_start
         self.strand = strand
@@ -271,7 +274,7 @@ class Read:
         )
 
     @classmethod
-    def init(cls, chrom, ref_start, strand, cigar_str, mapq, nm, query_seq):
+    def init(cls, query_name, chrom, ref_start, strand, cigar_str, mapq, nm, query_seq):
         """Calculate the features of the read and initialize the read."""
         (
             lt_soft_len,
@@ -285,6 +288,7 @@ class Read:
         ) = Read._calculate_features(cigar_str)
 
         return cls(
+            query_name,
             chrom,
             ref_start,
             strand,
@@ -383,7 +387,7 @@ class Read:
             return False
 
 
-class NovelInsertion(Read):
+class NovelInsertion:
     """NovelInsertion is used to represent reads insertion whose hit is 0 or >1.
 
     :Example:
@@ -400,7 +404,7 @@ class NovelInsertion(Read):
         `NovelInsertion` is a subclass of :class:`Read`, and siblings of :class:`Insertion`
 
     .. seealso::
-        :class:`Insertion`
+        :class: `Insertion`
     """
 
     def __init__(self, hit_num: int, query_sequence: str):  # type: ignore
@@ -576,6 +580,7 @@ class Insertion(Read, BasicNode):
         "mapq",
         "nm",
         "query_sequence",
+        "query_name",
         "linked_paths",
         "lt_soft_len",
         "rt_soft_len",
@@ -617,6 +622,7 @@ class Insertion(Read, BasicNode):
         BasicNode.__init__(self)
         Read.__init__(
             self,
+            "",  # query_name
             chrom,
             ref_start,
             strand,
@@ -647,7 +653,7 @@ class Insertion(Read, BasicNode):
         """Represent Insertion object."""
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return (
-            f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"Insertion({self.query_name}:{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
             f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr})"
         )
@@ -807,11 +813,12 @@ class Node(BasicNode):
         canonical: Optional[int] = None,
         modes: Optional[Tuple[int]] = None,
         genes: Optional[Tuple[str]] = None,
-        sr: Optional[int] = 1,
+        sr: int = 1,
     ) -> None:
         """Initialize a Node object."""
         super().__init__()  # initialize BasicNode object
         self.chrom = chrom
+        self.query_name = ""
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
         self.strand = strand
@@ -857,7 +864,7 @@ class Node(BasicNode):
         """Get a string representation of a node."""
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return (
-            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"Node({self.query_name}:{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
             f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}) "
         )
@@ -1187,8 +1194,11 @@ class Series:
         event_list = self.order_events_by_trancription_direction(event_list)
 
         event_list_len = len(event_list)
-        previous_breakpoint = None
         for index, event in enumerate(event_list):
+
+            read1: Read = event.read1(read_chains)
+            read2: Read = event.read2(read_chains)
+            previous_breakpoint = event.bp2
 
             read1_node: NodeType = Node(
                 prev_bp=previous_breakpoint,
@@ -1199,10 +1209,10 @@ class Series:
                 ref_end=event.read1_ref_end,
                 exons=event.read1_exons,
             )
-            previous_breakpoint = event.bp2
+            read1_node.query_name = (
+                read1.query_name
+            )  # copy query name from original read
 
-            read1 = event.read1(read_chains)
-            read2 = event.read2(read_chains)
             self.logger.trace(f"{read1=} {read2=}")
             # is insertions
             if event.has_insertion():
@@ -1214,6 +1224,7 @@ class Series:
                     else insertion_seq
                 )
                 flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
+                insertion.query_name = read1.query_name
                 if flag:  # only one hit
                     # add first node and insertion node
                     source_s = event.source_s1
@@ -1326,6 +1337,7 @@ class Series:
                     ref_end=event.read2_ref_end,
                     exons=event.read2_exons,
                 )
+                final_node.query_name = read2.query_name
 
                 self.add_node(final_node)
 
