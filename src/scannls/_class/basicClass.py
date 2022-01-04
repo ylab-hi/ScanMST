@@ -653,9 +653,9 @@ class Insertion(Read, BasicNode):
         """Represent Insertion object."""
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return (
-            f"Insertion({self.query_name}:{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
-            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr})"
+            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}, query_name={self.query_name})"
         )
 
     def __hash__(self) -> int:
@@ -864,9 +864,9 @@ class Node(BasicNode):
         """Get a string representation of a node."""
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return (
-            f"Node({self.query_name}:{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
-            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}) "
+            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}, query_name={self.query_name}) "
         )
 
     @classmethod
