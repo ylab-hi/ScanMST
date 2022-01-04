@@ -1082,23 +1082,12 @@ class Series:
         +1;-1 => up;down
         +2;-2 => down;up
         """
-        (
-            sv_type,
-            annot,
-            canonical,
-            _positions,
-            read1_info,
-            read2_info,
-            insertion_info,
-            strands,
-            genes,
-        ) = event
-        bp1 = _positions[0]
-        bp2 = _positions[1]
-        mode1 = _positions[2]
-        mode2 = _positions[3]
-        strand1 = strands[0]
-        strand2 = strands[1]
+        evt = Event(event)
+
+        mode1 = evt.mode1
+        mode2 = evt.mode2
+        strand1 = evt.strand1
+        strand2 = evt.strand2
 
         is_bp1_upstream = None
         if strand1 == "+" and strand2 == "-":
@@ -1123,26 +1112,8 @@ class Series:
                 is_bp1_upstream = True
 
         if not is_bp1_upstream:
-            if annot == 1:
-                annot = 2
-            elif annot == 2:
-                annot = 1
-            _positions = (bp2, bp1, mode2, mode1)
-            strands = (strand2, strand1)
-            genes = list(reversed(genes))
-            return (
-                sv_type,
-                annot,
-                canonical,
-                _positions,
-                read2_info,
-                read1_info,
-                insertion_info[::-1],
-                strands,
-                genes,
-            )
-        else:
-            return event
+            evt.reverse()
+        return evt
 
     @staticmethod
     def order_events_by_trancription_direction(event_list):
@@ -1151,30 +1122,29 @@ class Series:
          for multiple-hop events or one-hop events
                 bp1                bp2   bp3               bp4
         ---------|------    -------|----|------    --------|---------
-              Node1                 Node2                Node3
+              Node1      |         Node2        |        Node3
+                       event1                 event2
         ..note ::
                requirements
-               * bp2 and bp3 at the same chromosome
-               * if strand(+): bp3 > bp2
-                 if strand(-): bp3 < bp2
+               * the read where `breakpoint2` of event1 habors and
+               the read where `breakpoint1` of event2 habors should be the identical
         """
         is_reversed = False
         output_event_list = []
         for index, evt in enumerate(event_list):
-            ordered_evt = Series.reorder_event(evt)
-            parsed_evt = Event(ordered_evt)
-            output_event_list.append(parsed_evt)
+            parsed_evt = Series.reorder_event(evt)
 
             if index == 1:
                 last_event = output_event_list[-1]
-                if ~(
+                if not (
                     last_event.chrom2 == parsed_evt.chrom1
                     and last_event.strand2 == parsed_evt.strand1
-                    and last_event.read2_ref_end == parsed_evt.read1_ref_start
-                    and last_event.read2_ref_start == parsed_evt.read1_ref_end
+                    and last_event.read2_ref_start == parsed_evt.read1_ref_start
+                    and last_event.read2_ref_end == parsed_evt.read1_ref_end
                 ):
                     is_reversed = True
 
+            output_event_list.append(parsed_evt)
         if is_reversed:
             output_event_list = output_event_list[::-1]
 
@@ -1390,6 +1360,24 @@ class Event:
             return (
                 f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code})"
             )
+
+    def reverse(self):
+        """Reverse breakpoint1 and breakpoin2."""
+        if self.annotation_code == 1:
+            self.annotation_code = 2
+        elif self.annotation_code == 2:
+            self.annotation_code = 1
+        self.bp1, self.bp2 = self.bp2, self.bp1
+        self.mode1, self.mode2 = self.mode2, self.mode1
+        self.strand1, self.strand2 = self.strand2, self.strand1
+        self.genes = self.genes[::-1]
+        self.read1_ref_start, self.read2_ref_start = (
+            self.read2_ref_start,
+            self.read1_ref_start,
+        )
+        self.read1_ref_end, self.read2_ref_end = self.read2_ref_end, self.read1_ref_end
+        self.read1_exons, self.read2_exons = self.read2_exons, self.read1_exons
+        self.insertion_info = self.insertion_info[::-1]
 
     @property
     def modes(self) -> List[int]:
