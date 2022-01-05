@@ -506,21 +506,10 @@ def event_to_str(event: Any, tag: str) -> str:
     .. note:
         SV tag uses the coordinate system (start with 1) as SA tag
     """
-    (
-        _type,
-        _anno,
-        _canonical,
-        _positions,
-        read1_info,
-        read2_info,
-        bp_seqs,
-        strands,
-        genes,
-    ) = event
-
-    _bp1, _bp2, _mode1, _mode2 = _positions
-    _strand1, _strand2 = strands
-    _gene1, _gene2 = genes
+    _type, _anno, _canonical = event.sv_type, event.annotation_code, event.splicing_code
+    _bp1, _bp2, _mode1, _mode2 = event.positions
+    _strand1, _strand2 = event.strand1, event.strand2
+    _gene1, _gene2 = event.genes
     if tag == "SV":
         _chrm1, _pos1 = _bp1.split(":")
         _chrm2, _pos2 = _bp2.split(":")
