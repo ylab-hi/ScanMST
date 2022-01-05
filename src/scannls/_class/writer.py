@@ -265,7 +265,7 @@ def get_nodes_gtf_features_from_series(
 
     :return: List of GTF features for node and insertions in the series.
     """
-    series_gtf_features = [series.get_gtf_feature(series_id)]
+    series_gtf_features = []
     node_id = 0
     for node in series:
         node_id += 1

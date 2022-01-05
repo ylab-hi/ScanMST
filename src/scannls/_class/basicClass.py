@@ -1056,24 +1056,6 @@ class Series:
         """Return the unique key of the event."""
         return "".join([node.get_unique_key() for node in self.nodes])
 
-    def get_gtf_feature(self, series_id: int) -> List[str]:
-        """Return the gtf feature of the nls event.
-
-        :return: A list of gtf features for current series(not including nodes
-                in the series).
-        """
-        return [
-            "chrom",
-            "scannls",
-            "nls",
-            f"{self[0].ref_start}",
-            f"{self[-1].ref_end}",
-            "0",
-            "strand",
-            "0",
-            f'series_id "{series_id}"',
-        ]
-
     @staticmethod
     def reorder_event(evt: "Event"):
         """Order breakpoints pairs following the transcription direction using.
