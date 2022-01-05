@@ -745,10 +745,10 @@ class Insertion(Read, BasicNode):
         """
         if self.next_breakpoint is not None:
             chrom, pos = self.next_breakpoint.split(":")
-            pos = int(pos)
+            pos = int(pos)  # type: ignore
             if mode == 1:
-                pos = pos - 1
-            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)
+                pos = pos - 1  # type: ignore
+            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
     def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
         """Update prev breakpoint depth.
@@ -758,10 +758,10 @@ class Insertion(Read, BasicNode):
         """
         if self.prev_breakpoint is not None:
             chrom, pos = self.prev_breakpoint.split(":")
-            pos = int(pos)
+            pos = int(pos)  # type: ignore
             if mode == 1:
-                pos = pos - 1
-            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)
+                pos = pos - 1  # type: ignore
+            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
 
 class Node(BasicNode):
@@ -968,10 +968,10 @@ class Node(BasicNode):
         """
         if self.next_breakpoint is not None:
             chrom, pos = self.next_breakpoint.split(":")
-            pos = int(pos)
+            pos = int(pos)  # type: ignore
             if mode == 1:
-                pos = pos - 1
-            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)
+                pos = pos - 1  # type: ignore
+            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
     def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
         """Update prev breakpoint depth.
@@ -981,10 +981,10 @@ class Node(BasicNode):
         """
         if self.prev_breakpoint is not None:
             chrom, pos = self.prev_breakpoint.split(":")
-            pos = int(pos)
+            pos = int(pos)  # type: ignore
             if mode == 1:
-                pos = pos - 1
-            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)
+                pos = pos - 1  # type: ignore
+            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
 
 class Series:
