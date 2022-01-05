@@ -7,6 +7,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+import pysam  # type: ignore
 from Bio.Seq import Seq  # type: ignore
 from loguru._logger import Logger  # type: ignore
 
@@ -563,6 +564,8 @@ class Insertion(Read, BasicNode):
         "sv_type",
         "prev_breakpoint",
         "next_breakpoint",
+        "prev_breakpoint_depth",
+        "next_breakpoint_depth",
         "modes",
         "genes",
         "annotation_code",
@@ -639,6 +642,8 @@ class Insertion(Read, BasicNode):
         # add attributes for insertion in order to be compatible with the class Node
         self.prev_breakpoint: Optional[str] = None
         self.next_breakpoint: Optional[str] = None
+        self.prev_breakpoint_depth: Optional[int] = None
+        self.next_breakpoint_depth: Optional[int] = None
         self.modes = None
         self.genes = None
         self.annotation_code = None
@@ -731,6 +736,18 @@ class Insertion(Read, BasicNode):
         """Update sr."""
         self.sr += key
 
+    def update_next_and_prev_breakpoint_depth(self, bam: pysam.AlignmentFile) -> None:
+        """Update next and prev breakpoint depth.
+
+        :param bam: bam AlignmentFile object
+        """
+        if self.next_breakpoint is not None:
+            chrom, pos = self.next_breakpoint.split(":")
+            self.next_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+        if self.prev_breakpoint is not None:
+            chrom, pos = self.prev_breakpoint.split(":")
+            self.prev_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+
 
 class Node(BasicNode):
     """Build a breakpoint node class for storing information of every breakpoint.
@@ -774,6 +791,8 @@ class Node(BasicNode):
     __slots__ = (
         "next_breakpoint",
         "prev_breakpoint",
+        "prev_breakpoint_depth",
+        "next_breakpoint_depth",
         "strand",
         "chrom",
         "ref_start",
@@ -822,6 +841,8 @@ class Node(BasicNode):
         self.query_name = ""
         self.prev_breakpoint = prev_bp
         self.next_breakpoint = next_bp
+        self.prev_breakpoint_depth: Optional[int] = None
+        self.next_breakpoint_depth: Optional[int] = None
         self.strand = strand
         self.ref_start = ref_start
         self.ref_end = ref_end
@@ -922,6 +943,18 @@ class Node(BasicNode):
     def update_sr(self, key=1):
         """Update the sr of a node."""
         self.sr += key
+
+    def update_next_and_prev_breakpoint_depth(self, bam: pysam.AlignmentFile) -> None:
+        """Update next and prev breakpoint depth.
+
+        :param bam: bam AlignmentFile object
+        """
+        if self.next_breakpoint is not None:
+            chrom, pos = self.next_breakpoint.split(":")
+            self.next_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+        if self.prev_breakpoint is not None:
+            chrom, pos = self.prev_breakpoint.split(":")
+            self.prev_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
 
 
 class Series:
