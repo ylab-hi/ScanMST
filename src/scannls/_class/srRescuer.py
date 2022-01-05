@@ -139,30 +139,25 @@ class Rescuer:
                                         softclipped_seq = aln.query_sequence[
                                             read.query_position + 1 :
                                         ]
-                                        if abs(len(softclipped_seq) - soft_len) < 5:
-                                            sr_list[soft_mode].append(softclipped_seq)
+                                        sr_list[mode].append(softclipped_seq)
                                     elif mode == 2:
                                         softclipped_seq = aln.query_sequence[
                                             : read.query_position
                                         ]
-                                        if abs(len(softclipped_seq) - soft_len) < 5:
-                                            sr_list[soft_mode].append(softclipped_seq)
+                                        sr_list[mode].append(softclipped_seq)
                     # the anchor read
                     else:
-                        _, _, anchor_soft_pos, anchor_soft_mode = get_softclip_length(
-                            aln, mode
-                        )
+                        (
+                            _,
+                            anchor_soft_seq,
+                            anchor_soft_pos,
+                            anchor_soft_mode,
+                        ) = get_softclip_length(aln, mode)
                         if anchor_soft_pos == col.reference_pos:
                             if mode == 1:
-                                softclipped_seq = aln.query_sequence[
-                                    read.query_position + 1 :
-                                ]
-                                sv_list[mode].append(softclipped_seq)
+                                sv_list[mode].append(anchor_soft_seq)
                             elif mode == 2:
-                                softclipped_seq = aln.query_sequence[
-                                    : read.query_position
-                                ]
-                                sv_list[mode].append(softclipped_seq)
+                                sv_list[mode].append(anchor_soft_seq)
             rescued_sr = 0
             if sv_list[mode]:
                 for _soft_seq in sr_list[mode]:
