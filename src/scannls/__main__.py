@@ -267,7 +267,7 @@ def main():
         options.alignment_fraction,
         logger,
     )
-    logger.warning(f"{rescuer=}")
+
     for clique in cliques:
         # logger.debug(list(splice_graph(clique)))
         for i in splice_graph(clique):

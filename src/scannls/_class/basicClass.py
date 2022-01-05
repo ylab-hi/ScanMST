@@ -659,8 +659,9 @@ class Insertion(Read, BasicNode):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
         return (
             f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
-            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}, query_name={self.query_name})"
+            f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
+            f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
+            f"SR={self.sr}, query_name={self.query_name})"
         )
 
     def __hash__(self) -> int:
@@ -736,17 +737,33 @@ class Insertion(Read, BasicNode):
         """Update sr."""
         self.sr += key
 
-    def update_next_and_prev_breakpoint_depth(self, bam: pysam.AlignmentFile) -> None:
-        """Update next and prev breakpoint depth.
+    def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+        """Update next breakpoint depth.
 
         :param bam: bam AlignmentFile object
+        :param mode: if 'MS', pos = pos - 1
         """
         if self.next_breakpoint is not None:
             chrom, pos = self.next_breakpoint.split(":")
-            self.next_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+            if mode == 1:
+                pos = int(pos) - 1
+            else:
+                pos = int(pos)
+            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)
+
+    def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+        """Update prev breakpoint depth.
+
+        :param bam: bam AlignmentFile object
+        :param mode: if 'MS', pos = pos - 1
+        """
         if self.prev_breakpoint is not None:
             chrom, pos = self.prev_breakpoint.split(":")
-            self.prev_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+            if mode == 1:
+                pos = int(pos) - 1
+            else:
+                pos = int(pos)
+            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)
 
 
 class Node(BasicNode):
@@ -887,8 +904,9 @@ class Node(BasicNode):
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return (
             f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}, "
-            f"{self.next_breakpoint}, modes={self.modes}, SR={self.sr}, query_name={self.query_name}) "
+            f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
+            f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
+            f"SR={self.sr}, query_name={self.query_name}) "
         )
 
     @classmethod
@@ -944,17 +962,33 @@ class Node(BasicNode):
         """Update the sr of a node."""
         self.sr += key
 
-    def update_next_and_prev_breakpoint_depth(self, bam: pysam.AlignmentFile) -> None:
-        """Update next and prev breakpoint depth.
+    def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+        """Update next breakpoint depth.
 
         :param bam: bam AlignmentFile object
+        :param mode: if 'MS', pos = pos - 1
         """
         if self.next_breakpoint is not None:
             chrom, pos = self.next_breakpoint.split(":")
-            self.next_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+            if mode == 1:
+                pos = int(pos) - 1
+            else:
+                pos = int(pos)
+            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)
+
+    def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+        """Update prev breakpoint depth.
+
+        :param bam: bam AlignmentFile object
+        :param mode: if 'MS', pos = pos - 1
+        """
         if self.prev_breakpoint is not None:
             chrom, pos = self.prev_breakpoint.split(":")
-            self.prev_breakpoint_depth = bam.count(chrom, int(pos), int(pos) + 1)
+            if mode == 1:
+                pos = int(pos) - 1
+            else:
+                pos = int(pos)
+            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)
 
 
 class Series:

@@ -111,19 +111,24 @@ class SRRescuer:
         """Calculate SR from softclipped reads without SV tag, provided target region.
 
         region = 'chrm:start-end'
+        ..note.
+            rescued reads strand should be the same as the anchor ones
+            For 'MS' mode, softclipped position should subtract by one
         """
-        sr_list: Dict[int, List[str]] = {1: [], 2: []}
-        sv_list: Dict[int, List[str]] = {1: [], 2: []}
+        sr_list: Dict[str, List[str]] = {"+": [], "-": []}
+        sv_list: Dict[str, List[str]] = {"+": [], "-": []}
         query_names = set(query_name.split(","))
         self.logger.trace(f"{region=}")
         for col in self.in_bam.pileup(
             region=region, truncate=True, stepper="nofilter", min_base_quality=0
         ):
             # dp = col.nsegments
+            # read is an instance of pysam.PileupRead
             for read in col.pileups:
-                # read is an instance of pysam.PileupRead
+                # read.alignment is an instance of pysam.AlignedSegment
                 aln = read.alignment
                 read_name = aln.query_name
+                strand = "-" if aln.is_reverse else "+"
                 if aln.mapq >= self.mapq_cutoff and read.query_position:
                     # the read has soft-clipped part but not an anchor read
                     if read_name not in query_names:
@@ -146,12 +151,12 @@ class SRRescuer:
                                         softclipped_seq = aln.query_sequence[
                                             read.query_position + 1 :
                                         ]
-                                        sr_list[mode].append(softclipped_seq)
+                                        sr_list[strand].append(softclipped_seq)
                                     elif mode == 2:
                                         softclipped_seq = aln.query_sequence[
                                             : read.query_position
                                         ]
-                                        sr_list[mode].append(softclipped_seq)
+                                        sr_list[strand].append(softclipped_seq)
                     # the anchor read
                     else:
                         (
@@ -164,22 +169,30 @@ class SRRescuer:
                             anchor_soft_pos = anchor_soft_pos - 1
                         self.logger.trace(f"{col.reference_pos=}, {anchor_soft_pos=}")
                         if anchor_soft_pos == col.reference_pos:
-                            if mode == 1:
-                                sv_list[mode].append(anchor_soft_seq)
-                            elif mode == 2:
-                                sv_list[mode].append(anchor_soft_seq)
+                            sv_list[strand].append(anchor_soft_seq)
         self.logger.trace(f"{sv_list=}")
         self.logger.trace(f"{sr_list=}")
+
         rescued_sr = 0
-        if sv_list[mode]:
-            for _soft_seq in sr_list[mode]:
+        if sv_list["+"] and sv_list["+"]:
+            for _soft_seq in sr_list["+"]:
                 if (
                     SRRescuer.mismatch_count(
-                        _soft_seq, sv_list[mode], self.alignment_frac, mode
+                        _soft_seq, sv_list["+"], self.alignment_frac, mode
                     )
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
+        if sv_list["-"] and sr_list["-"]:
+            for _soft_seq in sr_list["-"]:
+                if (
+                    SRRescuer.mismatch_count(
+                        _soft_seq, sv_list["-"], self.alignment_frac, mode
+                    )
+                    <= self.mismatch_cutoff
+                ):
+                    rescued_sr += 1
+
         return rescued_sr
 
     def update_sr(self, series: Series) -> Any:
@@ -187,9 +200,9 @@ class SRRescuer:
         for idx in range(len(series) - 1):
             current_node = series[idx]
             next_node = series[idx + 1]
-            current_node.update_next_and_prev_breakpoint_depth(self.in_bam)
-            next_node.update_next_and_prev_breakpoint_depth(self.in_bam)
             mode1, mode2 = current_node.modes
+            current_node.update_next_breakpoint_depth(self.in_bam, mode1)
+            next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
             query_name1 = current_node.query_name
             query_name2 = next_node.query_name
             _bp1 = current_node.next_breakpoint
