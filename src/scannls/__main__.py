@@ -225,7 +225,7 @@ def main():
     # CIGAR string refinement or add SV tag
     motif_required = not options.noncanonical
 
-    intact_series_list = scanbam_run(
+    intact_series_list, in_bam_io_object = scanbam_run(
         two_bit=options.two_bit,
         port=options.port,
         tmp_dir=options.tmp_dir,
@@ -260,7 +260,7 @@ def main():
     cliques = clique_finder.find_clique()
     # begin to rescue SR
     rescuer = SRRescuer(
-        options.input,
+        in_bam_io_object,
         options.mapq,
         options.soft_len,
         options.mismatch,

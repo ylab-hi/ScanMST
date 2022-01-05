@@ -1208,11 +1208,11 @@ class Series:
         event_list = self.order_events_by_trancription_direction(event_list)
 
         event_list_len = len(event_list)
+        previous_breakpoint = None
         for index, event in enumerate(event_list):
 
             read1: Read = event.read1(read_chains)
             read2: Read = event.read2(read_chains)
-            previous_breakpoint = event.bp2
 
             read1_node: NodeType = Node(
                 prev_bp=previous_breakpoint,
@@ -1227,6 +1227,7 @@ class Series:
                 read1.query_name
             )  # copy query name from original read
 
+            previous_breakpoint = event.bp2
             self.logger.trace(f"{read1=} {read2=}")
             # is insertions
             if event.has_insertion():

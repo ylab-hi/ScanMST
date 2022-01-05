@@ -487,6 +487,7 @@ def _scan_bam_helper(
     subprocess.check_call(f"samtools index {current_output}", shell=True)
     logger.debug(f"{nls_src_forms_list=}")
     logger.complete()
+    in_bam_io_object.close()
     return current_output, nls_src_forms_list
 
 
@@ -586,4 +587,4 @@ def scanbam_run(
     write_series_to_file(
         f"{output.parent.joinpath(output.stem)}_series.txt", intact_series_list
     )
-    return intact_series_list
+    return intact_series_list, bam_scanner.in_bam

@@ -8,14 +8,13 @@
 from typing import Any
 from typing import Dict
 from typing import List
-from typing import Optional
 
-import pysam  # type: ignore
 import skbio  # type: ignore
-from loguru._logger import Logger  # type: ignore [import]
+from loguru._logger import Logger  # type: ignore
+from pysam import AlignmentFile  # type: ignore
 
 from ..utils import get_softclip_length
-from .basicClass import Series  # type: ignore [import]
+from .basicClass import Series  # type: ignore
 
 
 class SRRescuer:
@@ -23,8 +22,8 @@ class SRRescuer:
 
     def __init__(
         self,
-        input_bam: Optional[str],
-        mapq_cutoff: Optional[int],
+        input_bam: AlignmentFile,
+        mapq_cutoff: int,
         soft_len_cutoff: int,
         mismatch_cutoff: int,
         alignment_frac: float,
@@ -34,7 +33,7 @@ class SRRescuer:
 
         :param logger: logger
         """
-        self.in_bam = pysam.AlignmentFile(input_bam, "rb")
+        self.in_bam = input_bam
         self.mapq_cutoff = mapq_cutoff
         self.soft_len_cutoff = soft_len_cutoff
         self.mismatch_cutoff = mismatch_cutoff
@@ -65,47 +64,69 @@ class SRRescuer:
                     start_end_pos,
                 ) = skbio.alignment.local_pairwise_align_ssw(seq, each_seq)
             # raise IndexError if SSW cannot work
-            except IndexError:
-                continue
-            except ValueError:
+            except (IndexError, ValueError):
                 continue
             if (
                 len(alignment[0]) / float(len(seq)) < alignment_frac
                 and len(alignment[1]) / float(len(each_seq)) < alignment_frac
             ):
                 continue
-            if mode == 1 and start_end_pos[0][0] == 0 and start_end_pos[1][0] == 0:
-                if sum(alignment[0].mismatches(alignment[1])) < mismatch:
-                    mismatch = sum(alignment[0].mismatches(alignment[1]))
-            elif (
-                mode == 2
-                and start_end_pos[0][1] == len(seq) - 1
-                and start_end_pos[1][1] == len(each_seq) - 1
-            ):
-                if sum(alignment[0].mismatches(alignment[1])) < mismatch:
-                    mismatch = sum(alignment[0].mismatches(alignment[1]))
-            else:
-                continue
+            if (
+                (mode == 1 and start_end_pos[0][0] == 0 and start_end_pos[1][0] == 0)
+                or (
+                    mode == 2
+                    and start_end_pos[0][1] == len(seq) - 1
+                    and start_end_pos[1][1] == len(each_seq) - 1
+                )
+            ) and sum(alignment[0].mismatches(alignment[1])) < mismatch:
+                mismatch = sum(alignment[0].mismatches(alignment[1]))
         return mismatch
 
-    @staticmethod
-    def region_in_sv_checker(
-        region: str, sv_type: str, mode: int, sv_aln_list: list
-    ) -> bool:
-        """Check if region in SV tag."""
-        tgt_pos = region.split("-")[0]
-        tgt_chrm, _tgt_pos = tgt_pos.split(":")
-        tgt_pos = int(_tgt_pos) + 1  # type: ignore
-        flag = False
-        for sv_aln in sv_aln_list:
-            _sv_type, _anno_can, _bp1, _bp2, modes, strands, genes = sv_aln.split(",")
-            mode1, mode2 = map(int, modes)
-            if _sv_type == sv_type:
-                if _bp1 == f"{tgt_chrm}:{tgt_pos}" and mode1 == mode:
-                    flag = True
-                elif _bp2 == f"{tgt_chrm}:{tgt_pos}" and mode2 == mode:
-                    flag = True
-        return flag
+    def _calculate_sr_for_reads(self, col, query_names, sr_list, sv_list, mode):
+        for read in col.pileups:
+            # read.alignment is an instance of pysam.AlignedSegment
+            aln = read.alignment
+            read_name = aln.query_name
+            strand = "-" if aln.is_reverse else "+"
+            if aln.mapq >= self.mapq_cutoff and read.query_position:
+                # the read has soft-clipped part but not an anchor read
+                if read_name not in query_names:
+                    if "S" in aln.cigarstring:
+                        (
+                            soft_len,
+                            soft_seq,
+                            soft_pos,
+                            soft_mode,
+                        ) = get_softclip_length(aln, mode)
+                        # the pileup position is equal to the soft-clipped connection point
+                        # xxxxxxxxSyyyyyyyyMzzzzzS
+                        #         ^      ^
+                        soft_pos = soft_pos - 1 if mode == 1 else soft_pos
+                        self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
+                        if (
+                            soft_pos == col.reference_pos
+                            and soft_len >= self.soft_len_cutoff
+                        ):
+                            softclipped_seq = (
+                                aln.query_sequence[read.query_position + 1]
+                                if mode == 1
+                                else aln.query_sequence[: read.query_position]
+                            )
+                            sr_list[strand].append(softclipped_seq)
+                # the anchor read
+                else:
+                    (
+                        _,
+                        anchor_soft_seq,
+                        anchor_soft_pos,
+                        anchor_soft_mode,
+                    ) = get_softclip_length(aln, mode)
+                    anchor_soft_pos = (
+                        anchor_soft_pos - 1 if mode == 1 else anchor_soft_pos
+                    )
+                    self.logger.trace(f"{col.reference_pos=}, {anchor_soft_pos=}")
+                    if anchor_soft_pos == col.reference_pos:
+                        sv_list[strand].append(anchor_soft_seq)
 
     def calculate_sr(self, region: str, mode: int, query_name: str) -> int:
         """Calculate SR from softclipped reads without SV tag, provided target region.
@@ -117,64 +138,20 @@ class SRRescuer:
         """
         sr_list: Dict[str, List[str]] = {"+": [], "-": []}
         sv_list: Dict[str, List[str]] = {"+": [], "-": []}
+
         query_names = set(query_name.split(","))
+
         self.logger.trace(f"{region=}")
+
         for col in self.in_bam.pileup(
             region=region, truncate=True, stepper="nofilter", min_base_quality=0
         ):
             # dp = col.nsegments
             # read is an instance of pysam.PileupRead
-            for read in col.pileups:
-                # read.alignment is an instance of pysam.AlignedSegment
-                aln = read.alignment
-                read_name = aln.query_name
-                strand = "-" if aln.is_reverse else "+"
-                if aln.mapq >= self.mapq_cutoff and read.query_position:
-                    # the read has soft-clipped part but not an anchor read
-                    if read_name not in query_names:
-                        if "S" in aln.cigarstring:
-                            (
-                                soft_len,
-                                soft_seq,
-                                soft_pos,
-                                soft_mode,
-                            ) = get_softclip_length(aln, mode)
-                            # the pileup position is equal to the soft-clipped connection point
-                            # xxxxxxxxSyyyyyyyyMzzzzzS
-                            #         ^      ^
-                            if mode == 1:
-                                soft_pos = soft_pos - 1
-                            self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
-                            if soft_pos == col.reference_pos:
-                                if soft_len >= self.soft_len_cutoff:
-                                    if mode == 1:
-                                        softclipped_seq = aln.query_sequence[
-                                            read.query_position + 1 :
-                                        ]
-                                        sr_list[strand].append(softclipped_seq)
-                                    elif mode == 2:
-                                        softclipped_seq = aln.query_sequence[
-                                            : read.query_position
-                                        ]
-                                        sr_list[strand].append(softclipped_seq)
-                    # the anchor read
-                    else:
-                        (
-                            _,
-                            anchor_soft_seq,
-                            anchor_soft_pos,
-                            anchor_soft_mode,
-                        ) = get_softclip_length(aln, mode)
-                        if mode == 1:
-                            anchor_soft_pos = anchor_soft_pos - 1
-                        self.logger.trace(f"{col.reference_pos=}, {anchor_soft_pos=}")
-                        if anchor_soft_pos == col.reference_pos:
-                            sv_list[strand].append(anchor_soft_seq)
-        self.logger.trace(f"{sv_list=}")
-        self.logger.trace(f"{sr_list=}")
+            self._calculate_sr_for_reads(col, query_names, sr_list, sv_list, mode)
 
         rescued_sr = 0
-        if sv_list["+"] and sv_list["+"]:
+        if sv_list["+"] and sr_list["+"]:
             for _soft_seq in sr_list["+"]:
                 if (
                     SRRescuer.mismatch_count(
@@ -183,6 +160,7 @@ class SRRescuer:
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
+
         if sv_list["-"] and sr_list["-"]:
             for _soft_seq in sr_list["-"]:
                 if (
@@ -192,6 +170,8 @@ class SRRescuer:
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
+        self.logger.trace(f"{sv_list=}")
+        self.logger.trace(f"{sr_list=}")
 
         return rescued_sr
 
@@ -211,8 +191,8 @@ class SRRescuer:
             _chrom2, _pos2 = _bp2.split(":")
             _pos1 = int(_pos1)
             _pos2 = int(_pos2)
-            _region1 = f"{_chrom1}:{_pos1}-{_pos1+1}"
-            _region2 = f"{_chrom2}:{_pos2}-{_pos2+1}"
+            _region1 = f"{_chrom1}:{_pos1}-{_pos1 + 1}"
+            _region2 = f"{_chrom2}:{_pos2}-{_pos2 + 1}"
 
             rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
             rescued_sr2 = self.calculate_sr(_region2, mode2, query_name2)

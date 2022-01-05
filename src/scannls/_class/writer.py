@@ -120,6 +120,10 @@ class FastaWriter(Writer):
     @write_data.register
     def _(self, data_object: Series):
         """Write Series to fasta file."""
+        if len(data_object.nodes) == 0:
+            self.logger.warning(
+                f"{self.__class__.__name__}: No nodes to write to file."
+            )
         self.logger.trace(f"{self.__class__.__name__}: Writing Series to file.")
         sequence = get_nodes_sequence_from_series(
             data_object, reference_io=self.reference_io
@@ -198,6 +202,10 @@ class GTFWriter(Writer):
         :param data_object:
         :return:
         """
+        if len(data_object.nodes) == 0:
+            self.logger.warning(
+                f"{self.__class__.__name__}: No nodes to write to file."
+            )
         self.logger.trace(f"{self.__class__.__name__}: Writing Series to file.")
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object, self.id
