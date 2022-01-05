@@ -745,10 +745,9 @@ class Insertion(Read, BasicNode):
         """
         if self.next_breakpoint is not None:
             chrom, pos = self.next_breakpoint.split(":")
+            pos = int(pos)
             if mode == 1:
-                pos = int(pos) - 1
-            else:
-                pos = int(pos)
+                pos = pos - 1
             self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)
 
     def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
@@ -759,10 +758,9 @@ class Insertion(Read, BasicNode):
         """
         if self.prev_breakpoint is not None:
             chrom, pos = self.prev_breakpoint.split(":")
+            pos = int(pos)
             if mode == 1:
-                pos = int(pos) - 1
-            else:
-                pos = int(pos)
+                pos = pos - 1
             self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)
 
 
@@ -970,10 +968,9 @@ class Node(BasicNode):
         """
         if self.next_breakpoint is not None:
             chrom, pos = self.next_breakpoint.split(":")
+            pos = int(pos)
             if mode == 1:
-                pos = int(pos) - 1
-            else:
-                pos = int(pos)
+                pos = pos - 1
             self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)
 
     def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
@@ -984,10 +981,9 @@ class Node(BasicNode):
         """
         if self.prev_breakpoint is not None:
             chrom, pos = self.prev_breakpoint.split(":")
+            pos = int(pos)
             if mode == 1:
-                pos = int(pos) - 1
-            else:
-                pos = int(pos)
+                pos = pos - 1
             self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)
 
 
