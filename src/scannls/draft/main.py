@@ -392,7 +392,7 @@ def _scan_bam_helper(
                 chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
                 read_length = int(read.query_length)
-                _, _soft_seq, _, read_mode = get_softclip_length(read)
+                _, _soft_seq, _, read_mode = get_softclip_length(read, mode=0)
 
                 if read.is_reverse:
                     soft_seq_ori = reverse_complement(_soft_seq)

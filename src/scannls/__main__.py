@@ -11,6 +11,7 @@ from . import __version__  # type: ignore
 from ._class.blat import Blat
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
+from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
 from .draft.main import scanbam_run  # type: ignore
@@ -153,6 +154,32 @@ def parse_args():
         help="BLAT temporary directory (default: %(default)s)",
         default="/tmp",
     )
+    # SR Rescuer parameters
+    parser.add_argument(
+        "--soft_len",
+        action="store",
+        dest="soft_len",
+        type=int,
+        help="minimum softclipped segment length to be rescued (default: %(default)s)",
+        default=5,
+    )
+    parser.add_argument(
+        "--mismatch",
+        action="store",
+        dest="mismatch",
+        type=int,
+        help="maximum allowded mismatch bases of rescued segment (default: %(default)s)",
+        default=3,
+    )
+    parser.add_argument(
+        "-a",
+        "--alignment_fraction",
+        action="store",
+        dest="alignment_fraction",
+        type=float,
+        help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
+        default=0.8,
+    )
 
     return parser
 
@@ -231,8 +258,22 @@ def main():
     clique_finder = CliqueFinder(intact_series_list, logger)
     # cliques is generator
     cliques = clique_finder.find_clique()
+    # begin to rescue SR
+    rescuer = SRRescuer(
+        options.input,
+        options.mapq,
+        options.soft_len,
+        options.mismatch,
+        options.alignment_fraction,
+        logger,
+    )
+    logger.warning(f"{rescuer=}")
     for clique in cliques:
-        logger.debug(list(splice_graph(clique)))
+        # logger.debug(list(splice_graph(clique)))
+        for i in splice_graph(clique):
+            j = rescuer.update_sr(i)
+            logger.debug(f"{j} is rescued!")
+
     logger.info("ScanNLS build running done")
     end = time.time()
     logger.info(f"ScanNLS build takes {end - start} seconds.")

@@ -8,6 +8,7 @@
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 
 import pysam  # type: ignore
 import skbio  # type: ignore
@@ -17,17 +18,17 @@ from ..utils import get_softclip_length
 from .basicClass import Series  # type: ignore [import]
 
 
-class Rescuer:
+class SRRescuer:
     """Rescue SR from softclipped non-chimeric reads."""
 
     def __init__(
         self,
-        input_bam: Any,
+        input_bam: Optional[str],
+        mapq_cutoff: Optional[int],
+        soft_len_cutoff: int,
+        mismatch_cutoff: int,
+        alignment_frac: float,
         logger: Logger,
-        mapq_cutoff: int,
-        soft_len_cutoff: int = 5,
-        mismatch_cutoff: int = 3,
-        alignment_frac: float = 0.8,
     ) -> None:
         """Initialize Rescuer.
 
@@ -42,7 +43,10 @@ class Rescuer:
 
     def __repr__(self):
         """Represent Rescuer."""
-        return f"{self.__class__.__name__}()"
+        return (
+            f"{self.__class__.__name__}({self.in_bam.filename}, "
+            f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
+        )
 
     @staticmethod
     def mismatch_count(seq: str, seqs: list, alignment_frac: float, mode: int) -> float:
@@ -111,6 +115,7 @@ class Rescuer:
         sr_list: Dict[int, List[str]] = {1: [], 2: []}
         sv_list: Dict[int, List[str]] = {1: [], 2: []}
         query_names = set(query_name.split(","))
+        self.logger.trace(f"{region=}")
         for col in self.in_bam.pileup(
             region=region, truncate=True, stepper="nofilter", min_base_quality=0
         ):
@@ -132,8 +137,10 @@ class Rescuer:
                             # the pileup position is equal to the soft-clipped connection point
                             # xxxxxxxxSyyyyyyyyMzzzzzS
                             #         ^      ^
+                            if mode == 1:
+                                soft_pos = soft_pos - 1
+                            self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
                             if soft_pos == col.reference_pos:
-                                self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
                                 if soft_len >= self.soft_len_cutoff:
                                     if mode == 1:
                                         softclipped_seq = aln.query_sequence[
@@ -153,21 +160,26 @@ class Rescuer:
                             anchor_soft_pos,
                             anchor_soft_mode,
                         ) = get_softclip_length(aln, mode)
+                        if mode == 1:
+                            anchor_soft_pos = anchor_soft_pos - 1
+                        self.logger.trace(f"{col.reference_pos=}, {anchor_soft_pos=}")
                         if anchor_soft_pos == col.reference_pos:
                             if mode == 1:
                                 sv_list[mode].append(anchor_soft_seq)
                             elif mode == 2:
                                 sv_list[mode].append(anchor_soft_seq)
-            rescued_sr = 0
-            if sv_list[mode]:
-                for _soft_seq in sr_list[mode]:
-                    if (
-                        Rescuer.mismatch_count(
-                            _soft_seq, sv_list[mode], self.alignment_frac, mode
-                        )
-                        <= self.mismatch_cutoff
-                    ):
-                        rescued_sr += 1
+        self.logger.trace(f"{sv_list=}")
+        self.logger.trace(f"{sr_list=}")
+        rescued_sr = 0
+        if sv_list[mode]:
+            for _soft_seq in sr_list[mode]:
+                if (
+                    SRRescuer.mismatch_count(
+                        _soft_seq, sv_list[mode], self.alignment_frac, mode
+                    )
+                    <= self.mismatch_cutoff
+                ):
+                    rescued_sr += 1
         return rescued_sr
 
     def update_sr(self, series: Series) -> Any:
@@ -175,6 +187,8 @@ class Rescuer:
         for idx in range(len(series) - 1):
             current_node = series[idx]
             next_node = series[idx + 1]
+            current_node.update_next_and_prev_breakpoint_depth(self.in_bam)
+            next_node.update_next_and_prev_breakpoint_depth(self.in_bam)
             mode1, mode2 = current_node.modes
             query_name1 = current_node.query_name
             query_name2 = next_node.query_name
@@ -184,12 +198,13 @@ class Rescuer:
             _chrom2, _pos2 = _bp2.split(":")
             _pos1 = int(_pos1)
             _pos2 = int(_pos2)
-            _region1 = f"{_chrom1}:{_pos1+1}-{_pos1+1}"
-            _region2 = f"{_chrom2}:{_pos2+1}-{_pos2+1}"
+            _region1 = f"{_chrom1}:{_pos1}-{_pos1+1}"
+            _region2 = f"{_chrom2}:{_pos2}-{_pos2+1}"
 
             rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
             rescued_sr2 = self.calculate_sr(_region2, mode2, query_name2)
             rescued_sr = rescued_sr1 + rescued_sr2
+            self.logger.trace(f"{rescued_sr=}")
             if rescued_sr > 0:
                 series[idx].update_sr(rescued_sr)
-        yield series
+        return series

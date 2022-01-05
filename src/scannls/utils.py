@@ -50,7 +50,7 @@ def get_softclip_length(
         read.query_name, _chrm, _pos, _strand, _cigar, _mapq, _nm, _seq
     )
 
-    if not mode:
+    if mode == 0:
         if read_obj.lt_soft_len > read_obj.rt_soft_len:
             return (
                 read_obj.lt_soft_len,
