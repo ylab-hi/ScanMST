@@ -1075,15 +1075,13 @@ class Series:
         ]
 
     @staticmethod
-    def reorder_event(event):
+    def reorder_event(evt: "Event"):
         """Order breakpoints pairs following the transcription direction using.
 
         information of reads 'mode' and 'strand'
         +1;-1 => up;down
         +2;-2 => down;up
         """
-        evt = Event(event)
-
         mode1 = evt.mode1
         mode2 = evt.mode2
         strand1 = evt.strand1
@@ -1348,6 +1346,7 @@ class Event:
             self.splicing_code = canonical
             self.genes = genes
             self.insertion_info = insertion_info
+            self.positions = _positions
             self.bp1, self.bp2 = _positions[:2]
             self.mode1, self.mode2 = _positions[2:]
             self.strand1, self.strand2 = strands
@@ -1358,11 +1357,14 @@ class Event:
         """Return the string representation of the event."""
         if self.sv_type != "NA":
             return (
-                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code})"
+                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} {self.positions} "
+                f"{self.strand1} {self.read1_ref_start} {self.read1_ref_end} {self.read1_exons} "
+                f"{self.strand2} {self.read2_ref_start} {self.read2_ref_end} {self.read2_exons} "
+                f"{self.insertion_info})"
             )
 
     def reverse(self):
-        """Reverse breakpoint1 and breakpoin2."""
+        """Reverse breakpoint1 and breakpoint2."""
         if self.annotation_code == 1:
             self.annotation_code = 2
         elif self.annotation_code == 2:

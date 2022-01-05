@@ -8,7 +8,6 @@ import time
 from pathlib import Path
 from typing import Any
 from typing import List
-from typing import Tuple
 
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
@@ -28,6 +27,7 @@ from .helper import event_to_str
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
+from scannls._class.basicClass import Event  # type: ignore
 from scannls._class.basicClass import reverse_complement  # type: ignore
 from scannls._class.basicClass import Series
 
@@ -208,7 +208,7 @@ def detect_sv_from_cigar(
 
     read_to_read_chains = [read_to_read_chains]
 
-    event_list = []  # type: List[Tuple[Any,...]]
+    event_list: List[Event] = []
     if read_to_read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
@@ -254,16 +254,18 @@ def detect_sv_from_cigar(
                         f"{nls_type=} {positions=} {lt_info=} {rt_info=} {bp_seqs=} {strands=}"
                     )
                     event_list.append(
-                        (
-                            nls_type,
-                            _anno,
-                            _canonical,
-                            positions,
-                            lt_info,
-                            rt_info,
-                            bp_seqs,
-                            strands,
-                            genes,
+                        Event(
+                            (
+                                nls_type,
+                                _anno,
+                                _canonical,
+                                positions,
+                                lt_info,
+                                rt_info,
+                                bp_seqs,
+                                strands,
+                                genes,
+                            )
                         )
                     )
                 else:  # temporary solution
@@ -448,7 +450,7 @@ def _scan_bam_helper(
                 ot_tags = []
                 nls_event_list = []
                 for event in event_lists:
-                    if event[0] in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
+                    if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
                         sv_tags.append(event_to_str(event, "SV"))
                         nls_event_list.append(event)
 
