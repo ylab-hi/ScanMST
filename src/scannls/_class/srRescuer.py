@@ -103,13 +103,14 @@ class Rescuer:
                     flag = True
         return flag
 
-    def calculate_sr(self, region: str, sv_type: str, mode: int) -> int:
+    def calculate_sr(self, region: str, mode: int, query_name: str) -> int:
         """Calculate SR from softclipped reads without SV tag, provided target region.
 
         region = 'chrm:start-end'
         """
         sr_list: Dict[int, List[str]] = {1: [], 2: []}
         sv_list: Dict[int, List[str]] = {1: [], 2: []}
+        query_names = set(query_name.split(","))
         for col in self.in_bam.pileup(
             region=region, truncate=True, stepper="nofilter", min_base_quality=0
         ):
@@ -117,9 +118,10 @@ class Rescuer:
             for read in col.pileups:
                 # read is an instance of pysam.PileupRead
                 aln = read.alignment
+                read_name = aln.query_name
                 if aln.mapq >= self.mapq_cutoff and read.query_position:
-                    # the read has soft-clipped part but no SV tag
-                    if not aln.has_tag("SV"):
+                    # the read has soft-clipped part but not an anchor read
+                    if read_name not in query_names:
                         if "S" in aln.cigarstring:
                             (
                                 soft_len,
@@ -130,29 +132,27 @@ class Rescuer:
                             # the pileup position is equal to the soft-clipped connection point
                             # xxxxxxxxSyyyyyyyyMzzzzzS
                             #         ^      ^
-                            # if soft_pos == col.reference_pos and 'N' not in soft_seq:
-                            self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
-                            if soft_len >= self.soft_len_cutoff:
-                                if soft_mode == 1:
-                                    softclipped_seq = aln.query_sequence[
-                                        read.query_position + 1 :
-                                    ]
-                                    if abs(len(softclipped_seq) - soft_len) < 5:
-                                        sr_list[soft_mode].append(softclipped_seq)
-                                elif soft_mode == 2:
-                                    softclipped_seq = aln.query_sequence[
-                                        : read.query_position
-                                    ]
-                                    if abs(len(softclipped_seq) - soft_len) < 5:
-                                        sr_list[soft_mode].append(softclipped_seq)
-                    # the read has SV tag
+                            if soft_pos == col.reference_pos:
+                                self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
+                                if soft_len >= self.soft_len_cutoff:
+                                    if mode == 1:
+                                        softclipped_seq = aln.query_sequence[
+                                            read.query_position + 1 :
+                                        ]
+                                        if abs(len(softclipped_seq) - soft_len) < 5:
+                                            sr_list[soft_mode].append(softclipped_seq)
+                                    elif mode == 2:
+                                        softclipped_seq = aln.query_sequence[
+                                            : read.query_position
+                                        ]
+                                        if abs(len(softclipped_seq) - soft_len) < 5:
+                                            sr_list[soft_mode].append(softclipped_seq)
+                    # the anchor read
                     else:
-                        _, _, _, sv_soft_mode = get_softclip_length(aln, mode)
-                        # TDUP,0|0,chr14:39177452,chr14:39180759,21,++,INTERGENIC|INTERGENIC
-                        sv_aln_list = aln.get_tag("SV")[:-1].split(";")
-                        if Rescuer.region_in_sv_checker(
-                            region, sv_type, mode, sv_aln_list
-                        ):
+                        _, _, anchor_soft_pos, anchor_soft_mode = get_softclip_length(
+                            aln, mode
+                        )
+                        if anchor_soft_pos == col.reference_pos:
                             if mode == 1:
                                 softclipped_seq = aln.query_sequence[
                                     read.query_position + 1 :
@@ -178,19 +178,22 @@ class Rescuer:
     def update_sr(self, series: Series) -> Any:
         """Update SR for input series."""
         for idx in range(len(series) - 1):
-            _sv_type = series[idx].sv_type
-            mode1, mode2 = series[idx].modes
-            _bp1 = series[idx].next_breakpoint
-            _bp2 = series[idx + 1].prev_breakpoint
+            current_node = series[idx]
+            next_node = series[idx + 1]
+            mode1, mode2 = current_node.modes
+            query_name1 = current_node.query_name
+            query_name2 = next_node.query_name
+            _bp1 = current_node.next_breakpoint
+            _bp2 = next_node.prev_breakpoint
             _chrom1, _pos1 = _bp1.split(":")
             _chrom2, _pos2 = _bp2.split(":")
             _pos1 = int(_pos1)
             _pos2 = int(_pos2)
-            _region1 = f"{_chrom1}:{_pos1}-{_pos1+1}"
-            _region2 = f"{_chrom2}:{_pos2}-{_pos2+1}"
+            _region1 = f"{_chrom1}:{_pos1+1}-{_pos1+1}"
+            _region2 = f"{_chrom2}:{_pos2+1}-{_pos2+1}"
 
-            rescued_sr1 = self.calculate_sr(_region1, _sv_type, mode1)
-            rescued_sr2 = self.calculate_sr(_region2, _sv_type, mode2)
+            rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
+            rescued_sr2 = self.calculate_sr(_region2, mode2, query_name2)
             rescued_sr = rescued_sr1 + rescued_sr2
             if rescued_sr > 0:
                 series[idx].update_sr(rescued_sr)

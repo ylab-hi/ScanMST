@@ -782,6 +782,7 @@ class Node(BasicNode):
         "sv_type",
         "modes",
         "genes",
+        "query_name",
         "annotation_code",
         "splicing_code",
         "sr",
