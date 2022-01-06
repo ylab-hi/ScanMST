@@ -89,8 +89,8 @@ class Blat:
         return ref_dir
 
     @property
-    def log_file(self) -> str:
-        """Property for log_file, which is the path of log file for blat."""
+    def log_file_path(self) -> str:
+        """Property for log_file_path, which is the path of log file for blat."""
         return (
             f"{self.ref_dir}/gfserver.temp.{self.ran_id}.log"
             if self.fix_log_file is None
@@ -106,8 +106,8 @@ class Blat:
         """
         flag = False
         self.logger.debug("check if the server starts")
-        if os.path.exists(self.log_file):
-            with open(self.log_file) as f:
+        if os.path.exists(self.log_file_path):
+            with open(self.log_file_path) as f:
                 for line in f:
                     if "Server ready" in line:
                         flag = True
@@ -118,7 +118,7 @@ class Blat:
 
         :return: the boolean value of whether the server is running or not
         """
-        return True if self._search_processing() else False
+        return bool(self._search_processing())
 
     def _search_processing(self) -> List:
         """Function for searching the process of blat server.
@@ -154,11 +154,11 @@ class Blat:
         logger.trace(f"{self.ref_dir=}")
         logger.trace(f"{os.getcwd()}")
 
-        if os.path.exists(self.log_file):
-            os.remove(self.log_file)
+        if os.path.exists(self.log_file_path):
+            os.remove(self.log_file_path)
 
         cmd = (
-            f"gfServer -canStop -log={self.log_file} -stepSize=5 start "
+            f"gfServer -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
         )
         logger.trace(f"{cmd=}")

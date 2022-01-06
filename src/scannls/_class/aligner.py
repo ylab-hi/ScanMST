@@ -86,7 +86,6 @@ class Aligner:
         with open(result_file) as f:
             for line in [line.strip() for line in f if not line.startswith("#")]:
                 if line.startswith("seq1"):
-                    # (1, 50)
                     seqa_coords.append(
                         (int(line.split()[1]) - 1, int(line.split()[-1]))
                     )

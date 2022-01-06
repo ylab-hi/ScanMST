@@ -156,7 +156,6 @@ class SRRescuer:
         for col in self.in_bam.pileup(
             region=region, truncate=True, stepper="nofilter", min_base_quality=0
         ):
-            # dp = col.nsegments
             # read is an instance of pysam.PileupRead
             self._calculate_sr_for_reads(col, query_names, sr_list, sv_list, mode)
 

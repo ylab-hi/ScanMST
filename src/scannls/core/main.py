@@ -14,18 +14,18 @@ from loguru._logger import Logger
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
 
-from .._class.blat import Blat  # type: ignore
-from .._class.myLogger import MyLogger  # type: ignore
-from .._class.parallel import ParallelWorker  # type: ignore
-from .._class.readConnector import detect_read_read_connections_from_cigar  # type: ignore
-from ..utils import get_softclip_length  # type: ignore
+from .. import Blat
+from .. import detect_read_read_connections_from_cigar
+from .. import Event
+from .. import get_softclip_length
+from .. import MyLogger
+from .. import ParallelWorker
+from .. import reverse_complement
+from .. import Series
 from .helper import blat2chimeric_alignment  # type: ignore
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
-from scannls._class.basicClass import Event  # type: ignore
-from scannls._class.basicClass import reverse_complement  # type: ignore
-from scannls._class.basicClass import Series
 
 
 class BamScanner:
@@ -73,10 +73,10 @@ class BamScanner:
 
         self.representative_alignments_new_cigar = {}
 
-    def _check_bam_sort(self, header):
+    def _check_bam_sort(self, header) -> bool:
         """Check if the bam file is sorted."""
         try:
-            return True if header["HD"]["SO"] == "coordinate" else False
+            return bool(header["HD"]["SO"] == "coordinate")
         except KeyError:
             self.logger.error(f"Bam file {self.in_bam} is not sorted")
             raise SystemExit from KeyError
@@ -205,7 +205,6 @@ def detect_sv_from_cigar(
         # every chain is a group of connected reads
         # every chain may have a list of events
         for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
-            # print(_lt, _rt)
             if (_lt, _rt) in reads_pair_mode_dict:
                 _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
             elif (_rt, _lt) in reads_pair_mode_dict:
@@ -379,7 +378,6 @@ def _scan_bam_helper(
                         after_set_sa_chimeric_alns_num = 1
 
                         # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
-            # newpos=[pos,size/pos2_of_translocation, rep_aln_mode, sup_aln_mode]
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if (

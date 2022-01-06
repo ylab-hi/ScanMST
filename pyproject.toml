@@ -55,6 +55,10 @@ sphinx-click = "^3.0.1"
 Pygments = "^2.11.0"
 pytest-mock = "^3.6.1"
 nox = "^2021.10.1"
+flake8-broken-line = "^0.4.0"
+flake8-comprehensions = "^3.7.0"
+flake8-eradicate = "^1.2.0"
+flake8-simplify = "^0.14.2"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"

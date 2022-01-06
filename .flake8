@@ -1,13 +1,24 @@
 [flake8]
-select = B,B9,C,D,DAR,E,F,N,RST,S,W
-ignore = E203,E501,RST201,RST203,RST301,W503,C901,S404,RST307,RST219,RST303,S108,RST305,RST205,S603,S602
+select = B,B9,C,D,DAR,E,F,N,RST,S,W,C4,SIM
+ignore = E203,E501,RST201,RST203,RST301,
+    # W503 line break before binary operator
+    W503,
+    # C901 function is too complex
+    C901,
+    # S404 Consider possible security implications associated with the subprocess module.
+    S404, RST307,RST219,RST303,
+    # S108 Probable insecure usage of temp file/directory.
+    S108, RST305,RST205,S603,S602,
+    # C409 Unnecessary list passed to tuple() - rewrite as a tuple literal.
+    C409,
 max-line-length = 105
 max-complexity = 10
 docstring-convention = google
 per-file-ignores =
     tests/*:S101,
     src/scannls/__init__.py:F401,
-    src/scannls/draft/nls_inference.py:F841,
+    src/scannls/_class/writer.py:SIM115,
+    src/scannls/_class/parallel.py: SIM117,
 rst-roles = class,const,func,meth,mod,ref
 rst-directives = deprecated,seealso,note
 exclude =

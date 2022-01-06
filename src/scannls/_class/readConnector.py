@@ -15,7 +15,7 @@ from loguru import logger
 from loguru._logger import Logger
 from pysam import AlignedSegment  # type: ignore
 
-from ..draft.helper import cigar_validity  # type: ignore
+from ..core.helper import cigar_validity  # type: ignore
 from .basicClass import Read
 from .basicClass import reverse_complement
 from .blat import Blat
@@ -113,7 +113,7 @@ class ReadsConnector:
             else:
                 read1.mode = read2.mode
 
-    def compare_ms(
+    def check_if_ms_match(
         self,
         query_seq: str,
         target_seq: str,
@@ -251,7 +251,7 @@ class ReadsConnector:
             return read_match_sequence
 
     @staticmethod
-    def _check_strand_mode_for_compare_ms(
+    def _check_if_strand_mode_for_compare_ms(
         start_read: Read,
         read: Read,
         same_strand: bool,
@@ -296,7 +296,7 @@ class ReadsConnector:
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
         read_query_sequence = read.query_sequence
 
-        same_strand = True if start_read.adhocseq == read.query_sequence else False
+        same_strand = bool(start_read.adhocseq == read.query_sequence)
 
         # first case
         self.logger.debug("testing first case M vs LS")
@@ -314,11 +314,11 @@ class ReadsConnector:
             next_read_mode,
         )
 
-        match_flag1 = self.compare_ms(
+        match_flag1 = self.check_if_ms_match(
             read_match_sequence, read.query_sequence[:_lt_len_r2], same_strand
         )
         if match_flag1:
-            condition1 = self._check_strand_mode_for_compare_ms(
+            condition1 = self._check_if_strand_mode_for_compare_ms(
                 start_read, read, same_strand, match_flag1
             )
         if match_flag1 and condition1:  # may same
@@ -352,12 +352,12 @@ class ReadsConnector:
             next_read_mode,
         )
 
-        match_flag2 = self.compare_ms(
+        match_flag2 = self.check_if_ms_match(
             read_match_sequence, read.query_sequence[-_rt_len_r2:], same_strand
         )
 
         if match_flag2:
-            condition2 = self._check_strand_mode_for_compare_ms(
+            condition2 = self._check_if_strand_mode_for_compare_ms(
                 start_read, read, same_strand, False, match_flag2
             )
         if match_flag2 and condition2:  # may same
@@ -389,7 +389,7 @@ class ReadsConnector:
         return False, start_read  # not match
 
     @staticmethod
-    def _double_check_for_start_and_end_read_determine_new_read_mode(
+    def _double_check_for_start_end_read_determine_new_read_mode(
         read: Read, new_read: Read
     ) -> None:
         """Double check for start and end read determine new read mode."""
@@ -399,7 +399,7 @@ class ReadsConnector:
         else:
             new_read.mode = 1 if read.mode == 1 else 2
 
-    def _double_check_creat_new_read_and_calculate_sms(
+    def _double_check_creat_new_read_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read
     ) -> Read:
         """Double check creat new read and calculate sms."""
@@ -461,7 +461,7 @@ class ReadsConnector:
         )
         return True, hit, keep_hsp
 
-    def _double_check_for_start_and_end_read(
+    def _double_check_for_start_end_read(
         self,
         read: Read,
         read_type: str,
@@ -482,10 +482,10 @@ class ReadsConnector:
         if flag and hit == 1:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
-            new_read = self._double_check_creat_new_read_and_calculate_sms(
+            new_read = self._double_check_creat_new_read_calculate_sms(
                 hsp, query_sequence, read
             )
-            self._double_check_for_start_and_end_read_determine_new_read_mode(
+            self._double_check_for_start_end_read_determine_new_read_mode(
                 read, new_read
             )
             if read_type == "start":
@@ -552,8 +552,8 @@ class ReadsConnector:
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_mode_judge(start_read, end_read)
             _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
-            self._double_check_for_start_and_end_read(start_read, "start")
-            self._double_check_for_start_and_end_read(end_read, "end")
+            self._double_check_for_start_end_read(start_read, "start")
+            self._double_check_for_start_end_read(end_read, "end")
 
         else:
             candidate_read_len = len(self.candidate_nodes)
@@ -573,13 +573,13 @@ class ReadsConnector:
                     self.increment_index()
 
                 if flag and len(self.candidate_nodes) + 1 == candidate_read_len:
-                    self._double_check_for_start_and_end_read(start_nodes[0], "start")
+                    self._double_check_for_start_end_read(start_nodes[0], "start")
 
             ReadsConnector.init_mode_judge(start_read, end_read)
             _, start_read = self.test_2case(
                 start_read, end_read, is_compare_for_ms=True
             )
-            self._double_check_for_start_and_end_read(end_read, "end")
+            self._double_check_for_start_end_read(end_read, "end")
 
         return flag
 

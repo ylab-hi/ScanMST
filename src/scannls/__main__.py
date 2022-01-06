@@ -8,13 +8,13 @@ import time
 from loguru import logger
 
 from . import __version__  # type: ignore
-from ._class.blat import Blat
-from ._class.spliceGraph import CliqueFinder
-from ._class.spliceGraph import SpliceGraph
-from ._class.srRescuer import SRRescuer
-from ._class.writer import FastaWriter
-from ._class.writer import GTFWriter
-from .draft.main import scanbam_run  # type: ignore
+from . import Blat
+from . import CliqueFinder
+from . import FastaWriter
+from . import GTFWriter
+from . import SpliceGraph
+from . import SRRescuer
+from .core.main import scanbam_run  # type: ignore
 from .utils import external_tool_checking
 
 
@@ -221,7 +221,7 @@ def main():
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
     blat.start_server()
-    blat_info = blat.log_file, blat.is_start_server
+    blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
     motif_required = not options.noncanonical
 
@@ -268,8 +268,8 @@ def main():
     )
 
     for clique in cliques:
-        # logger.debug(list(splice_graph(clique)))
         for i in splice_graph(clique):
+            logger.debug(f"series{i}")
             j = rescuer.update_sr(i)
             logger.debug(f"{j} is rescued!")
 
