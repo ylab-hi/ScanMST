@@ -330,7 +330,7 @@ class CliqueFinder:
         """Initialize CliqueFinder."""
         self.ruler = Ruler(logger)
         self.intact_series_list = intact_series_list
-        self.distance_dict: Dict[Any, float] = dict()
+        self.distance_dict: Dict[Any, float] = {}
         self.graph = nx.Graph()
         self.threshold = threshold
 
@@ -475,11 +475,10 @@ class SpliceGraph:
             node.unique_key is not None.
 
         """
-        for other_node in self.get_nodes_with_similar_key(node.similar_key):
-            if other_node.unique_key == node.unique_key:
-                return True
-
-        return False
+        return any(
+            other_node.unique_key == node.unique_key
+            for other_node in self.get_nodes_with_similar_key(node.similar_key)
+        )
 
     def __iter__(self):
         """Iterate over all nodes in graph."""
@@ -495,7 +494,7 @@ class SpliceGraph:
         insertion_info1 = node1.insertion_info
         insertion_info2 = node2.insertion_info
         if insertion_info1 is None and insertion_info2 is None:
-            # None == None
+            # When None = None
             return flag
         elif insertion_info1 is not None and insertion_info2 is not None:
             if insertion_info1[0] and insertion_info2[0]:
@@ -638,7 +637,7 @@ class SpliceGraph:
         return False
 
     @staticmethod
-    def update_exon_coord_sr_svtype_breakpoints_name(
+    def update_exon_coord_sr_svtype_breakpoints_name_mode(
         updated_node: NodeType, current_node: NodeType
     ) -> None:
         """Update exon coordinates of the updated node based on current node.
@@ -669,6 +668,9 @@ class SpliceGraph:
             updated_node.next_breakpoint = current_node.next_breakpoint
         # update query name
         updated_node.query_name += "," + current_node.query_name
+        # update mode of the node
+        if updated_node.modes is None:
+            updated_node.modes = current_node.modes
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
@@ -686,7 +688,7 @@ class SpliceGraph:
             if SpliceGraph._compare_is_merged(similar_node_in_graph, current_node):
                 current_node.is_merged = True
 
-                SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name(
+                SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name_mode(
                     similar_node_in_graph, current_node
                 )
 
@@ -725,7 +727,7 @@ class SpliceGraph:
                 if merge_node.similar_key == similar_key
             ]:
                 if SpliceGraph._compare_is_merged(merge_node, current_node):
-                    SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name(
+                    SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name_mode(
                         current_node, merge_node
                     )
                     merge_node.merged_parent_nodes.append(current_node)

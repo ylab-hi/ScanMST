@@ -7,12 +7,12 @@ from typing import Any
 from typing import Callable
 from typing import Tuple
 
-import pysam.libcalignedsegment  # type: ignore
+import pysam  # type: ignore
 from loguru import logger
 from loguru._logger import Logger
 
-from ._class.basicClass import Read  # type: ignore
-from ._class.exception import ToolNotFoundError  # type: ignore
+from . import Read
+from . import ToolNotFoundError
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
@@ -25,11 +25,12 @@ def external_tool_checking(logger: Logger) -> None:
         if "command not found" in output:
             raise ToolNotFoundError(tool)
         else:
-            logger.success("Checking for '" + tool + "': found ")  # type: ignore
+            logger.success(f"Checking for {tool} found ")
 
 
 def get_softclip_length(
-    read: pysam.libcalignedsegment.AlignedSegment, mode: int
+    read: pysam.libcalignedsegment.AlignedSegment,
+    mode: int,
 ) -> Tuple[int, str, int, int]:
     """Extract softclipped sequence information from input read.
 
@@ -47,7 +48,14 @@ def get_softclip_length(
     _chrm = read.reference_name
     _pos = read.reference_start
     read_obj = Read.init(
-        read.query_name, _chrm, _pos, _strand, _cigar, _mapq, _nm, _seq
+        read.query_name,
+        _chrm,
+        _pos,
+        _strand,
+        _cigar,
+        _mapq,
+        _nm,
+        _seq,
     )
 
     if mode == 0:

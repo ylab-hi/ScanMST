@@ -11,8 +11,8 @@ import pysam  # type: ignore
 from Bio.Seq import Seq  # type: ignore
 from loguru._logger import Logger  # type: ignore
 
-from ..draft.helper import cigar_validity  # type: ignore
-from ..draft.nls_inference import infer_nls_from_connected_reads  # type: ignore
+from ..core.helper import cigar_validity  # type: ignore
+from ..core.nls_inference import infer_nls_from_connected_reads  # type: ignore
 from .exception import ReadNotFoundError  # type: ignore
 
 NodeType = Union["Node", "Insertion"]
@@ -382,10 +382,7 @@ class Read:
                     right_site = genome_fasta[self.chrom][end - 2 : end].seq
                 if f"{left_site}-{right_site}" in can_sites:
                     can_count += 1
-        if can_count / intron_count >= fraction_cutoff:
-            return True
-        else:
-            return False
+        return can_count / intron_count >= fraction_cutoff
 
 
 class NovelInsertion:
@@ -466,21 +463,21 @@ class BasicNode:
         self.previous_node_in_series: Optional[NodeType] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
 
-    def is_start_node(self):
+    def is_start_node(self) -> bool:
         """Return True if Insertion object is start node."""
-        return True if not self.has_predecessor() else False
+        return bool(not self.has_predecessor())
 
-    def is_end_node(self):
+    def is_end_node(self) -> bool:
         """Return True if Insertion object is end node."""
-        return True if not self.has_successor() else False
+        return bool(not self.has_successor())
 
-    def has_predecessor(self):
+    def has_predecessor(self) -> bool:
         """Return True if Insertion object has predecessor."""
-        return True if self.predecessors else False
+        return bool(self.predecessors)
 
-    def has_successor(self):
+    def has_successor(self) -> bool:
         """Return True if Insertion object has successor."""
-        return True if self.successors else False
+        return bool(self.successors)
 
     def add_successor_from_list(self, successors):
         """Add successor from list of Insertion object."""
@@ -1468,15 +1465,15 @@ class Event:
 
     def is_type_na(self) -> bool:
         """Return True if the event is NA."""
-        return True if self.sv_type == "NA" else False
+        return bool(self.sv_type == "NA")
 
     def has_insertion(self) -> bool:
         """Return True if the event has insertion."""
-        return True if self.insertion_info[0].startswith("+") else False
+        return self.insertion_info[0].startswith("+")
 
     def has_microhomology(self) -> bool:
         """Return True if the event has microhomology."""
-        return True if self.insertion_info[0].startswith("-") else False
+        return self.insertion_info[0].startswith("-")
 
     def is_same_strand(self) -> bool:
         """Return True if the event is same strand."""

@@ -41,8 +41,6 @@ def short_tdup_or_not(
         soft_extension_size = 0
         matched_reduced_size = -bp_region_seq_len
 
-    # logger.trace(f"{event_size=} {matched_reduced_size=} {soft_extension_size=}")
-
     read_sa_matched_segment = read_sa.query_sequence[
         read_sa.lt_soft_len : read_sa.query_length - read_sa.rt_soft_len
     ]
@@ -53,7 +51,6 @@ def short_tdup_or_not(
         + soft_extension_size
         - event_size
     )
-    # len(ins_seq_in_read) > read_sa_matched_segment
     if diff_len < 0:
         compared_seq = (
             read_sa.query_sequence[: read_sa.lt_soft_len][
@@ -236,21 +233,17 @@ def infer_nls_from_connected_reads(
     logger.trace(f"{read_lt=} {read_rt=}")
     if lt_mode == 3 or rt_mode == 3:
         return noreturn
-    lt_chrm, lt_strand, lt_start, lt_end, lt_cigartuples, lt_cigarstring = (
+    lt_chrm, lt_strand, lt_start, lt_end = (
         read_lt.chrom,
         read_lt.strand,
         read_lt.ref_start,
         read_lt.ref_end,
-        read_lt.cigartuples,
-        read_lt.cigarstring,
     )
-    rt_chrm, rt_strand, rt_start, rt_end, rt_cigartuples, rt_cigarstring = (
+    rt_chrm, rt_strand, rt_start, rt_end = (
         read_rt.chrom,
         read_rt.strand,
         read_rt.ref_start,
         read_rt.ref_end,
-        read_rt.cigartuples,
-        read_rt.cigarstring,
     )
 
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
