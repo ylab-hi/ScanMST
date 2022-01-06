@@ -196,16 +196,17 @@ class SRRescuer:
         strand = node.strand
         chrom = node.chrom
         exons = node.exons
-        if strand == "+":
-            if tgt_name == "next_breakpoint":
-                pos = exons[-1][1]
-            elif tgt_name == "prev_breakpoint":
-                pos = exons[0][0]
-        else:
-            if tgt_name == "next_breakpoint":
-                pos = exons[0][0]
-            elif tgt_name == "prev_breakpoint":
-                pos = exons[-1][1]
+        if exons:
+            if strand == "+":
+                if tgt_name == "next_breakpoint":
+                    pos = exons[-1][1]
+                elif tgt_name == "prev_breakpoint":
+                    pos = exons[0][0]
+            else:
+                if tgt_name == "next_breakpoint":
+                    pos = exons[0][0]
+                elif tgt_name == "prev_breakpoint":
+                    pos = exons[-1][1]
         region = f"{chrom}:{pos}-{pos + 1}"
         return region
 
