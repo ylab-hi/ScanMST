@@ -112,17 +112,14 @@ class SRRescuer:
                         # xxxxxxxxSyyyyyyyyMzzzzzS
                         #         ^      ^
                         soft_pos = soft_pos - 1 if mode == 1 else soft_pos
-                        self.logger.trace(f"{col.reference_pos=}, {soft_pos=}")
+                        self.logger.trace(
+                            f"{read_name=}, {col.reference_pos=}, {soft_pos=}"
+                        )
                         if (
                             soft_pos == col.reference_pos
                             and soft_len >= self.soft_len_cutoff
                         ):
-                            softclipped_seq = (
-                                aln.query_sequence[read.query_position + 1]
-                                if mode == 1
-                                else aln.query_sequence[: read.query_position]
-                            )
-                            sr_list[strand].append(softclipped_seq)
+                            sr_list[strand].append(soft_seq)
                 # the anchor read
                 else:
                     (
@@ -134,7 +131,9 @@ class SRRescuer:
                     anchor_soft_pos = (
                         anchor_soft_pos - 1 if mode == 1 else anchor_soft_pos
                     )
-                    self.logger.trace(f"{col.reference_pos=}, {anchor_soft_pos=}")
+                    self.logger.trace(
+                        f"{read_name=}, {col.reference_pos=}, {anchor_soft_pos=}"
+                    )
                     if anchor_soft_pos == col.reference_pos:
                         sv_list[strand].append(anchor_soft_seq)
 
@@ -185,7 +184,7 @@ class SRRescuer:
         return rescued_sr
 
     @staticmethod
-    def obtain_region_for_rescue_sr(node: Node, tgt_name: str) -> str:
+    def obtain_region_for_rescue_sr(node: Node, tgt_name: str, mode: int) -> str:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
@@ -206,7 +205,7 @@ class SRRescuer:
                     pos = exons[0][0]
                 elif tgt_name == "prev_breakpoint":
                     pos = exons[-1][1]
-        region = f"{chrom}:{pos}-{pos + 1}"
+        region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
     def update_sr(self, series: Series) -> Any:
@@ -221,10 +220,10 @@ class SRRescuer:
             query_name2 = next_node.query_name
 
             _region1 = SRRescuer.obtain_region_for_rescue_sr(
-                current_node, "next_breakpoint"
+                current_node, "next_breakpoint", mode1
             )
             _region2 = SRRescuer.obtain_region_for_rescue_sr(
-                next_node, "prev_breakpoint"
+                next_node, "prev_breakpoint", mode2
             )
 
             rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
