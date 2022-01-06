@@ -14,6 +14,7 @@ from loguru._logger import Logger  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
 from ..utils import get_softclip_length
+from .basicClass import Node  # type: ignore
 from .basicClass import Series  # type: ignore
 
 
@@ -184,6 +185,30 @@ class SRRescuer:
 
         return rescued_sr
 
+    @staticmethod
+    def obtain_region_for_rescue_sr(node: Node, tgt_name: str) -> str:
+        """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
+
+        ..note.
+              Due to microhomology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
+              Thus, exon start/end (S-M boundary) will be used to rescue SR.
+        """
+        strand = node.strand
+        chrom = node.chrom
+        exons = node.exons
+        if strand == "+":
+            if tgt_name == "next_breakpoint":
+                pos = exons[-1][1]
+            elif tgt_name == "prev_breakpoint":
+                pos = exons[0][0]
+        else:
+            if tgt_name == "next_breakpoint":
+                pos = exons[0][0]
+            elif tgt_name == "prev_breakpoint":
+                pos = exons[-1][1]
+        region = f"{chrom}:{pos}-{pos + 1}"
+        return region
+
     def update_sr(self, series: Series) -> Any:
         """Update SR for input series."""
         for idx in range(len(series) - 1):
@@ -194,14 +219,13 @@ class SRRescuer:
             next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
             query_name1 = current_node.query_name
             query_name2 = next_node.query_name
-            _bp1 = current_node.next_breakpoint
-            _bp2 = next_node.prev_breakpoint
-            _chrom1, _pos1 = _bp1.split(":")
-            _chrom2, _pos2 = _bp2.split(":")
-            _pos1 = int(_pos1)
-            _pos2 = int(_pos2)
-            _region1 = f"{_chrom1}:{_pos1}-{_pos1 + 1}"
-            _region2 = f"{_chrom2}:{_pos2}-{_pos2 + 1}"
+
+            _region1 = SRRescuer.obtain_region_for_rescue_sr(
+                current_node, "next_breakpoint"
+            )
+            _region2 = SRRescuer.obtain_region_for_rescue_sr(
+                next_node, "prev_breakpoint"
+            )
 
             rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
             rescued_sr2 = self.calculate_sr(_region2, mode2, query_name2)
