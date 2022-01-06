@@ -232,7 +232,6 @@ def main():
         blat_info=blat_info,
         in_bam_path=options.input,
         mapq_cutoff=options.mapq,
-        output=options.output,
         ref_genome=options.ref,
         gtf=options.gtf,
         splice_bin=options.splice_bin,

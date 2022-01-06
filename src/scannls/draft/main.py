@@ -3,8 +3,6 @@
 import copy
 import inspect
 import re
-import subprocess
-import time
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -21,9 +19,7 @@ from .._class.myLogger import MyLogger  # type: ignore
 from .._class.parallel import ParallelWorker  # type: ignore
 from .._class.readConnector import detect_read_read_connections_from_cigar  # type: ignore
 from ..utils import get_softclip_length  # type: ignore
-from ..utils import write_series_to_file  # type: ignore
 from .helper import blat2chimeric_alignment  # type: ignore
-from .helper import event_to_str
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads  # type: ignore
@@ -39,7 +35,6 @@ class BamScanner:
         self,
         input_bam,
         mapq_cutoff,
-        output,
         ref_genome,
         gtf,
         splice_in,
@@ -56,7 +51,6 @@ class BamScanner:
 
         self.bam_chrom_info = {}
 
-        self.output = output
         self.mapq_cutoff = mapq_cutoff
 
         self.ref_genome = (
@@ -195,7 +189,7 @@ def detect_sv_from_cigar(
     :rtype: list (list of lists)
     """
     (
-        read_to_read_chains,
+        read_chains,
         reads_pair_mode_dict,
         num_added_reads,
     ) = detect_read_read_connections_from_cigar(
@@ -206,37 +200,24 @@ def detect_sv_from_cigar(
         logger=logger,
     )
 
-    read_to_read_chains = [read_to_read_chains]
-
     event_list: List[Event] = []
-    if read_to_read_chains:
+    if read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
-        for chain in read_to_read_chains:
-            event_list = []
-            for _lt, _rt in zip(chain[::1], chain[1::1]):
-                # print(_lt, _rt)
-                if (_lt, _rt) in reads_pair_mode_dict:
-                    _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
-                elif (_rt, _lt) in reads_pair_mode_dict:
-                    _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
+        for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
+            # print(_lt, _rt)
+            if (_lt, _rt) in reads_pair_mode_dict:
+                _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
+            elif (_rt, _lt) in reads_pair_mode_dict:
+                _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
 
-                if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
-                    logger.warning(
-                        f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}"
-                    )
+            if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
+                logger.warning(
+                    f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}"
+                )
 
-                (
-                    nls_type,
-                    _anno,
-                    _canonical,
-                    positions,
-                    lt_info,
-                    rt_info,
-                    bp_seqs,
-                    strands,
-                    genes,
-                ) = infer_nls_from_connected_reads(
+            event = Event(
+                infer_nls_from_connected_reads(
                     read_lt=_lt,
                     read_rt=_rt,
                     lt_mode=_lt_mode,
@@ -248,31 +229,14 @@ def detect_sv_from_cigar(
                     motif_required=motif_required,
                     logger=logger,
                 )
+            )
 
-                if nls_type != "NA":
-                    logger.trace(
-                        f"{nls_type=} {positions=} {lt_info=} {rt_info=} {bp_seqs=} {strands=}"
-                    )
-                    event_list.append(
-                        Event(
-                            (
-                                nls_type,
-                                _anno,
-                                _canonical,
-                                positions,
-                                lt_info,
-                                rt_info,
-                                bp_seqs,
-                                strands,
-                                genes,
-                            )
-                        )
-                    )
-                else:  # temporary solution
-                    logger.warning(
-                        f"{nls_type=} {positions=} {lt_info=} {rt_info=} {bp_seqs=} {strands=}"
-                    )
-    return event_list, read_to_read_chains[0], num_added_reads
+            if not event.is_type_na():
+                event_list.append(event)
+                logger.trace(event)
+            else:  # temporary solution
+                logger.warning(f"Event Type is NA {event=}")
+    return event_list, read_chains, num_added_reads
 
 
 def _scan_bam_helper(
@@ -286,8 +250,6 @@ def _scan_bam_helper(
     in_bam_path,
     ref_genome,
     gtf,
-    output,
-    header,
     mapq_cutoff,
     representative_alignments_new_cigar,
     max_allowed_nm,
@@ -304,8 +266,6 @@ def _scan_bam_helper(
 
     logger.info(f"{identified_key= } start")
 
-    output = Path(output)
-
     genome_fasta = _get_genome_fasta(ref_genome, logger)
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin, logger)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
@@ -313,10 +273,6 @@ def _scan_bam_helper(
 
     blat_log_file, blat_is_start_server = blat_info
     blat = Blat(two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server)
-
-    temp_id = int(time.time_ns())
-    current_output = output.parent.joinpath(f"{identified_key}_{temp_id}_{output.name}")
-    output_bam = pysam.AlignmentFile(f"{current_output}", "wb", header=header)
 
     nls_src_forms_list = []
 
@@ -446,16 +402,10 @@ def _scan_bam_helper(
                     blat=blat,
                     logger=logger,
                 )
-                sv_tags = []
-                ot_tags = []
                 nls_event_list = []
                 for event in event_lists:
                     if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
-                        sv_tags.append(event_to_str(event, "SV"))
                         nls_event_list.append(event)
-
-                    elif event[0] in {"INS"}:
-                        ot_tags.append(event_to_str(event, "OT"))
 
                 chimeric_alns_num += num_added_reads
                 if nls_event_list and (len(nls_event_list) + 1 == chimeric_alns_num):
@@ -475,20 +425,10 @@ def _scan_bam_helper(
                         nls_src_forms_list.append(series)
                         logger.debug(f"{series=}")
 
-                if sv_tags:
-                    read.set_tag("SV", "".join(sv_tags))
-                if ot_tags:
-                    read.set_tag("OT", "".join(ot_tags))
-
-        output_bam.write(read)
-
-    output_bam.close()
-
-    subprocess.check_call(f"samtools index {current_output}", shell=True)
     logger.debug(f"{nls_src_forms_list=}")
     logger.complete()
     in_bam_io_object.close()
-    return current_output, nls_src_forms_list
+    return nls_src_forms_list
 
 
 def scanbam_run(
@@ -498,7 +438,6 @@ def scanbam_run(
     blat_info,
     in_bam_path,
     mapq_cutoff,
-    output,
     ref_genome,
     gtf,
     splice_bin,
@@ -514,7 +453,6 @@ def scanbam_run(
     bam_scanner = BamScanner(
         input_bam=Path(in_bam_path),
         mapq_cutoff=mapq_cutoff,
-        output=Path(output),
         ref_genome=Path(ref_genome),
         gtf=Path(gtf),
         splice_in=splice_bin,
@@ -538,8 +476,6 @@ def scanbam_run(
     ]
 
     logger.info(f" Processing {contigs=}")
-    # get the header of the bam file in order to write the new bam file
-    header = bam_scanner.header
     # get running mode
     running_mode = "normal" if parallel == 1 else "parallel"
     # get current local namespace
@@ -551,24 +487,12 @@ def scanbam_run(
         if value.kind.name == "KEYWORD_ONLY"
     }
 
-    # create a temporary directory for storing temporary files of bam
-    output = Path(output)
-    temp_id = int(time.time_ns())
-    temp_dirname = output.parent.joinpath(f"temp_{temp_id}")
-    temp_dirname.mkdir()
-    temp_output = temp_dirname.joinpath(output.name)
-
-    keyword_parameters_dict["output"] = temp_output
-
     intact_series_list = []
-    temp_bamfiles = []
 
     if parallel == 1:
 
         for contig in contigs:
-            result = _scan_bam_helper(contig, **keyword_parameters_dict)
-            contig_output, contig_series_list = result
-            temp_bamfiles.append(contig_output)
+            contig_series_list = _scan_bam_helper(contig, **keyword_parameters_dict)
             intact_series_list.extend(contig_series_list)
 
     else:
@@ -577,14 +501,7 @@ def scanbam_run(
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)
 
         for contig in contigs:
-            contig_output, contig_series_list = result[contig]
-            temp_bamfiles.append(contig_output)
+            contig_series_list = result[contig]
             intact_series_list.extend(contig_series_list)
 
-    merge_cmd = f"samtools merge -f {output} {temp_dirname}/*.bam"
-    subprocess.check_call(merge_cmd, shell=True)
-
-    write_series_to_file(
-        f"{output.parent.joinpath(output.stem)}_series.txt", intact_series_list
-    )
     return intact_series_list, bam_scanner.in_bam

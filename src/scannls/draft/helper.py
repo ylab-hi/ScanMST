@@ -495,41 +495,6 @@ def blat2chimeric_alignment(
     return chimeric_aln_str
 
 
-def event_to_str(event: Any, tag: str) -> str:
-    """Convert event info to a string adding to the pysam tag.
-
-    :param event: event tuple from infer_nls_from_connected_reads
-    :param tag: SV or OT
-
-    :return: string of event
-
-    .. note:
-        SV tag uses the coordinate system (start with 1) as SA tag
-    """
-    _type, _anno, _canonical = event.sv_type, event.annotation_code, event.splicing_code
-    _bp1, _bp2, _mode1, _mode2 = event.positions
-    _strand1, _strand2 = event.strand1, event.strand2
-    _gene1, _gene2 = event.genes
-    if tag == "SV":
-        _chrm1, _pos1 = _bp1.split(":")
-        _chrm2, _pos2 = _bp2.split(":")
-        return (
-            f"{_type},{_anno}|{_canonical},{_chrm1}:{int(_pos1) + 1},"
-            f"{_chrm2}:{int(_pos2) + 1},{_mode1}{_mode2},{_strand1}{_strand2},"
-            f"{_gene1}|{_gene2};"
-        )
-    else:
-        _chrm, _pos = _bp1.split(":")
-        _ins_length = int(_bp2)
-        # _anno: ref allele
-        # _canonical: ins_seq (with out ref allele)
-        return (
-            f"{_type},{_anno}|{_canonical},{_chrm}:{int(_pos) + 1},"
-            f"{_ins_length},{_mode1}{_mode2},{_strand1}{_strand2},"
-            f"{_gene1}|{_gene2};"
-        )
-
-
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
     """Check if the two strands are compatible with the two modes."""
     flag = False

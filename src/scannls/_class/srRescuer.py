@@ -83,6 +83,15 @@ class SRRescuer:
         return mismatch
 
     def _calculate_sr_for_reads(self, col, query_names, sr_list, sv_list, mode):
+        """Calculate SR for reads.
+
+        :param col:
+        :param query_names:
+        :param sr_list:
+        :param sv_list:
+        :param mode:
+        :return:
+        """
         for read in col.pileups:
             # read.alignment is an instance of pysam.AlignedSegment
             aln = read.alignment
