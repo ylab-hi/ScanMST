@@ -322,16 +322,35 @@ class Read:
         :return: exons coordinates and introns coordinates
         :rtype: tuple
         """
+        cigartuples_without_soft = self.cigartuples_without_soft
+        stack = [cigartuples_without_soft[0]]
+        """
+        0 M
+        2 D
+        3 N
+        """
+        for current_code, current_len in cigartuples_without_soft:
+            last_op_code, last_len = stack.pop()
+            if last_op_code == 3 and current_code == 2:  # N D(current)
+                stack.append((last_op_code, last_len + current_len))
+            elif last_op_code == 2 and current_code == 3:  # D N(current)
+                stack.append((current_code, last_len + current_len))
+            else:
+                stack.append((last_op_code, last_len))
+
         exons = []
         current_pos = self.ref_start
         start_pos = self.ref_start
-        for op_code, _len_ in self.cigartuples_without_soft:
+
+        for op_code, _len_ in stack:
+
             if op_code in {0, 2}:  # M, D
                 current_pos = current_pos + _len_
             elif op_code == 3:  # N
                 exons.append([start_pos, current_pos])
                 current_pos = current_pos + _len_
                 start_pos = current_pos
+
         exons.append([start_pos, current_pos])
 
         introns = []

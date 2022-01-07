@@ -23,6 +23,7 @@ from .basicClass import NovelInsertion
 from .basicClass import reverse_complement
 from .basicClass import Series
 
+
 # todo: add comments line
 # todo: add asyncio support
 
@@ -248,12 +249,8 @@ def get_exon_sequence_from_node(node: NodeType, reference_io) -> str:
         if isinstance(insertion, MicroHomology):
             microhomology_sequence += insertion.query_sequence
 
-    exons = node.exons if node.strand == "+" else node.exons[::-1]  # type: ignore
-
-    for start, end in exons:  # type: ignore
-        if node.strand == "-":
-            start, end = end, start
-        node_sequence += reference_io.get_seq(node.chrom, start, end).seq
+    for start, end in node.exons:  # type: ignore
+        node_sequence += reference_io.get_seq(node.chrom, start + 1, end).seq  # 1-based
 
     node_sequence += novel_insertion_sequence
 
