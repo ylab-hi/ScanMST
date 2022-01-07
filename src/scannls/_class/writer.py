@@ -252,11 +252,11 @@ def get_exon_sequence_from_node(node: NodeType, reference_io) -> str:
     for start, end in node.exons:  # type: ignore
         node_sequence += reference_io.get_seq(node.chrom, start + 1, end).seq  # 1-based
 
-    node_sequence += novel_insertion_sequence
-
     node_sequence = (
         node_sequence if node.strand == "+" else reverse_complement(node_sequence)
     )
+
+    node_sequence += novel_insertion_sequence
     return node_sequence[: len(node_sequence) - len(microhomology_sequence)]
 
 

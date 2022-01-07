@@ -329,7 +329,7 @@ class Read:
         2 D
         3 N
         """
-        for current_code, current_len in cigartuples_without_soft:
+        for current_code, current_len in cigartuples_without_soft[1:]:
             last_op_code, last_len = stack.pop()
             if last_op_code == 3 and current_code == 2:  # N D(current)
                 stack.append((last_op_code, last_len + current_len))
@@ -337,6 +337,7 @@ class Read:
                 stack.append((current_code, last_len + current_len))
             else:
                 stack.append((last_op_code, last_len))
+                stack.append((current_code, current_len))
 
         exons = []
         current_pos = self.ref_start
