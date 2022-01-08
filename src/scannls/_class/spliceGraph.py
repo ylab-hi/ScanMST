@@ -11,6 +11,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -114,7 +115,7 @@ class Voter:
         return flag
 
     @staticmethod
-    def nodes_sanity_checker(nodes_a: List, nodes_b: List) -> bool:
+    def nodes_sanity_checker(nodes_a: List[Any], nodes_b: List[Any]) -> bool:
         """Check whether the introns of nodes are consistent or not."""
         flag = True
         for i, j in zip(nodes_a, nodes_b):
@@ -175,7 +176,7 @@ class Voter:
         return flag
 
     @staticmethod
-    def nodes_sr_comparison(nodes_a: List, nodes_b: List) -> int:
+    def nodes_sr_comparison(nodes_a: List[Any], nodes_b: List[Any]) -> Optional[int]:
         """Check whether the introns of nodes are consistent or not.
 
         :rtype: int
@@ -198,7 +199,7 @@ class Voter:
             ret_code = -1
         return ret_code
 
-    def __call__(self, series_a: Series, series_b: Series) -> float:
+    def __call__(self, series_a: Series, series_b: Series) -> Any:
         """Call Ruler to calculate the distance between two series.
 
         :param series_a: series a
@@ -230,7 +231,7 @@ class Voter:
         for i in range(len(series_a_bp_pair) - sliding_window_size + 1):
             _subject_bp_pair = series_a_bp_pair[i : i + sliding_window_size]
             subject_nodes = series_a[i : i + sliding_window_size + 1]
-            query_nodes = series_b
+            query_nodes = series_b[:]
             left_query_node = series_b[0]
             right_query_node = series_b[-1]
 
@@ -252,7 +253,9 @@ class Voter:
                     series_b_bp_pair, _subject_bp_pair
                 )
                 if distance_flag:
-                    Voter.nodes_sr_comparison(subject_nodes, query_nodes)
+                    include_code = Voter.nodes_sr_comparison(subject_nodes, query_nodes)
+                    break
+                    return include_code
 
 
 class Ruler:
