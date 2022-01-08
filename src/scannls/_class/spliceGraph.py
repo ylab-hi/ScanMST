@@ -11,6 +11,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -27,6 +28,234 @@ from .basicClass import Read
 from .basicClass import Series
 
 NodeType = Union[Node, Insertion]
+
+
+class Voter:
+    """Compare two series. Vote for the one with higher SR, and eliminate the other one.
+
+    using longer one as the reference
+    """
+
+    def __init__(self, len_cutoff: int, logger: Logger) -> None:
+        """Initialize Ruler.
+
+        :param logger: logger
+        :param len_cutoff: length cutoff for breakpoint distance
+        """
+        self.len_cutoff = len_cutoff
+        self.logger = logger
+
+    def __repr__(self):
+        """Represent Ruler."""
+        return f"{self.__class__.__name__}()"
+
+    @staticmethod
+    def obtain_breakpoint_pairs(series: Series) -> List:
+        """Generate breakpoint pairs from a series.
+
+        :param series: a series
+        :type series: Series object
+        :return: a list of breakpoint pairs
+        :rtype: list
+        """
+        breakpoints_pairs = []
+        for idx in range(len(series) - 1):
+            _sv_type = series[idx].sv_type
+            _bp1 = series[idx].next_breakpoint
+            _bp2 = series[idx + 1].prev_breakpoint
+            breakpoints_pairs.append((_sv_type, _bp1, _bp2))
+        return breakpoints_pairs
+
+    @staticmethod
+    def breakpoints_distance(
+        sv_type1: str, sv_type2: str, bp1: str, bp2: str
+    ) -> Union[float, int]:
+        """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
+
+        :param sv_type1: sv_type of breakpoint1
+        :param sv_type2: sv_type of breakpoint2
+        :param bp1: breakpoint1
+        :param bp2: breakpoint2
+        :return: calculated breakpoint distance
+        """
+        if sv_type1 != sv_type2:
+            return float("inf")
+        else:
+            chrm1, pos1 = bp1.split(":")
+            chrm2, pos2 = bp2.split(":")
+            if chrm1 == chrm2:
+                return abs(int(pos1) - int(pos2))
+            else:
+                return float("inf")
+
+    def breakpoint_pairs_distance_checker(self, bp_pair1: List, bp_pair2: List) -> bool:
+        """Calculate breakpoint distance.
+
+        :param bp_pair1: breakpoint pair list 1: [(sv_type, bp1, bp2), ...]
+        :param bp_pair2: breakpoint pair list 2: [(sv_type, bp1, bp2), ...]
+        :return: calculated breakpoint distance
+
+        .. note::
+            len(bp_pair1) == len(bp_pair2) should be always true
+        """
+        flag = True
+        for i, j in zip(bp_pair1, bp_pair2):
+            a_sv_type, a_bp1, a_bp2 = i
+            b_sv_type, b_bp1, b_bp2 = j
+            if a_sv_type != "NA" and b_sv_type != "NA":
+                _distance_a = Voter.breakpoints_distance(
+                    a_sv_type, b_sv_type, a_bp1, b_bp1
+                )
+                _distance_b = Voter.breakpoints_distance(
+                    a_sv_type, b_sv_type, a_bp2, b_bp2
+                )
+                if _distance_a > self.len_cutoff or _distance_b > self.len_cutoff:
+                    flag = False
+                    break
+        return flag
+
+    @staticmethod
+    def nodes_sanity_checker(nodes_a: List[Any], nodes_b: List[Any]) -> bool:
+        """Check whether the introns of nodes are consistent or not."""
+        flag = True
+        for i, j in zip(nodes_a, nodes_b):
+            a_introns = i.introns
+            b_introns = j.introns
+            if a_introns and b_introns:
+                if a_introns != b_introns:
+                    flag = False
+                    break
+            elif (a_introns and not b_introns) or (not a_introns and b_introns):
+                flag = False
+                break
+        return flag
+
+    @staticmethod
+    def boundary_checker(
+        left_query_node: NodeType,
+        right_query_node: NodeType,
+        left_subject_node: NodeType,
+        right_subject_node: NodeType,
+    ) -> bool:  # type: ignore
+        """Decide the flag.
+
+        :param left_query_node: left query node
+        :param right_query_node: right query node
+        :param left_subject_node: left subject node
+        :param right_subject_node: right subject node
+        :return: flag
+        """
+        flag = False
+
+        if not left_subject_node and not right_subject_node:
+            flag = True
+
+        if left_subject_node:
+            if (
+                left_query_node.strand == left_subject_node.strand == "+"
+                and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
+            ) or (
+                left_query_node.strand == left_subject_node.strand == "-"
+                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]  # type: ignore
+            ):
+                flag = True
+            else:
+                flag = False
+
+        if right_subject_node:
+            if (
+                right_query_node.strand == right_subject_node.strand == "+"
+                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
+            ) or (
+                right_query_node.strand == right_subject_node.strand == "-"
+                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]  # type: ignore
+            ):
+                flag = True
+            else:
+                flag = False
+        return flag
+
+    @staticmethod
+    def nodes_sr_comparison(nodes_a: List[Any], nodes_b: List[Any]) -> Optional[int]:
+        """Check whether the introns of nodes are consistent or not.
+
+        :rtype: int
+        :return: 1 (a ⊃ b), 0 (equal or non-overlapping), -1 (a ⊂ b)
+        """
+        sr_a_lst = [i.sr for i in nodes_a[:-1]]
+        sr_b_lst = [i.sr for i in nodes_b[:-1]]
+        greater_lst = []
+        for _sr_a, _sr_b in zip(sr_a_lst, sr_b_lst):
+            greater_lst.append(max(_sr_a, _sr_b))
+
+        ret_code = None
+        if (greater_lst == sr_a_lst and greater_lst == sr_b_lst) or (
+            greater_lst != sr_a_lst and greater_lst != sr_b_lst
+        ):
+            ret_code = 0
+        elif greater_lst == sr_a_lst and greater_lst != sr_b_lst:
+            ret_code = 1
+        elif greater_lst != sr_a_lst and greater_lst == sr_b_lst:
+            ret_code = -1
+        return ret_code
+
+    def __call__(self, series_a: Series, series_b: Series) -> Any:
+        """Call Ruler to calculate the distance between two series.
+
+        :param series_a: series a
+        :param series_b: series b
+        :return: distance
+
+        :Example:
+
+        >>> voter = Voter()
+        >>> voted_series = voter(series_a, series_b)
+        >>> voted_series == series_a
+        >>> True
+        """
+        if len(series_a) < len(series_b):
+            series_a, series_b = series_b, series_a
+
+        series_a_bp_pair = Voter.obtain_breakpoint_pairs(series_a)
+        series_b_bp_pair = Voter.obtain_breakpoint_pairs(series_b)
+
+        """
+        ref:     [x]-[x]-[x]-[x]-[x]-[x]
+        query1:  [x]-[x]-[x]
+        query2:      [x]-[x]-[x]
+        query3:          [x]-[x]-[x]
+        query4:              [x]-[x]-[x]
+        """
+        sliding_window_size = len(series_b_bp_pair)
+
+        for i in range(len(series_a_bp_pair) - sliding_window_size + 1):
+            _subject_bp_pair = series_a_bp_pair[i : i + sliding_window_size]
+            subject_nodes = series_a[i : i + sliding_window_size + 1]
+            query_nodes = series_b[:]
+            left_query_node = series_b[0]
+            right_query_node = series_b[-1]
+
+            left_subject_node = series_a[i] if i >= 1 else None
+
+            if 0 <= i < len(series_a_bp_pair) - sliding_window_size:
+                right_subject_node = series_a[i + sliding_window_size]
+            else:
+                right_subject_node = None
+
+            boundary_flag = Voter.boundary_checker(
+                left_query_node, right_query_node, left_subject_node, right_subject_node
+            )
+
+            nodes_flag = Voter.nodes_sanity_checker(subject_nodes, query_nodes)
+
+            if boundary_flag and nodes_flag:
+                distance_flag = self.breakpoint_pairs_distance_checker(
+                    series_b_bp_pair, _subject_bp_pair
+                )
+                if distance_flag:
+                    include_code = Voter.nodes_sr_comparison(subject_nodes, query_nodes)
+                    break
+                    return include_code
 
 
 class Ruler:
@@ -250,7 +479,7 @@ class Ruler:
         calculated_distance_list = []
 
         """
-        ref:        [x]-[x]-[x]-[x]
+        ref:           [x]-[x]-[x]-[x]
         query: [x]-[x]-[x]
         """
         distance = Ruler.first_node_last_node_distance(series_a[0], series_b[-1])
@@ -265,9 +494,9 @@ class Ruler:
         """
         sliding_window_size = len(series_b_bp_pair)
         for _ in range(sliding_window_size - 1):
-            _chrom = "chrN:0"
-            series_a_bp_pair.insert(0, ("NA", _chrom, _chrom))
-            series_a_bp_pair.append(("NA", _chrom, _chrom))
+            _dummy_bp = "chrN:0"
+            series_a_bp_pair.insert(0, ("NA", _dummy_bp, _dummy_bp))
+            series_a_bp_pair.append(("NA", _dummy_bp, _dummy_bp))
 
         for i in range(len(series_a_bp_pair) - sliding_window_size + 1):
             _subject_bp_pair = series_a_bp_pair[i : i + sliding_window_size]

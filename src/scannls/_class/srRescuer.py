@@ -112,9 +112,9 @@ class SRRescuer:
                         # xxxxxxxxSyyyyyyyyMzzzzzS
                         #         ^      ^
                         soft_pos = soft_pos - 1 if mode == 1 else soft_pos
-                        self.logger.trace(
-                            f"{read_name=}, {col.reference_pos=}, {soft_pos=}"
-                        )
+                        # self.logger.trace( # type: ignore
+                        #    f"{read_name=}, {col.reference_pos=}, {soft_pos=}" # type: ignore
+                        # ) # type: ignore
                         if (
                             soft_pos == col.reference_pos
                             and soft_len >= self.soft_len_cutoff
@@ -131,9 +131,9 @@ class SRRescuer:
                     anchor_soft_pos = (
                         anchor_soft_pos - 1 if mode == 1 else anchor_soft_pos
                     )
-                    self.logger.trace(
-                        f"{read_name=}, {col.reference_pos=}, {anchor_soft_pos=}"
-                    )
+                    # self.logger.trace( # type: ignore
+                    #    f"{read_name=}, {col.reference_pos=}, {anchor_soft_pos=}" # type: ignore
+                    # ) # type: ignore
                     if anchor_soft_pos == col.reference_pos:
                         sv_list[strand].append(anchor_soft_seq)
 
@@ -168,6 +168,9 @@ class SRRescuer:
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
+                    for i in sv_list["+"]:
+                        self.logger.trace(f"SW|SV: {i}\n")
+                        self.logger.trace(f"SW|SR: {_soft_seq}\n")
 
         if sv_list["-"] and sr_list["-"]:
             for _soft_seq in sr_list["-"]:
@@ -178,8 +181,11 @@ class SRRescuer:
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
-        self.logger.trace(f"{sv_list=}")
-        self.logger.trace(f"{sr_list=}")
+                    for i in sv_list["+"]:
+                        self.logger.trace(f"SW|SV: {i}\n")
+                        self.logger.trace(f"SW|SR: {_soft_seq}\n")
+        # self.logger.trace(f"{sv_list=}") # type: ignore
+        # self.logger.trace(f"{sr_list=}") # type: ignore
 
         return rescued_sr
 
