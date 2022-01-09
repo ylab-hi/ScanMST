@@ -6,7 +6,6 @@
 @Time:        12/15/21 10:42 AM
 """
 import copy
-import sys
 import types
 from typing import Any
 from typing import Dict
@@ -909,7 +908,7 @@ class SpliceGraph:
         # Testing run
         if updated_node.modes and updated_node.modes != current_node.modes:
             print(f"{current_node.query_name}")
-            sys.exit(1)
+            raise SystemExit
         # update mode of the node
         if updated_node.modes is None:
             updated_node.modes = current_node.modes

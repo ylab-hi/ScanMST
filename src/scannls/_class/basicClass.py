@@ -645,7 +645,7 @@ class Insertion(Read, BasicNode):
         self.next_breakpoint: Optional[str] = None
         self.prev_breakpoint_depth: Optional[int] = None
         self.next_breakpoint_depth: Optional[int] = None
-        self.modes = None
+        self.modes: Optional[List[int]] = None
         self.genes = None
         self.annotation_code = None
         self.splicing_code = None
@@ -847,7 +847,7 @@ class Node(BasicNode):
         sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
-        modes: Optional[Tuple[int]] = None,
+        modes: Optional[List[int]] = None,
         genes: Optional[Tuple[str]] = None,
         sr: int = 1,
     ) -> None:

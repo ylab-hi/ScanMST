@@ -52,3 +52,11 @@ class ExonsNotFoundError(ScannlsExceptionError):
     def __init__(self) -> None:
         """Initialize the exception."""
         super().__init__("Current Node cannot found exons")
+
+
+class ModesNotFoundError(ScannlsExceptionError):
+    """Exception raised for errors when exons not found."""
+
+    def __init__(self) -> None:
+        """Initialize the exception."""
+        super().__init__("Current Node cannot found modes")

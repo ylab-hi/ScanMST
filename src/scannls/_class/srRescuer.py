@@ -14,7 +14,8 @@ from loguru._logger import Logger  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
 from ..utils import get_softclip_length
-from .basicClass import Node  # type: ignore
+from .basicClass import NodeType
+from .exception import ModesNotFoundError
 
 
 class SRRescuer:
@@ -187,7 +188,7 @@ class SRRescuer:
         return rescued_sr
 
     @staticmethod
-    def obtain_region_for_rescue_sr(node: Node, tgt_name: str, mode: int) -> str:
+    def obtain_region_for_rescue_sr(node: NodeType, tgt_name: str, mode: int) -> str:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
@@ -205,9 +206,11 @@ class SRRescuer:
         region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
-    def update_sr(self, current_node: Node) -> Any:
+    def update_sr(self, current_node: NodeType) -> Any:
         """Update SR for input node."""
         if not current_node.is_end_node():
+            if current_node.modes is None:
+                raise SystemExit from ModesNotFoundError
             mode1, mode2 = current_node.modes
             current_node.update_next_breakpoint_depth(self.in_bam, mode1)
             query_name_current = current_node.query_name
