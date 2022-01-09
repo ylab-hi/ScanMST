@@ -5,14 +5,19 @@ from typing import Optional
 
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
-from loguru._logger import Logger
 
+from ..type import LoggerType
+from ..type import ReadType
 from .helper import gene_annotation
 from .helper import splicing_confirmation
 
 
 def short_tdup_or_not(
-    ra_mode: int, read_sa, bp_region_seq_len: int, ins_seq_in_read: str, logger: Logger
+    ra_mode: int,
+    read_sa: ReadType,
+    bp_region_seq_len: int,
+    ins_seq_in_read: str,
+    logger: LoggerType,
 ) -> Optional[bool]:
     """Judge the ins_seq_in_read is a TDUP (TDUP size < reads length).
 
@@ -102,7 +107,7 @@ def infer_nls_from_connected_reads(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    logger: Logger,
+    logger: LoggerType,
 ) -> Any:
     """Infer NLS event from connected reads.
 

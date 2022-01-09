@@ -9,7 +9,7 @@ try:
 except ModuleNotFoundError as e:
     raise SystemExit from e
 
-from ._class.basicClass import Read
+from ._class.basicRead import Read
 from ._class.exception import ReadNotFoundError, ToolNotFoundError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement

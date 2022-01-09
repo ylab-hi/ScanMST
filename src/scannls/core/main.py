@@ -10,8 +10,7 @@ from typing import List
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import pysam  # type: ignore
-from loguru._logger import Logger
-from pyfaidx import Fasta  # type: ignore
+from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from .. import Blat
@@ -22,10 +21,11 @@ from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
-from .helper import blat2chimeric_alignment  # type: ignore
+from ..type import LoggerType
+from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
-from .nls_inference import infer_nls_from_connected_reads  # type: ignore
+from .nls_inference import infer_nls_from_connected_reads
 
 
 class BamScanner:
@@ -168,7 +168,7 @@ def detect_sv_from_cigar(
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
     blat: Blat,
-    logger: Logger,
+    logger: LoggerType,
 ) -> Any:
     """Detect SV from cigar string.
 
@@ -232,7 +232,7 @@ def detect_sv_from_cigar(
 
             if not event.is_type_na():
                 event_list.append(event)
-                logger.trace(event)
+                logger.trace(str(event))
             else:  # temporary solution
                 logger.warning(f"Event Type is NA {event=}")
     return event_list, read_chains, num_added_reads
