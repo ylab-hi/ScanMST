@@ -15,7 +15,6 @@ from pysam import AlignmentFile  # type: ignore
 
 from ..utils import get_softclip_length
 from .basicClass import Node  # type: ignore
-from .basicClass import Series  # type: ignore
 
 
 class SRRescuer:
@@ -214,28 +213,27 @@ class SRRescuer:
         region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
-    def update_sr(self, series: Series) -> Any:
-        """Update SR for input series."""
-        for idx in range(len(series) - 1):
-            current_node = series[idx]
-            next_node = series[idx + 1]
+    def update_sr(self, current_node: Node) -> Any:
+        """Update SR for input node."""
+        if not current_node.is_end_node():
             mode1, mode2 = current_node.modes
             current_node.update_next_breakpoint_depth(self.in_bam, mode1)
-            next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
-            query_name1 = current_node.query_name
-            query_name2 = next_node.query_name
-
-            _region1 = SRRescuer.obtain_region_for_rescue_sr(
+            query_name_current = current_node.query_name
+            _region_current = SRRescuer.obtain_region_for_rescue_sr(
                 current_node, "next_breakpoint", mode1
             )
-            _region2 = SRRescuer.obtain_region_for_rescue_sr(
-                next_node, "prev_breakpoint", mode2
-            )
-
-            rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
-            rescued_sr2 = self.calculate_sr(_region2, mode2, query_name2)
-            rescued_sr = rescued_sr1 + rescued_sr2
+            rescued_sr = self.calculate_sr(_region_current, mode1, query_name_current)
+            for next_node in current_node.successors:
+                next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
+                query_name_next = next_node.query_name
+                _region_next = SRRescuer.obtain_region_for_rescue_sr(
+                    next_node, "prev_breakpoint", mode2
+                )
+                rescued_sr_next = self.calculate_sr(
+                    _region_next, mode2, query_name_next
+                )
+                rescued_sr += rescued_sr_next
             self.logger.trace(f"{rescued_sr=}")
             if rescued_sr > 0:
-                series[idx].update_sr(rescued_sr)
-        return series
+                current_node.update_sr(rescued_sr)
+        return current_node

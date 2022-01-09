@@ -6,6 +6,7 @@
 @Time:        12/15/21 10:42 AM
 """
 import copy
+import sys
 import types
 from typing import Any
 from typing import Dict
@@ -396,6 +397,7 @@ class Ruler:
             len(bp_pair1) == len(bp_pair2) should be always true
             The output distance will be [0, 1]
         """
+        normalization_factor = 100
         distance_list = []
         effect_num_pair = 0
         for i, j in zip(bp_pair1, bp_pair2):
@@ -409,8 +411,12 @@ class Ruler:
                     Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp2, b_bp2)
                 )
                 effect_num_pair += 1
-        ave_distance = sum(distance_list) / (effect_num_pair * 2)
-        distance = ave_distance / (max(distance_list) - min(distance_list) + 1e-6)
+
+        if effect_num_pair > 0:
+            ave_distance = sum(distance_list) / (effect_num_pair * 2)
+        else:
+            ave_distance = 100
+        distance = ave_distance / normalization_factor
         return distance
 
     @staticmethod
@@ -483,6 +489,7 @@ class Ruler:
         query: [x]-[x]-[x]
         """
         distance = Ruler.first_node_last_node_distance(series_a[0], series_b[-1])
+        self.logger.trace(f"first_node_last_node_distance:{distance}")
         calculated_distance_list.append(distance)
 
         """
@@ -526,12 +533,14 @@ class Ruler:
                 distance = Ruler.breakpoint_pairs_distance(
                     series_b_bp_pair, _subject_bp_pair
                 )
+                self.logger.trace(f"matching distance:{distance}")
                 calculated_distance_list.append(distance)
         """
          ref:    [x]-[x]-[x]-[x]
          query:              [x]-[x]-[x]
         """
         distance = Ruler.first_node_last_node_distance(series_b[0], series_a[-1])
+        self.logger.trace(f"last_node_first_node_distance:{distance}")
         calculated_distance_list.append(distance)
         return min(calculated_distance_list) if calculated_distance_list else 1.0
 
@@ -897,6 +906,10 @@ class SpliceGraph:
             updated_node.next_breakpoint = current_node.next_breakpoint
         # update query name
         updated_node.query_name += "," + current_node.query_name
+        # Testing run
+        if updated_node.modes and updated_node.modes != current_node.modes:
+            print(f"{current_node.query_name}")
+            sys.exit(1)
         # update mode of the node
         if updated_node.modes is None:
             updated_node.modes = current_node.modes
