@@ -399,7 +399,7 @@ class ReadsConnector:
         else:
             new_read.mode = 1 if read.mode == 1 else 2
 
-    def _double_check_creat_new_read_calculate_sms(
+    def _double_check_create_new_read_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read
     ) -> Read:
         """Double check creat new read and calculate sms."""
@@ -482,7 +482,7 @@ class ReadsConnector:
         if flag and hit == 1:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
-            new_read = self._double_check_creat_new_read_calculate_sms(
+            new_read = self._double_check_create_new_read_calculate_sms(
                 hsp, query_sequence, read
             )
             self._double_check_for_start_end_read_determine_new_read_mode(

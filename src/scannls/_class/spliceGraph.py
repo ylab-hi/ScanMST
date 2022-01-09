@@ -488,7 +488,6 @@ class Ruler:
         query: [x]-[x]-[x]
         """
         distance = Ruler.first_node_last_node_distance(series_a[0], series_b[-1])
-        self.logger.trace(f"first_node_last_node_distance:{distance}")
         calculated_distance_list.append(distance)
 
         """
@@ -532,14 +531,12 @@ class Ruler:
                 distance = Ruler.breakpoint_pairs_distance(
                     series_b_bp_pair, _subject_bp_pair
                 )
-                self.logger.trace(f"matching distance:{distance}")
                 calculated_distance_list.append(distance)
         """
          ref:    [x]-[x]-[x]-[x]
          query:              [x]-[x]-[x]
         """
         distance = Ruler.first_node_last_node_distance(series_b[0], series_a[-1])
-        self.logger.trace(f"last_node_first_node_distance:{distance}")
         calculated_distance_list.append(distance)
         return min(calculated_distance_list) if calculated_distance_list else 1.0
 
@@ -613,7 +610,7 @@ class CliqueFinder:
                 x.is_in_graph = True
 
     @timeit
-    def _creat_graph_for_series(self) -> None:
+    def _create_graph_for_series(self) -> None:
         """Create graph for all series in intact_series_list.
 
         add edge between two series in terms of the distance value
@@ -642,7 +639,7 @@ class CliqueFinder:
         ...     for series_list in clique:
         ...         assert isinstance(series_list, Series)
         """
-        self._creat_graph_for_series()
+        self._create_graph_for_series()
 
         yield from find_cliques(self.graph)
 

@@ -168,9 +168,6 @@ class SRRescuer:
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
-                    for i in sv_list["+"]:
-                        self.logger.trace(f"SW|SV: {i}\n")
-                        self.logger.trace(f"SW|SR: {_soft_seq}\n")
 
         if sv_list["-"] and sr_list["-"]:
             for _soft_seq in sr_list["-"]:
@@ -181,9 +178,6 @@ class SRRescuer:
                     <= self.mismatch_cutoff
                 ):
                     rescued_sr += 1
-                    for i in sv_list["+"]:
-                        self.logger.trace(f"SW|SV: {i}\n")
-                        self.logger.trace(f"SW|SR: {_soft_seq}\n")
 
         return rescued_sr
 
