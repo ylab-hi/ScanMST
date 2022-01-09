@@ -183,8 +183,6 @@ class SRRescuer:
                     for i in sv_list["+"]:
                         self.logger.trace(f"SW|SV: {i}\n")
                         self.logger.trace(f"SW|SR: {_soft_seq}\n")
-        # self.logger.trace(f"{sv_list=}") # type: ignore
-        # self.logger.trace(f"{sr_list=}") # type: ignore
 
         return rescued_sr
 
@@ -201,15 +199,9 @@ class SRRescuer:
         exons = node.exons
         if exons:
             if strand == "+":
-                if tgt_name == "next_breakpoint":
-                    pos = exons[-1][1]
-                elif tgt_name == "prev_breakpoint":
-                    pos = exons[0][0]
+                pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
             else:
-                if tgt_name == "next_breakpoint":
-                    pos = exons[0][0]
-                elif tgt_name == "prev_breakpoint":
-                    pos = exons[-1][1]
+                pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
         region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 

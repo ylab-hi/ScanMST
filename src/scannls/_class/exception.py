@@ -20,7 +20,6 @@ class ToolNotFoundError(ScannlsExceptionError):
     def __init__(self, tool: str) -> None:
         """Initialize the exception."""
         super().__init__(f"external tool: {tool} not found, please install that!")
-        self.tool = tool
 
 
 class ReadNotFoundError(ScannlsExceptionError):
@@ -45,3 +44,11 @@ class SeqNotFoundError(ScannlsExceptionError):
     def __init__(self) -> None:
         """Initialize the exception."""
         super().__init__("Gapmis: Sequence not found for semi-global alignment")
+
+
+class ExonsNotFoundError(ScannlsExceptionError):
+    """Exception raised for errors when exons not found."""
+
+    def __init__(self) -> None:
+        """Initialize the exception."""
+        super().__init__("Current Node cannot found exons")
