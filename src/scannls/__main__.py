@@ -7,14 +7,14 @@ import time
 
 from loguru import logger
 
-from . import __version__  # type: ignore
+from . import __version__
 from . import Blat
 from . import CliqueFinder
 from . import FastaWriter
 from . import GTFWriter
 from . import SpliceGraph
 from . import SRRescuer
-from .core.main import scanbam_run  # type: ignore
+from .core.main import scanbam_run
 from .utils import external_tool_checking
 
 

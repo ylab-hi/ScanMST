@@ -20,7 +20,7 @@ class TestBlat:
     """Test Blat class."""
 
     @pytest.fixture(scope="class")
-    def blat(self):
+    def blat(self) -> Blat:
         """Create Blat instance."""
         return Blat(ref_2bit=".", logger=logger, port=88888, output_dir=".")
 

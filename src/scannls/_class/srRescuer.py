@@ -10,9 +10,9 @@ from typing import Dict
 from typing import List
 
 import skbio  # type: ignore
-from loguru._logger import Logger  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
+from ..type import LoggerType
 from ..utils import get_softclip_length
 from .basicClass import NodeType
 from .exception import ModesNotFoundError
@@ -28,7 +28,7 @@ class SRRescuer:
         soft_len_cutoff: int,
         mismatch_cutoff: int,
         alignment_frac: float,
-        logger: Logger,
+        logger: LoggerType,
     ) -> None:
         """Initialize Rescuer.
 

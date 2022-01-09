@@ -323,7 +323,7 @@ class Blat:
             return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
 
     @staticmethod
-    def _remove(file):
+    def _remove(file: str) -> None:
         """Function for removing the file.
 
         :param file: the path of the file

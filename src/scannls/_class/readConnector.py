@@ -12,11 +12,11 @@ from typing import Tuple
 
 from Bio import SearchIO  # type: ignore
 from loguru import logger
-from loguru._logger import Logger
 from pysam import AlignedSegment  # type: ignore
 
-from ..core.helper import cigar_validity  # type: ignore
-from .basicClass import Read
+from .. import Read
+from ..core.helper import cigar_validity
+from ..type import LoggerType
 from .basicClass import reverse_complement
 from .blat import Blat
 from .exception import ReadNotConnectedError
@@ -46,14 +46,14 @@ class ReadsConnector:
         self,
         aln_list: List[Read],
         blat: Blat,
-        logger: Logger,
+        logger: LoggerType,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
         top: int = 3,
     ) -> None:
         """Initialize the ReadsConnector class."""
-        self.candidate_nodes: List = []
-        self.reads_chain: List = []
+        self.candidate_nodes: List[Read] = []
+        self.reads_chain: List[Read] = []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = aln_list
         self.logger = logger
@@ -65,11 +65,11 @@ class ReadsConnector:
         self.threshold_identity: float = threshold_identity
         self.top: int = top
 
-    def reset_index(self):
+    def reset_index(self) -> None:
         """Reset the index in order to fetch read in  candidate reads in new iteration."""
         self.index = 0
 
-    def increment_index(self):
+    def increment_index(self) -> None:
         """Increment the index in order to fetch read in  candidate nodes."""
         self.index += 1
 
@@ -136,8 +136,7 @@ class ReadsConnector:
 
         self.logger.trace(
             f"query length ={len(query_seq)} target length ={len(target_seq)}"
-        )  # type: ignore
-
+        )
         if len(target_seq) <= minimum_s_length:
             return match_flag
 
@@ -284,15 +283,14 @@ class ReadsConnector:
         :param is_compare_for_ms: is compare for ms
         """
         condition1, condition2 = False, False
-        self.logger.debug(f"{start_read.mode=}, {read.mode=}")  # type: ignore
-        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")  # type: ignore
-
+        self.logger.debug(f"{start_read.mode=}, {read.mode=}")
+        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
         if not is_compare_for_ms:  # one hop
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
             return True, start_read
 
-        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms  # type: ignore
+        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
         read_query_sequence = read.query_sequence
 
@@ -304,7 +302,7 @@ class ReadsConnector:
         next_read_mode = 2
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
-        ]  # type: ignore
+        ]
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -332,17 +330,17 @@ class ReadsConnector:
                 self.reset_index()
 
             start_read = read
-            start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2  # type: ignore
+            start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
 
-        self.logger.debug("testing second case M vs RS")  # type: ignore
+        self.logger.debug("testing second case M vs RS")
         # second case
         next_read_mode = 1
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
-        ]  # type: ignore
+        ]
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -385,7 +383,7 @@ class ReadsConnector:
             return True, start_read
         self.logger.debug(
             "start read cannot connect with read and try to connect other reads"
-        )  # type: ignore
+        )
         return False, start_read  # not match
 
     @staticmethod
@@ -589,7 +587,7 @@ def detect_read_read_connections_from_cigar(
     mapq_cutoff: int,
     max_allowed_nm: int,
     blat: Blat,
-    logger: Logger,
+    logger: LoggerType,
 ) -> Any:
     """Detecting read-read connections with chimeric alignments CIGAR string.
 
