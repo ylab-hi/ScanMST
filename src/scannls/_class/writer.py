@@ -22,6 +22,7 @@ from .basicClass import NodeType
 from .basicClass import NovelInsertion
 from .basicClass import reverse_complement
 from .basicClass import Series
+from .exception import ExonsNotFoundError
 
 
 # todo: add comments line
@@ -273,23 +274,18 @@ def get_nodes_gtf_features_from_series(
     """
     series_gtf_features = []
     for node_id, node in enumerate(series, 1):
-        node_gtf_features = get_gtf_features_from_node(node) + [
-            f'transcript_id "{series_id}"; '
-            f"{node.__class__.__name__}_id "
-            f'"{node_id:0>6}"'
-        ]
-        series_gtf_features.append(node_gtf_features)
-        print(node.insertion_info)
+        series_gtf_features.extend(get_gtf_features_from_node(node, series_id, node_id))
         if node.insertion_info and isinstance(node.insertion_info[1], NovelInsertion):
             series_gtf_features.append(
-                get_gtf_features_from_insertion(node.insertion_info[1], series_id)
+                get_gtf_features_from_insertion(
+                    node.insertion_info[1], series_id, node_id
+                )
             )
-    print(series_gtf_features)
     return series_gtf_features
 
 
 def get_gtf_features_from_insertion(
-    insertion: NovelInsertion, series_id: int
+    insertion: NovelInsertion, series_id: int, node_id: int
 ) -> List[str]:
     """Get GTF features of novel insertion."""
     return [
@@ -301,13 +297,18 @@ def get_gtf_features_from_insertion(
         ".",
         ".",
         ".",
-        f'transcript_id "{series_id}"; sequence "{insertion.query_sequence}"',
+        f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>6}"; '
+        f'sequence "{insertion.query_sequence}" ',
     ]
 
 
-def get_gtf_features_from_node(node: NodeType) -> List[str]:
-    """Get gtf features of a node.
+def get_gtf_features_from_node(
+    node: NodeType, series_id: int, node_id: int
+) -> List[List[str]]:
+    """Get exon gtf features of a node.
 
+    :param node_id: node id
+    :param series_id: series id
     :param node: Node and Insertion
     :return: list of gtf features (8 columns) except for the attribute column
 
@@ -323,15 +324,31 @@ def get_gtf_features_from_node(node: NodeType) -> List[str]:
                   is the first base of a codon, '1' that the second base is the first base
                   of a codon, and so on..
         9. attribute: a semicolon-separated list of tag-value pairs (separated by spaces)
-
     """
-    return [
-        f"{node.chrom}",
-        "scannls",
-        "Node",
-        f"{node.ref_start + 1}",
-        f"{node.ref_end - 1}",
-        ".",
-        f"{node.strand}",
-        ".",
-    ]
+    if node.exons is None:
+        raise SystemExit from ExonsNotFoundError
+
+    exons = node.exons[::-1] if node.strand == "-" else node.exons
+
+    nodes_gtf_features = []
+
+    for index, (start, end) in enumerate(exons, 1):
+        info = [
+            f'transcript_id "{series_id:0>6}"; '
+            f'mega_exon_id "{node_id:0>6}"; '
+            f'exon_id "{index:0>6}" '
+        ]
+        nodes_gtf_features.append(
+            [
+                f"{node.chrom}",
+                "exon",
+                "scannls",
+                f"{start + 1}",
+                f"{end}",
+                ".",
+                f"{node.strand}",
+                ".",
+            ]
+            + info
+        )
+    return nodes_gtf_features
