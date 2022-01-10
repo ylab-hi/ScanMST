@@ -561,7 +561,7 @@ class Node(BasicNode):
             return _introns
 
     @property
-    def similar_key(self):
+    def similar_key(self) -> str:
         """Get similar key of a node."""
         introns = self.introns
 
@@ -746,7 +746,7 @@ class Series:
         self.blat, self.logger = None, None
 
     @property
-    def unique_key(self):
+    def unique_key(self) -> str:
         """Return the unique key of the event."""
         return "".join([node.get_unique_key() for node in self.nodes])
 
@@ -868,7 +868,7 @@ class Series:
                     if event.strand1 == "-"
                     else insertion_seq
                 )
-                flag, insertion = self.blat.query_insertion(insertion_seq)  # type: ignore
+                flag, insertion = self.blat.query_insertion(insertion_seq)
                 insertion.query_name = read1.query_name
                 if flag:  # only one hit
                     # add first node and insertion node
@@ -1003,7 +1003,7 @@ class Event:
         add more examples
     """
 
-    def __init__(self, event):
+    def __init__(self, event) -> None:
         """Initialize the event."""
         (
             sv_type,

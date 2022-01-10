@@ -18,7 +18,7 @@ from .core.main import scanbam_run
 from .utils import external_tool_checking
 
 
-def parse_args():
+def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic"
@@ -184,7 +184,7 @@ def parse_args():
     return parser
 
 
-def main():
+def main() -> None:
     """Main function."""
     if sys.version_info < (3, 8):
         sys.exit(
