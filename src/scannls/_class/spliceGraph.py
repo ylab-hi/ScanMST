@@ -25,6 +25,7 @@ from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
 from .basicClass import Series
+from .srRescuer import SRRescuer
 
 NodeType = Union[Node, Insertion]
 
@@ -423,9 +424,10 @@ class SpliceGraph:
     dict_factory = dict
     list_factory = list
 
-    def __init__(self, logger: LoggerType):
+    def __init__(self, logger: LoggerType, rescuer: SRRescuer):
         """Initialize SpliceGraph."""
         self.logger = logger
+        self.rescuer = rescuer
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
@@ -445,6 +447,7 @@ class SpliceGraph:
         self.series_list = copy.deepcopy(series_list)
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
         self.construct()
+        self.rescuer(self)
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
 

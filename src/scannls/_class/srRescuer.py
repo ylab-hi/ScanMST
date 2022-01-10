@@ -5,7 +5,9 @@
 @license:     MIT Licence
 @Time:        12/30/21 15:00 PM
 """
+import re
 from typing import Dict
+from typing import Iterable
 from typing import List
 
 import parasail  # type: ignore
@@ -14,7 +16,6 @@ from pysam import AlignmentFile  # type: ignore
 from ..type import LoggerType
 from ..utils import get_softclip_length
 from .basicClass import NodeType
-from .basicClass import Series
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 
@@ -52,14 +53,13 @@ class SRRescuer:
             f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
         )
 
-    def __call__(self, series: Series) -> None:
+    def __call__(self, series: Iterable[NodeType]) -> None:
         """Rescue SR from softclipped non-chimeric reads.
 
         changed in place
 
         :param series: Series
         """
-        self.logger.trace(f"rs: {series=}")
         for node in series:
             self.update_sr(node)
 
@@ -82,16 +82,16 @@ class SRRescuer:
         """
         flag = False
         cigar = align_result.cigar.decode.decode()
-        if not cigar or cigar[1] != "=":
+        pattern = re.compile(r"((?P<length>\d+)(?P<op>\D))")
+        if not cigar or re.match(r"^\d+=", cigar) is None:
             return flag
         query_len, mismatch_count = 0, 0
-        for index, length in enumerate(cigar[::2]):
-            op = cigar[index + 1]
-            if op == "=":
+        for match in re.finditer(pattern, cigar):
+            length = int(match.group("length"))
+            if match.group("op") == "=":
                 query_len += length
             else:
                 mismatch_count += length
-
         query_end = align_result.end_query + 1
         query_start = query_end - query_len
         target_end = align_result.end_ref + 1
@@ -186,6 +186,7 @@ class SRRescuer:
             self._calculate_sr_for_reads(col, query_names, sr_list, sv_list, mode)
 
         rescued_sr = 0
+
         if sv_list["+"] and sr_list["+"]:
             for _soft_seq in sr_list["+"]:
                 rescued_sr += SRRescuer.determined_num_increment_sr(

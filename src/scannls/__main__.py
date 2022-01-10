@@ -253,11 +253,6 @@ def main():
         gtf_writer.write_data(intact_series_list[0])
 
     logger.debug(f"Total Series: {len(intact_series_list)}")
-    splice_graph = SpliceGraph(logger)
-    clique_finder = CliqueFinder(intact_series_list, logger)
-    # cliques is generator
-    cliques = clique_finder.find_clique()
-    # begin to rescue SR
     rescuer = SRRescuer(
         in_bam_io_object,
         options.mapq,
@@ -266,12 +261,13 @@ def main():
         options.alignment_fraction,
         logger,
     )
+    splice_graph = SpliceGraph(logger, rescuer)
+    clique_finder = CliqueFinder(intact_series_list, logger)
+    # cliques is generator
+    cliques = clique_finder.find_clique()
     for clique in cliques:
         for i in splice_graph(clique):
             logger.debug(f"Series{i}")
-            rescuer(i)
-            print(i)
-
     in_bam_io_object.close()
     logger.info("ScanNLS build running done")
     end = time.time()
