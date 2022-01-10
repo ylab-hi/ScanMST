@@ -17,8 +17,8 @@ from typing import Tuple
 import psutil  # type: ignore
 from Bio import SearchIO  # type: ignore
 from loguru import logger
-from loguru._logger import Logger
 
+from ..type import LoggerType
 from .basicClass import Insertion
 from .basicClass import NovelInsertion
 
@@ -58,7 +58,7 @@ class Blat:
     def __init__(
         self,
         ref_2bit: str,
-        logger: Logger,
+        logger: LoggerType,
         port: int,
         output_dir: str,
         fix_log_file=None,

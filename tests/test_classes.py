@@ -13,7 +13,7 @@ import loguru
 import pytest
 from loguru import logger
 
-from scannls._class.blat import Blat  # type: ignore
+from scannls import Blat  # type: ignore
 
 
 class TestBlat:
@@ -49,7 +49,7 @@ class TestBlat:
 
     def test_log_file(self, blat):
         """Test log file."""
-        log_file = Path(blat.log_file)
+        log_file = Path(blat.log_file_path)
         assert log_file.is_absolute()
 
     def test_is_ready(self, blat, mocker):
@@ -57,11 +57,11 @@ class TestBlat:
         spy = mocker.spy(loguru.logger, "debug")
         assert blat.is_ready() is False
 
-        with open(blat.log_file, "a") as log:
+        with open(blat.log_file_path, "a") as log:
             log.write("Server ready")
 
         assert blat.is_ready() is True
-        os.remove(blat.log_file)
+        os.remove(blat.log_file_path)
 
         assert spy.call_count == 2
 
