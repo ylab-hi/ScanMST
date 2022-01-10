@@ -11,7 +11,7 @@ ignore = E203,E501,RST201,RST203,RST301,
     S108, RST305,RST205,S603,S602,
     # C409 Unnecessary list passed to tuple() - rewrite as a tuple literal.
     C409,
-    #  W605 invalid escape sequence
+    # W605 invalid escape sequence
     W605,
 max-line-length = 105
 max-complexity = 10

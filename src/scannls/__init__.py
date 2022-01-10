@@ -25,3 +25,20 @@ from ._class.spliceGraph import SpliceGraph
 from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
+
+__all__ = [
+    "Read",
+    "Event",
+    "reverse_complement",
+    "Series",
+    "Blat",
+    "MyLogger",
+    "ParallelWorker",
+    "detect_read_read_connections_from_cigar",
+    "get_softclip_length",
+    "CliqueFinder",
+    "SpliceGraph",
+    "SRRescuer",
+    "FastaWriter",
+    "GTFWriter",
+]

@@ -13,10 +13,10 @@ from typing import IO
 from typing import List
 from typing import Optional
 
-from loguru._logger import Logger
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
 
+from ..type import LoggerType
 from .basicClass import MicroHomology
 from .basicClass import NodeType
 from .basicClass import NovelInsertion
@@ -32,7 +32,7 @@ from .exception import ExonsNotFoundError
 class Writer(ABC):
     """Abstract class for writing object to file."""
 
-    def __init__(self, file_path: str, logger: Logger):
+    def __init__(self, file_path: str, logger: LoggerType):
         """Initialize Writer object."""
         self.logger = logger
         self.file_path = Path(file_path)
@@ -69,7 +69,7 @@ class Writer(ABC):
 class FastaWriter(Writer):
     """Writer for Fasta files."""
 
-    def __init__(self, file_path: str, reference: str, logger: Logger):
+    def __init__(self, file_path: str, reference: str, logger: LoggerType):
         """Initialize FastaWriter object."""
         super().__init__(file_path, logger)
         self.reference = Path(reference)
@@ -152,7 +152,7 @@ class GTFWriter(Writer):
 
     num_fields: int = 9
 
-    def __init__(self, file_path: str, logger: Logger) -> None:
+    def __init__(self, file_path: str, logger: LoggerType) -> None:
         """Initialize GTFWriter object."""
         super().__init__(file_path, logger)
         self.id = 1

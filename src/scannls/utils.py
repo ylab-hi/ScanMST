@@ -9,15 +9,15 @@ from typing import Tuple
 
 import pysam  # type: ignore
 from loguru import logger
-from loguru._logger import Logger
 
 from . import Read
 from . import ToolNotFoundError
+from .type import LoggerType
 
 __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_length"}
 
 
-def external_tool_checking(logger: Logger) -> None:
+def external_tool_checking(logger: LoggerType) -> None:
     """Checking dependencies are installed."""
     software = ["samtools", "gfClient", "gfServer"]
     for tool in software:
