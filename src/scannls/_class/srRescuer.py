@@ -9,7 +9,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 
-import skbio  # type: ignore
+import parasail  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
 from ..type import LoggerType
@@ -41,7 +41,7 @@ class SRRescuer:
         self.alignment_frac = alignment_frac
         self.logger = logger
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent Rescuer."""
         return (
             f"{self.__class__.__name__}({self.in_bam.filename}, "
@@ -49,39 +49,69 @@ class SRRescuer:
         )
 
     @staticmethod
-    def mismatch_count(seq: str, seqs: list, alignment_frac: float, mode: int) -> float:
+    def check_if_sr_rescued_depended_on_alignment(
+        query_origin_len: int,
+        align_result: parasail.bindings_v2.Result,
+        alignment_frac: float,
+        mismatch_threshold: int,
+    ) -> bool:
+        """Check if SR is rescued depended on alignment result.
+
+        index style: [ )
+
+        :param mismatch_threshold:
+        :param query_origin_len:
+        :param align_result:
+        :param alignment_frac:
+        :return:
+        """
+        flag = False
+        cigar = align_result.cigar.decode.decode()
+        if not cigar or cigar[1] != "=":
+            return flag
+        query_len, mismatch_count = 0, 0
+        for index, length in enumerate(cigar[::2]):
+            op = cigar[index + 1]
+            if op == "=":
+                query_len += length
+            else:
+                mismatch_count += length
+
+        query_end = align_result.end_query + 1
+        query_start = query_end - query_len
+        target_end = align_result.end_ref + 1
+        target_start = target_end - query_len
+
+        if (
+            query_len / query_origin_len >= alignment_frac
+            and query_start + target_start == 0
+            and mismatch_count <= mismatch_threshold
+        ):
+            flag = True
+        return flag
+
+    @staticmethod
+    def determined_num_increment_sr(
+        seq: str, seqs: list, alignment_frac: float, mode: int, mismatch_threshold: int
+    ) -> int:
         """Local alignment."""
-        mismatch = 1e6
-        for each_seq in seqs:
-            seq = skbio.DNA(seq)
-            each_seq = skbio.DNA(each_seq)
-            # if seq or each_seq is an empty string, ignore it
-            if not seq or not each_seq:
-                continue
-            try:
-                (
-                    alignment,
-                    score,
-                    start_end_pos,
-                ) = skbio.alignment.local_pairwise_align_ssw(seq, each_seq)
-            # raise IndexError if SSW cannot work
-            except (IndexError, ValueError):
-                continue
-            if (
-                len(alignment[0]) / float(len(seq)) < alignment_frac
-                and len(alignment[1]) / float(len(each_seq)) < alignment_frac
+        gaps = 11
+        gap_extend = 1
+        increment_sr = 0
+        if not seq:
+            return increment_sr
+        seq = seq[::-1] if mode == 2 else seq
+        for each_seq in [each_seq for each_seq in seqs if each_seq]:
+            each_seq = each_seq[::-1] if mode == 2 else each_seq
+
+            align_result = parasail.sw_trace_striped_sat(
+                seq, each_seq, gaps, gap_extend, parasail.dnafull
+            )
+            if SRRescuer.check_if_sr_rescued_depended_on_alignment(
+                len(seq), align_result, alignment_frac, mismatch_threshold
             ):
-                continue
-            if (
-                (mode == 1 and start_end_pos[0][0] == 0 and start_end_pos[1][0] == 0)
-                or (
-                    mode == 2
-                    and start_end_pos[0][1] == len(seq) - 1
-                    and start_end_pos[1][1] == len(each_seq) - 1
-                )
-            ) and sum(alignment[0].mismatches(alignment[1])) < mismatch:
-                mismatch = sum(alignment[0].mismatches(alignment[1]))
-        return mismatch
+                increment_sr += 1
+        return increment_sr
 
     def _calculate_sr_for_reads(self, col, query_names, sr_list, sv_list, mode):
         """Calculate SR for reads.
@@ -96,52 +126,34 @@ class SRRescuer:
         for read in col.pileups:
             # read.alignment is an instance of pysam.AlignedSegment
             aln = read.alignment
-            read_name = aln.query_name
             strand = "-" if aln.is_reverse else "+"
             if aln.mapq >= self.mapq_cutoff and read.query_position:
-                # the read has soft-clipped part but not an anchor read
-                if read_name not in query_names:
-                    if "S" in aln.cigarstring:
-                        (
-                            soft_len,
-                            soft_seq,
-                            soft_pos,
-                            soft_mode,
-                        ) = get_softclip_length(aln, mode)
-                        # the pileup position is equal to the soft-clipped connection point
-                        # xxxxxxxxSyyyyyyyyMzzzzzS
-                        #         ^      ^
-                        soft_pos = soft_pos - 1 if mode == 1 else soft_pos
-                        # self.logger.trace( # type: ignore
-                        #    f"{read_name=}, {col.reference_pos=}, {soft_pos=}" # type: ignore
-                        # ) # type: ignore
-                        if (
-                            soft_pos == col.reference_pos
-                            and soft_len >= self.soft_len_cutoff
-                        ):
-                            sr_list[strand].append(soft_seq)
-                # the anchor read
-                else:
-                    (
-                        _,
-                        anchor_soft_seq,
-                        anchor_soft_pos,
-                        anchor_soft_mode,
-                    ) = get_softclip_length(aln, mode)
-                    anchor_soft_pos = (
-                        anchor_soft_pos - 1 if mode == 1 else anchor_soft_pos
-                    )
-                    # self.logger.trace( # type: ignore
-                    #    f"{read_name=}, {col.reference_pos=}, {anchor_soft_pos=}" # type: ignore
-                    # ) # type: ignore
-                    if anchor_soft_pos == col.reference_pos:
-                        sv_list[strand].append(anchor_soft_seq)
+                (
+                    _len,
+                    _seq,
+                    _pos,
+                    _mode,
+                ) = get_softclip_length(aln, mode)
+                _pos = _pos - 1 if mode == 1 else _pos
+
+                if aln.query_name in query_names:
+                    if _pos == col.reference_pos:
+                        sv_list[strand].append(_seq)
+                elif (
+                    "S" in aln.cigarstring
+                    and _pos == col.reference_pos
+                    and _len >= self.soft_len_cutoff
+                ):
+                    # the pileup position is equal to the soft-clipped connection point
+                    # xxxxxxxxSyyyyyyyyMzzzzzS
+                    #         ^      ^
+                    sr_list[strand].append(_seq)
 
     def calculate_sr(self, region: str, mode: int, query_name: str) -> int:
         """Calculate SR from softclipped reads without SV tag, provided target region.
 
         region = 'chrm:start-end'
-        ..note.
+        .. note.
             rescued reads strand should be the same as the anchor ones
             For 'MS' mode, softclipped position should subtract by one
         """
@@ -161,23 +173,23 @@ class SRRescuer:
         rescued_sr = 0
         if sv_list["+"] and sr_list["+"]:
             for _soft_seq in sr_list["+"]:
-                if (
-                    SRRescuer.mismatch_count(
-                        _soft_seq, sv_list["+"], self.alignment_frac, mode
-                    )
-                    <= self.mismatch_cutoff
-                ):
-                    rescued_sr += 1
+                rescued_sr += SRRescuer.determined_num_increment_sr(
+                    _soft_seq,
+                    sv_list["+"],
+                    self.alignment_frac,
+                    mode,
+                    self.mismatch_cutoff,
+                )
 
         if sv_list["-"] and sr_list["-"]:
             for _soft_seq in sr_list["-"]:
-                if (
-                    SRRescuer.mismatch_count(
-                        _soft_seq, sv_list["-"], self.alignment_frac, mode
-                    )
-                    <= self.mismatch_cutoff
-                ):
-                    rescued_sr += 1
+                rescued_sr += SRRescuer.determined_num_increment_sr(
+                    _soft_seq,
+                    sv_list["-"],
+                    self.alignment_frac,
+                    mode,
+                    self.mismatch_cutoff,
+                )
 
         return rescued_sr
 
@@ -192,12 +204,15 @@ class SRRescuer:
         strand = node.strand
         chrom = node.chrom
         exons = node.exons
+        region = ""
         if exons:
             if strand == "+":
                 pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
             else:
                 pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
-        region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
+            region = (
+                f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
+            )
         return region
 
     def update_sr(self, current_node: NodeType) -> Any:

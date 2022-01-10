@@ -676,8 +676,14 @@ class SpliceGraph:
         # update query name
         updated_node.query_name += "," + current_node.query_name
         # Testing run
-        if updated_node.modes and updated_node.modes != current_node.modes:
-            print(f"{current_node.query_name}")
+        if (
+            updated_node.modes
+            and current_node.modes
+            and updated_node.modes != current_node.modes
+        ):
+            print(
+                f"{current_node.query_name} {updated_node.modes} {current_node.modes}"
+            )
             raise SystemExit
         # update mode of the node
         if updated_node.modes is None:

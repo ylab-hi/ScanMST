@@ -266,12 +266,12 @@ def main():
         options.alignment_fraction,
         logger,
     )
-    print(rescuer)
     for clique in cliques:
         for i in splice_graph(clique):
-            logger.debug(f"series{i}")
-            # j = rescuer.update_sr(i) # type: ignore
-            # logger.debug(f"{j} is rescued!") # type: ignore
+            logger.debug(f"Series{i}")
+            for n in i:
+                rescuer.update_sr(n)
+
     in_bam_io_object.close()
     logger.info("ScanNLS build running done")
     end = time.time()
