@@ -269,8 +269,8 @@ def main():
     for clique in cliques:
         for i in splice_graph(clique):
             logger.debug(f"Series{i}")
-            for n in i:
-                rescuer.update_sr(n)
+            rescuer(i)
+            print(i)
 
     in_bam_io_object.close()
     logger.info("ScanNLS build running done")

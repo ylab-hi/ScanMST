@@ -5,7 +5,6 @@
 @license:     MIT Licence
 @Time:        12/30/21 15:00 PM
 """
-from typing import Any
 from typing import Dict
 from typing import List
 
@@ -15,7 +14,12 @@ from pysam import AlignmentFile  # type: ignore
 from ..type import LoggerType
 from ..utils import get_softclip_length
 from .basicClass import NodeType
+from .basicClass import Series
+from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
+
+
+# todo: change threshold of mismatch
 
 
 class SRRescuer:
@@ -47,6 +51,17 @@ class SRRescuer:
             f"{self.__class__.__name__}({self.in_bam.filename}, "
             f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
         )
+
+    def __call__(self, series: Series) -> None:
+        """Rescue SR from softclipped non-chimeric reads.
+
+        changed in place
+
+        :param series: Series
+        """
+        self.logger.trace(f"rs: {series=}")
+        for node in series:
+            self.update_sr(node)
 
     @staticmethod
     def check_if_sr_rescued_depended_on_alignment(
@@ -204,40 +219,40 @@ class SRRescuer:
         strand = node.strand
         chrom = node.chrom
         exons = node.exons
-        region = ""
-        if exons:
-            if strand == "+":
-                pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
-            else:
-                pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
-            region = (
-                f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
-            )
+        if exons is None:
+            raise SystemExit from ExonsNotFoundError
+
+        if strand == "+":
+            pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
+        else:
+            pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
+        region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
-    def update_sr(self, current_node: NodeType) -> Any:
+    def update_sr(self, current_node: NodeType) -> None:
         """Update SR for input node."""
-        if not current_node.is_end_node():
-            if current_node.modes is None:
-                raise SystemExit from ModesNotFoundError
-            mode1, mode2 = current_node.modes
-            current_node.update_next_breakpoint_depth(self.in_bam, mode1)
-            query_name_current = current_node.query_name
-            _region_current = SRRescuer.obtain_region_for_rescue_sr(
-                current_node, "next_breakpoint", mode1
+        if current_node.is_end_node():
+            return
+
+        if current_node.modes is None:
+            raise SystemExit from ModesNotFoundError
+
+        mode1, mode2 = current_node.modes
+        current_node.update_next_breakpoint_depth(self.in_bam, mode1)
+
+        query_name_current = current_node.query_name
+        _region_current = SRRescuer.obtain_region_for_rescue_sr(
+            current_node, "next_breakpoint", mode1
+        )
+        rescued_sr = self.calculate_sr(_region_current, mode1, query_name_current)
+        for next_node in current_node.successors:
+            next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
+            query_name_next = next_node.query_name
+            _region_next = SRRescuer.obtain_region_for_rescue_sr(
+                next_node, "prev_breakpoint", mode2
             )
-            rescued_sr = self.calculate_sr(_region_current, mode1, query_name_current)
-            for next_node in current_node.successors:
-                next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
-                query_name_next = next_node.query_name
-                _region_next = SRRescuer.obtain_region_for_rescue_sr(
-                    next_node, "prev_breakpoint", mode2
-                )
-                rescued_sr_next = self.calculate_sr(
-                    _region_next, mode2, query_name_next
-                )
-                rescued_sr += rescued_sr_next
-            self.logger.trace(f"{rescued_sr=}")
-            if rescued_sr > 0:
-                current_node.update_sr(rescued_sr)
-        return current_node
+            rescued_sr_next = self.calculate_sr(_region_next, mode2, query_name_next)
+            rescued_sr += rescued_sr_next
+        self.logger.trace(f"{rescued_sr=}")
+        if rescued_sr > 0:
+            current_node.update_sr(rescued_sr)

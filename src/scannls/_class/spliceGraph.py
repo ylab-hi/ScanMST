@@ -429,7 +429,7 @@ class SpliceGraph:
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
-    def __call__(self, series_list: Iterable[Series]) -> Any:
+    def __call__(self, series_list: Iterable[Series]) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
         :param series_list: series list
