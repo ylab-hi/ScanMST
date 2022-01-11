@@ -168,7 +168,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="mismatch",
         type=int,
-        help="maximum allowded mismatch bases of rescued segment (default: %(default)s)",
+        help="maximum allowed mismatch bases of rescued segment (default: %(default)s)",
         default=3,
     )
     parser.add_argument(
