@@ -9,6 +9,7 @@ import argparse
 import sys
 import textwrap
 import time
+from typing import Union
 
 from loguru import logger
 
@@ -17,6 +18,7 @@ from . import Blat
 from . import CliqueFinder
 from . import FastaWriter
 from . import GTFWriter
+from . import Options
 from . import SpliceGraph
 from . import SRRescuer
 from .core.main import scanbam_run
@@ -189,7 +191,7 @@ def parse_args() -> argparse.ArgumentParser:
     return parser
 
 
-def cli(options: argparse.Namespace) -> None:
+def cli(options: Union[argparse.Namespace, Options]) -> None:
     """Cli function."""
     # add logger
     logger.remove()
