@@ -120,7 +120,7 @@ class Blat:
         """
         return bool(self._search_processing())
 
-    def _search_processing(self) -> List:
+    def _search_processing(self) -> List[psutil.Process]:
         """Function for searching the process of blat server.
 
         in current system
