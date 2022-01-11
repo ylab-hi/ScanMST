@@ -19,7 +19,6 @@ from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
 from ._class.readConnector import detect_read_read_connections_from_cigar
 from .utils import get_softclip_length
-from .cli import cli
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
 from ._class.srRescuer import SRRescuer
