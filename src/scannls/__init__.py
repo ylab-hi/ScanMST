@@ -41,4 +41,6 @@ __all__ = [
     "SRRescuer",
     "FastaWriter",
     "GTFWriter",
+    "ToolNotFoundError",
+    "ReadNotFoundError",
 ]
