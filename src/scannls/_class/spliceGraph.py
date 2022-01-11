@@ -19,12 +19,12 @@ from typing import Union
 import networkx as nx  # type: ignore
 from networkx.algorithms.clique import find_cliques  # type: ignore
 
-from .. import Read
 from ..type import LoggerType
 from ..utils import timeit
 from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
+from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
 from .srRescuer import SRRescuer
@@ -515,8 +515,8 @@ class SpliceGraph:
 
             if not insertion_info1[0] and not insertion_info2[0]:
                 if (
-                    isinstance(insertion_info1[1], Read)
-                    and isinstance(insertion_info2[1], Read)
+                    isinstance(insertion_info1[1], NovelInsertion)
+                    and isinstance(insertion_info2[1], NovelInsertion)
                     and (
                         insertion_info1[1].query_sequence
                         == insertion_info2[1].query_sequence
@@ -669,6 +669,11 @@ class SpliceGraph:
         )
         # update sr
         updated_node.update_sr()
+        # update novel insertion ao
+        if updated_node.insertion_info and isinstance(
+            updated_node.insertion_info[1], NovelInsertion
+        ):
+            updated_node.insertion_info[1].increment_ao()
         # update sv_type
         updated_node.sv_type = (
             current_node.sv_type
@@ -682,16 +687,7 @@ class SpliceGraph:
             updated_node.next_breakpoint = current_node.next_breakpoint
         # update query name
         updated_node.query_name += "," + current_node.query_name
-        # Testing run
-        if (
-            updated_node.modes
-            and current_node.modes
-            and updated_node.modes != current_node.modes
-        ):
-            print(
-                f"{current_node.query_name} {updated_node.modes} {current_node.modes}"
-            )
-            raise SystemExit
+
         # update mode of the node
         if updated_node.modes is None:
             updated_node.modes = current_node.modes

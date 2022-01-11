@@ -32,6 +32,8 @@ class NovelInsertion:
     ATCA
     >>> novel_insertion.hit_num
     0
+    >>> novel_insertion.ao
+    1
 
     .. note::
         `NovelInsertion` is a subclass of :class:`Read`, and siblings of :class:`Insertion`
@@ -45,6 +47,7 @@ class NovelInsertion:
         self.query_sequence = query_sequence
         self.hit_num = hit_num
         self.insertion_info = None
+        self.ao = 1
 
     def __repr__(self) -> str:
         """Represent NovelInsertion object."""
@@ -53,6 +56,10 @@ class NovelInsertion:
     def reverse_completement_query(self) -> None:
         """Reverse complement query sequence."""
         self.query_sequence = reverse_complement(self.query_sequence)
+
+    def increment_ao(self, num=1) -> None:
+        """Increment ao."""
+        self.ao += num
 
 
 class MicroHomology:
