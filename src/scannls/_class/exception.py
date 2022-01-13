@@ -55,7 +55,7 @@ class ExonsNotFoundError(ScannlsExceptionError):
 
 
 class ModesNotFoundError(ScannlsExceptionError):
-    """Exception raised for errors when exons not found."""
+    """Exception raised for errors when modes not found."""
 
     def __init__(self) -> None:
         """Initialize the exception."""
@@ -63,8 +63,16 @@ class ModesNotFoundError(ScannlsExceptionError):
 
 
 class GenesNotFoundError(ScannlsExceptionError):
-    """Exception raised for errors when exons not found."""
+    """Exception raised for errors when genes not found."""
 
     def __init__(self) -> None:
         """Initialize the exception."""
         super().__init__("Cannot find genes in current node")
+
+
+class BreakpointNotFoundError(ScannlsExceptionError):
+    """Exception raised for errors when breakpoint not found."""
+
+    def __init__(self) -> None:
+        """Initialize the exception."""
+        super().__init__("Cannot find breakpoint in current node")

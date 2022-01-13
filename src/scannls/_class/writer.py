@@ -25,6 +25,7 @@ from .basicClass import NodeType
 from .basicClass import NovelInsertion
 from .basicClass import reverse_complement
 from .basicClass import Series
+from .exception import BreakpointNotFoundError
 from .exception import ExonsNotFoundError
 from .exception import GenesNotFoundError
 from .exception import ModesNotFoundError
@@ -527,16 +528,23 @@ def get_hops_vcf_features_from_series(
         else:
             anno_field = "BOTH"
 
-        if current_node.modes is None:
-            raise SystemExit from ModesNotFoundError
-
         if current_node.genes is None:
             raise SystemExit from GenesNotFoundError
+        gene1, gene2 = current_node.genes
 
+        if current_node.modes is None:
+            raise SystemExit from ModesNotFoundError
         _mode1, _mode2 = current_node.modes
+
         mode1 = "MS" if _mode1 == 1 else "SM"
         mode2 = "MS" if _mode2 == 1 else "SM"
-        gene1, gene2 = current_node.genes
+
+        if current_node.next_breakpoint is None:
+            raise SystemExit from BreakpointNotFoundError
+
+        if next_node.prev_breakpoint is None:
+            raise SystemExit from BreakpointNotFoundError
+
         _chrom1, _pos1 = current_node.next_breakpoint.split(":")
         _chrom2, _pos2 = next_node.prev_breakpoint.split(":")
 
@@ -548,7 +556,7 @@ def get_hops_vcf_features_from_series(
         _dp1 = current_node.next_breakpoint_depth
         _dp2 = next_node.prev_breakpoint_depth
         if _dp1 is None or _dp2 is None:
-            _pso = 0
+            _pso = 0.0
         else:
             _pso = _sr / (_sr + (_dp1 + _dp2) / 2)
         _strand1 = current_node.strand
@@ -602,9 +610,11 @@ def get_hops_vcf_features_from_series(
                 "alt": alt_allele,
                 "quality": ".",
                 "filter": ".",
-                "info": f"{can_field};BOUNDARY={anno_field};SVTYPE={_sv_type};"
-                f"CHR2={_chrom2};END={end};DP={_dp};AF={_af:.3g};"
-                f"SVLEN={sv_distance};GENE={gene};STRAND={_strand1};TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS",
+                "info": (
+                    f"{can_field};BOUNDARY={anno_field};SVTYPE={_sv_type};"
+                    f"CHR2={_chrom2};END={end};DP={_dp};AF={_af:.3g};"
+                    f"SVLEN={sv_distance};GENE={gene};STRAND={_strand1};TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS"
+                ),
                 "format": "GT",
                 "sample": "0/1",
             }
