@@ -110,8 +110,8 @@ class SRRescuer:
         seq: str, seqs: list, alignment_frac: float, mode: int, mismatch_threshold: int
     ) -> int:
         """Local alignment."""
-        gaps = 11
-        gap_extend = 1
+        gap_open_penalty = 11
+        gap_extension_penalty = 1
         increment_sr = 0
         if not seq:
             return increment_sr
@@ -120,7 +120,7 @@ class SRRescuer:
             each_seq = each_seq[::-1] if mode == 2 else each_seq
 
             align_result = parasail.sw_trace_striped_sat(
-                seq, each_seq, gaps, gap_extend, parasail.dnafull
+                seq, each_seq, gap_open_penalty, gap_extension_penalty, parasail.dnafull
             )
             if SRRescuer.check_if_sr_rescued_depended_on_alignment(
                 len(seq), align_result, alignment_frac, mismatch_threshold
@@ -142,7 +142,11 @@ class SRRescuer:
             # read.alignment is an instance of pysam.AlignedSegment
             aln = read.alignment
             strand = "-" if aln.is_reverse else "+"
-            if aln.mapq >= self.mapq_cutoff and read.query_position:
+            if (
+                aln.mapq >= self.mapq_cutoff
+                and read.query_position
+                and "S" in aln.cigarstring
+            ):
                 (
                     _len,
                     _seq,
@@ -154,11 +158,7 @@ class SRRescuer:
                 if aln.query_name in query_names:
                     if _pos == col.reference_pos:
                         sv_list[strand].append(_seq)
-                elif (
-                    "S" in aln.cigarstring
-                    and _pos == col.reference_pos
-                    and _len >= self.soft_len_cutoff
-                ):
+                elif _pos == col.reference_pos and _len >= self.soft_len_cutoff:
                     # the pileup position is equal to the soft-clipped connection point
                     # xxxxxxxxSyyyyyyyyMzzzzzS
                     #         ^      ^

@@ -25,6 +25,7 @@ from ._class.spliceGraph import SpliceGraph
 from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
+from ._class.writer import VCFWriter
 
 __all__ = [
     "Read",
@@ -41,4 +42,5 @@ __all__ = [
     "SRRescuer",
     "FastaWriter",
     "GTFWriter",
+    "VCFWriter",
 ]

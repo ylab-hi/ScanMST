@@ -332,14 +332,14 @@ dev = ["coverage", "hypothesis", "hypothesmith (>=0.2)", "pre-commit"]
 
 [[package]]
 name = "flake8-comprehensions"
-version = "3.7.0"
+version = "3.8.0"
 description = "A flake8 plugin to help you write better list/set/dict comprehensions."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.dependencies]
-flake8 = ">=3.0,<3.2.0 || >3.2.0,<5"
+flake8 = ">=3.0,<3.2.0 || >3.2.0"
 
 [[package]]
 name = "flake8-docstrings"
@@ -634,6 +634,17 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 pyparsing = ">=2.0.2,<3.0.5 || >3.0.5"
+
+[[package]]
+name = "parasail"
+version = "1.2.4"
+description = "pairwise sequence alignment library"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+numpy = "*"
 
 [[package]]
 name = "pathspec"
@@ -1284,7 +1295,7 @@ tests = ["codecov", "scikit-build", "cmake", "ninja", "pybind11", "pytest", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "093306da47ab72c03afbac97287a0c38f8722ad720fa0c313223b63364e333b7"
+content-hash = "adf080a5b8e497b3ee0aa9595350956ee26f21bf7bb233bd3f05897fd464fcbf"
 
 [metadata.files]
 alabaster = [
@@ -1478,8 +1489,8 @@ flake8-bugbear = [
     {file = "flake8_bugbear-21.11.29-py36.py37.py38-none-any.whl", hash = "sha256:179e41ddae5de5e3c20d1f61736feeb234e70958fbb56ab3c28a67739c8e9a82"},
 ]
 flake8-comprehensions = [
-    {file = "flake8-comprehensions-3.7.0.tar.gz", hash = "sha256:6b3218b2dde8ac5959c6476cde8f41a79e823c22feb656be2710cd2a3232cef9"},
-    {file = "flake8_comprehensions-3.7.0-py3-none-any.whl", hash = "sha256:a5d7aea6315bbbd6fbcb2b4e80bff6a54d1600155e26236e555d0c6fe1d62522"},
+    {file = "flake8-comprehensions-3.8.0.tar.gz", hash = "sha256:8e108707637b1d13734f38e03435984f6b7854fa6b5a4e34f93e69534be8e521"},
+    {file = "flake8_comprehensions-3.8.0-py3-none-any.whl", hash = "sha256:9406314803abe1193c064544ab14fdc43c58424c0882f6ff8a581eb73fc9bb58"},
 ]
 flake8-docstrings = [
     {file = "flake8-docstrings-1.6.0.tar.gz", hash = "sha256:9fe7c6a306064af8e62a055c2f61e9eb1da55f84bb39caef2b84ce53708ac34b"},
@@ -1776,6 +1787,14 @@ packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
     {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},
 ]
+parasail = [
+    {file = "parasail-1.2.4-py2.py3-none-macosx_10_9_x86_64.whl", hash = "sha256:35bebac42193a0608fa59a42f34a3b393010d4d425a0c40a7bf3419ea7a0b2fe"},
+    {file = "parasail-1.2.4-py2.py3-none-manylinux2010_i686.whl", hash = "sha256:fd940a737507e1980d3c08982f0c3aef084515c059daff39e1ebd370db2f5fa3"},
+    {file = "parasail-1.2.4-py2.py3-none-manylinux2010_x86_64.whl", hash = "sha256:37d17536b37886dcf87883f56c04ff614fec780e111db5a0cedd791c586ef252"},
+    {file = "parasail-1.2.4-py2.py3-none-win32.whl", hash = "sha256:500a181b5c8f96083423913efdb3070fde7ca8e1bb2de222d03e2ef1c37bec2c"},
+    {file = "parasail-1.2.4-py2.py3-none-win_amd64.whl", hash = "sha256:5324e87262ae456a5c7165394734eda60f9b8927eb4bf6b88f6fe5f55c404e66"},
+    {file = "parasail-1.2.4.tar.gz", hash = "sha256:8e6e0762924a461bb437cbb71122765c6912dace880e338bd19c7f9d12efead2"},
+]
 pathspec = [
     {file = "pathspec-0.9.0-py2.py3-none-any.whl", hash = "sha256:7d15c4ddb0b5c802d161efc417ec1a2558ea2653c2e8ad9c19098201dc1c993a"},
     {file = "pathspec-0.9.0.tar.gz", hash = "sha256:e564499435a2673d586f6b2130bb5b95f04a3ba06f81b8f895b651a3c76aabb1"},
@@ -1816,6 +1835,11 @@ psutil = [
     {file = "psutil-5.9.0-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:742c34fff804f34f62659279ed5c5b723bb0195e9d7bd9907591de9f8f6558e2"},
     {file = "psutil-5.9.0-cp310-cp310-win32.whl", hash = "sha256:8293942e4ce0c5689821f65ce6522ce4786d02af57f13c0195b40e1edb1db61d"},
     {file = "psutil-5.9.0-cp310-cp310-win_amd64.whl", hash = "sha256:9b51917c1af3fa35a3f2dabd7ba96a2a4f19df3dec911da73875e1edaf22a40b"},
+    {file = "psutil-5.9.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:e9805fed4f2a81de98ae5fe38b75a74c6e6ad2df8a5c479594c7629a1fe35f56"},
+    {file = "psutil-5.9.0-cp36-cp36m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c51f1af02334e4b516ec221ee26b8fdf105032418ca5a5ab9737e8c87dafe203"},
+    {file = "psutil-5.9.0-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:32acf55cb9a8cbfb29167cd005951df81b567099295291bcfd1027365b36591d"},
+    {file = "psutil-5.9.0-cp36-cp36m-win32.whl", hash = "sha256:e5c783d0b1ad6ca8a5d3e7b680468c9c926b804be83a3a8e95141b05c39c9f64"},
+    {file = "psutil-5.9.0-cp36-cp36m-win_amd64.whl", hash = "sha256:d62a2796e08dd024b8179bd441cb714e0f81226c352c802fca0fd3f89eeacd94"},
     {file = "psutil-5.9.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:3d00a664e31921009a84367266b35ba0aac04a2a6cad09c550a89041034d19a0"},
     {file = "psutil-5.9.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7779be4025c540d1d65a2de3f30caeacc49ae7a2152108adeaf42c7534a115ce"},
     {file = "psutil-5.9.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:072664401ae6e7c1bfb878c65d7282d4b4391f1bc9a56d5e03b5a490403271b5"},
