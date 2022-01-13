@@ -21,6 +21,7 @@ from . import GTFWriter
 from . import Options
 from . import SpliceGraph
 from . import SRRescuer
+from . import VCFWriter
 from .core.main import scanbam_run
 from .utils import external_tool_checking
 
@@ -247,7 +248,14 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
     with gtf_writer.open() as _:
         gtf_writer.write_data(intact_series_list[0])
 
-    logger.debug(f"Total Series: {len(intact_series_list)}")
+    vcf_writer = VCFWriter(
+        "test.vcf", options.ref, in_bam_io_object, options.output, logger
+    )
+    with vcf_writer.open() as _:
+        vcf_writer.write_header()
+        vcf_writer.write_data(intact_series_list[0])
+
+    logger.info(f"Total Series: {len(intact_series_list)}")
     rescuer = SRRescuer(
         in_bam_io_object,
         options.mapq,
