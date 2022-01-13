@@ -5,11 +5,28 @@
 @license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
+from dataclasses import dataclass
 from typing import Any
+from typing import List
 from typing import NewType
 from typing import Protocol
+from typing import Tuple
 
 from . import Read
+
+ReadType = NewType("ReadType", Read)
+
+EventType = Tuple[
+    str,
+    int,
+    int,
+    Tuple[str, str, int, int],
+    Tuple[int, int, str],
+    Tuple[int, int, str],
+    Tuple[str, str],
+    Tuple[str, str],
+    List[str],
+]
 
 
 class LoggerType(Protocol):
@@ -40,4 +57,25 @@ class LoggerType(Protocol):
         """Complete."""
 
 
-ReadType = NewType("ReadType", Read)
+@dataclass
+class Options:
+    """Cli options for testing."""
+
+    input: str
+    ref: str
+    gtf: str
+    output: str
+    two_bit: str
+    splice_bin: int = 5
+    mapq: int = 15
+    noncanonical: bool = False
+    log: str = "info"
+    parallel: int = 1
+    port: int = 88888
+    min_soft_seg_len: int = 200
+    max_allowed_nm: int = 60
+    ident_cutoff: float = 0.99
+    tmp_dir: str = "/tmp"
+    soft_len: int = 5
+    mismatch: int = 3
+    alignment_fraction: float = 0.8

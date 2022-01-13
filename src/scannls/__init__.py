@@ -19,13 +19,13 @@ from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
 from ._class.readConnector import detect_read_read_connections_from_cigar
 from .utils import get_softclip_length
-
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
 from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
+from .type import Options
 
 __all__ = [
     "Read",
@@ -43,4 +43,8 @@ __all__ = [
     "FastaWriter",
     "GTFWriter",
     "VCFWriter",
+    "ToolNotFoundError",
+    "ReadNotFoundError",
+    "cli",
+    "Options",
 ]

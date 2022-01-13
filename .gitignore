@@ -22,3 +22,6 @@ __pycache__/
 # debug reprot
 /debuglog/
 .DS*
+
+# profile file
+*.pstat

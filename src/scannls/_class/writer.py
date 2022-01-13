@@ -709,7 +709,7 @@ def get_gtf_features_from_insertion(
         ".",
         ".",
         ".",
-        ".",
+        "+",
         ".",
         f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>6}"; '
         f'sequence "{insertion.query_sequence}" ',

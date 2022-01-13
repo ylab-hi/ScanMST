@@ -11,6 +11,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -18,13 +19,14 @@ from typing import Union
 import networkx as nx  # type: ignore
 from networkx.algorithms.clique import find_cliques  # type: ignore
 
-from .. import Read
 from ..type import LoggerType
 from ..utils import timeit
 from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
+from .basicClass import NovelInsertion
 from .basicClass import Series
+from .exception import ExonsNotFoundError
 from .srRescuer import SRRescuer
 
 NodeType = Union[Node, Insertion]
@@ -194,8 +196,8 @@ class Ruler:
     def __decide_flag(
         left_query_node: NodeType,
         right_query_node: NodeType,
-        left_subject_node: NodeType,
-        right_subject_node: NodeType,
+        left_subject_node: Optional[NodeType],
+        right_subject_node: Optional[NodeType],
     ) -> bool:
         """Decide the flag.
 
@@ -207,7 +209,7 @@ class Ruler:
         """
         flag = False
 
-        if not left_subject_node and not right_subject_node:
+        if left_subject_node is None and right_subject_node is None:
             flag = True
 
         if left_subject_node:
@@ -513,8 +515,8 @@ class SpliceGraph:
 
             if not insertion_info1[0] and not insertion_info2[0]:
                 if (
-                    isinstance(insertion_info1[1], Read)
-                    and isinstance(insertion_info2[1], Read)
+                    isinstance(insertion_info1[1], NovelInsertion)
+                    and isinstance(insertion_info2[1], NovelInsertion)
                     and (
                         insertion_info1[1].query_sequence
                         == insertion_info2[1].query_sequence
@@ -549,10 +551,12 @@ class SpliceGraph:
             -> [node1]
                 [node2] ->
         """
-        node1_first_exon_start = node1.exons[0][0]  # type: ignore
-        node1_last_exon_end = node1.exons[-1][1]  # type: ignore
-        node2_first_exon_start = node2.exons[0][0]  # type: ignore
-        node2_last_exon_end = node2.exons[-1][1]  # type: ignore
+        if node1.exons is None or node2.exons is None:
+            raise SystemExit from ExonsNotFoundError
+        node1_first_exon_start = node1.exons[0][0]
+        node1_last_exon_end = node1.exons[-1][1]
+        node2_first_exon_start = node2.exons[0][0]
+        node2_last_exon_end = node2.exons[-1][1]
         expression1 = node1_last_exon_end >= node2_first_exon_start
         expression2 = (
             expression1
@@ -665,6 +669,11 @@ class SpliceGraph:
         )
         # update sr
         updated_node.update_sr()
+        # update novel insertion ao
+        if updated_node.insertion_info and isinstance(
+            updated_node.insertion_info[1], NovelInsertion
+        ):
+            updated_node.insertion_info[1].increment_ao()
         # update sv_type
         updated_node.sv_type = (
             current_node.sv_type
@@ -678,16 +687,7 @@ class SpliceGraph:
             updated_node.next_breakpoint = current_node.next_breakpoint
         # update query name
         updated_node.query_name += "," + current_node.query_name
-        # Testing run
-        if (
-            updated_node.modes
-            and current_node.modes
-            and updated_node.modes != current_node.modes
-        ):
-            print(
-                f"{current_node.query_name} {updated_node.modes} {current_node.modes}"
-            )
-            raise SystemExit
+
         # update mode of the node
         if updated_node.modes is None:
             updated_node.modes = current_node.modes
@@ -783,7 +783,12 @@ class SpliceGraph:
                     current_node, similar_key, merged_nodes_pool
                 )
 
-    def _trace(self, start_node: NodeType, path: List, group_paths: List) -> None:
+    def _trace(
+        self,
+        start_node: NodeType,
+        path: List[NodeType],
+        group_paths: List[List[NodeType]],
+    ) -> None:
         """Helper function to trace through graph and find all paths.
 
         .. seealso::

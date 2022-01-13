@@ -20,9 +20,6 @@ from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 
 
-# todo: change threshold of mismatch
-
-
 class SRRescuer:
     """Rescue SR from softclipped non-chimeric reads."""
 

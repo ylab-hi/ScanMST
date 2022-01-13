@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from typing import Any
+from typing import Iterable
 from typing import Iterator
 from typing import List
 from typing import Optional
@@ -12,6 +13,7 @@ from Bio.Seq import Seq  # type: ignore
 from .. import Read
 from ..core.helper import cigar_validity
 from ..core.nls_inference import infer_nls_from_connected_reads
+from ..type import EventType
 from ..type import LoggerType
 from .exception import ReadNotFoundError
 
@@ -30,6 +32,8 @@ class NovelInsertion:
     ATCA
     >>> novel_insertion.hit_num
     0
+    >>> novel_insertion.ao
+    1
 
     .. note::
         `NovelInsertion` is a subclass of :class:`Read`, and siblings of :class:`Insertion`
@@ -38,19 +42,24 @@ class NovelInsertion:
         :class: `Insertion`
     """
 
-    def __init__(self, hit_num: int, query_sequence: str):
+    def __init__(self, hit_num: int, query_sequence: str) -> None:
         """Initialize NovelInsertion."""
         self.query_sequence = query_sequence
         self.hit_num = hit_num
         self.insertion_info = None
+        self.ao = 1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent NovelInsertion object."""
         return f"NovelInsertion({self.query_sequence}:{self.hit_num})"
 
-    def reverse_completement_query(self):
+    def reverse_completement_query(self) -> None:
         """Reverse complement query sequence."""
         self.query_sequence = reverse_complement(self.query_sequence)
+
+    def increment_ao(self, num=1) -> None:
+        """Increment ao."""
+        self.ao += num
 
 
 class MicroHomology:
@@ -112,27 +121,27 @@ class BasicNode:
         """Return True if Insertion object has successor."""
         return bool(self.successors)
 
-    def add_successor_from_list(self, successors):
+    def add_successor_from_list(self, successors) -> None:
         """Add successor from list of Insertion object."""
         for successor in successors:
             self.add_successor(successor)
 
-    def add_predecessor_from_list(self, predecessors):
+    def add_predecessor_from_list(self, predecessors) -> None:
         """Add predecessor from list of Insertion object."""
         for predecessor in predecessors:
             self.add_predecessor(predecessor)
 
-    def _add_successor(self, successor):
+    def _add_successor(self, successor) -> None:
         """Helper function to add successor to Insertion object."""
         self.successors.append(successor)
         successor.add_predecessor(self)
 
-    def _add_predecessor(self, predecessor):
+    def _add_predecessor(self, predecessor) -> None:
         """Helper function to add predecessor to Insertion object."""
         self.predecessors.append(predecessor)
         predecessor.add_successor(self)
 
-    def add_successor(self, successor):
+    def add_successor(self, successor) -> None:
         """Add successor to Insertion object."""
         if successor is not None and successor not in self.successors:
             if successor.is_in_graph:
@@ -140,7 +149,7 @@ class BasicNode:
             else:
                 self.add_successor_from_list(successor.merged_parent_nodes)
 
-    def add_predecessor(self, predecessor):
+    def add_predecessor(self, predecessor) -> None:
         """Node must be in the graph if the function is called.
 
         :param predecessor: predecessor of Insertion object
@@ -151,7 +160,9 @@ class BasicNode:
             else:
                 self.add_predecessor_from_list(predecessor.merged_parent_nodes)
 
-    def update_next_and_previous_node_in_series(self, index, series):
+    def update_next_and_previous_node_in_series(
+        self, index: int, series: "Series"
+    ) -> None:
         """Update next and previous node in series."""
         if index == 0:
             self.next_node_in_series = series[index + 1]
@@ -282,7 +293,7 @@ class Insertion(Read, BasicNode):
         self.insertion_info = None
 
         self.exons, self.introns = self.get_exons_and_introns()
-        self.unique_key = None
+        self.unique_key: Optional[str] = None
 
     def __repr__(self):
         """Represent Insertion object."""
@@ -306,7 +317,9 @@ class Insertion(Read, BasicNode):
             ^ hash(self.strand)
         )
 
-    def update_cigarstring_sms(self, sms, source_s, source_strand):
+    def update_cigarstring_sms(
+        self, sms: Iterable[int], source_s: str, source_strand: str
+    ) -> None:
         """Update cigarstring and sms of Insertion object."""
         _ls, _m, _rs = sms
         if source_s == "left":
@@ -325,16 +338,16 @@ class Insertion(Read, BasicNode):
         self.query_length = self.query_length + ls + rs
         self.cigarstring = cigar_validity(f"{ls}S{self.cigarstring}{rs}S")
 
-    def reverse_completement_query(self):
+    def reverse_completement_query(self) -> None:
         """Reverse complement query sequence of Insertion object."""
         self.query_sequence = reverse_complement(self.query_sequence)
 
-    def reverse_strand(self):
+    def reverse_strand(self) -> None:
         """Reverse strand of Insertion object."""
         self.strand = "-" if self.strand == "+" else "+"
 
     @property
-    def similar_key(self):
+    def similar_key(self) -> str:
         """Return similar key of Insertion object.
 
         .. note::
@@ -347,7 +360,7 @@ class Insertion(Read, BasicNode):
 
         return key
 
-    def get_unique_key(self):
+    def get_unique_key(self) -> str:
         """Return unique key of Insertion object.
 
         .. note::
@@ -586,7 +599,7 @@ class Node(BasicNode):
         self.unique_key = key
         return key
 
-    def update_sr(self, key=1):
+    def update_sr(self, key=1) -> None:
         """Update the sr of a node."""
         self.sr += key
 
@@ -707,7 +720,7 @@ class Series:
             series_instance.add_node(node)
         return series_instance
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> NodeType:
         """Return the event at the given index."""
         return self.nodes[index]
 
@@ -723,7 +736,7 @@ class Series:
         """Return the number of events."""
         return len(self.nodes)
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: Any) -> bool:
         """Return True if the event is less than the other event."""
         return len(self.nodes) < len(other.nodes)
 
@@ -741,9 +754,9 @@ class Series:
         """Return an iterator over the events."""
         yield from self.nodes
 
-    def disable_blat_logger(self):
+    def disable_blat_logger(self) -> None:
         """Disable blat logger."""
-        self.blat, self.logger = None, None
+        self.blat, self.logger = None, None  # type: ignore
 
     @property
     def unique_key(self) -> str:
@@ -790,7 +803,7 @@ class Series:
         return evt
 
     @staticmethod
-    def order_events_by_trancription_direction(event_list):
+    def order_events_by_trancription_direction(event_list: List["Event"]):
         """Construct breakpoints order following transcription direction.
 
          for multiple-hop events or one-hop events
@@ -804,7 +817,7 @@ class Series:
                the read where `breakpoint1` of event2 habors should be the identical
         """
         is_reversed = False
-        output_event_list = []
+        output_event_list: List["Event"] = []
         for index, evt in enumerate(event_list):
             parsed_evt = Series.reorder_event(evt)
 
@@ -1003,7 +1016,7 @@ class Event:
         add more examples
     """
 
-    def __init__(self, event) -> None:
+    def __init__(self, event: EventType) -> None:
         """Initialize the event."""
         (
             sv_type,
