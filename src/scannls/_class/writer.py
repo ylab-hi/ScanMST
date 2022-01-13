@@ -481,10 +481,10 @@ def get_novel_insertion_sequence_from_node(node: NodeType, reference_io) -> tupl
         if isinstance(insertion, NovelInsertion):
             novel_insertion_sequence += insertion.query_sequence
 
-    if node.strand == "+":
-        _pos = node.exons[-1][1]
-    else:
-        _pos = node.exons[0][0]
+    if node.exons is None:
+        raise SystemExit from ExonsNotFoundError
+
+    _pos = node.exons[-1][1] if node.strand == "+" else node.exons[0][0]
 
     ref_allele = reference_io.get_seq(node.chrom, _pos + 1, _pos + 1).seq  # 1-based
 
@@ -502,7 +502,7 @@ def get_novel_insertion_sequence_from_node(node: NodeType, reference_io) -> tupl
 
 def get_hops_vcf_features_from_series(
     series: Series, series_id: int, reference_io
-) -> List[str]:
+) -> List[List[str]]:
     """Obtain hop vcf features from one series."""
     series_hops_features = []
     ins_id = 1
@@ -614,7 +614,7 @@ def get_hops_vcf_features_from_series(
     return series_hops_features
 
 
-def get_line_from_hop(fields_dict: dict) -> str:
+def get_line_from_hop(fields_dict: dict) -> List[str]:
     """Get the VCF line from one hop, including INS/DEL/TDUP/IDUP/INV/TRA."""
     fields_names = [
         "chrom",
