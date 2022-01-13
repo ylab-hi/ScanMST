@@ -252,6 +252,71 @@ class VCFWriter(Writer):
 
     num_fields = 10
 
+    reserved_info = {
+        "CANONICAL": "Flag",
+        "NONCANONICAL": "Flag",
+        "BOUNDARY": "String",
+        "DP": "Integer",
+        "DP1": "Integer",
+        "DP2": "Integer",
+        "SR": "Integer",
+        "PSO": "Float",
+        "AO": "Integer",
+        "AF": "Float",
+        "SVMETHOD": "String",
+        "SVTYPE": "String",
+        "SVLEN": "Integer",
+        "CHR2": "String",
+        "END": "Integer",
+        "STRAND": "String",
+        "STRAND1": "String",
+        "STRAND2": "String",
+        "MODE1": "String",
+        "MODE2": "String",
+        "GENE": "String",
+        "GENE1": "String",
+        "GENE2": "String",
+    }
+    reserved_format = {"GT": "String"}
+    reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA"]
+
+    description = {
+        "CANONICAL": "Canonical splice site",
+        "NONCANONICAL": "Noncanonical splice site",
+        "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
+        "DP": "Total read depth at the breakpoint for insertion",
+        "DP1": "Total read depth at the breakpoint1",
+        "DP2": "Total read depth at the breakpoint2",
+        "SR": "The number of support reads for the breakpoints",
+        "AO": "Alternate allele observations, "
+        "with partial observations recorded fractionally",
+        "AF": "Estimated allele frequency in the range (0,1], "
+        "representing the ratio of reads showing the alternative allele to all reads",
+        "PSO": "Estimated Percent splice-out in the range (0,1], "
+        "representing the percentage of NLS transcripts",
+        "SVTYPE": "The type of event, INS, DEL, TDUP, IDUP, INV, TRA.",
+        "SVLEN": "Difference in length between REF and ALT alleles",
+        "CHR2": "Chromosome for END coordinate in case of a translocation",
+        "END": "2nd position of the structural variant",
+        "GENE": "Overlapped coding gene for insertion",
+        "GENE1": "Overlapped coding gene for breakpoint1",
+        "GENE2": "Overlapped coding gene for breakpoint2",
+        "TRANSCRIPT_ID": "Transcript ID",
+        "SVMETHOD": "Type of approach used to detect SV",
+        "STRAND": "Strand for insertion",
+        "STRAND1": "Strand for breakpoint1",
+        "STRAND2": "Strand for breakpoint2",
+        "MODE1": "Mode for softclipped reads at breakpoint1",
+        "MODE2": "Mode for softclipped reads at breakpoint2",
+        "GT": "Genotype",
+        "INS": "Insertion",
+        "DEL": "Deletion",
+        "TDUP": "Tandem duplication",
+        "IDUP": "Inverted duplication",
+        "INV": "Inversion",
+        "TRA": "Translocation",
+    }
+
     def __init__(
         self,
         file_path: str,
@@ -336,70 +401,6 @@ class VCFWriter(Writer):
     def header(self) -> str:
         """VCF header provides metadata describing the body of the file."""
         # Metadata parsers/constants
-        reserved_info = {
-            "CANONICAL": "Flag",
-            "NONCANONICAL": "Flag",
-            "BOUNDARY": "String",
-            "DP": "Integer",
-            "DP1": "Integer",
-            "DP2": "Integer",
-            "SR": "Integer",
-            "PSO": "Float",
-            "AO": "Integer",
-            "AF": "Float",
-            "SVMETHOD": "String",
-            "SVTYPE": "String",
-            "SVLEN": "Integer",
-            "CHR2": "String",
-            "END": "Integer",
-            "STRAND": "String",
-            "STRAND1": "String",
-            "STRAND2": "String",
-            "MODE1": "String",
-            "MODE2": "String",
-            "GENE": "String",
-            "GENE1": "String",
-            "GENE2": "String",
-        }
-        reserved_format = {"GT": "String"}
-        reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA"]
-
-        description = {
-            "CANONICAL": "Canonical splice site",
-            "NONCANONICAL": "Noncanonical splice site",
-            "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
-            "DP": "Total read depth at the breakpoint for insertion",
-            "DP1": "Total read depth at the breakpoint1",
-            "DP2": "Total read depth at the breakpoint2",
-            "SR": "The number of support reads for the breakpoints",
-            "AO": "Alternate allele observations, "
-            "with partial observations recorded fractionally",
-            "AF": "Estimated allele frequency in the range (0,1], "
-            "representing the ratio of reads showing the alternative allele to all reads",
-            "PSO": "Estimated Percent splice-out in the range (0,1], "
-            "representing the percentage of NLS transcripts",
-            "SVTYPE": "The type of event, INS, DEL, TDUP, IDUP, INV, TRA.",
-            "SVLEN": "Difference in length between REF and ALT alleles",
-            "CHR2": "Chromosome for END coordinate in case of a translocation",
-            "END": "2nd position of the structural variant",
-            "GENE": "Overlapped coding gene for insertion",
-            "GENE1": "Overlapped coding gene for breakpoint1",
-            "GENE2": "Overlapped coding gene for breakpoint2",
-            "TRANSCRIPT_ID": "Transcript ID",
-            "SVMETHOD": "Type of approach used to detect SV",
-            "STRAND": "Strand for insertion",
-            "STRAND1": "Strand for breakpoint1",
-            "STRAND2": "Strand for breakpoint2",
-            "MODE1": "Mode for softclipped reads at breakpoint1",
-            "MODE2": "Mode for softclipped reads at breakpoint2",
-            "GT": "Genotype",
-            "INS": "Insertion",
-            "DEL": "Deletion",
-            "TDUP": "Tandem duplication",
-            "IDUP": "Inverted duplication",
-            "INV": "Inversion",
-            "TRA": "Translocation",
-        }
 
         date = datetime.datetime.today().strftime("%Y%m%d")
         source = f"ScanNLS v{__version__}"
@@ -415,21 +416,23 @@ class VCFWriter(Writer):
             f"##reference={reference}",
         ]
 
-        for _id in reserved_info:
-            _number = 0 if reserved_info[_id] == "Flag" else 1
+        for _id in VCFWriter.reserved_info:
+            _number = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
             header_lines.append(
-                f"##INFO=<ID={_id},Number={_number},Type={reserved_info[_id]},"
-                f'Description="{description[_id]}">'
+                f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},"
+                f'Description="{VCFWriter.description[_id]}">'
             )
 
-        for _id in reserved_format:
+        for _id in VCFWriter.reserved_format:
             header_lines.append(
-                f"##FORMAT=<ID={_id},Number=1,Type={reserved_format[_id]},"
-                f'Description="{description[_id]}">'
+                f"##FORMAT=<ID={_id},Number=1,Type={VCFWriter.reserved_format[_id]},"
+                f'Description="{VCFWriter.description[_id]}">'
             )
 
-        for _id in reserved_alt:
-            header_lines.append(f'##ALT=<ID={_id},Description="{description[_id]}">')
+        for _id in VCFWriter.reserved_alt:
+            header_lines.append(
+                f'##ALT=<ID={_id},Description="{VCFWriter.description[_id]}">'
+            )
         header_lines.append(
             f"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_name}"
         )
