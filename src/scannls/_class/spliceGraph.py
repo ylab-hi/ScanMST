@@ -385,7 +385,6 @@ class CliqueFinder:
                 self.graph.add_edge(x, y)
                 x.is_in_graph = True
 
-    @timeit
     def _create_graph_for_series(self) -> None:
         """Create graph for all series in intact_series_list.
 

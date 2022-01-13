@@ -247,7 +247,7 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
     with gtf_writer.open() as _:
         gtf_writer.write_data(intact_series_list[0])
 
-    logger.debug(f"Total Series: {len(intact_series_list)}")
+    logger.info(f"Total Series: {len(intact_series_list)}")
     rescuer = SRRescuer(
         in_bam_io_object,
         options.mapq,
