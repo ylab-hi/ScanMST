@@ -3,6 +3,7 @@
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List
 
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
@@ -49,7 +50,7 @@ class OneHop:
         :param logger: logger
         """
         self.chrom_to_genes = chrom_to_genes
-        self.available_chroms = set(chrom_to_genes)
+        self.available_chroms = list(chrom_to_genes)
         self.gene_to_trx = gene_to_trx
         self.gene_to_intergenic = gene_to_intergenic
         self.trx_to_exons = trx_to_exons
@@ -270,12 +271,12 @@ class OneHop:
                 locus_type=_locus_type,
                 direction="upstream",
             )
-            _metaexon2 = OneHop.reverse_complement(_metaexon1)
+            _metaexon2 = OneHop.reverse_metaexon(_metaexon1)
             current_metaexons.append(_metaexon1)
             current_metaexons.append(_metaexon2)
         else:
             last_metaexon = current_metaexons[-1]
-            _metaexon2 = OneHop.reverse_complement(last_metaexon)
+            _metaexon2 = OneHop.reverse_metaexon(last_metaexon)
             current_metaexons.append(_metaexon2)
 
     def _inv_hopper(self, current_metaexons) -> None:
@@ -398,10 +399,10 @@ class OneHop:
         """Check Microhomology."""
         pass
 
-    def hop_generator(self, num_of_hops) -> list:
+    def hop_generator(self, num_of_hops) -> tuple:
         """Generate specified number of hops."""
         candidate_hop_types = ["TDUP", "IDUP", "INV", "TRA"]
-        total_metaexons = []
+        total_metaexons: List[MetaExon] = []
         hops_type_list = []
         for _hop_idx in range(num_of_hops):
             _select_type = secrets.choice(candidate_hop_types)

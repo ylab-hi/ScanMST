@@ -4,7 +4,7 @@ import operator
 import os
 from collections import defaultdict
 
-import HTSeq
+import HTSeq  # type: ignore
 from loguru._logger import Logger  # type: ignore
 
 from .intergenicGTF import Intergenic
