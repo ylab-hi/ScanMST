@@ -143,14 +143,19 @@ class GTFReader:
         for feature in gtf_file:
             biotype = feature.attr["gene_type"]
             gene_name = feature.attr["gene_name"]
+            chrom = feature.iv.chrom
             if biotype in protein_coding and feature.type == "gene":
                 upstream_region = feature.attr["upstream_intergenic"]
                 downstream_region = feature.attr["downstream_intergenic"]
                 _up_start, _up_end = upstream_region.split("-")
                 _down_start, _down_end = downstream_region.split("-")
                 gene_to_intergenic[gene_name] = {
-                    "upstream": (int(_up_start), int(_up_end)),
-                    "downstream": (int(_down_start), int(_down_end)),
+                    "upstream": HTSeq.GenomicInterval(
+                        chrom, int(_up_start), int(_up_end), "."
+                    ),
+                    "downstream": HTSeq.GenomicInterval(
+                        chrom, int(_down_start), int(_down_end), "."
+                    ),
                 }
         return gene_to_intergenic
 
