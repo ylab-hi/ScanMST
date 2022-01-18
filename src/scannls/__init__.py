@@ -25,6 +25,8 @@ from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
+from ._class.GTFReader import GTFReader
+from ._class.intergenicGTF import Intergenic
 from .type import Options
 
 __all__ = [
@@ -47,4 +49,6 @@ __all__ = [
     "ReadNotFoundError",
     "cli",
     "Options",
+    "GTFReader",
+    "Intergenic",
 ]
