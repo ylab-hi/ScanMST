@@ -27,6 +27,8 @@ from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
 from ._class.GTFReader import GTFReader
 from ._class.intergenicGTF import Intergenic
+from ._class.oneHop import OneHop
+from ._class.oneHop import SimVCFWriter
 from .type import Options
 
 __all__ = [
@@ -51,4 +53,6 @@ __all__ = [
     "Options",
     "GTFReader",
     "Intergenic",
+    "OneHop",
+    "SimVCFWriter",
 ]

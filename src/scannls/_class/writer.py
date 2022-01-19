@@ -182,7 +182,7 @@ class GTFWriter(Writer):
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)  # add asyncio support
+        self.io = open(self.file_path, mode)
         return self.io
 
     def close(self) -> None:

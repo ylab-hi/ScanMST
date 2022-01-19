@@ -5,8 +5,8 @@ import os
 from collections import defaultdict
 
 import HTSeq  # type: ignore
-from loguru._logger import Logger  # type: ignore
 
+from ..type import LoggerType
 from .intergenicGTF import Intergenic
 
 
@@ -14,7 +14,7 @@ class GTFReader:
     """GTFReader."""
 
     # hg38
-    chrm_size = {
+    chrom_size = {
         "chr1": 248956422,
         "chr2": 242193529,
         "chr3": 198295559,
@@ -41,12 +41,11 @@ class GTFReader:
         "chrY": 57227415,
     }
 
-    def __init__(self, input_gtf: str, logger: Logger, input_gtf_source: str) -> None:
+    def __init__(self, input_gtf: str, logger: LoggerType) -> None:
         """Init."""
         self.gtf = input_gtf
         self.logger = logger
-        self.source = input_gtf_source
-        self.chrm_to_genes = None
+        self.chrom_to_genes = None
         self.gene_to_trx = None
         self.trx_to_exon = None
         self.trx_to_intron = None
@@ -99,12 +98,12 @@ class GTFReader:
         gene_positions.sort(key=operator.itemgetter("pos"))
 
         # chrom => (gene_name, strand)
-        chrm_to_ordered_genes = defaultdict(list)
+        chrom_to_ordered_genes = defaultdict(list)
         for item in gene_positions:
             chrom = item["chrom"]
             gene_name = item["gene_name"]
             strand = item["strand"]
-            chrm_to_ordered_genes[chrom].append((gene_name, strand))
+            chrom_to_ordered_genes[chrom].append((gene_name, strand))
 
         sorted_trx_to_exon = {}
         for trx_id in trx_to_exon:
@@ -112,7 +111,7 @@ class GTFReader:
             tmp_exons.sort(key=lambda x: x.start)
             sorted_trx_to_exon[trx_id] = tmp_exons
         trx_to_exon = None
-        return chrm_to_ordered_genes, gene_to_trx, sorted_trx_to_exon
+        return chrom_to_ordered_genes, gene_to_trx, sorted_trx_to_exon
 
     @staticmethod
     def _obtain_trx_to_intron(trx_to_exon):
@@ -161,7 +160,7 @@ class GTFReader:
 
     def parser(self):
         """Parse the annotation GTF file to generate serval useful dictionaries."""
-        self.chrm_to_genes, self.gene_to_trx, self.trx_to_exon = GTFReader._gtf_parser(
+        self.chrom_to_genes, self.gene_to_trx, self.trx_to_exon = GTFReader._gtf_parser(
             self.gtf
         )
         self.trx_to_intron = GTFReader._obtain_trx_to_intron(self.trx_to_exon)
