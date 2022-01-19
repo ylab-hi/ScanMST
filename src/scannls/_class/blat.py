@@ -341,6 +341,11 @@ class Blat:
         :return: the map quality of the insertion
         """
         num_of_locations = 0
+        mapq_dict = {
+            1: 60,
+            2: 3,
+            3: 2,
+        }
 
         for hsp in hsps:
             if (
@@ -348,17 +353,10 @@ class Blat:
                 and hsp.query_span / in_seq_len >= threshold_identity
             ):
                 num_of_locations += 1
-        if num_of_locations == 1:
-            mapq = 60
-        elif num_of_locations == 2:
-            mapq = 3
-        elif num_of_locations == 3:
-            mapq = 2
-        elif 4 <= num_of_locations <= 9:
-            mapq = 1
-        else:
-            mapq = 0
-        return mapq
+
+        if 4 <= num_of_locations <= 9:
+            return 1
+        return mapq_dict.get(num_of_locations, 0)
 
     def fetch_mapq(self, in_seq: str, threshold_identity: float) -> Any:
         """Function is used to fetch the map quality of the insertion.
