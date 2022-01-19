@@ -669,7 +669,7 @@ class SimVCFWriter(Writer):
     def write_line(self, line: str) -> None:
         """Write line to file."""
         if self.is_opened:
-            self.io.write(line)
+            self.io.write(line)  # type: ignore
         else:
             self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
@@ -690,7 +690,7 @@ class SimVCFWriter(Writer):
 
         :param data_object: metaexons to write to file.
         """
-        if len(data_object.nodes) == 0:
+        if len(data_object) == 0:
             self.logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to VCF file."
             )
