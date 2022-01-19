@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 from typing import List
+from typing import Optional
 
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
@@ -31,7 +32,7 @@ class MetaExon:
     p3_pos: int
     wt_seq: str
     mt_seq: str
-    nls_type: str = None
+    nls_type: Optional[str] = None
 
 
 class OneHop:
