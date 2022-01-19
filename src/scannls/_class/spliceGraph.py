@@ -603,12 +603,12 @@ class SpliceGraph:
         if (
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
         ):  # both are start nodel check last exon end
-            return node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
+            return node1.next_breakpoint == node2.next_breakpoint
 
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
-            return node1.exons[0][0] == node2.exons[0][0]  # type: ignore
+            return node1.prev_breakpoint == node2.prev_breakpoint
 
         elif (
             node1.prev_breakpoint is None and node2.prev_breakpoint is not None

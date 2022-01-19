@@ -16,30 +16,33 @@ from loguru import logger
 from scannls import Blat  # type: ignore
 
 
+@pytest.fixture(scope="class")
+def blat() -> Blat:
+    """Create Blat instance."""
+    return Blat(ref_2bit=".", logger=logger, port=88888, output_dir=".")
+
+
+@pytest.fixture()
+def process():
+    """Create fake process."""
+    names = ["gfServer", "test"]
+
+    class _Process:
+        def __init__(self, name):
+            self._name = name
+
+        def name(self) -> str:
+            return self._name
+
+        def cmdline(self) -> bool:
+            return True
+
+    return [_Process(name) for name in names]
+
+
+@pytest.mark.usefixtures("blat")
 class TestBlat:
     """Test Blat class."""
-
-    @pytest.fixture(scope="class")
-    def blat(self) -> Blat:
-        """Create Blat instance."""
-        return Blat(ref_2bit=".", logger=logger, port=88888, output_dir=".")
-
-    @pytest.fixture(scope="class")
-    def process(self):
-        """Create fake process."""
-        names = ["gfServer", "test"]
-
-        class _Process:
-            def __init__(self, name):
-                self._name = name
-
-            def name(self):
-                return self._name
-
-            def cmdline(self):
-                return True
-
-        return [_Process(name) for name in names]
 
     def test_ref_dir(self, blat):
         """Test ref_dir."""
