@@ -80,13 +80,10 @@ class Ruler:
         """
         if sv_type1 != sv_type2:
             return float("inf")
-        else:
-            chrm1, pos1 = bp1.split(":")
-            chrm2, pos2 = bp2.split(":")
-            if chrm1 == chrm2:
-                return abs(int(pos1) - int(pos2))
-            else:
-                return float("inf")
+
+        chrm1, pos1 = bp1.split(":")
+        chrm2, pos2 = bp2.split(":")
+        return abs(int(pos1) - int(pos2)) if chrm1 == chrm2 else float("inf")
 
     @staticmethod
     def first_node_last_node_distance(
@@ -103,60 +100,58 @@ class Ruler:
              [x]-[x]-[x]-[x]
              * The output distance will be [0, 1]
         """
+        if first_node.exons is None or last_node.exons is None:
+            raise SystemExit from ExonsNotFoundError
+
         _ft_strand = first_node.strand
         _lt_strand = last_node.strand
 
         if _ft_strand != _lt_strand:
             return 1.0
-        else:
-            distance = 1.0
-            #       [xxxx]-->--
-            # -->--[xxxx]
-            first_node_first_exon_start = first_node.exons[0][0]  # type: ignore
-            first_node_last_exon_end = first_node.exons[-1][1]  # type: ignore
-            last_node_first_exon_start = last_node.exons[0][0]  # type: ignore
-            last_node_last_exon_end = last_node.exons[-1][1]  # type: ignore
 
-            if _ft_strand == _lt_strand == "+":
-                if (
-                    last_node_first_exon_start
-                    <= first_node_first_exon_start
-                    < last_node_last_exon_end
-                    <= first_node_last_exon_end
-                ):
-                    overlapped_len = (
-                        last_node_last_exon_end - first_node_first_exon_start
-                    )
+        distance = 1.0
+        #       [xxxx]-->--
+        # -->--[xxxx]
+        first_node_first_exon_start = first_node.exons[0][0]
+        first_node_last_exon_end = first_node.exons[-1][1]
+        last_node_first_exon_start = last_node.exons[0][0]
+        last_node_last_exon_end = last_node.exons[-1][1]
 
-                    _ft_cov = overlapped_len / (
-                        first_node_last_exon_end - first_node_first_exon_start
-                    )
-                    _lt_cov = overlapped_len / (
-                        last_node_last_exon_end - last_node_first_exon_start
-                    )
-                    distance = 1 - (_ft_cov + _lt_cov) / 2
+        if _ft_strand == _lt_strand == "+":
+            if (
+                last_node_first_exon_start
+                <= first_node_first_exon_start
+                < last_node_last_exon_end
+                <= first_node_last_exon_end
+            ):
+                overlapped_len = last_node_last_exon_end - first_node_first_exon_start
 
-            #  --<--[xxxx]
-            #         [xxxx]--<--
-            else:
-                if (
-                    first_node_first_exon_start
-                    <= last_node_first_exon_start
-                    < first_node_last_exon_end
-                    <= last_node_last_exon_end
-                ):
-                    overlapped_len = (
-                        first_node_last_exon_end - last_node_first_exon_start
-                    )
+                _ft_cov = overlapped_len / (
+                    first_node_last_exon_end - first_node_first_exon_start
+                )
+                _lt_cov = overlapped_len / (
+                    last_node_last_exon_end - last_node_first_exon_start
+                )
+                distance = 1 - (_ft_cov + _lt_cov) / 2
 
-                    _ft_cov = overlapped_len / (
-                        first_node_last_exon_end - first_node_first_exon_start
-                    )
-                    _lt_cov = overlapped_len / (
-                        last_node_last_exon_end - last_node_first_exon_start
-                    )
-                    distance = 1 - (_ft_cov + _lt_cov) / 2
-            return distance
+        #  --<--[xxxx]
+        #         [xxxx]--<--
+        elif (
+            first_node_first_exon_start
+            <= last_node_first_exon_start
+            < first_node_last_exon_end
+            <= last_node_last_exon_end
+        ):
+            overlapped_len = first_node_last_exon_end - last_node_first_exon_start
+
+            _ft_cov = overlapped_len / (
+                first_node_last_exon_end - first_node_first_exon_start
+            )
+            _lt_cov = overlapped_len / (
+                last_node_last_exon_end - last_node_first_exon_start
+            )
+            distance = 1 - (_ft_cov + _lt_cov) / 2
+        return distance
 
     @staticmethod
     def breakpoint_pairs_distance(bp_pair1: List, bp_pair2: List) -> float:
@@ -185,10 +180,9 @@ class Ruler:
                 )
                 effect_num_pair += 1
 
-        if effect_num_pair > 0:
-            ave_distance = sum(distance_list) / (effect_num_pair * 2)
-        else:
-            ave_distance = 100
+        ave_distance = (
+            sum(distance_list) / (effect_num_pair * 2) if effect_num_pair > 0 else 100
+        )
         distance = ave_distance / normalization_factor
         return distance
 
@@ -210,7 +204,7 @@ class Ruler:
         flag = False
 
         if left_subject_node is None and right_subject_node is None:
-            flag = True
+            return True
 
         if left_subject_node:
             if (
@@ -288,20 +282,18 @@ class Ruler:
                 else None
             )
 
+            right_subject_node = None
             if (
                 0
                 <= i
                 < len(series_a_bp_pair) - sliding_window_size + 1 - sliding_window_size
             ):
                 right_subject_node = series_a[i + 1]
-            else:
-                right_subject_node = None
 
-            flag = Ruler.__decide_flag(
+            if Ruler.__decide_flag(
                 left_query_node, right_query_node, left_subject_node, right_subject_node
-            )
+            ):
 
-            if flag:
                 distance = Ruler.breakpoint_pairs_distance(
                     series_b_bp_pair, _subject_bp_pair
                 )
