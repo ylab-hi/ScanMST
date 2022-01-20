@@ -664,7 +664,7 @@ class SimVCFWriter:
         """Close file."""
         if self.is_opened:
             self.io.close()  # type: ignore
-            self.io = None
+            self.io = None  # type: ignore
 
     def write_line(self, line: str) -> None:
         """Write line to file."""
