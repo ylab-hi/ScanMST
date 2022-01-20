@@ -17,7 +17,6 @@ from .. import __version__
 from ..type import LoggerType
 from .basicClass import reverse_complement
 from .exception import NumberOfHopIsNotValidError
-from .writer import Writer
 
 
 @dataclass
@@ -550,7 +549,7 @@ class OneHop:
         return transcripts_dict
 
 
-class SimVCFWriter(Writer):
+class SimVCFWriter:
     """Writer for VCF files for Simulated data.
 
     .. note::
@@ -634,9 +633,10 @@ class SimVCFWriter(Writer):
         logger: LoggerType,
     ) -> None:
         """Initialize SimVCFWriter object."""
-        super().__init__(file_path, logger)
+        self.file_path = file_path
         self.id = 1
         self.sample_name = output_prefix
+        self.logger = logger
 
     @property
     def is_opened(self) -> bool:
@@ -682,13 +682,6 @@ class SimVCFWriter(Writer):
         """Write data to file.
 
         :param: data_object: Data to write to file.
-        """
-
-    @write_data.register
-    def _(self, data_object: List[MetaExon]) -> None:
-        """Write metaexons to VCF file.
-
-        :param data_object: metaexons to write to file.
         """
         if len(data_object) == 0:
             self.logger.warning(
