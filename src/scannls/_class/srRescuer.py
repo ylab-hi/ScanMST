@@ -135,18 +135,20 @@ class SRRescuer:
         :param mode:
         :return:
         """
-        for aln in self.in_bam.fetch(region=region):
+        for read in self.in_bam.fetch(region=region):
             # read is an instance of pysam.AlignedSegment
-            strand = "-" if aln.is_reverse else "+"
-            if aln.mapq >= self.mapq_cutoff and "S" in aln.cigarstring:
+            strand = "-" if read.is_reverse else "+"
+            if read.mapping_quality >= self.mapq_cutoff and "S" in read.cigarstring:
                 (
                     _len,
                     _seq,
                     _pos,
                     _mode,
-                ) = get_softclip_length(aln, mode)
-                _reference_pos = aln.reference_start if mode == 2 else aln.reference_end
-                if aln.query_name in query_names:
+                ) = get_softclip_length(read, mode)
+                _reference_pos = (
+                    read.reference_start if mode == 2 else read.reference_end
+                )
+                if read.query_name in query_names:
                     if _pos == _reference_pos:
                         sv_list[strand].append(_seq)
                 elif _pos == _reference_pos and _len >= self.soft_len_cutoff:

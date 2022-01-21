@@ -256,7 +256,6 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
         vcf_writer.write_data(intact_series_list[0])
 
     logger.info(f"Total Series: {len(intact_series_list)}")
-    logger.info("on the dev/fetch branch")
     rescuer = SRRescuer(
         in_bam_io_object,
         options.mapq,
