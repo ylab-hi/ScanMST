@@ -145,7 +145,6 @@ class SRRescuer:
                     _pos,
                     _mode,
                 ) = get_softclip_length(aln, mode)
-                _pos = _pos - 1 if mode == 1 else _pos
                 _reference_pos = aln.reference_start if mode == 2 else aln.reference_end
                 if aln.query_name in query_names:
                     if _pos == _reference_pos:
@@ -171,9 +170,6 @@ class SRRescuer:
 
         self.logger.trace(f"{region=}")
 
-        # for col in self.in_bam.pileup(
-        #    region=region, truncate=True, stepper="nofilter", min_base_quality=0
-        # ):
         # read is an instance of pysam.PileupRead
         self._calculate_sr_for_reads(region, query_names, sr_list, sv_list, mode)
 
