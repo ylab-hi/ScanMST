@@ -139,11 +139,7 @@ class SRRescuer:
             # read.alignment is an instance of pysam.AlignedSegment
             aln = read.alignment
             strand = "-" if aln.is_reverse else "+"
-            if (
-                aln.mapq >= self.mapq_cutoff
-                and read.query_position
-                and "S" in aln.cigarstring
-            ):
+            if read.query_position and "S" in aln.cigarstring:
                 (
                     _len,
                     _seq,
@@ -177,7 +173,11 @@ class SRRescuer:
         self.logger.trace(f"{region=}")
 
         for col in self.in_bam.pileup(
-            region=region, truncate=True, stepper="nofilter", min_base_quality=0
+            region=region,
+            truncate=True,
+            stepper="nofilter",
+            min_base_quality=0,
+            min_mapping_quality=self.mapq_cutoff,
         ):
             # read is an instance of pysam.PileupRead
             self._calculate_sr_for_reads(col, query_names, sr_list, sv_list, mode)
