@@ -13,7 +13,7 @@ from ._class.basicRead import Read
 from ._class.exception import ReadNotFoundError, ToolNotFoundError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement
-from ._class.basicClass import Series
+from ._class.basicClass import Series, NodeType, Node
 from ._class.blat import Blat
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
@@ -32,6 +32,8 @@ __all__ = [
     "Event",
     "reverse_complement",
     "Series",
+    "Node",
+    "NodeType",
     "Blat",
     "MyLogger",
     "ParallelWorker",

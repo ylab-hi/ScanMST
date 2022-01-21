@@ -32,14 +32,15 @@ class SpliceGraph:
     dict_factory = dict
     list_factory = list
 
-    def __init__(self, logger: LoggerType, rescuer: SRRescuer):
+    def __init__(self, logger: LoggerType):
         """Initialize SpliceGraph."""
         self.logger = logger
-        self.rescuer = rescuer
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
-    def __call__(self, series_list: Iterable[Series]) -> Iterable[Series]:
+    def __call__(
+        self, series_list: Iterable[Series], rescuer: SRRescuer
+    ) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
         :param series_list: series list
@@ -53,9 +54,15 @@ class SpliceGraph:
         if isinstance(series_list, types.GeneratorType):
             series_list = list(series_list)
         self.series_list = copy.deepcopy(series_list)
+        del series_list  # remove reference to series_list
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
+        # construct splice graph
         self.construct()
-        self.rescuer(self)
+        # sr rescuer
+        rescuer(self)
+        # prun the graph
+
+        # trace path
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
 
@@ -417,3 +424,10 @@ class SpliceGraph:
             self._trace(start_node, [], group_paths)
             result_series_list.extend(group_paths)
         return result_series_list
+
+    def _prune(self):
+        """Helper function to prune graph."""
+
+    def prune(self) -> None:
+        """Prune graph."""
+        self._prune()
