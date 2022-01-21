@@ -175,7 +175,7 @@ class SRRescuer:
         for col in self.in_bam.pileup(
             region=region,
             truncate=True,
-            stepper="nofilter",
+            stepper="samtools",
             min_base_quality=0,
             min_mapping_quality=self.mapq_cutoff,
         ):
