@@ -33,10 +33,6 @@ class MetaExon:
     mt_seq: str = None
     nls_type: Optional[str] = None
 
-    def __bool__(self):
-        """Bool."""
-        return self.exons
-
 
 class OneHop:
     """Generate one-hop NLS transcript (GTF and FASTA)."""
@@ -249,7 +245,7 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    if _metaexon2:
+                    if _metaexon2.chrom:
                         current_metaexons.append(_metaexon1)
                         current_metaexons.append(_metaexon2)
                         break
@@ -279,7 +275,7 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    if _metaexon2:
+                    if _metaexon2.chrom:
                         current_metaexons.append(_metaexon2)
                         break
             return current_metaexons
@@ -300,7 +296,7 @@ class OneHop:
                     direction="upstream",
                     nls_type="IDUP",
                 )
-                if _metaexon1:
+                if _metaexon1.chrom:
                     _metaexon2 = OneHop.reverse_metaexon(_metaexon1)
                     current_metaexons.append(_metaexon1)
                     current_metaexons.append(_metaexon2)
@@ -346,7 +342,7 @@ class OneHop:
                         direction="downstream",
                     )
 
-                    if _metaexon2:
+                    if _metaexon2.chrom:
                         current_metaexons.append(_metaexon1)
                         current_metaexons.append(_metaexon2)
                         break
@@ -375,7 +371,7 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    if _metaexon2:
+                    if _metaexon2.chrom:
                         current_metaexons.append(_metaexon2)
                         break
             return current_metaexons
@@ -408,7 +404,7 @@ class OneHop:
                     locus_type=_locus_type,
                     direction="downstream",
                 )
-                if _metaexon2:
+                if _metaexon2.chrom:
                     current_metaexons.append(_metaexon1)
                     current_metaexons.append(_metaexon2)
                     break
@@ -429,7 +425,7 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    if _metaexon2:
+                    if _metaexon2.chrom:
                         current_metaexons.append(_metaexon2)
                         break
             return current_metaexons
