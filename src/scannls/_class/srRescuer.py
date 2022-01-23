@@ -128,7 +128,6 @@ class SRRescuer:
     def _calculate_sr_for_reads(self, region, query_names, sr_list, sv_list, mode):
         """Calculate SR for reads.
 
-        :param col:
         :param query_names:
         :param sr_list:
         :param sv_list:
