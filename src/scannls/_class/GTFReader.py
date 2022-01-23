@@ -47,8 +47,8 @@ class GTFReader:
         self.logger = logger
         self.chrom_to_genes = None
         self.gene_to_trx = None
-        self.trx_to_exon = None
-        self.trx_to_intron = None
+        self.trx_to_exons = None
+        self.trx_to_introns = None
         self.gene_to_intergenic = None
 
     @staticmethod
@@ -94,7 +94,7 @@ class GTFReader:
         if "chrY" in available_chroms:
             available_chroms.remove("chrY")
 
-        gene_positions.sort(key=operator.itemgetter("chrm"))
+        gene_positions.sort(key=operator.itemgetter("chrom"))
         gene_positions.sort(key=operator.itemgetter("pos"))
 
         # chrom => (gene_name, strand)
@@ -114,24 +114,24 @@ class GTFReader:
         return chrom_to_ordered_genes, gene_to_trx, sorted_trx_to_exon
 
     @staticmethod
-    def _obtain_trx_to_intron(trx_to_exon):
+    def _obtain_trx_to_intron(trx_to_exons):
         """Obtain transcript to introns dictionary."""
-        trx_to_intron = defaultdict(list)
-        for trx_id in trx_to_exon:
-            strand = trx_to_exon[trx_id][0].strand
-            chrm = trx_to_exon[trx_id][0].chrom
+        trx_to_introns = defaultdict(list)
+        for trx_id in trx_to_exons:
+            strand = trx_to_exons[trx_id][0].strand
+            chrm = trx_to_exons[trx_id][0].chrom
             tmp_list = []
-            for i in trx_to_exon[trx_id]:
+            for i in trx_to_exons[trx_id]:
                 tmp_list.append(i.start)
                 tmp_list.append(i.end)
             tmp_list.pop(0)
             tmp_list.pop(-1)
             if len(tmp_list) >= 2:
                 for j, k in zip(tmp_list[0::2], tmp_list[1::2]):
-                    trx_to_intron[trx_id].append(
+                    trx_to_introns[trx_id].append(
                         HTSeq.GenomicInterval(chrm, j, k, strand)
                     )
-        return trx_to_intron
+        return trx_to_introns
 
     @staticmethod
     def gene_to_intergenic_parser(input_gtf):
@@ -160,10 +160,12 @@ class GTFReader:
 
     def parser(self):
         """Parse the annotation GTF file to generate serval useful dictionaries."""
-        self.chrom_to_genes, self.gene_to_trx, self.trx_to_exon = GTFReader._gtf_parser(
-            self.gtf
-        )
-        self.trx_to_intron = GTFReader._obtain_trx_to_intron(self.trx_to_exon)
+        (
+            self.chrom_to_genes,
+            self.gene_to_trx,
+            self.trx_to_exons,
+        ) = GTFReader._gtf_parser(self.gtf)
+        self.trx_to_intron = GTFReader._obtain_trx_to_intron(self.trx_to_exons)
         gtf_name = os.path.splitext(os.path.basename(self.gtf))[0]
         intergenic = Intergenic(
             input_gtf=self.gtf,

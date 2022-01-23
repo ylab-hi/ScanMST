@@ -23,15 +23,19 @@ from .exception import NumberOfHopIsNotValidError
 class MetaExon:
     """Class to store the information of one meta-exon."""
 
-    chrom: str
-    locus: str
-    strand: str
-    exons: list
-    p5_pos: int
-    p3_pos: int
-    wt_seq: str
-    mt_seq: str
+    chrom: str = None
+    locus: str = None
+    strand: str = None
+    exons: list = None
+    p5_pos: int = None
+    p3_pos: int = None
+    wt_seq: str = None
+    mt_seq: str = None
     nls_type: Optional[str] = None
+
+    def __bool__(self):
+        """Bool."""
+        return self.exons
 
 
 class OneHop:
@@ -69,7 +73,7 @@ class OneHop:
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.logger = logger
 
-    def _metaexon(
+    def gen_metaexon(
         self,
         locus: str,
         strand: str,
@@ -85,11 +89,10 @@ class OneHop:
               * For intergenic, upstream: upstream intergenic region of selected gene
                 downstream: downstream intergenic region of selected gene
         """
-        _trxs = self.gene_to_trx[locus]
+        _trxs = list(self.gene_to_trx[locus])
         _tgt_trx = secrets.choice(_trxs)
         _chrom = self.trx_to_exons[_tgt_trx][0].chrom
         _num_exon = len(self.trx_to_exons[_tgt_trx])
-        _num_intron = len(self.trx_to_introns[_tgt_trx])
         wt_seq = ""
         if locus_type == "exonic" or locus_type == "intronic":
             if strand == "+":
@@ -149,6 +152,10 @@ class OneHop:
                     p5_pos, p3_pos = _metaexon[-1].end, _metaexon[0].start
             r_metaexon = _metaexon
         elif locus_type == "intronic":
+            if _tgt_trx not in self.trx_to_introns:
+                return MetaExon()
+
+            _num_intron = len(self.trx_to_introns[_tgt_trx])
             tgt_intron_index = secrets.choice(range(_num_intron))
             # GenomicInterval
             _metaexon = self.trx_to_introns[_tgt_trx][tgt_intron_index]
@@ -218,7 +225,7 @@ class OneHop:
                 _index1 = self.chrom_to_genes[_select_chrom].index(
                     (_select_gene1, _select_strand1)
                 )
-                _metaexon1 = self._metaexon(
+                _metaexon1 = self.gen_metaexon(
                     locus=_select_gene1,
                     strand=_select_strand1,
                     locus_type="exonic",
@@ -236,15 +243,16 @@ class OneHop:
                     _index2
                 ]
                 if _select_strand1 == _select_strand2:
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    current_metaexons.append(_metaexon1)
-                    current_metaexons.append(_metaexon2)
-                    break
+                    if _metaexon2:
+                        current_metaexons.append(_metaexon1)
+                        current_metaexons.append(_metaexon2)
+                        break
         else:
             current_metaexons[-1].nls_type = "TDUP"
             last_metaexon = current_metaexons[-1]
@@ -265,34 +273,38 @@ class OneHop:
                     _index2
                 ]
                 if _select_strand1 == _select_strand2:
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    current_metaexons.append(_metaexon2)
-                    break
+                    if _metaexon2:
+                        current_metaexons.append(_metaexon2)
+                        break
             return current_metaexons
 
     def _idup_hopper(self, current_metaexons) -> None:
         """IDUP hopper."""
         if current_metaexons == []:
             _select_chrom = secrets.choice(self.available_chroms)
-            _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
-            _select_gene1, _select_strand1 = secrets.choice(
-                self.chrom_to_genes[_select_chrom]
-            )
-            _metaexon1 = self._metaexon(
-                locus=_select_gene1,
-                strand=_select_strand1,
-                locus_type=_locus_type,
-                direction="upstream",
-                nls_type="IDUP",
-            )
-            _metaexon2 = OneHop.reverse_metaexon(_metaexon1)
-            current_metaexons.append(_metaexon1)
-            current_metaexons.append(_metaexon2)
+            while True:
+                _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
+                _select_gene1, _select_strand1 = secrets.choice(
+                    self.chrom_to_genes[_select_chrom]
+                )
+                _metaexon1 = self.gen_metaexon(
+                    locus=_select_gene1,
+                    strand=_select_strand1,
+                    locus_type=_locus_type,
+                    direction="upstream",
+                    nls_type="IDUP",
+                )
+                if _metaexon1:
+                    _metaexon2 = OneHop.reverse_metaexon(_metaexon1)
+                    current_metaexons.append(_metaexon1)
+                    current_metaexons.append(_metaexon2)
+                    break
         else:
             current_metaexons[-1].nls_type = "IDUP"
             last_metaexon = current_metaexons[-1]
@@ -310,7 +322,7 @@ class OneHop:
                 _index1 = self.chrom_to_genes[_select_chrom].index(
                     (_select_gene1, _select_strand1)
                 )
-                _metaexon1 = self._metaexon(
+                _metaexon1 = self.gen_metaexon(
                     locus=_select_gene1,
                     strand=_select_strand1,
                     locus_type="exonic",
@@ -327,15 +339,17 @@ class OneHop:
                     _index2
                 ]
                 if _select_strand1 != _select_strand2:
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    current_metaexons.append(_metaexon1)
-                    current_metaexons.append(_metaexon2)
-                    break
+
+                    if _metaexon2:
+                        current_metaexons.append(_metaexon1)
+                        current_metaexons.append(_metaexon2)
+                        break
         else:
             current_metaexons[-1].nls_type = "INV"
             last_metaexon = current_metaexons[-1]
@@ -355,14 +369,15 @@ class OneHop:
                     _index2
                 ]
                 if _select_strand1 != _select_strand2:
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    current_metaexons.append(_metaexon2)
-                    break
+                    if _metaexon2:
+                        current_metaexons.append(_metaexon2)
+                        break
             return current_metaexons
 
     def _tra_hopper(self, current_metaexons) -> None:
@@ -371,29 +386,32 @@ class OneHop:
             _select_chrom1, _select_chrom2 = secrets.SystemRandom().sample(
                 self.available_chroms, k=2
             )
-            _select_gene1, _select_strand1 = secrets.choice(
-                self.chrom_to_genes[_select_chrom1]
-            )
-            _select_gene2, _select_strand2 = secrets.choice(
-                self.chrom_to_genes[_select_chrom2]
-            )
-            _metaexon1 = self._metaexon(
-                locus=_select_gene1,
-                strand=_select_strand1,
-                locus_type="exonic",
-                direction="upstream",
-                nls_type="TRA",
-            )
+            while True:
+                _select_gene1, _select_strand1 = secrets.choice(
+                    self.chrom_to_genes[_select_chrom1]
+                )
+                _select_gene2, _select_strand2 = secrets.choice(
+                    self.chrom_to_genes[_select_chrom2]
+                )
+                _metaexon1 = self.gen_metaexon(
+                    locus=_select_gene1,
+                    strand=_select_strand1,
+                    locus_type="exonic",
+                    direction="upstream",
+                    nls_type="TRA",
+                )
 
-            _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
-            _metaexon2 = self._metaexon(
-                locus=_select_gene2,
-                strand=_select_strand2,
-                locus_type=_locus_type,
-                direction="downstream",
-            )
-            current_metaexons.append(_metaexon1)
-            current_metaexons.append(_metaexon2)
+                _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
+                _metaexon2 = self.gen_metaexon(
+                    locus=_select_gene2,
+                    strand=_select_strand2,
+                    locus_type=_locus_type,
+                    direction="downstream",
+                )
+                if _metaexon2:
+                    current_metaexons.append(_metaexon1)
+                    current_metaexons.append(_metaexon2)
+                    break
         else:
             current_metaexons[-1].nls_type = "TRA"
             last_metaexon = current_metaexons[-1]
@@ -405,14 +423,15 @@ class OneHop:
                     _select_gene2, _select_strand2 = secrets.choice(
                         self.chrom_to_genes[_select_chrom2]
                     )
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    current_metaexons.append(_metaexon2)
-                    break
+                    if _metaexon2:
+                        current_metaexons.append(_metaexon2)
+                        break
             return current_metaexons
 
     def _del_hopper(self, current_metaexons) -> None:
@@ -426,7 +445,7 @@ class OneHop:
                 _index1 = self.chrom_to_genes[_select_chrom].index(
                     (_select_gene1, _select_strand1)
                 )
-                _metaexon1 = self._metaexon(
+                _metaexon1 = self.gen_metaexon(
                     locus=_select_gene1,
                     strand=_select_strand1,
                     locus_type="exonic",
@@ -444,7 +463,7 @@ class OneHop:
                     _index2
                 ]
                 if _select_strand1 == _select_strand2:
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
@@ -473,7 +492,7 @@ class OneHop:
                     _index2
                 ]
                 if _select_strand1 == _select_strand2:
-                    _metaexon2 = self._metaexon(
+                    _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
                         locus_type=_locus_type,
