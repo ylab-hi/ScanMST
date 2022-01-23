@@ -104,6 +104,18 @@ class BasicNode:
         self.next_node_in_series: Optional[NodeType] = None
         self.previous_node_in_series: Optional[NodeType] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
+        self.trace_id: int = -1
+
+    def set_trace_id(self, trace_id: int) -> None:
+        """Set trace_id."""
+        if not self.is_traced:
+            self.trace_id = trace_id
+            self.is_traced = True
+
+    def reset_trace_id(self) -> None:
+        """Reset trace_id."""
+        self.trace_id = -1
+        self.is_traced = False
 
     def is_start_node(self) -> bool:
         """Return True if Insertion object is start node."""
@@ -249,6 +261,7 @@ class Insertion(Read, BasicNode):
         "is_merged",
         "is_in_graph",
         "is_traced",
+        "trace_id",
     )
 
     def __init__(
@@ -302,7 +315,7 @@ class Insertion(Read, BasicNode):
             f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
-            f"SR={self.sr}, query_name={self.query_name})"
+            f"SR={self.sr}, query_name={self.query_name}, trace_id={self.trace_id})"
         )
 
     def __hash__(self) -> int:
@@ -547,7 +560,7 @@ class Node(BasicNode):
             f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
-            f"SR={self.sr}, query_name={self.query_name}) "
+            f"SR={self.sr}, query_name={self.query_name}, trace_id={self.trace_id})"
         )
 
     @classmethod

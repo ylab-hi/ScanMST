@@ -7,11 +7,15 @@
 """
 import copy
 import types
+from collections import defaultdict
+from enum import auto
+from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Set
+from typing import Tuple
 from typing import Union
 
 from ..type import LoggerType
@@ -24,6 +28,16 @@ from .exception import ExonsNotFoundError
 from .srRescuer import SRRescuer
 
 NodeType = Union[Node, Insertion]
+
+
+class SpliceType(Enum):
+    """Splice Type.
+
+    used in prune
+    """
+
+    forward = auto()
+    backward = auto()
 
 
 class SpliceGraph:
@@ -66,29 +80,6 @@ class SpliceGraph:
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
 
-    def get_start_nodes(self):
-        """Get start nodes based if node has predecessors."""
-        return [
-            node
-            for nodes in self.nodes.values()
-            for node in nodes
-            if node.is_start_node()
-        ]
-
-    def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
-        """Get nodes in graph with similar key."""
-        return self.nodes.get(similar_key, [])
-
-    def add_node_with_similar_key(self, node: NodeType) -> None:
-        """Add node to the splice graph.
-
-        :param node: node to be added
-        """
-        if similar_nodes := self.get_nodes_with_similar_key(node.similar_key):
-            similar_nodes.append(node)
-        else:
-            self.nodes[node.similar_key] = [node]
-
     def __contains__(self, node: NodeType) -> bool:
         """Check if node is in graph.
 
@@ -105,10 +96,56 @@ class SpliceGraph:
             for other_node in self.get_nodes_with_similar_key(node.similar_key)
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[NodeType]:
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             yield from nodes
+
+    def get_start_nodes(self) -> Iterable[NodeType]:
+        """Get start nodes based if node has predecessors."""
+        return (
+            node
+            for nodes in self.nodes.values()
+            for node in nodes
+            if node.is_start_node()
+        )
+
+    def get_end_nodes(self) -> Iterable[NodeType]:
+        """Get end nodes based if node has successors."""
+        return (
+            node
+            for nodes in self.nodes.values()
+            for node in nodes
+            if node.is_end_node()
+        )
+
+    def remove_node(self, node: NodeType) -> None:
+        """Remove node from graph.
+
+        :param node: node to be removed
+        """
+        if node.unique_key is None:
+            raise ValueError("node.unique_key is None")
+        self.get_nodes_with_similar_key(node.similar_key).remove(node)
+
+    def reset_trace_id(self) -> None:
+        """Reset trace id for all nodes."""
+        for node in self:
+            node.reset_trace_id()
+
+    def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
+        """Get nodes in graph with similar key."""
+        return self.nodes.get(similar_key, [])
+
+    def add_node_with_similar_key(self, node: NodeType) -> None:
+        """Add node to the splice graph.
+
+        :param node: node to be added
+        """
+        if similar_nodes := self.get_nodes_with_similar_key(node.similar_key):
+            similar_nodes.append(node)
+        else:
+            self.nodes[node.similar_key] = [node]
 
     @staticmethod
     def _check_insertion_conditions_for_compare(
@@ -395,9 +432,10 @@ class SpliceGraph:
                     current_node, similar_key, merged_nodes_pool
                 )
 
-    def _trace(
+    def _trace_forward(
         self,
         start_node: NodeType,
+        trace_id: int,
         path: List[NodeType],
         group_paths: List[List[NodeType]],
     ) -> None:
@@ -411,22 +449,202 @@ class SpliceGraph:
         else:
             if successors := start_node.successors:
                 for successor in successors:
-                    self._trace(successor, path + [start_node], group_paths)
+                    successor.set_trace_id(trace_id)
+                    self._trace_forward(
+                        successor, trace_id + 1, path + [start_node], group_paths
+                    )
             else:
-                self._trace(successors, path + [start_node], group_paths)  # type: ignore
+                # successor be [] or None
+                self._trace_forward(
+                    successors,  # type: ignore
+                    trace_id + 1,
+                    path + [start_node],
+                    group_paths,
+                )
+
+    def _trace_backward(
+        self,
+        end_node: NodeType,
+        trace_id: int,
+        path: List[NodeType],
+        group_paths: List[List[NodeType]],
+    ) -> None:
+        """Helper function to trace through graph and find all paths.
+
+        .. seealso::
+            :func:`SpliceGraph.trace`
+        """
+        if not end_node or end_node in path:
+            group_paths.append(path)
+        else:
+            if predecessors := end_node.predecessors:
+                for predecessor in predecessors:
+                    predecessor.set_trace_id(trace_id)
+                    self._trace_backward(
+                        predecessor, trace_id + 1, path + [end_node], group_paths
+                    )
+            else:
+                # predecessor be [] or None
+                self._trace_backward(
+                    predecessors,  # type: ignore
+                    trace_id + 1,
+                    path + [end_node],
+                    group_paths,
+                )
+
+    def _trace(self, direction: Enum) -> None:
+        """Trace splice graph but only mark node with trace_id.
+
+        :param direction: direction of trace, forward or backward
+
+        .. note::
+            before trace, you should call :func:`SpliceGraph.reset_trace_id` if
+            you have already traced splice graph.
+        """
+        if direction == SpliceType.forward:
+            for start_node in self.get_start_nodes():
+                start_node.set_trace_id(1)
+                self._trace_forward(start_node, 2, [], [])
+            return
+        elif direction == SpliceType.backward:
+            for end_node in self.get_end_nodes():
+                end_node.set_trace_id(1)
+                self._trace_backward(end_node, 2, [], [])
+            return
+
+        raise ValueError(f"{direction=} is not a valid direction[forward, backward]")
 
     def trace(self) -> Any:
-        """Trace through graph and find all paths."""
+        """Trace forward through graph and find all paths."""
         result_series_list = []
+
         for start_node in self.get_start_nodes():
+            start_node.set_trace_id(1)
             group_paths: Any = []
-            self._trace(start_node, [], group_paths)
+            self._trace_forward(start_node, 2, [], group_paths)
             result_series_list.extend(group_paths)
+
         return result_series_list
 
-    def _prune(self):
-        """Helper function to prune graph."""
+    def create_node_trace_id_dict(self) -> Dict[int, List[NodeType]]:
+        """Create node trace id dict.
+
+        :return: trace_id: List[node] dict
+        """
+        node_trace_id_dict: Dict[int, List[NodeType]] = defaultdict(list)
+        for node in self:
+            node_trace_id_dict[node.trace_id].append(node)
+
+        return node_trace_id_dict
+
+    def _rule_out(self, winner: NodeType, loser: NodeType) -> None:
+        """Rule out loser and add sr to winner.
+
+        Loser is out, and its sr, successors, predecessors are added to winner.
+        """
+        winner.update_sr(loser.sr)
+        winner.add_successor_from_list(loser.successors)
+        winner.add_predecessor_from_list(loser.predecessors)
+
+        for loser_predecessor in loser.predecessors:
+            loser_predecessor.successors.remove(loser)
+
+        for loser_successor in loser.successors:
+            loser_successor.predecessors.remove(loser)
+        self.remove_node(loser)
+
+    @staticmethod
+    def check_can_battle(node_a: NodeType, node_b: NodeType) -> bool:
+        """Check if two nodes can battle.
+
+        .. todo:: Write specific condition.
+        """
+        flag = False
+        if node_a == node_b:
+            flag = True
+        return flag
+
+    def _begin_battle(self, node_a: NodeType, node_b: NodeType) -> Tuple[bool, ...]:
+        """Begin battle between two nodes.
+
+        :return: Two bool values:
+                value1: True if node_a and node_b can battle.
+                value2: if node_a is winner, return True, else return False
+        """
+        if not self.check_can_battle(node_a, node_b):
+            return False, False
+
+        if node_a.sr > node_b.sr:
+            self._rule_out(node_a, node_b)
+            return True, True
+
+        elif node_a.sr < node_b.sr:
+            self._rule_out(node_b, node_a)
+            return True, False
+
+    def _battle(self, nodes: List[NodeType]) -> None:
+        """Nodes Battle.
+
+        :param nodes: nodes to battle
+        :return: battle result
+        """
+        while nodes:
+            last_node = nodes.pop()
+            for other_node in nodes:
+                can_battle, is_winner = self._begin_battle(last_node, other_node)
+                if can_battle:
+                    if not is_winner:
+                        # other_node is winner
+                        break
+                    # winner is last_node
+                    nodes.remove(other_node)
+
+                # battle never happen
+
+                # battle happened
+                # two situations:
+                # 1. last_node is always winner
+                # 2. other_node is winner and break battle cycle
+
+                # 1. last_node is always winner
+                # nothing to do
+
+                # 2. other_node is winner and break battle cycle
+                # nothing to do
+
+    def battle(self, node_trace_id_dict: Dict[int, List[NodeType]]) -> None:
+        """Nodes with same trace id battle each other.
+
+        Node with larger number of sr wins, otherwise lose.
+
+        Loser will be rule out.
+        """
+        for nodes in node_trace_id_dict.values():
+            if len(nodes) > 1:
+                self._battle(nodes)
+
+    def _prune(self, direction: Enum) -> None:
+        """Implement function to prune graph.
+
+        :param direction: direction of prune, forward or backward
+        """
+        # 1. trace and mark node with trace_id
+        self._trace(direction)
+        # 2. save every trace_id and its corresponding node to be Dict
+        node_trace_id_dict = self.create_node_trace_id_dict()
+        # 3. check value of Dict, if number of nodes is less than 2, remove it
+        # 4. compare them and rule out loser
+        self.battle(node_trace_id_dict)
 
     def prune(self) -> None:
-        """Prune graph."""
-        self._prune()
+        """Prune graph.
+
+        Algorithm:
+        1. trace graph and mark every node with trace id
+        2. save every node with trace id as a Dict[int, List[NodeType]]
+        3. check nodes of Dict in terms of trace id if len(values)>1,
+        4. then compare them and rule out loser in terms of sr number
+        """
+        self._prune(SpliceType.forward)
+        self.reset_trace_id()
+        self._prune(SpliceType.backward)

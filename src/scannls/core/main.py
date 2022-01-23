@@ -131,30 +131,24 @@ class BamScanner:
             return self.representative_alignments_new_cigar
 
 
-def _get_genome_fasta(ref_genome, logger):
+def _get_genome_fasta(ref_genome):
     """Get the genome fasta file."""
     try:
         return Fasta(str(ref_genome), sequence_always_upper=True)
     except FastaNotFoundError:
-        logger.error(f"Cannot find the reference genome {ref_genome}")
         raise SystemExit from FastaNotFoundError
 
 
-def _get_cvg_gene_iv(gtf, splice_bin, logger):
+def _get_cvg_gene_iv(gtf, splice_bin):
     """Get the gene coverage interval.
 
     :param gtf: gtf file
     :param splice_bin: splice_bin file
-    :param logger: logger
     """
     try:
-        cvg, gene_iv = extract_splice_sites(str(gtf), splice_bin)
-        logger.success(f"{gtf} loaded successfully")
-    except OSError as e:
-        logger.error(f"read GTF file {gtf} error!", e)
-        raise SystemExit from OSError
-    else:
-        return cvg, gene_iv
+        return extract_splice_sites(str(gtf), splice_bin)
+    except OSError:
+        raise SystemExit from OSError(f"read GTF file {gtf} error!")
 
 
 def detect_sv_from_cigar(
@@ -263,10 +257,10 @@ def _scan_bam_helper(
     if running_mode == "parallel":
         logger = MyLogger(identified_key, logger)
 
-    logger.info(f"{identified_key= } start")
+    logger.trace(f"{identified_key=} start")
 
-    genome_fasta = _get_genome_fasta(ref_genome, logger)
-    cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin, logger)
+    genome_fasta = _get_genome_fasta(ref_genome)
+    cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
     chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
 
@@ -489,9 +483,7 @@ def scanbam_run(
 
     if parallel == 1:
 
-        for contig in contigs:
-            contig_series_list = _scan_bam_helper(contig, **keyword_parameters_dict)
-            intact_series_list.extend(contig_series_list)
+        intact_series_list = _scan_bam_helper(None, **keyword_parameters_dict)
 
     else:
 

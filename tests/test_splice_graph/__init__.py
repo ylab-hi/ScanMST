@@ -9,6 +9,7 @@
 """
 from typing import Any
 from typing import Dict
+from typing import Sequence
 
 from scannls import NodeType
 
@@ -20,7 +21,9 @@ def assign_value_for_node(node: NodeType, **kwargs: Dict[str, Any]):
             setattr(node, key, value)
 
 
-def add_edge_according_order(nodes: NodeType, parent_order: int, child_order: int):
+def add_edge_according_order(
+    nodes: Sequence[NodeType], parent_order: int, child_order: int
+):
     """Add edge according order.
 
     .. note::
