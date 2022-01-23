@@ -231,7 +231,6 @@ class SpliceGraph:
                 node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
                 and node1.exons[0][0] >= node2.exons[0][0]  # type: ignore
             )
-
         elif (
             node1.prev_breakpoint is not None
             and node1.next_breakpoint is not None

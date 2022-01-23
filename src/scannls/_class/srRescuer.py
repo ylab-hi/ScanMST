@@ -125,37 +125,32 @@ class SRRescuer:
                 increment_sr += 1
         return increment_sr
 
-    def _calculate_sr_for_reads(self, col, query_names, sr_list, sv_list, mode):
+    def _calculate_sr_for_reads(self, region, query_names, sr_list, sv_list, mode):
         """Calculate SR for reads.
 
-        :param col:
         :param query_names:
         :param sr_list:
         :param sv_list:
         :param mode:
         :return:
         """
-        for read in col.pileups:
-            # read.alignment is an instance of pysam.AlignedSegment
-            aln = read.alignment
-            strand = "-" if aln.is_reverse else "+"
-            if (
-                aln.mapq >= self.mapq_cutoff
-                and read.query_position
-                and "S" in aln.cigarstring
-            ):
+        for read in self.in_bam.fetch(region=region):
+            # read is an instance of pysam.AlignedSegment
+            strand = "-" if read.is_reverse else "+"
+            if read.mapping_quality >= self.mapq_cutoff and "S" in read.cigarstring:
                 (
                     _len,
                     _seq,
                     _pos,
                     _mode,
-                ) = get_softclip_length(aln, mode)
-                _pos = _pos - 1 if mode == 1 else _pos
-
-                if aln.query_name in query_names:
-                    if _pos == col.reference_pos:
+                ) = get_softclip_length(read, mode)
+                _reference_pos = (
+                    read.reference_start if mode == 2 else read.reference_end
+                )
+                if read.query_name in query_names:
+                    if _pos == _reference_pos:
                         sv_list[strand].append(_seq)
-                elif _pos == col.reference_pos and _len >= self.soft_len_cutoff:
+                elif _pos == _reference_pos and _len >= self.soft_len_cutoff:
                     # the pileup position is equal to the soft-clipped connection point
                     # xxxxxxxxSyyyyyyyyMzzzzzS
                     #         ^      ^
@@ -176,11 +171,8 @@ class SRRescuer:
 
         self.logger.trace(f"{region=}")
 
-        for col in self.in_bam.pileup(
-            region=region, truncate=True, stepper="nofilter", min_base_quality=0
-        ):
-            # read is an instance of pysam.PileupRead
-            self._calculate_sr_for_reads(col, query_names, sr_list, sv_list, mode)
+        # read is an instance of pysam.PileupRead
+        self._calculate_sr_for_reads(region, query_names, sr_list, sv_list, mode)
 
         rescued_sr = 0
 
