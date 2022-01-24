@@ -13,7 +13,9 @@ from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import Iterable
+from typing import Iterator
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
@@ -46,9 +48,10 @@ class SpliceGraph:
     dict_factory = dict
     list_factory = list
 
-    def __init__(self, logger: LoggerType):
+    def __init__(self, logger: LoggerType, prune_threshold: int = 10) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
+        self.prune_threshold = prune_threshold
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
@@ -74,6 +77,7 @@ class SpliceGraph:
         self.construct()
         # sr rescuer
         rescuer(self)
+        self.prune()
         # prun the graph
 
         # trace path
@@ -96,7 +100,7 @@ class SpliceGraph:
             for other_node in self.get_nodes_with_similar_key(node.similar_key)
         )
 
-    def __iter__(self) -> Iterable[NodeType]:
+    def __iter__(self) -> Iterator[NodeType]:
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             yield from nodes
@@ -450,6 +454,7 @@ class SpliceGraph:
             if successors := start_node.successors:
                 for successor in successors:
                     successor.set_trace_id(trace_id)
+                    successor.set_original_sr(successor.sr)
                     self._trace_forward(
                         successor, trace_id + 1, path + [start_node], group_paths
                     )
@@ -480,6 +485,7 @@ class SpliceGraph:
             if predecessors := end_node.predecessors:
                 for predecessor in predecessors:
                     predecessor.set_trace_id(trace_id)
+                    predecessor.set_original_sr(predecessor.sr)
                     self._trace_backward(
                         predecessor, trace_id + 1, path + [end_node], group_paths
                     )
@@ -504,11 +510,13 @@ class SpliceGraph:
         if direction == SpliceType.forward:
             for start_node in self.get_start_nodes():
                 start_node.set_trace_id(1)
+                start_node.set_original_sr(start_node.sr)
                 self._trace_forward(start_node, 2, [], [])
             return
         elif direction == SpliceType.backward:
             for end_node in self.get_end_nodes():
                 end_node.set_trace_id(1)
+                end_node.set_original_sr(end_node.sr)
                 self._trace_backward(end_node, 2, [], [])
             return
 
@@ -526,7 +534,7 @@ class SpliceGraph:
 
         return result_series_list
 
-    def create_node_trace_id_dict(self) -> Dict[int, List[NodeType]]:
+    def create_same_level_node_list(self) -> List[List[NodeType]]:
         """Create node trace id dict.
 
         :return: trace_id: List[node] dict
@@ -535,7 +543,7 @@ class SpliceGraph:
         for node in self:
             node_trace_id_dict[node.trace_id].append(node)
 
-        return node_trace_id_dict
+        return [i for i in node_trace_id_dict.values() if len(i) > 1]
 
     def _rule_out(self, winner: NodeType, loser: NodeType) -> None:
         """Rule out loser and add sr to winner.
@@ -554,15 +562,43 @@ class SpliceGraph:
         self.remove_node(loser)
 
     @staticmethod
-    def check_can_battle(node_a: NodeType, node_b: NodeType) -> bool:
-        """Check if two nodes can battle.
+    def _check_can_battle_condition(
+        breakpoint1: Optional[str], breakpoint2: Optional[str], threshold: int
+    ) -> bool:
+        """Check if two breakpoints is in threshold .
 
-        .. todo:: Write specific condition.
+        :param breakpoint1: 'chr1:100'
+        :param breakpoint2: 'chr1:100'
+        :return: True or False
         """
-        flag = False
-        if node_a == node_b:
-            flag = True
-        return flag
+        if breakpoint1 is None or breakpoint2 is None:
+            raise SystemExit from ValueError("breakpoint is None")
+        return (
+            abs(int(breakpoint1.split(":")[1]) - int(breakpoint2.split(":")[1]))
+            < threshold
+        )
+
+    def check_can_battle(self, node_a: NodeType, node_b: NodeType) -> bool:
+        """Check if two nodes can battle."""
+        self.logger.trace(f"{node_a=}\n{node_b=}")
+        if node_a.prev_sv_type != node_b.prev_sv_type:
+            return False
+
+        if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:
+            return SpliceGraph._check_can_battle_condition(
+                node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
+            )
+
+        if node_a.next_breakpoint is None and node_b.next_breakpoint is None:
+            return SpliceGraph._check_can_battle_condition(
+                node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
+            )
+
+        return SpliceGraph._check_can_battle_condition(
+            node_a.prev_breakpoint, node_a.prev_breakpoint, self.prune_threshold
+        ) and SpliceGraph._check_can_battle_condition(
+            node_a.next_breakpoint, node_a.next_breakpoint, self.prune_threshold
+        )
 
     def _begin_battle(self, node_a: NodeType, node_b: NodeType) -> Tuple[bool, ...]:
         """Begin battle between two nodes.
@@ -571,57 +607,38 @@ class SpliceGraph:
                 value1: True if node_a and node_b can battle.
                 value2: if node_a is winner, return True, else return False
         """
-        if not self.check_can_battle(node_a, node_b):
+        if node_a.original_sr == node_b.original_sr or not self.check_can_battle(
+            node_a, node_b
+        ):
             return False, False
 
-        if node_a.sr > node_b.sr:
+        if node_a.original_sr > node_b.original_sr:
             self._rule_out(node_a, node_b)
             return True, True
 
-        elif node_a.sr < node_b.sr:
-            self._rule_out(node_b, node_a)
-            return True, False
+        # node_a.original_sr < node_b.original_sr
+        self._rule_out(node_b, node_a)
+        return True, False
 
-    def _battle(self, nodes: List[NodeType]) -> None:
-        """Nodes Battle.
-
-        :param nodes: nodes to battle
-        :return: battle result
-        """
-        while nodes:
-            last_node = nodes.pop()
-            for other_node in nodes:
-                can_battle, is_winner = self._begin_battle(last_node, other_node)
-                if can_battle:
-                    if not is_winner:
-                        # other_node is winner
-                        break
-                    # winner is last_node
-                    nodes.remove(other_node)
-
-                # battle never happen
-
-                # battle happened
-                # two situations:
-                # 1. last_node is always winner
-                # 2. other_node is winner and break battle cycle
-
-                # 1. last_node is always winner
-                # nothing to do
-
-                # 2. other_node is winner and break battle cycle
-                # nothing to do
-
-    def battle(self, node_trace_id_dict: Dict[int, List[NodeType]]) -> None:
+    def battle(self, same_level_node_list: List[List[NodeType]]) -> None:
         """Nodes with same trace id battle each other.
 
         Node with larger number of sr wins, otherwise lose.
 
         Loser will be rule out.
         """
-        for nodes in node_trace_id_dict.values():
-            if len(nodes) > 1:
-                self._battle(nodes)
+        for node_list in same_level_node_list:
+
+            while node_list:
+                current_node = node_list.pop()
+                for other_node in node_list:
+                    can_battle, is_winner = self._begin_battle(current_node, other_node)
+                    if can_battle:
+                        if not is_winner:
+                            # other_node is winner
+                            break
+                        # winner is last_node
+                        node_list.remove(other_node)
 
     def _prune(self, direction: Enum) -> None:
         """Implement function to prune graph.
@@ -631,10 +648,10 @@ class SpliceGraph:
         # 1. trace and mark node with trace_id
         self._trace(direction)
         # 2. save every trace_id and its corresponding node to be Dict
-        node_trace_id_dict = self.create_node_trace_id_dict()
+        same_level_node_list = self.create_same_level_node_list()
         # 3. check value of Dict, if number of nodes is less than 2, remove it
         # 4. compare them and rule out loser
-        self.battle(node_trace_id_dict)
+        self.battle(same_level_node_list)
 
     def prune(self) -> None:
         """Prune graph.

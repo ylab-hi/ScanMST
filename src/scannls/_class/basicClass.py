@@ -105,6 +105,11 @@ class BasicNode:
         self.previous_node_in_series: Optional[NodeType] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
+        self.original_sr: int = 1
+
+    def set_original_sr(self, sr: int) -> None:
+        """Set original_sr."""
+        self.original_sr = sr
 
     def set_trace_id(self, trace_id: int) -> None:
         """Set trace_id."""
@@ -185,6 +190,233 @@ class BasicNode:
             self.previous_node_in_series = series[index - 1]
 
 
+class Node(BasicNode):
+    """Build a breakpoint node class for storing information of every breakpoint.
+
+    :param prev_breakpoint: breakpoint for the previous breakpoints connections
+    :param next_bp: breakpoint for the next breakpoints connections
+    :param strand: direction of chimeric read (-|+)
+    :param chrom: chromosome
+    :param ref_start: reference start position
+    :param ref_end: reference end position
+    :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
+    :param sv_type: one of the SV types (TDUP/INV/TRA)
+    :param annot: gene annotation code
+    :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
+    :param modes: read modes of connected breakpoints
+    :param genes: overlapped genes of connected breakpoints
+
+    .. note::
+        connection-level fields:
+        * sv_type
+        * modes
+        * genes
+        * annotation_code
+        * splicing_code
+
+    :Example:
+
+    >>> node1 = Node(
+                prev_bp=None,
+                next_bp='chr10:93636994',
+                strand='+',
+                chrom='chr10',
+                ref_start=93636994
+                ref_end=93637094,
+                exons=[(93636994, 93637094)],
+            )
+    >>> node1
+    Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
+    """
+
+    __slots__ = (
+        "next_breakpoint",
+        "prev_breakpoint",
+        "prev_breakpoint_depth",
+        "next_breakpoint_depth",
+        "strand",
+        "chrom",
+        "ref_start",
+        "ref_end",
+        "exons",
+        "sv_type",
+        "prev_sv_type",
+        "modes",
+        "genes",
+        "query_name",
+        "annotation_code",
+        "splicing_code",
+        "sr",
+        "insertion_info",
+        "unique_key",
+        # parent class: basic node fields
+        "successors",
+        "predecessors",
+        "merged_child_nodes",
+        "merged_parent_nodes",
+        "next_node_in_series",
+        "previous_node_in_series",
+        "is_merged",
+        "is_in_graph",
+        "is_traced",
+        "original_sr",
+    )
+
+    def __init__(
+        self,
+        prev_bp: Optional[str] = None,
+        next_bp: Optional[str] = None,
+        strand: Optional[str] = None,
+        chrom: Optional[str] = None,
+        ref_start: Optional[int] = None,
+        ref_end: Optional[int] = None,
+        exons: Optional[List[Any]] = None,
+        sv_type: Optional[str] = None,
+        annot: Optional[int] = None,
+        canonical: Optional[int] = None,
+        modes: Optional[List[int]] = None,
+        genes: Optional[Tuple[str, str]] = None,
+        sr: int = 1,
+    ) -> None:
+        """Initialize a Node object."""
+        super().__init__()  # initialize BasicNode object
+        self.chrom = chrom
+        self.query_name = ""
+        self.prev_breakpoint = prev_bp
+        self.next_breakpoint = next_bp
+        self.prev_breakpoint_depth: Optional[int] = None
+        self.next_breakpoint_depth: Optional[int] = None
+        self.strand = strand
+        self.ref_start = ref_start
+        self.ref_end = ref_end
+        self.exons = exons
+        self.sv_type = sv_type
+        self.prev_sv_type = None
+        self.modes = modes
+        self.genes = genes
+        self.annotation_code = annot
+        self.splicing_code = canonical
+        self.sr = sr
+        self.insertion_info = None
+        self.unique_key = None
+
+    def __eq__(self, other) -> bool:
+        """Compare two nodes."""
+        if isinstance(other, Node) and (
+            self.chrom == other.chrom
+            and self.ref_start == other.ref_start
+            and self.ref_end == other.ref_end
+            and self.sv_type == other.sv_type
+            and self.prev_breakpoint == other.prev_breakpoint
+            and self.next_breakpoint == other.next_breakpoint
+            and self.strand == other.strand
+        ):
+            return True
+        return False
+
+    def __hash__(self) -> int:
+        """Hash a node."""
+        return (
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.sv_type)
+            ^ hash(self.prev_breakpoint)
+            ^ hash(self.next_breakpoint)
+            ^ hash(self.strand)
+        )
+
+    def __repr__(self) -> str:
+        """Get a string representation of a node."""
+        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
+        return (
+            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"{exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
+            f"{self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
+            f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
+            f"SR={self.sr}, query_name={self.query_name}, trace_id={self.trace_id})"
+        )
+
+    @classmethod
+    def create_nodes(cls, number):
+        """Create a list of nodes.
+
+        :param number: number of nodes to create
+        :return: list of nodes
+        """
+        return [cls() for _ in range(number)]
+
+    @property
+    def introns(self):
+        """Get introns of a node."""
+        if len(self.exons) <= 1:
+            return []
+        else:
+            _positions = []
+            for i, j in self.exons:
+                _positions.extend([i, j])
+            _positions.pop(0)
+            _positions.pop(-1)
+            _introns = list(zip(_positions[::2], _positions[1::2]))
+            return _introns
+
+    @property
+    def similar_key(self) -> str:
+        """Get similar key of a node."""
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = f"{self.chrom}-{key}"
+
+        return key
+
+    def get_unique_key(self):
+        """Get unique key of a node."""
+        introns = self.introns
+
+        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+
+        key = f"{self.chrom}-{key}-{self.sv_type}-{self.prev_breakpoint}-{self.next_breakpoint}"
+
+        if self.insertion_info is not None:
+            _, insertion_type = self.insertion_info
+            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
+                key = f"{insertion_type.query_sequence}-{key}"
+
+        self.unique_key = key
+        return key
+
+    def update_sr(self, key=1) -> None:
+        """Update the sr of a node."""
+        self.sr += key
+
+    def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+        """Update next breakpoint depth.
+
+        :param bam: bam AlignmentFile object
+        :param mode: if 'MS', pos = pos - 1
+        """
+        if self.next_breakpoint is not None:
+            chrom, pos = self.next_breakpoint.split(":")
+            pos = int(pos)  # type: ignore
+            if mode == 1:
+                pos = pos - 1  # type: ignore
+            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
+
+    def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+        """Update prev breakpoint depth.
+
+        :param bam: bam AlignmentFile object
+        :param mode: if 'MS', pos = pos - 1
+        """
+        if self.prev_breakpoint is not None:
+            chrom, pos = self.prev_breakpoint.split(":")
+            pos = int(pos)  # type: ignore
+            if mode == 1:
+                pos = pos - 1  # type: ignore
+            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
+
+
 class Insertion(Read, BasicNode):
     """Insertion is used to represent reads insertion whose hit is 1.
 
@@ -215,6 +447,7 @@ class Insertion(Read, BasicNode):
         # node attributes
         "hit_num",
         "sv_type",
+        "prev_sv_type",
         "prev_breakpoint",
         "next_breakpoint",
         "prev_breakpoint_depth",
@@ -262,6 +495,7 @@ class Insertion(Read, BasicNode):
         "is_in_graph",
         "is_traced",
         "trace_id",
+        "original_sr",
     )
 
     def __init__(
@@ -292,6 +526,7 @@ class Insertion(Read, BasicNode):
 
         self.hit_num = hit_num
         self.sv_type = None
+        self.prev_sv_type = None
 
         # add attributes for insertion in order to be compatible with the class Node
         self.prev_breakpoint: Optional[str] = None
@@ -308,15 +543,7 @@ class Insertion(Read, BasicNode):
         self.exons, self.introns = self.get_exons_and_introns()
         self.unique_key: Optional[str] = None
 
-    def __repr__(self):
-        """Represent Insertion object."""
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])
-        return (
-            f"Insertion({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
-            f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
-            f"SR={self.sr}, query_name={self.query_name}, trace_id={self.trace_id})"
-        )
+    __repr__ = Node.__repr__
 
     def __hash__(self) -> int:
         """Hash Insertion object."""
@@ -391,229 +618,6 @@ class Insertion(Read, BasicNode):
 
     def update_sr(self, key=1):
         """Update sr."""
-        self.sr += key
-
-    def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
-        """Update next breakpoint depth.
-
-        :param bam: bam AlignmentFile object
-        :param mode: if 'MS', pos = pos - 1
-        """
-        if self.next_breakpoint is not None:
-            chrom, pos = self.next_breakpoint.split(":")
-            pos = int(pos)  # type: ignore
-            if mode == 1:
-                pos = pos - 1  # type: ignore
-            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
-
-    def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
-        """Update prev breakpoint depth.
-
-        :param bam: bam AlignmentFile object
-        :param mode: if 'MS', pos = pos - 1
-        """
-        if self.prev_breakpoint is not None:
-            chrom, pos = self.prev_breakpoint.split(":")
-            pos = int(pos)  # type: ignore
-            if mode == 1:
-                pos = pos - 1  # type: ignore
-            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
-
-
-class Node(BasicNode):
-    """Build a breakpoint node class for storing information of every breakpoint.
-
-    :param prev_breakpoint: breakpoint for the previous breakpoints connections
-    :param next_bp: breakpoint for the next breakpoints connections
-    :param strand: direction of chimeric read (-|+)
-    :param chrom: chromosome
-    :param ref_start: reference start position
-    :param ref_end: reference end position
-    :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
-    :param sv_type: one of the SV types (TDUP/INV/TRA)
-    :param annot: gene annotation code
-    :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
-    :param modes: read modes of connected breakpoints
-    :param genes: overlapped genes of connected breakpoints
-
-    .. note::
-        connection-level fields:
-        * sv_type
-        * modes
-        * genes
-        * annotation_code
-        * splicing_code
-
-    :Example:
-
-    >>> node1 = Node(
-                prev_bp=None,
-                next_bp='chr10:93636994',
-                strand='+',
-                chrom='chr10',
-                ref_start=93636994
-                ref_end=93637094,
-                exons=[(93636994, 93637094)],
-            )
-    >>> node1
-    Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
-    """
-
-    __slots__ = (
-        "next_breakpoint",
-        "prev_breakpoint",
-        "prev_breakpoint_depth",
-        "next_breakpoint_depth",
-        "strand",
-        "chrom",
-        "ref_start",
-        "ref_end",
-        "exons",
-        "sv_type",
-        "modes",
-        "genes",
-        "query_name",
-        "annotation_code",
-        "splicing_code",
-        "sr",
-        "insertion_info",
-        "unique_key",
-        # parent class: basic node fields
-        "successors",
-        "predecessors",
-        "merged_child_nodes",
-        "merged_parent_nodes",
-        "next_node_in_series",
-        "previous_node_in_series",
-        "is_merged",
-        "is_in_graph",
-        "is_traced",
-    )
-
-    def __init__(
-        self,
-        prev_bp: Optional[str] = None,
-        next_bp: Optional[str] = None,
-        strand: Optional[str] = None,
-        chrom: Optional[str] = None,
-        ref_start: Optional[int] = None,
-        ref_end: Optional[int] = None,
-        exons: Optional[List[Any]] = None,
-        sv_type: Optional[str] = None,
-        annot: Optional[int] = None,
-        canonical: Optional[int] = None,
-        modes: Optional[List[int]] = None,
-        genes: Optional[Tuple[str, str]] = None,
-        sr: int = 1,
-    ) -> None:
-        """Initialize a Node object."""
-        super().__init__()  # initialize BasicNode object
-        self.chrom = chrom
-        self.query_name = ""
-        self.prev_breakpoint = prev_bp
-        self.next_breakpoint = next_bp
-        self.prev_breakpoint_depth: Optional[int] = None
-        self.next_breakpoint_depth: Optional[int] = None
-        self.strand = strand
-        self.ref_start = ref_start
-        self.ref_end = ref_end
-        self.exons = exons
-        self.sv_type = sv_type
-        self.modes = modes
-        self.genes = genes
-        self.annotation_code = annot
-        self.splicing_code = canonical
-        self.sr = sr
-        self.insertion_info = None
-        self.unique_key = None
-
-    def __eq__(self, other) -> bool:
-        """Compare two nodes."""
-        if isinstance(other, Node) and (
-            self.chrom == other.chrom
-            and self.ref_start == other.ref_start
-            and self.ref_end == other.ref_end
-            and self.sv_type == other.sv_type
-            and self.prev_breakpoint == other.prev_breakpoint
-            and self.next_breakpoint == other.next_breakpoint
-            and self.strand == other.strand
-        ):
-            return True
-        return False
-
-    def __hash__(self) -> int:
-        """Hash a node."""
-        return (
-            hash(self.chrom)
-            ^ hash(self.ref_start)
-            ^ hash(self.ref_end)
-            ^ hash(self.sv_type)
-            ^ hash(self.prev_breakpoint)
-            ^ hash(self.next_breakpoint)
-            ^ hash(self.strand)
-        )
-
-    def __repr__(self) -> str:
-        """Get a string representation of a node."""
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
-        return (
-            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{exons_repr}, {self.sv_type}, {self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
-            f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
-            f"SR={self.sr}, query_name={self.query_name}, trace_id={self.trace_id})"
-        )
-
-    @classmethod
-    def create_nodes(cls, number):
-        """Create a list of nodes.
-
-        :param number: number of nodes to create
-        :return: list of nodes
-        """
-        return [cls() for _ in range(number)]
-
-    @property
-    def introns(self):
-        """Get introns of a node."""
-        if len(self.exons) <= 1:
-            return []
-        else:
-            _positions = []
-            for i, j in self.exons:
-                _positions.extend([i, j])
-            _positions.pop(0)
-            _positions.pop(-1)
-            _introns = list(zip(_positions[::2], _positions[1::2]))
-            return _introns
-
-    @property
-    def similar_key(self) -> str:
-        """Get similar key of a node."""
-        introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
-        key = f"{self.chrom}-{key}"
-
-        return key
-
-    def get_unique_key(self):
-        """Get unique key of a node."""
-        introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
-
-        key = f"{self.chrom}-{key}-{self.sv_type}-{self.prev_breakpoint}-{self.next_breakpoint}"
-
-        if self.insertion_info is not None:
-            _, insertion_type = self.insertion_info
-            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
-                key = f"{insertion_type.query_sequence}-{key}"
-
-        self.unique_key = key
-        return key
-
-    def update_sr(self, key=1) -> None:
-        """Update the sr of a node."""
         self.sr += key
 
     def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
@@ -865,6 +869,7 @@ class Series:
 
         event_list_len = len(event_list)
         previous_breakpoint = None
+        prev_sv_type = None
         for index, event in enumerate(event_list):
 
             read1: Read = event.read1(read_chains)
@@ -879,11 +884,15 @@ class Series:
                 ref_end=event.read1_ref_end,
                 exons=event.read1_exons,
             )
+
+            read1_node.prev_sv_type = prev_sv_type
+
             read1_node.query_name = (
                 read1.query_name
             )  # copy query name from original read
 
             previous_breakpoint = event.bp2
+            prev_sv_type = event.sv_type
             self.logger.trace(f"{read1=} {read2=}")
             # is insertions
             if event.has_insertion():
@@ -964,12 +973,18 @@ class Series:
                         read1_node = read1_insertion_event.update_node_info(
                             True, read1_node, insertion
                         )
+                        # change prev sv type for next node or Insertion
+                        prev_sv_type = read1_node.sv_type
                         self.add_node(read1_node)
 
                         insertion = insertion_read2_event.update_insertion_info(
                             insertion
                         )
-
+                        # change prev sv type for next node or Insertion
+                        insertion.prev_sv_type, prev_sv_type = (
+                            prev_sv_type,
+                            insertion.sv_type,
+                        )
                         self.logger.trace(f"Add {insertion=} to Series")
 
                         self.add_node(insertion)
@@ -1009,6 +1024,7 @@ class Series:
                     exons=event.read2_exons,
                 )
                 final_node.query_name = read2.query_name
+                final_node.prev_sv_type = prev_sv_type
 
                 self.add_node(final_node)
 

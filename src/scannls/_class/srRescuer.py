@@ -9,6 +9,7 @@ import re
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Union
 
 import parasail  # type: ignore
 from pysam import AlignmentFile  # type: ignore
@@ -18,6 +19,7 @@ from ..utils import get_softclip_length
 from .basicClass import NodeType
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
+from .spliceGraph import SpliceGraph
 
 
 class SRRescuer:
@@ -50,7 +52,7 @@ class SRRescuer:
             f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
         )
 
-    def __call__(self, series: Iterable[NodeType]) -> None:
+    def __call__(self, series: Union[Iterable[NodeType], SpliceGraph]) -> None:
         """Rescue SR from softclipped non-chimeric reads.
 
         changed in place
