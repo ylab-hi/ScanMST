@@ -927,7 +927,7 @@ class SimVCFWriter:
 def get_vcf_features_from_metaexons(
     series: List[MetaExon],
     series_id: int,
-) -> List[List[str]]:
+) -> List[List[str]]:  # type: ignore
     """Obtain hop vcf features from one list of metaexons."""
     series_hops_features = []
 
@@ -939,6 +939,9 @@ def get_vcf_features_from_metaexons(
 
         _strand1, _pos1 = current_node.strand, current_node.p3_pos
         _strand2, _pos2 = next_node.strand, next_node.p5_pos
+
+        if _pos1 is None or _pos2 is None:
+            raise SystemExit from BreakpointNotFoundError
 
         sv_distance = abs(_pos1 - _pos2) if current_node.nls_type != "TRA" else 0
 

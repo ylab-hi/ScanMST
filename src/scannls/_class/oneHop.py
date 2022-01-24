@@ -3,6 +3,7 @@
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 from typing import List
 from typing import Optional
 
@@ -18,15 +19,15 @@ from .exception import NumberOfHopIsNotValidError
 class MetaExon:
     """Class to store the information of one meta-exon."""
 
-    chrom: str = None
-    locus: str = None
-    locus_strand: str = None
-    strand: str = None
-    exons: list = None
-    p5_pos: int = None
-    p3_pos: int = None
-    wt_seq: str = None
-    mt_seq: str = None
+    chrom: Optional[str] = None
+    locus: Optional[str] = None
+    locus_strand: Optional[str] = None
+    strand: Optional[str] = None
+    exons: Optional[List[Any]] = None
+    p5_pos: Optional[int] = None
+    p3_pos: Optional[int] = None
+    wt_seq: Optional[str] = None
+    mt_seq: Optional[str] = None
     nls_type: Optional[str] = None
 
     def __repr__(self) -> str:
@@ -220,7 +221,7 @@ class OneHop:
             p5_pos=input_metaexon.p3_pos,
             p3_pos=input_metaexon.p5_pos,
             wt_seq=input_metaexon.wt_seq,
-            mt_seq=reverse_complement(input_metaexon.mt_seq),
+            mt_seq=reverse_complement(input_metaexon.mt_seq),  # type: ignore
             nls_type=input_metaexon.nls_type,
         )
 
@@ -601,7 +602,7 @@ class OneHop:
         return total_metaexons
 
     def transcripts_generator(
-        self, num_of_hops: int, num_of_transcripts: int, hop_type: str = None
+        self, num_of_hops: int, num_of_transcripts: int, hop_type: Optional[str] = None
     ) -> dict:
         """Generate transcripts."""
         transcripts_dict = {}
@@ -609,7 +610,7 @@ class OneHop:
             raise SystemExit from NumberOfHopIsNotValidError
         elif num_of_hops == 1:  # user must provide hop_type
             for trx_idx in range(num_of_transcripts):
-                transcripts_dict[f"nls_{trx_idx}"] = self.one_hop_generator(hop_type)
+                transcripts_dict[f"nls_{trx_idx}"] = self.one_hop_generator(hop_type)  # type: ignore
         else:  # hop number > 1
             for trx_idx in range(num_of_transcripts):
                 transcripts_dict[f"nls_{trx_idx}"] = self.multi_hop_generator(
