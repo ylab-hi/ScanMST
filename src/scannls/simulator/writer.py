@@ -221,26 +221,24 @@ def get_vcf_features_from_metaexons(
             raise SystemExit from BreakpointNotFoundError
 
         sv_distance = abs(_pos1 - _pos2) if current_node.nls_type != "TRA" else 0
-
-        series_hops_features.append(
-            [
-                _chrom1,
-                f"{int(_pos1) + 1}",
-                f"HOP_{event_id}",
-                ".",
-                f"<{current_node.nls_type}>",
-                ".",
-                ".",
-                (
-                    f"SVTYPE={current_node.nls_type};"
-                    f"CHR2={_chrom2};END={int(_pos2) + 1};"
-                    f"SVLEN={sv_distance};"
-                    f"STRAND1={_strand1};STRAND2={_strand2};"
-                    f"TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS_Simulator"
-                ),
-                "GT",
-                "0/1",
-            ]
-        )
+        item = [
+            f"{_chrom1}",
+            f"{int(_pos1) + 1}",
+            f"HOP_{event_id}",
+            ".",
+            f"<{current_node.nls_type}>",
+            ".",
+            ".",
+            (
+                f"SVTYPE={current_node.nls_type};"
+                f"CHR2={_chrom2};END={int(_pos2) + 1};"
+                f"SVLEN={sv_distance};"
+                f"STRAND1={_strand1};STRAND2={_strand2};"
+                f"TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS_Simulator"
+            ),
+            "GT",
+            "0/1",
+        ]
+        series_hops_features.append(item)
         # current_node insertion_seq: #TODO
     return series_hops_features

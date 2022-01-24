@@ -9,6 +9,7 @@ import argparse
 import sys
 import textwrap
 import time
+from dataclasses import dataclass
 from typing import Union
 
 from loguru import logger
@@ -17,7 +18,21 @@ from .main import multi_hop_generator
 from .main import single_hop_generator
 from scannls import __version__
 from scannls import external_tool_checking
-from scannls import Options
+
+
+@dataclass
+class SimulatorOptions:
+    """Cli options for testing."""
+
+    input: str
+    ref: str
+    gtf: str
+    output: str
+    num: int
+    hops: int = 2
+    choice: str = "s"
+    log: str = "info"
+    nls_type: str = "TDUP"
 
 
 def parse_args() -> argparse.ArgumentParser:
@@ -103,7 +118,7 @@ def parse_args() -> argparse.ArgumentParser:
     return parser
 
 
-def cli(options: Union[argparse.Namespace, Options]) -> None:
+def cli(options: Union[argparse.Namespace, SimulatorOptions]) -> None:
     """Cli function."""
     # add logger
     logger.remove()

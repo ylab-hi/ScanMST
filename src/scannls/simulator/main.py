@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Generate NLS transcripts."""
-# ===============================================================================
 from .GTFReader import GTFReader
 from .helper import to_wt_and_mt_fasta
 from .intergenicGTF import Intergenic
@@ -28,6 +27,8 @@ def single_hop_generator(
     gtf = GTFReader(input_gtf=annotation_gtf, logger=logger)
     gtf.parser()
 
+    if gtf.chrom_to_genes is None:
+        raise SystemExit from ValueError("chrom_to_genes is None")
     # initialize OneHop class using GTF information
     one_hop = OneHop(
         chrom_to_genes=gtf.chrom_to_genes,
@@ -63,6 +64,8 @@ def multi_hop_generator(
     gtf = GTFReader(input_gtf=annotation_gtf, logger=logger)
     gtf.parser()
 
+    if gtf.chrom_to_genes is None:
+        raise SystemExit from ValueError("chrom_to_genes is None")
     # initialize OneHop class using GTF information
     one_hop = OneHop(
         chrom_to_genes=gtf.chrom_to_genes,
