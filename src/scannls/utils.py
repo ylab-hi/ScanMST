@@ -40,22 +40,17 @@ def get_softclip_length(
      the connection point of soft-clipped part (left/right),
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
     """
-    _cigar = read.cigarstring
-    _mapq = read.mapping_quality
-    _nm = read.get_tag("NM")
-    _seq = read.query_sequence
     _strand = "-" if read.is_reverse else "+"
-    _chrm = read.reference_name
-    _pos = read.reference_start
+
     read_obj = Read.init(
         read.query_name,
-        _chrm,
-        _pos,
+        read.reference_name,
+        read.reference_start,
         _strand,
-        _cigar,
-        _mapq,
-        _nm,
-        _seq,
+        read.cigarstring,
+        read.mapping_quality,
+        read.get_tag("NM"),
+        read.query_sequence,
     )
 
     if mode == 0:
@@ -75,23 +70,23 @@ def get_softclip_length(
             )
         else:
             return 0, "", -1, 0
+
+    if mode == 1:
+        return (
+            read_obj.rt_soft_len,
+            read_obj.query_sequence[read_obj.query_length - read_obj.rt_soft_len :],
+            read_obj.ref_end,
+            1,
+        )
+    elif mode == 2:
+        return (
+            read_obj.lt_soft_len,
+            read_obj.query_sequence[: read_obj.lt_soft_len],
+            read_obj.ref_start,
+            2,
+        )
     else:
-        if mode == 1:
-            return (
-                read_obj.rt_soft_len,
-                read_obj.query_sequence[read_obj.query_length - read_obj.rt_soft_len :],
-                read_obj.ref_end,
-                1,
-            )
-        elif mode == 2:
-            return (
-                read_obj.lt_soft_len,
-                read_obj.query_sequence[: read_obj.lt_soft_len],
-                read_obj.ref_start,
-                2,
-            )
-        else:
-            return 0, "", -1, 0
+        return 0, "", -1, 0
 
 
 def write_series_to_file(file_name: str, series: Any) -> None:
