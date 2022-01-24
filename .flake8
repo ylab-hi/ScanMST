@@ -13,8 +13,6 @@ ignore = E203,E501,RST201,RST203,RST301,
     C409,
     # W605 invalid escape sequence
     W605,
-    # SIM115 Use context handler for opening files
-    SIM115
 max-line-length = 105
 max-complexity = 10
 docstring-convention = google

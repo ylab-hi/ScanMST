@@ -1,24 +1,17 @@
 #!/usr/bin/env python
 # ===============================================================================
-import datetime
 import secrets
 from dataclasses import dataclass
-from functools import singledispatchmethod
 from pathlib import Path
-from typing import Any
-from typing import IO
 from typing import List
 from typing import Optional
 
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
 
-from .. import __version__
 from ..type import LoggerType
 from .basicClass import reverse_complement
 from .exception import NumberOfHopIsNotValidError
-
-secrets.SystemRandom.seed(42)
 
 
 @dataclass
@@ -27,6 +20,7 @@ class MetaExon:
 
     chrom: str = None
     locus: str = None
+    locus_strand: str = None
     strand: str = None
     exons: list = None
     p5_pos: int = None
@@ -40,9 +34,9 @@ class MetaExon:
         exons_repr = "|".join([f"{i.start}-{i.end}" for i in self.exons])  # type: ignore
         return (
             f"MetaExon({self.chrom}:{self.exons[0].start}-{self.exons[-1].end}:{self.strand}, "
-            f"{exons_repr}, {self.nls_type}, {self.p5_pos}, "
-            f"{self.p3_pos}, "
-            f"locus={self.locus}) "
+            f"{exons_repr}, {self.nls_type}, 5p:{self.p5_pos}, "
+            f"3p:{self.p3_pos}, "
+            f"locus={self.locus}:{self.locus_strand}) "
         )
 
 
@@ -115,7 +109,7 @@ class OneHop:
                     wt_seq += self.reference_io[exon.chrom][
                         exon.start : exon.end
                     ].reverse.complement.seq
-        # intergenic/intronic wt_seq == ''
+        # intergenic wt_seq == ''
 
         r_metaexon = []
         mt_seq = ""
@@ -198,6 +192,7 @@ class OneHop:
         return MetaExon(
             chrom=_chrom,
             locus=locus,
+            locus_strand=strand,
             strand=strand,
             exons=r_metaexon,
             p5_pos=p5_pos,
@@ -214,6 +209,7 @@ class OneHop:
         return MetaExon(
             chrom=input_metaexon.chrom,
             locus=input_metaexon.locus,
+            locus_strand=input_metaexon.strand,
             strand=strand,
             exons=input_metaexon.exons,
             p5_pos=input_metaexon.p3_pos,
@@ -227,6 +223,7 @@ class OneHop:
         """TDUP hopper."""
         if current_metaexons == []:
             _select_chrom = secrets.choice(self.available_chroms)
+            gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
             while True:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
@@ -248,28 +245,33 @@ class OneHop:
                     _index2 = _index1 - _shift
                 else:
                     _index2 = _index1 + _shift
-                _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
-                    _index2
-                ]
-                if _metaexon1.chrom and _select_strand1 == _select_strand2:
-                    _metaexon2 = self.gen_metaexon(
-                        locus=_select_gene2,
-                        strand=_select_strand2,
-                        locus_type=_locus_type,
-                        direction="downstream",
-                    )
-                    if _metaexon2.chrom:
-                        current_metaexons.append(_metaexon1)
-                        current_metaexons.append(_metaexon2)
-                        break
+                if 0 <= _index2 < gene_num_on_select_chrom:
+                    _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
+                        _index2
+                    ]
+                    if _metaexon1.chrom and _select_strand1 == _select_strand2:
+                        _metaexon2 = self.gen_metaexon(
+                            locus=_select_gene2,
+                            strand=_select_strand2,
+                            locus_type=_locus_type,
+                            direction="downstream",
+                        )
+                        if _metaexon2.chrom:
+                            current_metaexons.append(_metaexon1)
+                            current_metaexons.append(_metaexon2)
+                            break
         else:
             current_metaexons[-1].nls_type = "TDUP"
             last_metaexon = current_metaexons[-1]
             _select_chrom = last_metaexon.chrom
-            _select_gene1, _select_strand1 = last_metaexon.locus, last_metaexon.strand
+            _select_gene1, _select_strand1 = (
+                last_metaexon.locus,
+                last_metaexon.locus_strand,
+            )
             _index1 = self.chrom_to_genes[_select_chrom].index(
                 (_select_gene1, _select_strand1)
             )
+            gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
 
             while True:
                 _shift = secrets.choice(range(2, 12))
@@ -278,19 +280,20 @@ class OneHop:
                     _index2 = _index1 - _shift
                 else:
                     _index2 = _index1 + _shift
-                _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
-                    _index2
-                ]
-                if _select_strand1 == _select_strand2:
-                    _metaexon2 = self.gen_metaexon(
-                        locus=_select_gene2,
-                        strand=_select_strand2,
-                        locus_type=_locus_type,
-                        direction="downstream",
-                    )
-                    if _metaexon2.chrom:
-                        current_metaexons.append(_metaexon2)
-                        break
+                if 0 <= _index2 < gene_num_on_select_chrom:
+                    _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
+                        _index2
+                    ]
+                    if _select_strand1 == _select_strand2:
+                        _metaexon2 = self.gen_metaexon(
+                            locus=_select_gene2,
+                            strand=_select_strand2,
+                            locus_type=_locus_type,
+                            direction="downstream",
+                        )
+                        if _metaexon2.chrom:
+                            current_metaexons.append(_metaexon2)
+                            break
             return current_metaexons
 
     def _idup_hopper(self, current_metaexons) -> None:
@@ -324,6 +327,7 @@ class OneHop:
         """INV hopper."""
         if current_metaexons == []:
             _select_chrom = secrets.choice(self.available_chroms)
+            gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
             while True:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
@@ -344,26 +348,31 @@ class OneHop:
                 )
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 _index2 = _index1 + _shift
-                _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
-                    _index2
-                ]
-                if _metaexon1.chrom and _select_strand1 != _select_strand2:
-                    _metaexon2 = self.gen_metaexon(
-                        locus=_select_gene2,
-                        strand=_select_strand2,
-                        locus_type=_locus_type,
-                        direction="downstream",
-                    )
+                if 0 <= _index2 < gene_num_on_select_chrom:
+                    _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
+                        _index2
+                    ]
+                    if _metaexon1.chrom and _select_strand1 != _select_strand2:
+                        _metaexon2 = self.gen_metaexon(
+                            locus=_select_gene2,
+                            strand=_select_strand2,
+                            locus_type=_locus_type,
+                            direction="downstream",
+                        )
 
-                    if _metaexon2.chrom:
-                        current_metaexons.append(_metaexon1)
-                        current_metaexons.append(_metaexon2)
-                        break
+                        if _metaexon2.chrom:
+                            current_metaexons.append(_metaexon1)
+                            current_metaexons.append(_metaexon2)
+                            break
         else:
             current_metaexons[-1].nls_type = "INV"
             last_metaexon = current_metaexons[-1]
             _select_chrom = last_metaexon.chrom
-            _select_gene1, _select_strand1 = last_metaexon.locus, last_metaexon.strand
+            gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
+            _select_gene1, _select_strand1 = (
+                last_metaexon.locus,
+                last_metaexon.locus_strand,
+            )
             _index1 = self.chrom_to_genes[_select_chrom].index(
                 (_select_gene1, _select_strand1)
             )
@@ -374,19 +383,20 @@ class OneHop:
                 )
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 _index2 = _index1 + _shift
-                _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
-                    _index2
-                ]
-                if _select_strand1 != _select_strand2:
-                    _metaexon2 = self.gen_metaexon(
-                        locus=_select_gene2,
-                        strand=_select_strand2,
-                        locus_type=_locus_type,
-                        direction="downstream",
-                    )
-                    if _metaexon2.chrom:
-                        current_metaexons.append(_metaexon2)
-                        break
+                if 0 <= _index2 < gene_num_on_select_chrom:
+                    _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
+                        _index2
+                    ]
+                    if _select_strand1 != _select_strand2:
+                        _metaexon2 = self.gen_metaexon(
+                            locus=_select_gene2,
+                            strand=_select_strand2,
+                            locus_type=_locus_type,
+                            direction="downstream",
+                        )
+                        if _metaexon2.chrom:
+                            current_metaexons.append(_metaexon2)
+                            break
             return current_metaexons
 
     def _tra_hopper(self, current_metaexons) -> None:
@@ -447,6 +457,7 @@ class OneHop:
         """DEL hopper."""
         if current_metaexons == []:
             _select_chrom = secrets.choice(self.available_chroms)
+            gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
             while True:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
@@ -468,24 +479,29 @@ class OneHop:
                     _index2 = _index1 + _shift
                 else:
                     _index2 = _index1 - _shift
-                _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
-                    _index2
-                ]
-                if _metaexon1.chrom and _select_strand1 == _select_strand2:
-                    _metaexon2 = self.gen_metaexon(
-                        locus=_select_gene2,
-                        strand=_select_strand2,
-                        locus_type=_locus_type,
-                        direction="downstream",
-                    )
-                    current_metaexons.append(_metaexon1)
-                    current_metaexons.append(_metaexon2)
-                    break
+                if 0 <= _index2 < gene_num_on_select_chrom:
+                    _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
+                        _index2
+                    ]
+                    if _metaexon1.chrom and _select_strand1 == _select_strand2:
+                        _metaexon2 = self.gen_metaexon(
+                            locus=_select_gene2,
+                            strand=_select_strand2,
+                            locus_type=_locus_type,
+                            direction="downstream",
+                        )
+                        current_metaexons.append(_metaexon1)
+                        current_metaexons.append(_metaexon2)
+                        break
         else:
             current_metaexons[-1].nls_type = "DEL"
             last_metaexon = current_metaexons[-1]
             _select_chrom = last_metaexon.chrom
-            _select_gene1, _select_strand1 = last_metaexon.locus, last_metaexon.strand
+            gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
+            _select_gene1, _select_strand1 = (
+                last_metaexon.locus,
+                last_metaexon.locus_strand,
+            )
             _index1 = self.chrom_to_genes[_select_chrom].index(
                 (_select_gene1, _select_strand1)
             )
@@ -497,19 +513,20 @@ class OneHop:
                     _index2 = _index1 + _shift
                 else:
                     _index2 = _index1 - _shift
-                _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
-                    _index2
-                ]
-                if _select_strand1 == _select_strand2:
-                    _metaexon2 = self.gen_metaexon(
-                        locus=_select_gene2,
-                        strand=_select_strand2,
-                        locus_type=_locus_type,
-                        direction="downstream",
-                    )
-                    if _metaexon2.chrom:
-                        current_metaexons.append(_metaexon2)
-                        break
+                if 0 <= _index2 < gene_num_on_select_chrom:
+                    _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
+                        _index2
+                    ]
+                    if _select_strand1 == _select_strand2:
+                        _metaexon2 = self.gen_metaexon(
+                            locus=_select_gene2,
+                            strand=_select_strand2,
+                            locus_type=_locus_type,
+                            direction="downstream",
+                        )
+                        if _metaexon2.chrom:
+                            current_metaexons.append(_metaexon2)
+                            break
             return current_metaexons
 
     def _microhomology_checker(self) -> bool:
@@ -532,7 +549,7 @@ class OneHop:
         elif _select_type == "TRA":
             self._tra_hopper(total_metaexons)
         repr_metaexons = [repr(i) for i in total_metaexons]
-        self.logger.trace(f"{';'.join(repr_metaexons)}")
+        self.logger.trace(f"{'; '.join(repr_metaexons)}")
         return total_metaexons
 
     def multi_hop_generator(self, num_of_hops: int) -> list:
@@ -580,228 +597,3 @@ class OneHop:
                     num_of_hops
                 )
         return transcripts_dict
-
-
-class SimVCFWriter:
-    """Writer for VCF files for Simulated data.
-
-    .. note::
-
-        1. CHROM: The name of the sequence (typically a chromosome) on which the variation
-            is being called. This sequence is usually known as 'the reference sequence',
-            i.e. the sequence against which the given sample varies.
-        2. POS: The 1-based position of the variation on the given sequence.
-        3. ID: The identifier of the variation, e.g. a dbSNP rs identifier, or if unknown
-            a ".". Multiple identifiers should be separated by semi-colons without white-space.
-        4. REF:The reference base (or bases in the case of an indel) at the given position
-            on the given reference sequence.
-        5. ALT: The list of alternative alleles at this position.
-        6. QUAL: A quality score associated with the inference of the given alleles.
-        7. FILTER: A flag indicating which of a given set of filters the variation has
-            failed or PASS if all the filters were passed successfully.
-        8. INFO: An extensible list of key-value pairs (fields) describing the variation.
-            See below for some common fields. Multiple fields are separated by semicolons
-            with optional values in the format: <key>=<data>[,data].
-        9. FORMAT: An (optional) extensible list of fields for describing the samples.
-            See below for some common fields.
-        10. SAMPLE: For each (optional) sample described in the file,
-            values are given for the fields listed in FORMAT
-    """
-
-    num_fields = 10
-
-    reserved_info = {
-        "SVMETHOD": "String",
-        "SVTYPE": "String",
-        "STRAND1": "String",
-        "STRAND2": "String",
-        "SVLEN": "Integer",
-        "CHR2": "String",
-        "END": "Integer",
-    }
-    reserved_format = {"GT": "String"}
-    reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA"]
-
-    description = {
-        "CANONICAL": "Canonical splice site",
-        "NONCANONICAL": "Noncanonical splice site",
-        "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
-        "DP": "Total read depth at the breakpoint for insertion",
-        "DP1": "Total read depth at the breakpoint1",
-        "DP2": "Total read depth at the breakpoint2",
-        "SR": "The number of support reads for the breakpoints",
-        "AO": "Alternate allele observations, "
-        "with partial observations recorded fractionally",
-        "AF": "Estimated allele frequency in the range (0,1], "
-        "representing the ratio of reads showing the alternative allele to all reads",
-        "PSO": "Estimated Percent splice-out in the range (0,1], "
-        "representing the percentage of NLS transcripts",
-        "SVTYPE": "The type of event, INS, DEL, TDUP, IDUP, INV, TRA.",
-        "SVLEN": "Difference in length between REF and ALT alleles",
-        "CHR2": "Chromosome for END coordinate in case of a translocation",
-        "END": "2nd position of the structural variant",
-        "GENE": "Overlapped coding gene for insertion",
-        "GENE1": "Overlapped coding gene for breakpoint1",
-        "GENE2": "Overlapped coding gene for breakpoint2",
-        "TRANSCRIPT_ID": "Transcript ID",
-        "SVMETHOD": "Type of approach used to detect SV",
-        "STRAND": "Strand for insertion",
-        "STRAND1": "Strand for breakpoint1",
-        "STRAND2": "Strand for breakpoint2",
-        "MODE1": "Mode for softclipped reads at breakpoint1",
-        "MODE2": "Mode for softclipped reads at breakpoint2",
-        "GT": "Genotype",
-        "INS": "Insertion",
-        "DEL": "Deletion",
-        "TDUP": "Tandem duplication",
-        "IDUP": "Inverted duplication",
-        "INV": "Inversion",
-        "TRA": "Translocation",
-    }
-
-    def __init__(
-        self,
-        file_path: str,
-        output_prefix: str,
-        logger: LoggerType,
-    ) -> None:
-        """Initialize SimVCFWriter object."""
-        self.file_path = file_path
-        self.logger = logger
-        if self.file_path.exists():
-            self.logger.warning(f"{self.file_path} exists, will be overwritten.")
-        self.id = 1
-        self.sample_name = output_prefix
-        self.io: Optional[IO] = None
-
-    @property
-    def is_opened(self) -> bool:
-        """Check if file is opened."""
-        return self.io is not None and not self.io.closed
-
-    def formatter(self, fields: List[str], delimiter: str = "\t") -> str:
-        """Formatter for writing data."""
-        if fields is None or len(fields) != SimVCFWriter.num_fields:
-            self.logger.warning(
-                f"{self.__class__.__name__}: Number of fields is not equal to 10."
-            )
-            raise SystemExit
-        return delimiter.join(fields) + "\n"
-
-    def open(self, mode: str = "w") -> IO:
-        """Open file."""
-        if self.is_opened:
-            self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)
-        return self.io
-
-    def close(self) -> None:
-        """Close file."""
-        if self.is_opened:
-            self.io.close()  # type: ignore
-            self.io = None  # type: ignore
-
-    def write_line(self, line: str) -> None:
-        """Write line to file."""
-        if self.is_opened:
-            self.io.write(line)  # type: ignore
-        else:
-            self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
-
-    def write_header(self) -> None:
-        """Write header to VCF file."""
-        self.write_line(self.header)
-
-    @singledispatchmethod
-    def write_data(self, data_object: Any) -> None:
-        """Write data to file.
-
-        :param: data_object: Data to write to file.
-        """
-        if len(data_object) == 0:
-            self.logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to VCF file."
-            )
-        self.logger.trace(f"{self.__class__.__name__}: Writing metaexons to VCF file.")
-        for hop_vcf_feature in get_vcf_features_from_metaexons(data_object, self.id):
-            self.write_line(self.formatter(hop_vcf_feature))
-        self.id += 1
-
-    @property
-    def header(self) -> str:
-        """VCF header provides metadata describing the body of the file."""
-        # Metadata parsers/constants
-
-        date = datetime.datetime.today().strftime("%Y%m%d")
-        source = f"ScanNLS v{__version__}"
-
-        header_lines = [
-            "##fileformat=VCFv4.3",
-            f"##fileDate={date}",
-            f"##source={source}",
-        ]
-
-        for _id in SimVCFWriter.reserved_info:
-            _number = 0 if SimVCFWriter.reserved_info[_id] == "Flag" else 1
-            header_lines.append(
-                f"##INFO=<ID={_id},Number={_number},Type={SimVCFWriter.reserved_info[_id]},"
-                f'Description="{SimVCFWriter.description[_id]}">'
-            )
-
-        for _id in SimVCFWriter.reserved_format:
-            header_lines.append(
-                f"##FORMAT=<ID={_id},Number=1,Type={SimVCFWriter.reserved_format[_id]},"
-                f'Description="{SimVCFWriter.description[_id]}">'
-            )
-
-        for _id in SimVCFWriter.reserved_alt:
-            header_lines.append(
-                f'##ALT=<ID={_id},Description="{SimVCFWriter.description[_id]}">'
-            )
-        header_lines.append(
-            f"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_name}"
-        )
-
-        return "\n".join(header_lines) + "\n"
-
-
-def get_vcf_features_from_metaexons(
-    series: List[MetaExon],
-    series_id: int,
-) -> List[List[str]]:
-    """Obtain hop vcf features from one list of metaexons."""
-    series_hops_features = []
-
-    for event_id, current_node in enumerate(series[:-1], 1):
-        next_node = series[event_id]
-
-        _chrom1 = current_node.chrom
-        _chrom2 = next_node.chrom
-
-        _strand1, _pos1 = current_node.strand, current_node.p3_pos
-        _strand2, _pos2 = next_node.strand, next_node.p5_pos
-
-        sv_distance = abs(_pos1 - _pos2) if current_node.nls_type != "TRA" else 0
-
-        series_hops_features.append(
-            [
-                _chrom1,
-                f"{int(_pos1) + 1}",
-                f"HOP_{event_id}",
-                ".",
-                f"<{current_node.nls_type}>",
-                ".",
-                ".",
-                (
-                    f"SVTYPE={current_node.nls_type};"
-                    f"CHR2={_chrom2};END={int(_pos2) + 1};"
-                    f"SVLEN={sv_distance};"
-                    f"STRAND1={_strand1};STRAND2={_strand2};"
-                    f"TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS_Simulator"
-                ),
-                "GT",
-                "0/1",
-            ]
-        )
-        # current_node insertion_seq: #TODO
-    return series_hops_features
