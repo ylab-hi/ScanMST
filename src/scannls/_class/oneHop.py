@@ -31,12 +31,16 @@ class MetaExon:
 
     def __repr__(self) -> str:
         """Get a string representation of a MetaExon."""
-        exons_repr = "|".join([f"{i.start}-{i.end}" for i in self.exons])  # type: ignore
+        exons_repr = "|".join([f"{i.start}-{i.end}" for i in self.exons]) if self.exons else "None"  # type: ignore
         return (
-            f"MetaExon({self.chrom}:{self.exons[0].start}-{self.exons[-1].end}:{self.strand}, "
-            f"{exons_repr}, {self.nls_type}, 5p:{self.p5_pos}, "
-            f"3p:{self.p3_pos}, "
-            f"locus={self.locus}:{self.locus_strand}) "
+            (
+                f"MetaExon({self.chrom}:{self.exons[0].start}-{self.exons[-1].end}:{self.strand}, "
+                f"{exons_repr}, {self.nls_type}, 5p:{self.p5_pos}, "
+                f"3p:{self.p3_pos}, "
+                f"locus={self.locus}:{self.locus_strand}) "
+            )
+            if self.exons
+            else "None"
         )
 
 
@@ -206,10 +210,11 @@ class OneHop:
     def reverse_metaexon(input_metaexon: MetaExon) -> MetaExon:
         """Reverse metaexon for IDUP."""
         strand = "+" if input_metaexon.strand == "-" else "-"
+        print(f"{input_metaexon.mt_seq=}")
         return MetaExon(
             chrom=input_metaexon.chrom,
             locus=input_metaexon.locus,
-            locus_strand=input_metaexon.strand,
+            locus_strand=input_metaexon.locus_strand,
             strand=strand,
             exons=input_metaexon.exons,
             p5_pos=input_metaexon.p3_pos,
@@ -256,6 +261,7 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
+                        self.logger.trace(f"TDUP: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
@@ -291,6 +297,7 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
+                        self.logger.trace(f"TDUP: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
                             break
@@ -313,15 +320,20 @@ class OneHop:
                     nls_type="IDUP",
                 )
                 if _metaexon1.chrom:
+                    self.logger.trace(f"IDUP metaexon1: {_metaexon1=}")
                     _metaexon2 = OneHop.reverse_metaexon(_metaexon1)
-                    current_metaexons.append(_metaexon1)
-                    current_metaexons.append(_metaexon2)
-                    break
+                    self.logger.trace(f"IDUP: {_metaexon2=}")
+                    if _metaexon2.chrom:
+                        current_metaexons.append(_metaexon1)
+                        current_metaexons.append(_metaexon2)
+                        break
         else:
             current_metaexons[-1].nls_type = "IDUP"
             last_metaexon = current_metaexons[-1]
             _metaexon2 = OneHop.reverse_metaexon(last_metaexon)
-            current_metaexons.append(_metaexon2)
+            self.logger.trace(f"IDUP: {_metaexon2=}")
+            if _metaexon2.chrom:
+                current_metaexons.append(_metaexon2)
 
     def _inv_hopper(self, current_metaexons) -> None:
         """INV hopper."""
@@ -360,6 +372,7 @@ class OneHop:
                             direction="downstream",
                         )
 
+                        self.logger.trace(f"INV: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
@@ -394,6 +407,7 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
+                        self.logger.trace(f"INV: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
                             break
@@ -427,6 +441,7 @@ class OneHop:
                     locus_type=_locus_type,
                     direction="downstream",
                 )
+                self.logger.trace(f"TRA: {_metaexon2=}")
                 if _metaexon1.chrom and _metaexon2.chrom:
                     current_metaexons.append(_metaexon1)
                     current_metaexons.append(_metaexon2)
@@ -448,6 +463,7 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
+                    self.logger.trace(f"TRA: {_metaexon2=}")
                     if _metaexon2.chrom:
                         current_metaexons.append(_metaexon2)
                         break
@@ -490,9 +506,11 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
-                        current_metaexons.append(_metaexon1)
-                        current_metaexons.append(_metaexon2)
-                        break
+                        self.logger.trace(f"DEL: {_metaexon2=}")
+                        if _metaexon2.chrom:
+                            current_metaexons.append(_metaexon1)
+                            current_metaexons.append(_metaexon2)
+                            break
         else:
             current_metaexons[-1].nls_type = "DEL"
             last_metaexon = current_metaexons[-1]
@@ -524,6 +542,7 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
+                        self.logger.trace(f"DEL: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
                             break
