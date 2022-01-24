@@ -27,7 +27,6 @@ from .basicClass import Node
 from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
-from .srRescuer import SRRescuer
 
 NodeType = Union[Node, Insertion]
 
@@ -55,9 +54,7 @@ class SpliceGraph:
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
-    def __call__(
-        self, series_list: Iterable[Series], rescuer: SRRescuer
-    ) -> Iterable[Series]:
+    def __call__(self, series_list: Iterable[Series], rescuer: Any) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
         :param series_list: series list

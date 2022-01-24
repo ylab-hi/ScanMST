@@ -64,6 +64,7 @@ flake8-simplify = "^0.14.2"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
+scannls-simulator = "scannls.simulator.__main__:main"
 
 [tool.mypy]
 strict = false

@@ -32,7 +32,11 @@ class MetaExon:
 
     def __repr__(self) -> str:
         """Get a string representation of a MetaExon."""
-        exons_repr = "|".join([f"{i.start}-{i.end}" for i in self.exons]) if self.exons else "None"  # type: ignore
+        exons_repr = (
+            "|".join([f"{i.start}-{i.end}" for i in self.exons])
+            if self.exons
+            else "None"
+        )  # type: ignore
         return (
             (
                 f"MetaExon({self.chrom}:{self.exons[0].start}-{self.exons[-1].end}:{self.strand}, "
@@ -79,6 +83,13 @@ class OneHop:
             raise FastaNotFoundError
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.logger = logger
+        self.function_dict = {
+            "TDUP": self._tdup_hopper,
+            "IDUP": self._idup_hopper,
+            "INV": self._inv_hopper,
+            "TRA": self._tra_hopper,
+            "DEL": self._del_hopper,
+        }
 
     def gen_metaexon(
         self,
@@ -227,7 +238,7 @@ class OneHop:
 
     def _tdup_hopper(self, current_metaexons) -> None:
         """TDUP hopper."""
-        if current_metaexons == []:
+        if not current_metaexons:
             _select_chrom = secrets.choice(self.available_chroms)
             gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
             while True:
@@ -279,14 +290,15 @@ class OneHop:
                 (_select_gene1, _select_strand1)
             )
             gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
-
-            while True:
+            flag = True
+            while flag:
                 _shift = secrets.choice(range(2, 12))
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 if _select_strand1 == "+":
                     _index2 = _index1 - _shift
                 else:
                     _index2 = _index1 + _shift
+
                 if 0 <= _index2 < gene_num_on_select_chrom:
                     _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
                         _index2
@@ -301,7 +313,8 @@ class OneHop:
                         self.logger.trace(f"TDUP: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
-                            break
+                            flag = False
+                flag = False
             return current_metaexons
 
     def _idup_hopper(self, current_metaexons) -> None:
@@ -579,24 +592,21 @@ class OneHop:
               All the hop types are 'DEL' is not allowed.
         """
         candidate_hop_types = ["TDUP", "IDUP", "INV", "TRA", "DEL"]
-        while True:
-            total_metaexons: List[MetaExon] = []
+
+        flag = True
+        while flag:
             hops_type_list = []
+            total_metaexons: List[MetaExon] = []
             for _hop_idx in range(num_of_hops):
                 _select_type = secrets.choice(candidate_hop_types)
                 hops_type_list.append(_select_type)
-                if _select_type == "TDUP":
-                    self._tdup_hopper(total_metaexons)
-                elif _select_type == "IDUP":
-                    self._idup_hopper(total_metaexons)
-                elif _select_type == "INV":
-                    self._inv_hopper(total_metaexons)
-                elif _select_type == "TRA":
-                    self._tra_hopper(total_metaexons)
-                elif _select_type == "DEL":
-                    self._del_hopper(total_metaexons)
-            if hops_type_list.count("DEL") < num_of_hops:
-                break
+                self.function_dict[_select_type](total_metaexons)
+
+            if (
+                len(total_metaexons) == 1 + num_of_hops
+                and hops_type_list.count("DEL") < num_of_hops
+            ):
+                flag = False
         repr_metaexons = [repr(i) for i in total_metaexons]
         self.logger.trace(f"{';'.join(repr_metaexons)}")
         return total_metaexons
