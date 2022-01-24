@@ -230,6 +230,7 @@ class Read:
         reference_match_size = 0
         read_match_size = 0
         cigartuples_without_soft = []
+
         for op_code, _len_ in cigartuples:
             if op_code == 0:  # M
                 reference_match_size += _len_
