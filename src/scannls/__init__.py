@@ -13,13 +13,13 @@ from ._class.basicRead import Read
 from ._class.exception import ReadNotFoundError, ToolNotFoundError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement
-from ._class.basicClass import Series
+from ._class.basicClass import Series, NodeType, Node
 from ._class.blat import Blat
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
 from ._class.readConnector import detect_read_read_connections_from_cigar
 from .utils import get_softclip_length
-from ._class.spliceGraph import CliqueFinder
+from ._class.cliqueFinder import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
 from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
@@ -32,12 +32,13 @@ __all__ = [
     "Event",
     "reverse_complement",
     "Series",
+    "Node",
+    "NodeType",
     "Blat",
     "MyLogger",
     "ParallelWorker",
     "detect_read_read_connections_from_cigar",
     "get_softclip_length",
-    "CliqueFinder",
     "SpliceGraph",
     "SRRescuer",
     "FastaWriter",
