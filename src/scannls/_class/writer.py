@@ -81,7 +81,9 @@ class FastaWriter(Writer):
         super().__init__(file_path, logger)
         self.reference = Path(reference)
         if not self.reference.exists():
-            raise FastaNotFoundError
+            raise SystemExit from FastaNotFoundError(
+                f"{self.reference} does not exist."
+            )
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.id = 1
 
@@ -182,7 +184,7 @@ class GTFWriter(Writer):
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)  # add asyncio support
+        self.io = open(self.file_path, mode)
         return self.io
 
     def close(self) -> None:

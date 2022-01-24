@@ -8,10 +8,10 @@
 /data/
 /docs/_build/
 /src/*.egg-info/
-/src/scannls/simulator/
 __pycache__/
 
 # editor
+profile/
 .idea/
 .run/
 #profile
