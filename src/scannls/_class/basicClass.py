@@ -351,14 +351,14 @@ class Node(BasicNode):
         """Get introns of a node."""
         if len(self.exons) <= 1:
             return []
-        else:
-            _positions = []
-            for i, j in self.exons:
-                _positions.extend([i, j])
-            _positions.pop(0)
-            _positions.pop(-1)
-            _introns = list(zip(_positions[::2], _positions[1::2]))
-            return _introns
+
+        _positions = []
+        for i, j in self.exons:
+            _positions.extend([i, j])
+        _positions.pop(0)
+        _positions.pop(-1)
+        _introns = list(zip(_positions[::2], _positions[1::2]))
+        return _introns
 
     @property
     def similar_key(self) -> str:
@@ -710,6 +710,17 @@ class Series:
         Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
     """
 
+    reorder_conditions_dict = {
+        "+-11": True,
+        "+-22": False,
+        "-+11": False,
+        "-+22": True,
+        "++12": True,
+        "++21": False,
+        "--12": False,
+        "--21": True,
+    }
+
     def __init__(self, blat: Any, logger: LoggerType) -> None:
         """Initialize a Series object."""
         self.nodes: List[NodeType] = []
@@ -788,35 +799,13 @@ class Series:
         +1;-1 => up;down
         +2;-2 => down;up
         """
-        mode1 = evt.mode1
-        mode2 = evt.mode2
-        strand1 = evt.strand1
-        strand2 = evt.strand2
-
-        is_bp1_upstream = None
-        if strand1 == "+" and strand2 == "-":
-            if mode1 == 1 and mode2 == 1:
-                is_bp1_upstream = True
-            elif mode1 == 2 and mode2 == 2:
-                is_bp1_upstream = False
-        elif strand1 == "-" and strand2 == "+":
-            if mode1 == 1 and mode2 == 1:
-                is_bp1_upstream = False
-            elif mode1 == 2 and mode2 == 2:
-                is_bp1_upstream = True
-        elif strand1 == "+" and strand2 == "+":
-            if mode1 == 1 and mode2 == 2:
-                is_bp1_upstream = True
-            elif mode1 == 2 and mode2 == 1:
-                is_bp1_upstream = False
-        elif strand1 == "-" and strand2 == "-":
-            if mode1 == 1 and mode2 == 2:
-                is_bp1_upstream = False
-            elif mode1 == 2 and mode2 == 1:
-                is_bp1_upstream = True
+        is_bp1_upstream = Series.reorder_conditions_dict.get(
+            f"{evt.strand1}{evt.strand2}{evt.mode1}{evt.mode2}", None
+        )
 
         if not is_bp1_upstream:
             evt.reverse()
+
         return evt
 
     @staticmethod
@@ -882,7 +871,7 @@ class Series:
                 chrom=event.chrom1,
                 ref_start=event.read1_ref_start,
                 ref_end=event.read1_ref_end,
-                exons=event.read1_exons,
+                exons=event.read1_exons,  # type: ignore
             )
 
             read1_node.prev_sv_type = prev_sv_type
@@ -1021,7 +1010,7 @@ class Series:
                     chrom=event.chrom2,
                     ref_start=event.read2_ref_start,
                     ref_end=event.read2_ref_end,
-                    exons=event.read2_exons,
+                    exons=event.read2_exons,  # type: ignore
                 )
                 final_node.query_name = read2.query_name
                 final_node.prev_sv_type = prev_sv_type

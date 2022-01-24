@@ -1,5 +1,5 @@
 # !/usr/bin/env python
-"""Aligner class based on Gapmis.
+"""Note Used: Aligner class based on Gapmis.
 
 @Filename:    aligner.py
 @license:     MIT Licence
