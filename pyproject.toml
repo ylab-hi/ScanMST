@@ -64,6 +64,7 @@ flake8-simplify = "^0.14.2"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
+scannls-simulator = "scannls.simulator.__main__:main"
 
 [tool.mypy]
 strict = false
@@ -71,7 +72,7 @@ pretty = true
 show_column_numbers = true
 show_error_codes = true
 show_error_context = true
-exclude = "simulator"
+#exclude = "simulator"
 allow_untyped_calls = true
 
 [build-system]
