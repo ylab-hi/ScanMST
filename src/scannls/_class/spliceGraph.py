@@ -645,8 +645,8 @@ class SpliceGraph:
         # 1. trace and mark node with trace_id
         self._trace(direction)
         # 2. save every trace_id and its corresponding node to be Dict
+        # 3. check length of node list, if number of nodes is less than 2, remove it
         same_level_node_list = self.create_same_level_node_list()
-        # 3. check value of Dict, if number of nodes is less than 2, remove it
         # 4. compare them and rule out loser
         self.battle(same_level_node_list)
 

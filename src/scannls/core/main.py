@@ -136,7 +136,9 @@ def _get_genome_fasta(ref_genome):
     try:
         return Fasta(str(ref_genome), sequence_always_upper=True)
     except FastaNotFoundError:
-        raise SystemExit from FastaNotFoundError
+        raise SystemExit from FastaNotFoundError(
+            f"Reference File {ref_genome} Not Found!"
+        )
 
 
 def _get_cvg_gene_iv(gtf, splice_bin):
