@@ -264,12 +264,12 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
         options.alignment_fraction,
         logger,
     )
-    splice_graph = SpliceGraph(logger, rescuer)
+    splice_graph = SpliceGraph(logger)
     clique_finder = CliqueFinder(intact_series_list, logger)
     # cliques is generator
     cliques = clique_finder.find_clique()
     for clique in cliques:
-        for i in splice_graph(clique):
+        for i in splice_graph(clique, rescuer):
             logger.debug(f"Series{i}")
     in_bam_io_object.close()
     logger.info("ScanNLS build running done")

@@ -7,20 +7,20 @@
 """
 import copy
 import types
+from collections import defaultdict
+from enum import auto
+from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import Iterable
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
 
-import networkx as nx  # type: ignore
-from networkx.algorithms.clique import find_cliques  # type: ignore
-
 from ..type import LoggerType
-from ..utils import timeit
 from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
@@ -32,391 +32,14 @@ from .srRescuer import SRRescuer
 NodeType = Union[Node, Insertion]
 
 
-class Ruler:
-    """Calculate the similarity distance between two series.
+class SpliceType(Enum):
+    """Splice Type.
 
-    using longer one as the reference
+    used in prune
     """
 
-    def __init__(self, logger: LoggerType) -> None:
-        """Initialize Ruler.
-
-        :param logger: logger
-        """
-        self.logger = logger
-
-    def __repr__(self):
-        """Represent Ruler."""
-        return f"{self.__class__.__name__}()"
-
-    @staticmethod
-    def obtain_breakpoint_pairs(series: Series) -> List:
-        """Generate breakpoint pairs from a series.
-
-        :param series: a series
-        :type series: Series object
-        :return: a list of breakpoint pairs
-        :rtype: list
-        """
-        breakpoints_pairs = []
-        for idx in range(len(series) - 1):
-            _sv_type = series[idx].sv_type
-            _bp1 = series[idx].next_breakpoint
-            _bp2 = series[idx + 1].prev_breakpoint
-            breakpoints_pairs.append((_sv_type, _bp1, _bp2))
-        return breakpoints_pairs
-
-    @staticmethod
-    def breakpoints_distance(
-        sv_type1: str, sv_type2: str, bp1: str, bp2: str
-    ) -> Union[float, int]:
-        """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
-
-        :param sv_type1: sv_type of breakpoint1
-        :param sv_type2: sv_type of breakpoint2
-        :param bp1: breakpoint1
-        :param bp2: breakpoint2
-        :return: calculated breakpoint distance
-        """
-        if sv_type1 != sv_type2:
-            return float("inf")
-        else:
-            chrm1, pos1 = bp1.split(":")
-            chrm2, pos2 = bp2.split(":")
-            if chrm1 == chrm2:
-                return abs(int(pos1) - int(pos2))
-            else:
-                return float("inf")
-
-    @staticmethod
-    def first_node_last_node_distance(
-        first_node: NodeType, last_node: NodeType
-    ) -> float:
-        """Calculate distance between first node of Series A and last node of Series B.
-
-        :param first_node: the first node of Series A
-        :param last_node: the last node of Series B
-        :return: calculated breakpoint distance
-
-        ..note::
-                         [x]-[x]-[x]-[x]
-             [x]-[x]-[x]-[x]
-             * The output distance will be [0, 1]
-        """
-        _ft_strand = first_node.strand
-        _lt_strand = last_node.strand
-
-        if _ft_strand != _lt_strand:
-            return 1.0
-        else:
-            distance = 1.0
-            #       [xxxx]-->--
-            # -->--[xxxx]
-            first_node_first_exon_start = first_node.exons[0][0]  # type: ignore
-            first_node_last_exon_end = first_node.exons[-1][1]  # type: ignore
-            last_node_first_exon_start = last_node.exons[0][0]  # type: ignore
-            last_node_last_exon_end = last_node.exons[-1][1]  # type: ignore
-
-            if _ft_strand == _lt_strand == "+":
-                if (
-                    last_node_first_exon_start
-                    <= first_node_first_exon_start
-                    < last_node_last_exon_end
-                    <= first_node_last_exon_end
-                ):
-                    overlapped_len = (
-                        last_node_last_exon_end - first_node_first_exon_start
-                    )
-
-                    _ft_cov = overlapped_len / (
-                        first_node_last_exon_end - first_node_first_exon_start
-                    )
-                    _lt_cov = overlapped_len / (
-                        last_node_last_exon_end - last_node_first_exon_start
-                    )
-                    distance = 1 - (_ft_cov + _lt_cov) / 2
-
-            #  --<--[xxxx]
-            #         [xxxx]--<--
-            else:
-                if (
-                    first_node_first_exon_start
-                    <= last_node_first_exon_start
-                    < first_node_last_exon_end
-                    <= last_node_last_exon_end
-                ):
-                    overlapped_len = (
-                        first_node_last_exon_end - last_node_first_exon_start
-                    )
-
-                    _ft_cov = overlapped_len / (
-                        first_node_last_exon_end - first_node_first_exon_start
-                    )
-                    _lt_cov = overlapped_len / (
-                        last_node_last_exon_end - last_node_first_exon_start
-                    )
-                    distance = 1 - (_ft_cov + _lt_cov) / 2
-            return distance
-
-    @staticmethod
-    def breakpoint_pairs_distance(bp_pair1: List, bp_pair2: List) -> float:
-        """Calculate breakpoint distance.
-
-        :param bp_pair1: breakpoint pair list 1: [(sv_type, bp1, bp2), ...]
-        :param bp_pair2: breakpoint pair list 2: [(sv_type, bp1, bp2), ...]
-        :return: calculated breakpoint distance
-
-        .. note::
-            len(bp_pair1) == len(bp_pair2) should be always true
-            The output distance will be [0, 1]
-        """
-        normalization_factor = 100
-        distance_list = []
-        effect_num_pair = 0
-        for i, j in zip(bp_pair1, bp_pair2):
-            a_sv_type, a_bp1, a_bp2 = i
-            b_sv_type, b_bp1, b_bp2 = j
-            if a_sv_type != "NA" and b_sv_type != "NA":
-                distance_list.append(
-                    Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp1, b_bp1)
-                )
-                distance_list.append(
-                    Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp2, b_bp2)
-                )
-                effect_num_pair += 1
-
-        if effect_num_pair > 0:
-            ave_distance = sum(distance_list) / (effect_num_pair * 2)
-        else:
-            ave_distance = 100
-        distance = ave_distance / normalization_factor
-        return distance
-
-    @staticmethod
-    def __decide_flag(
-        left_query_node: NodeType,
-        right_query_node: NodeType,
-        left_subject_node: Optional[NodeType],
-        right_subject_node: Optional[NodeType],
-    ) -> bool:
-        """Decide the flag.
-
-        :param left_query_node: left query node
-        :param right_query_node: right query node
-        :param left_subject_node: left subject node
-        :param right_subject_node: right subject node
-        :return: flag
-        """
-        flag = False
-
-        if left_subject_node is None and right_subject_node is None:
-            flag = True
-
-        if left_subject_node:
-            if (
-                left_query_node.strand == left_subject_node.strand == "+"
-                and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
-            ) or (
-                left_query_node.strand == left_subject_node.strand == "-"
-                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]  # type: ignore
-            ):
-                flag = True
-            else:
-                flag = False
-
-        if right_subject_node:
-            if (
-                right_query_node.strand == right_subject_node.strand == "+"
-                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
-            ) or (
-                right_query_node.strand == right_subject_node.strand == "-"
-                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]  # type: ignore
-            ):
-                flag = True
-            else:
-                flag = False
-        return flag
-
-    def __call__(self, series_a: Series, series_b: Series) -> float:
-        """Call Ruler to calculate the distance between two series.
-
-        :param series_a: series a
-        :param series_b: series b
-        :return: distance
-
-        :Example:
-
-        >>> ruler = Ruler()
-        >>> ruler(series_a, series_b)
-        0.5
-        """
-        if len(series_a) < len(series_b):
-            series_a, series_b = series_b, series_a
-        series_a_bp_pair = Ruler.obtain_breakpoint_pairs(series_a)
-        series_b_bp_pair = Ruler.obtain_breakpoint_pairs(series_b)
-
-        calculated_distance_list = []
-
-        """
-        ref:           [x]-[x]-[x]-[x]
-        query: [x]-[x]-[x]
-        """
-        distance = Ruler.first_node_last_node_distance(series_a[0], series_b[-1])
-        calculated_distance_list.append(distance)
-
-        """
-        ref:     [O]-[x]-[x]-[x]-[x]-[O]
-        query1:  [x]-[x]-[x]
-        query2:      [x]-[x]-[x]
-        query3:          [x]-[x]-[x]
-        query4:              [x]-[x]-[x]
-        """
-        sliding_window_size = len(series_b_bp_pair)
-        for _ in range(sliding_window_size - 1):
-            _dummy_bp = "chrN:0"
-            series_a_bp_pair.insert(0, ("NA", _dummy_bp, _dummy_bp))
-            series_a_bp_pair.append(("NA", _dummy_bp, _dummy_bp))
-
-        for i in range(len(series_a_bp_pair) - sliding_window_size + 1):
-            _subject_bp_pair = series_a_bp_pair[i : i + sliding_window_size]
-            left_query_node = series_b[0]
-            right_query_node = series_b[-1]
-
-            left_subject_node = (
-                series_a[i + 1 - sliding_window_size]
-                if i >= sliding_window_size
-                else None
-            )
-
-            if (
-                0
-                <= i
-                < len(series_a_bp_pair) - sliding_window_size + 1 - sliding_window_size
-            ):
-                right_subject_node = series_a[i + 1]
-            else:
-                right_subject_node = None
-
-            flag = Ruler.__decide_flag(
-                left_query_node, right_query_node, left_subject_node, right_subject_node
-            )
-
-            if flag:
-                distance = Ruler.breakpoint_pairs_distance(
-                    series_b_bp_pair, _subject_bp_pair
-                )
-                calculated_distance_list.append(distance)
-        """
-         ref:    [x]-[x]-[x]-[x]
-         query:              [x]-[x]-[x]
-        """
-        distance = Ruler.first_node_last_node_distance(series_b[0], series_a[-1])
-        calculated_distance_list.append(distance)
-        return min(calculated_distance_list) if calculated_distance_list else 1.0
-
-
-class CliqueFinder:
-    """Find cliques in a graph based on series level.
-
-     which will help to construct splice graph base on nodes level in the future.
-
-    :param intact_series_list: list of intact series for a bam file of one sample
-    :param logger: logger
-    :param threshold: threshold to determine whether two series are connected
-
-    .. note::
-        :function: `networkx.algorithms.clique.find_cliques` is used to find cliques.
-
-    :Example:
-
-    >>> from loguru import  logger
-    >>> clique_finder = CliqueFinder([], logger)
-    >>> clique_finder.find_clique()
-    """
-
-    def __init__(
-        self, intact_series_list: Any, logger: LoggerType, threshold: float = 0.2
-    ):
-        """Initialize CliqueFinder."""
-        self.ruler = Ruler(logger)
-        self.intact_series_list = intact_series_list
-        self.distance_dict: Dict[Any, float] = {}
-        self.graph = nx.Graph()
-        self.threshold = threshold
-
-    def _calculate_distance(self, x: Series, y: Series) -> Tuple[bool, float]:
-        """Calculate distance between two series. If distance has been calculated before.
-
-        return True and distance value. Otherwise, calculate distance and return False and
-        distance value.
-
-        :param x: series x
-        :param y: series y
-        :return: is_calculated, distance value
-        """
-        distance1 = self.distance_dict.get((x, y), None)
-        if distance1 is not None:
-            return True, distance1
-        distance2 = self.distance_dict.get((y, x), None)
-        if distance2 is not None:
-            return True, distance2
-
-        distance = self.ruler(x, y)
-        self.distance_dict[(x, y)] = distance
-        return False, distance
-
-    def _add_edge_between_two_series(self, x: Series, y: Series) -> None:
-        """Add edge between two series according to the distance between them.
-
-        if the distance is less than threshold, add edge. Otherwise, do nothing.
-
-        :param x: series x
-        :param y: series y
-        :return: None
-
-        .. note::
-            if `is_calculated` is True, distance value is stored in distance_dict, which
-            indicates that the two series have been checked and determined if they
-            should be connected in graph.
-        """
-        if x != y:
-            is_calculated, distance = self._calculate_distance(x, y)
-            if not is_calculated and distance < self.threshold:
-                self.graph.add_edge(x, y)
-                x.is_in_graph = True
-
-    def _create_graph_for_series(self) -> None:
-        """Create graph for all series in intact_series_list.
-
-        add edge between two series in terms of the distance value
-
-        :return: None
-        """
-        for x in self.intact_series_list:
-            for y in self.intact_series_list:
-                self._add_edge_between_two_series(x, y)
-
-            if not x.is_in_graph:
-                self.graph.add_node(x)
-
-    @timeit
-    def find_clique(self) -> Any:
-        """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
-
-        :return:  every clique in graph as a iterator (List[Series])
-
-        :Example:
-
-        >>> from loguru import logger
-        >>> clique_finder = CliqueFinder([], logger)
-        >>> cliques = clique_finder.find_clique()
-        >>> for clique in cliques:
-        ...     for series_list in clique:
-        ...         assert isinstance(series_list, Series)
-        """
-        self._create_graph_for_series()
-
-        yield from find_cliques(self.graph)
+    forward = auto()
+    backward = auto()
 
 
 class SpliceGraph:
@@ -425,14 +48,16 @@ class SpliceGraph:
     dict_factory = dict
     list_factory = list
 
-    def __init__(self, logger: LoggerType, rescuer: SRRescuer):
+    def __init__(self, logger: LoggerType, prune_threshold: int = 10) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
-        self.rescuer = rescuer
+        self.prune_threshold = prune_threshold
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
-    def __call__(self, series_list: Iterable[Series]) -> Iterable[Series]:
+    def __call__(
+        self, series_list: Iterable[Series], rescuer: SRRescuer
+    ) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
         :param series_list: series list
@@ -446,34 +71,18 @@ class SpliceGraph:
         if isinstance(series_list, types.GeneratorType):
             series_list = list(series_list)
         self.series_list = copy.deepcopy(series_list)
+        del series_list  # remove reference to series_list
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
+        # construct splice graph
         self.construct()
-        self.rescuer(self)
+        # sr rescuer
+        rescuer(self)
+        self.prune()
+        # prun the graph
+
+        # trace path
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
-
-    def get_start_nodes(self):
-        """Get start nodes based if node has predecessors."""
-        return [
-            node
-            for nodes in self.nodes.values()
-            for node in nodes
-            if node.is_start_node()
-        ]
-
-    def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
-        """Get nodes in graph with similar key."""
-        return self.nodes.get(similar_key, [])
-
-    def add_node_with_similar_key(self, node: NodeType) -> None:
-        """Add node to the splice graph.
-
-        :param node: node to be added
-        """
-        if similar_nodes := self.get_nodes_with_similar_key(node.similar_key):
-            similar_nodes.append(node)
-        else:
-            self.nodes[node.similar_key] = [node]
 
     def __contains__(self, node: NodeType) -> bool:
         """Check if node is in graph.
@@ -491,10 +100,56 @@ class SpliceGraph:
             for other_node in self.get_nodes_with_similar_key(node.similar_key)
         )
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[NodeType]:
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             yield from nodes
+
+    def get_start_nodes(self) -> Iterable[NodeType]:
+        """Get start nodes based if node has predecessors."""
+        return (
+            node
+            for nodes in self.nodes.values()
+            for node in nodes
+            if node.is_start_node()
+        )
+
+    def get_end_nodes(self) -> Iterable[NodeType]:
+        """Get end nodes based if node has successors."""
+        return (
+            node
+            for nodes in self.nodes.values()
+            for node in nodes
+            if node.is_end_node()
+        )
+
+    def remove_node(self, node: NodeType) -> None:
+        """Remove node from graph.
+
+        :param node: node to be removed
+        """
+        if node.unique_key is None:
+            raise ValueError("node.unique_key is None")
+        self.get_nodes_with_similar_key(node.similar_key).remove(node)
+
+    def reset_trace_id(self) -> None:
+        """Reset trace id for all nodes."""
+        for node in self:
+            node.reset_trace_id()
+
+    def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
+        """Get nodes in graph with similar key."""
+        return self.nodes.get(similar_key, [])
+
+    def add_node_with_similar_key(self, node: NodeType) -> None:
+        """Add node to the splice graph.
+
+        :param node: node to be added
+        """
+        if similar_nodes := self.get_nodes_with_similar_key(node.similar_key):
+            similar_nodes.append(node)
+        else:
+            self.nodes[node.similar_key] = [node]
 
     @staticmethod
     def _check_insertion_conditions_for_compare(
@@ -603,12 +258,12 @@ class SpliceGraph:
         if (
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
         ):  # both are start nodel check last exon end
-            return node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
+            return node1.next_breakpoint == node2.next_breakpoint
 
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
-            return node1.exons[0][0] == node2.exons[0][0]  # type: ignore
+            return node1.prev_breakpoint == node2.prev_breakpoint
 
         elif (
             node1.prev_breakpoint is None and node2.prev_breakpoint is not None
@@ -781,9 +436,10 @@ class SpliceGraph:
                     current_node, similar_key, merged_nodes_pool
                 )
 
-    def _trace(
+    def _trace_forward(
         self,
         start_node: NodeType,
+        trace_id: int,
         path: List[NodeType],
         group_paths: List[List[NodeType]],
     ) -> None:
@@ -797,15 +453,215 @@ class SpliceGraph:
         else:
             if successors := start_node.successors:
                 for successor in successors:
-                    self._trace(successor, path + [start_node], group_paths)
+                    successor.set_trace_id(trace_id)
+                    successor.set_original_sr(successor.sr)
+                    self._trace_forward(
+                        successor, trace_id + 1, path + [start_node], group_paths
+                    )
             else:
-                self._trace(successors, path + [start_node], group_paths)  # type: ignore
+                # successor be [] or None
+                self._trace_forward(
+                    successors,  # type: ignore
+                    trace_id + 1,
+                    path + [start_node],
+                    group_paths,
+                )
+
+    def _trace_backward(
+        self,
+        end_node: NodeType,
+        trace_id: int,
+        path: List[NodeType],
+        group_paths: List[List[NodeType]],
+    ) -> None:
+        """Helper function to trace through graph and find all paths.
+
+        .. seealso::
+            :func:`SpliceGraph.trace`
+        """
+        if not end_node or end_node in path:
+            group_paths.append(path)
+        else:
+            if predecessors := end_node.predecessors:
+                for predecessor in predecessors:
+                    predecessor.set_trace_id(trace_id)
+                    predecessor.set_original_sr(predecessor.sr)
+                    self._trace_backward(
+                        predecessor, trace_id + 1, path + [end_node], group_paths
+                    )
+            else:
+                # predecessor be [] or None
+                self._trace_backward(
+                    predecessors,  # type: ignore
+                    trace_id + 1,
+                    path + [end_node],
+                    group_paths,
+                )
+
+    def _trace(self, direction: Enum) -> None:
+        """Trace splice graph but only mark node with trace_id.
+
+        :param direction: direction of trace, forward or backward
+
+        .. note::
+            before trace, you should call :func:`SpliceGraph.reset_trace_id` if
+            you have already traced splice graph.
+        """
+        if direction == SpliceType.forward:
+            for start_node in self.get_start_nodes():
+                start_node.set_trace_id(1)
+                start_node.set_original_sr(start_node.sr)
+                self._trace_forward(start_node, 2, [], [])
+            return
+        elif direction == SpliceType.backward:
+            for end_node in self.get_end_nodes():
+                end_node.set_trace_id(1)
+                end_node.set_original_sr(end_node.sr)
+                self._trace_backward(end_node, 2, [], [])
+            return
+
+        raise ValueError(f"{direction=} is not a valid direction[forward, backward]")
 
     def trace(self) -> Any:
-        """Trace through graph and find all paths."""
+        """Trace forward through graph and find all paths."""
         result_series_list = []
+
         for start_node in self.get_start_nodes():
+            start_node.set_trace_id(1)
             group_paths: Any = []
-            self._trace(start_node, [], group_paths)
+            self._trace_forward(start_node, 2, [], group_paths)
             result_series_list.extend(group_paths)
+
         return result_series_list
+
+    def create_same_level_node_list(self) -> List[List[NodeType]]:
+        """Create node trace id dict.
+
+        :return: trace_id: List[node] dict
+        """
+        node_trace_id_dict: Dict[int, List[NodeType]] = defaultdict(list)
+        for node in self:
+            node_trace_id_dict[node.trace_id].append(node)
+
+        return [i for i in node_trace_id_dict.values() if len(i) > 1]
+
+    def _rule_out(self, winner: NodeType, loser: NodeType) -> None:
+        """Rule out loser and add sr to winner.
+
+        Loser is out, and its sr, successors, predecessors are added to winner.
+        """
+        winner.update_sr(loser.sr)
+        winner.add_successor_from_list(loser.successors)
+        winner.add_predecessor_from_list(loser.predecessors)
+
+        for loser_predecessor in loser.predecessors:
+            loser_predecessor.successors.remove(loser)
+
+        for loser_successor in loser.successors:
+            loser_successor.predecessors.remove(loser)
+        self.remove_node(loser)
+
+    @staticmethod
+    def _check_can_battle_condition(
+        breakpoint1: Optional[str], breakpoint2: Optional[str], threshold: int
+    ) -> bool:
+        """Check if two breakpoints is in threshold .
+
+        :param breakpoint1: 'chr1:100'
+        :param breakpoint2: 'chr1:100'
+        :return: True or False
+        """
+        if breakpoint1 is None or breakpoint2 is None:
+            raise SystemExit from ValueError("breakpoint is None")
+        return (
+            abs(int(breakpoint1.split(":")[1]) - int(breakpoint2.split(":")[1]))
+            < threshold
+        )
+
+    def check_can_battle(self, node_a: NodeType, node_b: NodeType) -> bool:
+        """Check if two nodes can battle."""
+        self.logger.trace(f"{node_a=}\n{node_b=}")
+        if node_a.prev_sv_type != node_b.prev_sv_type:
+            return False
+
+        if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:
+            return SpliceGraph._check_can_battle_condition(
+                node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
+            )
+
+        if node_a.next_breakpoint is None and node_b.next_breakpoint is None:
+            return SpliceGraph._check_can_battle_condition(
+                node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
+            )
+
+        return SpliceGraph._check_can_battle_condition(
+            node_a.prev_breakpoint, node_a.prev_breakpoint, self.prune_threshold
+        ) and SpliceGraph._check_can_battle_condition(
+            node_a.next_breakpoint, node_a.next_breakpoint, self.prune_threshold
+        )
+
+    def _begin_battle(self, node_a: NodeType, node_b: NodeType) -> Tuple[bool, ...]:
+        """Begin battle between two nodes.
+
+        :return: Two bool values:
+                value1: True if node_a and node_b can battle.
+                value2: if node_a is winner, return True, else return False
+        """
+        if node_a.original_sr == node_b.original_sr or not self.check_can_battle(
+            node_a, node_b
+        ):
+            return False, False
+
+        if node_a.original_sr > node_b.original_sr:
+            self._rule_out(node_a, node_b)
+            return True, True
+
+        # node_a.original_sr < node_b.original_sr
+        self._rule_out(node_b, node_a)
+        return True, False
+
+    def battle(self, same_level_node_list: List[List[NodeType]]) -> None:
+        """Nodes with same trace id battle each other.
+
+        Node with larger number of sr wins, otherwise lose.
+
+        Loser will be rule out.
+        """
+        for node_list in same_level_node_list:
+
+            while node_list:
+                current_node = node_list.pop()
+                for other_node in node_list:
+                    can_battle, is_winner = self._begin_battle(current_node, other_node)
+                    if can_battle:
+                        if not is_winner:
+                            # other_node is winner
+                            break
+                        # winner is last_node
+                        node_list.remove(other_node)
+
+    def _prune(self, direction: Enum) -> None:
+        """Implement function to prune graph.
+
+        :param direction: direction of prune, forward or backward
+        """
+        # 1. trace and mark node with trace_id
+        self._trace(direction)
+        # 2. save every trace_id and its corresponding node to be Dict
+        same_level_node_list = self.create_same_level_node_list()
+        # 3. check value of Dict, if number of nodes is less than 2, remove it
+        # 4. compare them and rule out loser
+        self.battle(same_level_node_list)
+
+    def prune(self) -> None:
+        """Prune graph.
+
+        Algorithm:
+        1. trace graph and mark every node with trace id
+        2. save every node with trace id as a Dict[int, List[NodeType]]
+        3. check nodes of Dict in terms of trace id if len(values)>1,
+        4. then compare them and rule out loser in terms of sr number
+        """
+        self._prune(SpliceType.forward)
+        self.reset_trace_id()
+        self._prune(SpliceType.backward)
