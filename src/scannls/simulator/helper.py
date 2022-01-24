@@ -27,6 +27,6 @@ def to_wt_and_mt_fasta(input_dict: dict, output_prefix: str):
                 wt_seq += _metaexon.wt_seq
                 mt_seq += _metaexon.mt_seq
             if wt_seq:
-                wt_fa.write(">{trx_id}\n{wt_seq}\n")
+                wt_fa.write(f">{trx_id}\n{wt_seq}\n")
             if mt_seq:
-                mt_fa.write(">{trx_id}\n{mt_seq}\n")
+                mt_fa.write(f">{trx_id}\n{mt_seq}\n")

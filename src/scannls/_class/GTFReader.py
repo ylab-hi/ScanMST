@@ -3,6 +3,7 @@
 import operator
 import os
 from collections import defaultdict
+from pathlib import Path
 
 import HTSeq  # type: ignore
 
@@ -165,12 +166,15 @@ class GTFReader:
             self.gene_to_trx,
             self.trx_to_exons,
         ) = GTFReader._gtf_parser(self.gtf)
-        self.trx_to_intron = GTFReader._obtain_trx_to_intron(self.trx_to_exons)
+        self.trx_to_introns = GTFReader._obtain_trx_to_intron(self.trx_to_exons)
         gtf_name = os.path.splitext(os.path.basename(self.gtf))[0]
         intergenic = Intergenic(
             input_gtf=self.gtf,
             output_gtf=f"{gtf_name}.intergenic.gtf",
             logger=self.logger,
         )
-        intergenic_gtf = intergenic.run()
+        intergenic_gtf = f"{gtf_name}.intergenic.gtf"
+
+        if not Path(intergenic_gtf).exists():
+            intergenic.run()
         self.gene_to_intergenic = GTFReader.gene_to_intergenic_parser(intergenic_gtf)

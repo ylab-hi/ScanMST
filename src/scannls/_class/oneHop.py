@@ -18,6 +18,8 @@ from ..type import LoggerType
 from .basicClass import reverse_complement
 from .exception import NumberOfHopIsNotValidError
 
+secrets.SystemRandom.seed(42)
+
 
 @dataclass
 class MetaExon:
@@ -32,6 +34,16 @@ class MetaExon:
     wt_seq: str = None
     mt_seq: str = None
     nls_type: Optional[str] = None
+
+    def __repr__(self) -> str:
+        """Get a string representation of a MetaExon."""
+        exons_repr = "|".join([f"{i.start}-{i.end}" for i in self.exons])  # type: ignore
+        return (
+            f"MetaExon({self.chrom}:{self.exons[0].start}-{self.exons[-1].end}:{self.strand}, "
+            f"{exons_repr}, {self.nls_type}, {self.p5_pos}, "
+            f"{self.p3_pos}, "
+            f"locus={self.locus}) "
+        )
 
 
 class OneHop:
@@ -89,6 +101,10 @@ class OneHop:
         _tgt_trx = secrets.choice(_trxs)
         _chrom = self.trx_to_exons[_tgt_trx][0].chrom
         _num_exon = len(self.trx_to_exons[_tgt_trx])
+        # We only consider transcript with >= 3 exons
+        if _num_exon <= 2:
+            return MetaExon()
+
         wt_seq = ""
         if locus_type == "exonic" or locus_type == "intronic":
             if strand == "+":
@@ -148,9 +164,6 @@ class OneHop:
                     p5_pos, p3_pos = _metaexon[-1].end, _metaexon[0].start
             r_metaexon = _metaexon
         elif locus_type == "intronic":
-            if _tgt_trx not in self.trx_to_introns:
-                return MetaExon()
-
             _num_intron = len(self.trx_to_introns[_tgt_trx])
             tgt_intron_index = secrets.choice(range(_num_intron))
             # GenomicInterval
@@ -238,7 +251,7 @@ class OneHop:
                 _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
                     _index2
                 ]
-                if _select_strand1 == _select_strand2:
+                if _metaexon1.chrom and _select_strand1 == _select_strand2:
                     _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
@@ -334,7 +347,7 @@ class OneHop:
                 _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
                     _index2
                 ]
-                if _select_strand1 != _select_strand2:
+                if _metaexon1.chrom and _select_strand1 != _select_strand2:
                     _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
@@ -404,7 +417,7 @@ class OneHop:
                     locus_type=_locus_type,
                     direction="downstream",
                 )
-                if _metaexon2.chrom:
+                if _metaexon1.chrom and _metaexon2.chrom:
                     current_metaexons.append(_metaexon1)
                     current_metaexons.append(_metaexon2)
                     break
@@ -458,7 +471,7 @@ class OneHop:
                 _select_gene2, _select_strand2 = self.chrom_to_genes[_select_chrom][
                     _index2
                 ]
-                if _select_strand1 == _select_strand2:
+                if _metaexon1.chrom and _select_strand1 == _select_strand2:
                     _metaexon2 = self.gen_metaexon(
                         locus=_select_gene2,
                         strand=_select_strand2,
@@ -494,8 +507,9 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    current_metaexons.append(_metaexon2)
-                    break
+                    if _metaexon2.chrom:
+                        current_metaexons.append(_metaexon2)
+                        break
             return current_metaexons
 
     def _microhomology_checker(self) -> bool:
@@ -517,6 +531,8 @@ class OneHop:
             self._inv_hopper(total_metaexons)
         elif _select_type == "TRA":
             self._tra_hopper(total_metaexons)
+        repr_metaexons = [repr(i) for i in total_metaexons]
+        self.logger.trace(f"{';'.join(repr_metaexons)}")
         return total_metaexons
 
     def multi_hop_generator(self, num_of_hops: int) -> list:
@@ -544,10 +560,12 @@ class OneHop:
                     self._del_hopper(total_metaexons)
             if hops_type_list.count("DEL") < num_of_hops:
                 break
+        repr_metaexons = [repr(i) for i in total_metaexons]
+        self.logger.trace(f"{';'.join(repr_metaexons)}")
         return total_metaexons
 
     def transcripts_generator(
-        self, num_of_hops: int, num_of_transcripts: int, hop_type: str
+        self, num_of_hops: int, num_of_transcripts: int, hop_type: str = None
     ) -> dict:
         """Generate transcripts."""
         transcripts_dict = {}
@@ -649,9 +667,12 @@ class SimVCFWriter:
     ) -> None:
         """Initialize SimVCFWriter object."""
         self.file_path = file_path
+        self.logger = logger
+        if self.file_path.exists():
+            self.logger.warning(f"{self.file_path} exists, will be overwritten.")
         self.id = 1
         self.sample_name = output_prefix
-        self.logger = logger
+        self.io: Optional[IO] = None
 
     @property
     def is_opened(self) -> bool:
@@ -671,8 +692,7 @@ class SimVCFWriter:
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        with open(self.file_path, mode) as self.io:
-            pass
+        self.io = open(self.file_path, mode)
         return self.io
 
     def close(self) -> None:
