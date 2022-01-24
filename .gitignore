@@ -14,6 +14,8 @@ __pycache__/
 profile/
 .idea/
 .run/
+#profile
+profile/
 # jupyter notebook
 *.ipynb
 # bam
