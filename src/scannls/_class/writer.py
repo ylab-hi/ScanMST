@@ -927,7 +927,7 @@ class SimVCFWriter:
 def get_vcf_features_from_metaexons(
     series: List[MetaExon],
     series_id: int,
-) -> List[List[str]]:  # type: ignore
+) -> List[List[str]]:
     """Obtain hop vcf features from one list of metaexons."""
     series_hops_features = []
 
