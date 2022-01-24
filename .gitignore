@@ -11,6 +11,7 @@
 __pycache__/
 
 # editor
+profile/
 .idea/
 .run/
 # jupyter notebook

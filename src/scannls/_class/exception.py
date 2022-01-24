@@ -76,11 +76,3 @@ class BreakpointNotFoundError(ScannlsExceptionError):
     def __init__(self) -> None:
         """Initialize the exception."""
         super().__init__("Cannot find breakpoint in current node")
-
-
-class NumberOfHopIsNotValidError(ScannlsExceptionError):
-    """Exception raised for errors when breakpoint not found."""
-
-    def __init__(self) -> None:
-        """Initialize the exception."""
-        super().__init__("The number of hop is not valid")

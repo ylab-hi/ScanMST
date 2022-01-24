@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Generate NLS transcripts."""
 # ===============================================================================
-from .. import GTFReader
-from .. import Intergenic
-from .. import OneHop
-from .. import SimVCFWriter
-from ..type import LoggerType
+from .GTFReader import GTFReader
 from .helper import to_wt_and_mt_fasta
+from .intergenicGTF import Intergenic
+from .oneHop import OneHop
+from .writer import SimVCFWriter
+from scannls import LoggerType
 
 
 def prepare_intergenic_gtf(input_gtf: str, output_gtf: str, logger: LoggerType) -> str:

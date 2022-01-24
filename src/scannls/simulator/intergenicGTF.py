@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-# ===============================================================================
+"""INTERGENIC GTF FILE."""
 import os
 import shutil
 import subprocess
 
-from ..type import LoggerType
+from scannls import LoggerType
 
 __license__ = "MIT"
 __revision__ = " $Id: actor.py 1586 2009-01-30 15:56:25Z cokelaer $ "

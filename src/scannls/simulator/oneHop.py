@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# ===============================================================================
+"""One-hop simulation."""
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,9 +10,9 @@ from typing import Optional
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError
 
-from ..type import LoggerType
-from .basicClass import reverse_complement
 from .exception import NumberOfHopIsNotValidError
+from scannls import LoggerType
+from scannls import reverse_complement
 
 
 @dataclass

@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-# ===============================================================================
+"""GTFFileReader - Reads a GTF file and returns a list of GTFRecords.
+
+GTFFileReader(filename) -> GTFReader object
+"""
 import operator
 import os
 from collections import defaultdict
@@ -7,8 +10,8 @@ from pathlib import Path
 
 import HTSeq  # type: ignore
 
-from ..type import LoggerType
 from .intergenicGTF import Intergenic
+from scannls import LoggerType
 
 
 class GTFReader:

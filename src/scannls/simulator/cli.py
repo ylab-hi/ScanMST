@@ -13,11 +13,11 @@ from typing import Union
 
 from loguru import logger
 
-from .. import __version__
-from .. import Options
-from ..utils import external_tool_checking
 from .main import multi_hop_generator
 from .main import single_hop_generator
+from scannls import __version__
+from scannls import external_tool_checking
+from scannls import Options
 
 
 def parse_args() -> argparse.ArgumentParser:

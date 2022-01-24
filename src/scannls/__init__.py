@@ -10,7 +10,9 @@ except ModuleNotFoundError as e:
     raise SystemExit from e
 
 from ._class.basicRead import Read
-from ._class.exception import ReadNotFoundError, ToolNotFoundError
+from ._class.exception import ReadNotFoundError
+from ._class.exception import ToolNotFoundError
+from ._class.exception import BreakpointNotFoundError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement
 from ._class.basicClass import Series
@@ -18,18 +20,14 @@ from ._class.blat import Blat
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
 from ._class.readConnector import detect_read_read_connections_from_cigar
-from .utils import get_softclip_length
+from .utils import get_softclip_length, external_tool_checking
 from ._class.spliceGraph import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
 from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
-from ._class.GTFReader import GTFReader
-from ._class.intergenicGTF import Intergenic
-from ._class.oneHop import OneHop
-from ._class.writer import SimVCFWriter
-from .type import Options
+from .type import Options, LoggerType
 
 __all__ = [
     "Read",
@@ -49,10 +47,9 @@ __all__ = [
     "VCFWriter",
     "ToolNotFoundError",
     "ReadNotFoundError",
+    "BreakpointNotFoundError",
     "cli",
     "Options",
-    "GTFReader",
-    "Intergenic",
-    "OneHop",
-    "SimVCFWriter",
+    "LoggerType",
+    "external_tool_checking",
 ]
