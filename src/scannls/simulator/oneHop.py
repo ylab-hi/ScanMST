@@ -61,6 +61,7 @@ class OneHop:
         gene_to_intergenic: dict,
         reference: str,
         logger: LoggerType,
+        shift: int = 20,
     ) -> None:
         """Initialize OneHop.
 
@@ -83,6 +84,7 @@ class OneHop:
             raise FastaNotFoundError
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.logger = logger
+        self.shift = shift
         self.function_dict = {
             "TDUP": self._tdup_hopper,
             "IDUP": self._idup_hopper,
@@ -222,7 +224,6 @@ class OneHop:
     def reverse_metaexon(input_metaexon: MetaExon) -> MetaExon:
         """Reverse metaexon for IDUP."""
         strand = "+" if input_metaexon.strand == "-" else "-"
-        print(f"{input_metaexon.mt_seq=}")
         return MetaExon(
             chrom=input_metaexon.chrom,
             locus=input_metaexon.locus,
@@ -238,10 +239,11 @@ class OneHop:
 
     def _tdup_hopper(self, current_metaexons) -> None:
         """TDUP hopper."""
+        flag = True
         if not current_metaexons:
             _select_chrom = secrets.choice(self.available_chroms)
             gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
-            while True:
+            while flag:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
                 )
@@ -256,7 +258,7 @@ class OneHop:
                     nls_type="TDUP",
                 )
 
-                _shift = secrets.choice(range(2, 5))
+                _shift = secrets.choice(range(2, 2 + self.shift))
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 if _select_strand1 == "+":
                     _index2 = _index1 - _shift
@@ -277,7 +279,8 @@ class OneHop:
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
-                            break
+                            flag = False
+                flag = False
         else:
             current_metaexons[-1].nls_type = "TDUP"
             last_metaexon = current_metaexons[-1]
@@ -292,7 +295,7 @@ class OneHop:
             gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
             flag = True
             while flag:
-                _shift = secrets.choice(range(2, 12))
+                _shift = secrets.choice(range(2, 2 + self.shift))
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 if _select_strand1 == "+":
                     _index2 = _index1 - _shift
@@ -315,13 +318,14 @@ class OneHop:
                             current_metaexons.append(_metaexon2)
                             flag = False
                 flag = False
-            return current_metaexons
+            return None
 
     def _idup_hopper(self, current_metaexons) -> None:
         """IDUP hopper."""
-        if current_metaexons == []:
+        flag = True
+        if not current_metaexons:
             _select_chrom = secrets.choice(self.available_chroms)
-            while True:
+            while flag:
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
@@ -340,7 +344,8 @@ class OneHop:
                     if _metaexon2.chrom:
                         current_metaexons.append(_metaexon1)
                         current_metaexons.append(_metaexon2)
-                        break
+                        flag = False
+                flag = False
         else:
             current_metaexons[-1].nls_type = "IDUP"
             last_metaexon = current_metaexons[-1]
@@ -351,10 +356,11 @@ class OneHop:
 
     def _inv_hopper(self, current_metaexons) -> None:
         """INV hopper."""
-        if current_metaexons == []:
+        flag = True
+        if not current_metaexons:
             _select_chrom = secrets.choice(self.available_chroms)
             gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
-            while True:
+            while flag:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
                 )
@@ -370,7 +376,8 @@ class OneHop:
                 )
 
                 _shift = secrets.choice(
-                    list(map(lambda x: -x, range(2, 5))) + list(range(2, 5))
+                    list(map(lambda x: -x, range(2, 2 + self.shift)))
+                    + list(range(2, 2 + self.shift))
                 )
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 _index2 = _index1 + _shift
@@ -390,7 +397,8 @@ class OneHop:
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
-                            break
+                            flag = False
+                flag = False
         else:
             current_metaexons[-1].nls_type = "INV"
             last_metaexon = current_metaexons[-1]
@@ -404,9 +412,11 @@ class OneHop:
                 (_select_gene1, _select_strand1)
             )
 
-            while True:
+            flag = True
+            while flag:
                 _shift = secrets.choice(
-                    list(map(lambda x: -x, range(2, 12))) + list(range(2, 12))
+                    list(map(lambda x: -x, range(2, 2 + self.shift)))
+                    + list(range(2, 2 + self.shift))
                 )
                 _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
                 _index2 = _index1 + _shift
@@ -424,16 +434,18 @@ class OneHop:
                         self.logger.trace(f"INV: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
-                            break
-            return current_metaexons
+                            flag = False
+                flag = False
+            return None
 
     def _tra_hopper(self, current_metaexons) -> None:
         """TRA hopper."""
-        if current_metaexons == []:
+        flag = True
+        if not current_metaexons:
             _select_chrom1, _select_chrom2 = secrets.SystemRandom().sample(
                 self.available_chroms, k=2
             )
-            while True:
+            while flag:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom1]
                 )
@@ -459,13 +471,15 @@ class OneHop:
                 if _metaexon1.chrom and _metaexon2.chrom:
                     current_metaexons.append(_metaexon1)
                     current_metaexons.append(_metaexon2)
-                    break
+                    flag = False
+                flag = False
         else:
             current_metaexons[-1].nls_type = "TRA"
             last_metaexon = current_metaexons[-1]
             _select_chrom1 = last_metaexon.chrom
             _locus_type = secrets.choice(["exonic", "intronic", "intergenic"])
-            while True:
+            flag = True
+            while flag:
                 _select_chrom2 = secrets.choice(self.available_chroms)
                 if _select_chrom1 != _select_chrom2:
                     _select_gene2, _select_strand2 = secrets.choice(
@@ -480,15 +494,17 @@ class OneHop:
                     self.logger.trace(f"TRA: {_metaexon2=}")
                     if _metaexon2.chrom:
                         current_metaexons.append(_metaexon2)
-                        break
-            return current_metaexons
+                        flag = False
+                flag = False
+            return None
 
     def _del_hopper(self, current_metaexons) -> None:
         """DEL hopper."""
-        if current_metaexons == []:
+        flag = True
+        if not current_metaexons:
             _select_chrom = secrets.choice(self.available_chroms)
             gene_num_on_select_chrom = len(self.chrom_to_genes[_select_chrom])
-            while True:
+            while flag:
                 _select_gene1, _select_strand1 = secrets.choice(
                     self.chrom_to_genes[_select_chrom]
                 )
@@ -503,7 +519,7 @@ class OneHop:
                     nls_type="DEL",
                 )
 
-                _shift = secrets.choice(range(2, 5))
+                _shift = secrets.choice(range(2, 2 + self.shift))
                 _locus_type = "exonic"
                 if _select_strand1 == "+":
                     _index2 = _index1 + _shift
@@ -524,7 +540,8 @@ class OneHop:
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
-                            break
+                            flag = False
+                flag = False
         else:
             current_metaexons[-1].nls_type = "DEL"
             last_metaexon = current_metaexons[-1]
@@ -537,9 +554,9 @@ class OneHop:
             _index1 = self.chrom_to_genes[_select_chrom].index(
                 (_select_gene1, _select_strand1)
             )
-
-            while True:
-                _shift = secrets.choice(range(2, 12))
+            flag = True
+            while flag:
+                _shift = secrets.choice(range(2, 2 + self.shift))
                 _locus_type = "exonic"
                 if _select_strand1 == "+":
                     _index2 = _index1 + _shift
@@ -559,8 +576,9 @@ class OneHop:
                         self.logger.trace(f"DEL: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
-                            break
-            return current_metaexons
+                            flag = False
+                flag = False
+            return None
 
     def _microhomology_checker(self) -> bool:
         """Check Microhomology."""
@@ -573,14 +591,12 @@ class OneHop:
         """
         total_metaexons: List[MetaExon] = []
         _select_type = hop_type
-        if _select_type == "TDUP":
-            self._tdup_hopper(total_metaexons)
-        elif _select_type == "IDUP":
-            self._idup_hopper(total_metaexons)
-        elif _select_type == "INV":
-            self._inv_hopper(total_metaexons)
-        elif _select_type == "TRA":
-            self._tra_hopper(total_metaexons)
+        flag = True
+        while flag:
+            total_metaexons: List[MetaExon] = []
+            self.function_dict[_select_type](total_metaexons)
+            if len(total_metaexons) == 2:
+                flag = False
         repr_metaexons = [repr(i) for i in total_metaexons]
         self.logger.trace(f"{'; '.join(repr_metaexons)}")
         return total_metaexons
@@ -591,12 +607,14 @@ class OneHop:
         .. note::
               All the hop types are 'DEL' is not allowed.
         """
-        candidate_hop_types = ["TDUP", "IDUP", "INV", "TRA", "DEL"]
+        candidate_hop_types = (
+            ["TDUP"] * 30 + ["INV"] * 30 + ["TRA"] * 30 + ["DEL"] * 3 + ["IDUP"] * 3
+        )
 
+        hops_type_list = []
+        total_metaexons: List[MetaExon] = []
         flag = True
         while flag:
-            hops_type_list = []
-            total_metaexons: List[MetaExon] = []
             for _hop_idx in range(num_of_hops):
                 _select_type = secrets.choice(candidate_hop_types)
                 hops_type_list.append(_select_type)

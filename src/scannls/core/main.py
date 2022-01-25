@@ -122,11 +122,10 @@ class BamScanner:
                     self.representative_alignments_new_cigar[
                         f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     ] = sup_aln_cigar
-        except ValueError as e:
-            self.logger.error(
-                f"BAM index file is not found in supplementary alignments! {e}"
+        except ValueError:
+            raise SystemExit from ValueError(
+                "BAM index file is not found in supplementary alignments"
             )
-            raise SystemExit from ValueError
         else:
             return self.representative_alignments_new_cigar
 

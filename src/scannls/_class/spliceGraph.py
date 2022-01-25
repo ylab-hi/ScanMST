@@ -74,6 +74,7 @@ class SpliceGraph:
         self.construct()
         # sr rescuer
         rescuer(self)
+        self.print_path()
         self.prune()
         # prun the graph
 
@@ -102,6 +103,11 @@ class SpliceGraph:
         for nodes in self.nodes.values():
             yield from nodes
 
+    def print_path(self) -> None:
+        """Print path based on splice graph."""
+        for node_list in self.trace():
+            print(Series.create_series_from_node_list(node_list, self.logger))
+
     def get_start_nodes(self) -> Iterable[NodeType]:
         """Get start nodes based if node has predecessors."""
         return (
@@ -125,8 +131,8 @@ class SpliceGraph:
 
         :param node: node to be removed
         """
-        if node.unique_key is None:
-            raise ValueError("node.unique_key is None")
+        if node.similar_key is None:
+            raise ValueError("node.similar_key is None")
         self.get_nodes_with_similar_key(node.similar_key).remove(node)
 
     def reset_trace_id(self) -> None:
@@ -329,6 +335,11 @@ class SpliceGraph:
             current_node.sv_type
             if current_node.sv_type is not None
             else updated_node.sv_type
+        )
+        updated_node.prev_sv_type = (
+            current_node.prev_sv_type
+            if current_node.prev_sv_type is not None
+            else updated_node.prev_sv_type
         )
         # update breakpoints
         if updated_node.prev_breakpoint is None:
