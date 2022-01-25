@@ -12,6 +12,7 @@ from . import add_edge_according_order
 from . import assign_value_for_node
 from scannls import Node
 from scannls import SpliceGraph
+from scannls import SpliceType
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -24,6 +25,7 @@ def graph_for_prun():
         Total Nodes: 13 (n1 ... n13)
         Splice Type: Bubble, diff start, diff end
 
+        After construction:
          n1    n2     n3   n4    n5
         1,2---1,2,3--1,2--1,2,3--1,2
              /  |        /   |
@@ -36,6 +38,13 @@ def graph_for_prun():
 
          Values:  "chrom", "ref_start", "ref_end", "strand", "exons", "sv_type",
                    "modes", "query_name", "sr", "successors", "predecessors"
+
+        After Prune:
+
+        1,2---1,2,3--1,2--1,2,3--1,2
+                            \
+                              4
+
     """
     param_dict = [
         # n1
@@ -46,11 +55,15 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[190659106, 190659995], [190670325, 190670461]],
             "sv_type": "TRA",
+            "prev_sv_type": None,
             "modes": [1, 2],
             "query_name": "one,two",
             "sr": 2,
             "successors": [],
             "predecessors": [],
+            "trace_id": -1,
+            "prev_breakpoint": None,
+            "next_breakpoint": "chr2:190670461",
         },
         # n2
         {
@@ -60,11 +73,15 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49502062, 49502204]],
             "sv_type": "TDUP",
+            "prev_sv_type": "TRA",
             "modes": [1, 2],
             "query_name": "one,three,two",
             "sr": 3,
             "successors": [],
             "predecessors": [],
+            "trace_id": -1,
+            "prev_breakpoint": "chr2:190670461",
+            "next_breakpoint": "chr17:49502204",
         },
         # n3
         {
@@ -74,11 +91,15 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49458588, 49458738]],
             "sv_type": "TRA",
+            "prev_sv_type": "TDUP",
             "modes": [1, 2],
             "query_name": "one,two",
             "sr": 2,
             "successors": [],
             "predecessors": [],
+            "trace_id": -1,
+            "prev_breakpoint": "chr17:49458588",
+            "next_breakpoint": "chr17:49458738",
         },
         # n4
         {
@@ -88,11 +109,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49827496, 49827873]],
             "sv_type": "INV",
+            "prev_sv_type": "TRA",
             "modes": [1, 1],
             "query_name": "one,three,two",
             "sr": 3,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr22:49827496",
+            "next_breakpoint": "chr22:49827873",
         },
         # n5
         {
@@ -102,11 +126,14 @@ def graph_for_prun():
             "strand": "-",
             "exons": [[49797704, 49798116]],
             "sv_type": None,
+            "prev_sv_type": "INV",
             "modes": None,
             "query_name": "one,two",
             "sr": 2,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr22:49798116",
+            "next_breakpoint": None,
         },
         # n6
         {
@@ -116,11 +143,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[190659176, 190659995], [190670325, 190670465]],
             "sv_type": "TRA",
+            "prev_sv_type": None,
             "modes": [1, 2],
             "query_name": "three",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": None,
+            "next_breakpoint": "chr2:190670465",
         },
         # n7
         {
@@ -130,11 +160,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49458583, 49458741]],
             "sv_type": "TRA",
+            "prev_sv_type": "TDUP",
             "modes": [1, 2],
             "query_name": "three",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr17:49458583",
+            "next_breakpoint": "chr17:49458741",
         },
         # n8
         {
@@ -144,11 +177,14 @@ def graph_for_prun():
             "strand": "-",
             "exons": [[49797754, 49798122]],
             "sv_type": None,
+            "prev_sv_type": "INV",
             "modes": None,
             "query_name": "three",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr22:49798122",
+            "next_breakpoint": None,
         },
         # n9-n13
         {
@@ -158,11 +194,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[190659106, 190659995], [190670325, 190670469]],
             "sv_type": "TRA",
+            "prev_sv_type": None,
             "modes": [1, 2],
             "query_name": "four",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": None,
+            "next_breakpoint": "chr2:190670469",
         },
         {
             "chrom": "chr17",
@@ -171,11 +210,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49502052, 49502214]],
             "sv_type": "TDUP",
+            "prev_sv_type": "TRA",
             "modes": [1, 2],
             "query_name": "four",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr17:49502052",
+            "next_breakpoint": "chr17:49502214",
         },
         {
             "chrom": "chr17",
@@ -184,11 +226,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49458578, 49458726]],
             "sv_type": "TRA",
+            "prev_sv_type": "TDUP",
             "modes": [1, 2],
             "query_name": "four",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr17:49458578",
+            "next_breakpoint": "chr17:49458726",
         },
         {
             "chrom": "chr22",
@@ -197,11 +242,14 @@ def graph_for_prun():
             "strand": "+",
             "exons": [[49827486, 49827863]],
             "sv_type": "INV",
+            "prev_sv_type": "TRA",
             "modes": [1, 1],
             "query_name": "four",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr22:49827486",
+            "next_breakpoint": "chr22:49827863",
         },
         {
             "chrom": "chr22",
@@ -210,17 +258,21 @@ def graph_for_prun():
             "strand": "-",
             "exons": [[49797754, 49798126]],
             "sv_type": None,
+            "prev_sv_type": "INV",
             "modes": None,
             "query_name": "four",
             "sr": 1,
             "successors": [],
             "predecessors": [],
+            "prev_breakpoint": "chr22:49798126",
+            "next_breakpoint": None,
         },
     ]
     num_nodes = 13
     nodes = [Node() for _ in range(num_nodes)]
     for ind, node in enumerate(nodes):
         assign_value_for_node(node, **param_dict[ind])
+        node.get_unique_key()
 
     # add successors and predecessors  12 edges
     add_edge_according_order(nodes, 1, 2)  # n1 -> n2
@@ -244,6 +296,38 @@ def graph_for_prun():
     yield graph
 
 
+@pytest.fixture(autouse=True)
+def start_node_with_name_onetwo(graph_for_prun):
+    """Start Node with name one two.
+
+    :param graph_for_prun: graph for pruning
+    :return: two nodes with name onetwo
+    """
+    for start_node in graph_for_prun.get_start_nodes():
+        if start_node.query_name == "one,two":
+            return start_node
+
+
+@pytest.fixture(autouse=True)
+def end_node_with_name_onetwo(graph_for_prun):
+    """End Node with name one two."""
+    for end_node in graph_for_prun.get_end_nodes():
+        if end_node.query_name == "one,two":
+            return end_node
+
+
+@pytest.fixture(autouse=True)
+def can_battle_nodes_onetwo_and_three(graph_for_prun):
+    """Can battle nodes onetwo and three."""
+    node_one_two, node_three = None, None
+    for node in graph_for_prun.get_start_nodes():
+        if node.query_name == "one,two":
+            node_one_two = node
+        if node.query_name == "three":
+            node_three = node
+    return node_one_two, node_three
+
+
 def test_graph_data_before_prun(graph_for_prun, num_nodes=13):
     """Test the pruning function in splice graph."""
     number = sum(1 for _ in graph_for_prun)
@@ -254,51 +338,51 @@ def test_graph_data_before_prun(graph_for_prun, num_nodes=13):
         assert expected_result[start_node.query_name] == start_node.sr
 
 
-def test_node_num_after_prune(graph_for_prun):
-    """Test number of node after the pruning function in splice graph."""
-    graph_for_prun.prune()
-    number = sum(1 for _ in graph_for_prun)
-    assert number == 10
+def test_check_can_battle(graph_for_prun, can_battle_nodes_onetwo_and_three):
+    """Test can battle."""
+    one_node, other_node = can_battle_nodes_onetwo_and_three
+    if one_node is not None or other_node is not None:
+        assert graph_for_prun.check_can_battle(one_node, other_node)
 
 
-def test_start_node_num_after_prune(graph_for_prun):
-    """Test number of start node after the pruning function in splice graph."""
-    graph_for_prun.prune()
-    start_nodes = graph_for_prun.get_start_nodes()
-    assert len(start_nodes) == 2
+def test_trace_forward(graph_for_prun, start_node_with_name_onetwo):
+    """Test trace forward."""
+    if start_node_with_name_onetwo is not None:
+        start_node_with_name_onetwo.set_trace_id(1)
+        paths = []
+        graph_for_prun._trace_forward(start_node_with_name_onetwo, 2, [], paths)
+        assert len(paths) == 4
+        assert len(paths[0]) == 5
 
 
-def test_start_node_sr_after_prune(graph_for_prun):
-    """Test start node sr after prune."""
-    graph_for_prun.prune()
-    start_nodes = graph_for_prun.get_start_nodes()
-    expected_result = {
-        "one,two": 3,
-        "four": 1,
-    }
-    for start_node in start_nodes:
-        assert expected_result[start_node.query_name] == start_node.sr
+def test_trace_backward(graph_for_prun, end_node_with_name_onetwo):
+    """Test trace backward."""
+    if end_node_with_name_onetwo is not None:
+        end_node_with_name_onetwo.set_trace_id(1)
+        paths = []
+        graph_for_prun._trace_backward(end_node_with_name_onetwo, 2, [], paths)
+        assert len(paths) == 4
+        assert len(paths[0]) == 5
 
 
-def test_bubble_after_prun(graph_for_prun):
-    """Test bubble after pruning."""
-    graph_for_prun.prune()
-    for node in graph_for_prun:
-        if (
-            node.query_name == "one,two"
-            and not node.is_start_node()
-            and not node.is_end_node()
-        ):
-            assert node.sr == 3
+def test_trace(graph_for_prun):
+    """Test trace."""
+    graph_for_prun._trace(SpliceType.forward)
+    graph_for_prun._trace(SpliceType.backward)
+
+    with pytest.raises(ValueError):
+        graph_for_prun._trace(1)  # type: ignore
 
 
-def test_end_node_sr_after_prune(graph_for_prun):
-    """Test end node sr after prune."""
-    graph_for_prun.prune()
-    expected_result = {
-        "one,two": 3,
-        "four": 1,
-    }
-    for node in graph_for_prun:
-        if node.is_end_node():
-            assert expected_result[node.query_name] == node.sr
+def test_create_same_level_node_list(graph_for_prun):
+    """Test creat same level node list."""
+    graph_for_prun._trace(SpliceType.forward)
+    assert len(graph_for_prun.create_same_level_node_list()) == 5
+
+
+def test_rule_out(graph_for_prun, can_battle_nodes_onetwo_and_three):
+    """Test rule out."""
+    node_one_two, node_three = can_battle_nodes_onetwo_and_three
+    graph_for_prun._rule_out(node_one_two, node_three)
+    assert node_one_two.sr == 3
+    assert node_three not in graph_for_prun
