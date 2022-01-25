@@ -6,10 +6,12 @@
 @Time:        12/15/21 2:00 PM
 """
 import os
+import platform
 import random
 import subprocess
 import time
 from multiprocessing import Process
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Tuple
@@ -55,8 +57,8 @@ class Blat:
     False, NovelInsertion(ATCG:10)
     """
 
-    ENV_SCANNLS_SERVER_IS_STARTED = "SCANNLS_SERVER_IS_STARTED"
     ENV_SCANNLS_SERVER_IS_READY = "SCANNLS_SERVER_IS_READY"
+    ENV_DIR = Path.home() / ".scannls"
 
     def __init__(
         self,
@@ -74,22 +76,22 @@ class Blat:
         self.is_start_server = is_start_server
         self.logger = logger
         self.fix_log_file = fix_log_file
+        self.env_file = Blat.ENV_DIR / f"env_{platform.node()}.conf"
 
-    @staticmethod
-    def set_env(is_started: str = "False", is_ready: str = "False") -> None:
+    def set_env(self, is_ready: bool = False) -> None:
         """Set the environment variable for blat."""
-        os.environ[Blat.ENV_SCANNLS_SERVER_IS_READY] = is_started
-        os.environ[Blat.ENV_SCANNLS_SERVER_IS_STARTED] = is_ready
+        with open(self.env_file, "w") as f:
+            f.write(f"{Blat.ENV_SCANNLS_SERVER_IS_READY}={is_ready}\n")
 
     @property
     def env_is_ready(self) -> bool:
         """Check if the blat server is ready."""
-        return os.environ.get(Blat.ENV_SCANNLS_SERVER_IS_READY) == "True"
+        if not self.env_file.exists():
+            return False
 
-    @property
-    def env_is_started(self) -> bool:
-        """Check if the blat server is started."""
-        return os.environ.get(Blat.ENV_SCANNLS_SERVER_IS_STARTED) == "True"
+        with open(self.env_file) as f:
+            content_list = [line.strip() for line in f.readlines()]
+            return content_list[1].split("=")[1] == "True"
 
     @property
     def ref_dir(self) -> str:
@@ -130,18 +132,18 @@ class Blat:
                 for line in f:
                     if "Server ready" in line:
                         # set env variable
-                        os.environ[Blat.ENV_SCANNLS_SERVER_IS_READY] = "True"
+                        self.set_env(is_ready=True)
                         return True
         else:
             # when do not start server check env variable
-            return self.env_is_ready and self.env_is_started
+            return self.env_is_ready
 
     def is_running(self) -> bool:
         """Function for checking whether the blat server is running or not.
 
         :return: the boolean value of whether the server is running or not
         """
-        return bool(self._search_processing()) and self.env_is_started
+        return bool(self._search_processing())
 
     def _search_processing(self) -> List[psutil.Process]:
         """Function for searching the process of blat server.
@@ -169,9 +171,6 @@ class Blat:
 
         where gfServer gfClient and hg38.2bit located.
         """
-        # set env variable
-        os.environ[Blat.ENV_SCANNLS_SERVER_IS_STARTED] = "True"
-
         cwd = os.path.abspath(os.getcwd())
         logger.debug(os.getcwd())
 
@@ -203,6 +202,7 @@ class Blat:
         running_flag = self.is_running()
         if not running_flag:
             self._start_server()
+            self.is_start_server = True
         else:
             self.is_start_server = False
 
@@ -214,7 +214,7 @@ class Blat:
             self.logger.debug("stopping server service")
             for proc in procs:
                 proc.kill()
-            self.set_env()  # reset env to False
+            self._remove(str(self.env_file))
             self._remove(self.log_file_path)  # remove temp log file
 
     def _query(self, in_seq: str, mini_identity: int = 90) -> str:
@@ -272,13 +272,20 @@ class Blat:
         :return: the path for PSL file
         """
         # check if need to start server service
-
-        if not self.env_is_started:
-            self.start_server()
+        self.start_server()
 
         if self.is_ready():
             out_psl = self._query(in_seq, mini_identity)
-        else:
+        #  not ready as no others is running
+        elif not self.is_running():
+            self.start_server()
+            # self open check if ready
+            if self.is_ready():
+                out_psl = self._query(in_seq, mini_identity)
+            else:
+                self._wait_ready()
+                out_psl = self._query(in_seq, mini_identity)
+        else:  # not ready but others is running
             self._wait_ready()
             out_psl = self._query(in_seq, mini_identity)
 
