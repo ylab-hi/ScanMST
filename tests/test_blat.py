@@ -6,17 +6,15 @@
 @file: test_classes.py
 @time: 16/11/2021 16:03
 """
-import os
 from pathlib import Path
 
-import loguru
 import pytest
 from loguru import logger
 
-from scannls import Blat  # type: ignore
+from scannls import Blat
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def blat() -> Blat:
     """Create Blat instance."""
     return Blat(ref_2bit=".", logger=logger, port=88888, output_dir=".")
@@ -55,18 +53,24 @@ class TestBlat:
         log_file = Path(blat.log_file_path)
         assert log_file.is_absolute()
 
-    def test_is_ready(self, blat, mocker):
+    def test_is_ready_when_self_open_server(self, blat, mocker):
         """Test is_ready."""
-        spy = mocker.spy(loguru.logger, "debug")
+        blat.stop_server()
         assert blat.is_ready() is False
 
         with open(blat.log_file_path, "a") as log:
             log.write("Server ready")
+        blat.is_start_server = True
 
         assert blat.is_ready() is True
-        os.remove(blat.log_file_path)
+        blat.stop_server()
 
-        assert spy.call_count == 2
+    def test_is_ready_when_others_open_server(self, blat):
+        """Test is_ready when others open server."""
+        blat.is_start_server = False
+        blat.set_env(True)
+        assert blat.is_ready() is True
+        blat.stop_server()
 
     def test_is_running(self, blat, process, mocker):
         """Test is running."""

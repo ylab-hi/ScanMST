@@ -67,16 +67,18 @@ class Blat:
         port: int,
         output_dir: str,
         fix_log_file=None,
-        is_start_server=True,
+        is_start_server=False,
     ) -> None:
         """Initialize the blat class."""
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
         self.ran_id = random.getrandbits(30)
         self.is_start_server = is_start_server
+        self.is_stop_server = False
         self.logger = logger
         self.fix_log_file = fix_log_file
         self.env_file = Blat.ENV_DIR / f"env_{platform.node()}.conf"
+        self.handle_process = None
 
     def set_env(self, is_ready: bool = False) -> None:
         """Set the environment variable for blat."""
@@ -92,7 +94,7 @@ class Blat:
 
         with open(self.env_file) as f:
             content_list = [line.strip() for line in f.readlines()]
-            flag = content_list[1].split("=")[1] == "True"
+            flag = content_list[0].split("=")[1] == "True"
         return flag
 
     @property
@@ -137,9 +139,10 @@ class Blat:
                         # set env variable
                         self.set_env(is_ready=True)
                         flag = True
+                        break
         else:
             # when do not start server check env variable
-            flag = self.env_is_ready
+            flag = self.env_is_ready and not self.is_start_server
         return flag
 
     def is_running(self) -> bool:
@@ -168,9 +171,12 @@ class Blat:
 
         :param cmd: the command to be run
         """
-        subprocess.check_call(cmd, shell=True)
+        try:
+            subprocess.check_call(cmd, shell=True)
+        except KeyboardInterrupt:
+            self.stop_server()
 
-    def _start_server(self) -> Process:
+    def _start_server(self) -> None:
         """The GfServer should run at the directory.
 
         where gfServer gfClient and hg38.2bit located.
@@ -191,18 +197,18 @@ class Blat:
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
         )
         logger.trace(f"{cmd=}")
-        process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
-        process.start()
+        self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
+        self.handle_process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
         logger.trace(f"{os.getcwd()}")
-        return process
 
     def start_server(self) -> None:
         """Function for starting the server service, if the server is not running.
 
         we will start the server service
         """
+        self.logger.debug(f"is running {self.is_running()}")
         running_flag = self.is_running()
         if not running_flag:
             self._start_server()
@@ -214,12 +220,13 @@ class Blat:
         """Function for stopping the server service, if the server is running."""
         # self open then self close
         if self.is_start_server:
-            procs = self._search_processing()
             self.logger.debug("stopping server service")
-            for proc in procs:
-                proc.kill()
+            if self.handle_process is None:
+                raise SystemExit("Not Start Server Want to Stop")
+            self.handle_process.close()
             self._remove(str(self.env_file))
             self._remove(self.log_file_path)  # remove temp log file
+            self.is_stop_server = True
 
     def _query(self, in_seq: str, mini_identity: int = 90) -> str:
         """Function is help function in order to using gfClient.
@@ -245,15 +252,11 @@ class Blat:
         os.chdir(self.ref_dir)
         logger.trace(f"{self.ref_dir=}")
         logger.trace(os.getcwd())
-        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} > /dev/null".format(
+        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} 2> /dev/null".format(
             mini_identity, self.port, in_fasta, out_psl
         )
         logger.trace(f"{cmd=}")
-        try:
-            subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
-        except subprocess.CalledProcessError as err:
-            raise SystemExit(f"{err} {err.output}") from err
-
+        subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         os.chdir(cwd)
         logger.trace(os.getcwd())
         self._remove(in_fasta)
@@ -265,8 +268,15 @@ class Blat:
 
         :param interval: the interval time for checking the server service
         """
-        while not self.is_ready():
+        if self.is_ready() and self.is_running():
+            return
+
+        if not self.is_ready() and self.is_running():
             time.sleep(interval)
+        elif not self.is_ready() and not self.is_running():
+            self.start_server()
+
+        self._wait_ready()
 
     def query(self, in_seq: str, mini_identity: int = 90) -> str:
         """Function for querying the sequence to the server service.
@@ -278,20 +288,30 @@ class Blat:
         # check if need to start server service
         self.start_server()
 
+        out_psl = ""
+
         if self.is_ready():
             out_psl = self._query(in_seq, mini_identity)
         #  not ready as no others is running
         elif not self.is_running():
-            self.start_server()
             # self open check if ready
             if self.is_ready():
                 out_psl = self._query(in_seq, mini_identity)
             else:
                 self._wait_ready()
                 out_psl = self._query(in_seq, mini_identity)
-        else:  # not ready but others is running
-            self._wait_ready()
-            out_psl = self._query(in_seq, mini_identity)
+        else:  # not ready but others or self is running
+            while self.is_running():
+                try:
+                    out_psl = self._query(in_seq, mini_identity)
+                except subprocess.CalledProcessError:
+                    time.sleep(30)
+                else:
+                    break
+
+            if not self.is_running():
+                self._wait_ready()
+                out_psl = self._query(in_seq, mini_identity)
 
         return out_psl
 
