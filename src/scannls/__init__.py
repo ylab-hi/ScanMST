@@ -23,6 +23,7 @@ from ._class.readConnector import detect_read_read_connections_from_cigar
 from .utils import get_softclip_length, external_tool_checking
 from ._class.cliqueFinder import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
+from ._class.spliceGraph import SpliceType
 from ._class.srRescuer import SRRescuer
 from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
@@ -42,6 +43,7 @@ __all__ = [
     "detect_read_read_connections_from_cigar",
     "get_softclip_length",
     "SpliceGraph",
+    "SpliceType",
     "SRRescuer",
     "FastaWriter",
     "GTFWriter",
