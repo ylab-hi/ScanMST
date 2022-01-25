@@ -86,12 +86,14 @@ class Blat:
     @property
     def env_is_ready(self) -> bool:
         """Check if the blat server is ready."""
+        flag = False
         if not self.env_file.exists():
-            return False
+            return flag
 
         with open(self.env_file) as f:
             content_list = [line.strip() for line in f.readlines()]
-            return content_list[1].split("=")[1] == "True"
+            flag = content_list[1].split("=")[1] == "True"
+        return flag
 
     @property
     def ref_dir(self) -> str:

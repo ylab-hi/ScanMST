@@ -224,7 +224,7 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
     logger.info(f"{options.input=}")
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
-    Blat.start_server()
+    blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
     motif_required = not options.noncanonical
@@ -282,7 +282,7 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
     in_bam_io_object.close()
 
     if options.closed:
-        Blat.stop_server()
+        blat.stop_server()
 
     logger.info("ScanNLS build running done")
     end = time.time()
