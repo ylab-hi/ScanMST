@@ -129,16 +129,18 @@ class Blat:
         """
         self.logger.debug("check if the server starts")
         # self open check self log file
+        flag = False
         if os.path.exists(self.log_file_path) and self.is_start_server:
             with open(self.log_file_path) as f:
                 for line in f:
                     if "Server ready" in line:
                         # set env variable
                         self.set_env(is_ready=True)
-                        return True
+                        flag = True
         else:
             # when do not start server check env variable
-            return self.env_is_ready
+            flag = self.env_is_ready
+        return flag
 
     def is_running(self) -> bool:
         """Function for checking whether the blat server is running or not.
