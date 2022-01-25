@@ -55,6 +55,9 @@ class Blat:
     False, NovelInsertion(ATCG:10)
     """
 
+    ENV_SCANNLS_SERVER_IS_STARTED = "SCANNLS_SERVER_IS_STARTED"
+    ENV_SCANNLS_SERVER_IS_READY = "SCANNLS_SERVER_IS_READY"
+
     def __init__(
         self,
         ref_2bit: str,
@@ -71,6 +74,22 @@ class Blat:
         self.is_start_server = is_start_server
         self.logger = logger
         self.fix_log_file = fix_log_file
+
+    @staticmethod
+    def set_env(is_started: str = "False", is_ready: str = "False") -> None:
+        """Set the environment variable for blat."""
+        os.environ[Blat.ENV_SCANNLS_SERVER_IS_READY] = is_started
+        os.environ[Blat.ENV_SCANNLS_SERVER_IS_STARTED] = is_ready
+
+    @property
+    def env_is_ready(self) -> bool:
+        """Check if the blat server is ready."""
+        return os.environ.get(Blat.ENV_SCANNLS_SERVER_IS_READY) == "True"
+
+    @property
+    def env_is_started(self) -> bool:
+        """Check if the blat server is started."""
+        return os.environ.get(Blat.ENV_SCANNLS_SERVER_IS_STARTED) == "True"
 
     @property
     def ref_dir(self) -> str:
@@ -104,21 +123,25 @@ class Blat:
 
         :return: the boolean value of whether the server is ready or not
         """
-        flag = False
         self.logger.debug("check if the server starts")
-        if os.path.exists(self.log_file_path):
+        # self open check self log file
+        if os.path.exists(self.log_file_path) and self.is_start_server:
             with open(self.log_file_path) as f:
                 for line in f:
                     if "Server ready" in line:
-                        flag = True
-        return flag
+                        # set env variable
+                        os.environ[Blat.ENV_SCANNLS_SERVER_IS_READY] = "True"
+                        return True
+        else:
+            # when do not start server check env variable
+            return self.env_is_ready and self.env_is_started
 
     def is_running(self) -> bool:
         """Function for checking whether the blat server is running or not.
 
         :return: the boolean value of whether the server is running or not
         """
-        return bool(self._search_processing())
+        return bool(self._search_processing()) and self.env_is_started
 
     def _search_processing(self) -> List[psutil.Process]:
         """Function for searching the process of blat server.
@@ -146,6 +169,9 @@ class Blat:
 
         where gfServer gfClient and hg38.2bit located.
         """
+        # set env variable
+        os.environ[Blat.ENV_SCANNLS_SERVER_IS_STARTED] = "True"
+
         cwd = os.path.abspath(os.getcwd())
         logger.debug(os.getcwd())
 
@@ -182,10 +208,14 @@ class Blat:
 
     def stop_server(self) -> None:
         """Function for stopping the server service, if the server is running."""
-        procs = self._search_processing()
-        self.logger.debug("stopping server service")
-        for proc in procs:
-            proc.kill()
+        # self open then self close
+        if self.is_start_server:
+            procs = self._search_processing()
+            self.logger.debug("stopping server service")
+            for proc in procs:
+                proc.kill()
+            self.set_env()  # reset env to False
+            self._remove(self.log_file_path)  # remove temp log file
 
     def _query(self, in_seq: str, mini_identity: int = 90) -> str:
         """Function is help function in order to using gfClient.
@@ -241,13 +271,15 @@ class Blat:
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
-        if self.is_start_server:
-            if self.is_ready():
-                out_psl = self._query(in_seq, mini_identity)
-            else:
-                self._wait_ready()
-                out_psl = self._query(in_seq, mini_identity)
+        # check if need to start server service
+
+        if not self.env_is_started:
+            self.start_server()
+
+        if self.is_ready():
+            out_psl = self._query(in_seq, mini_identity)
         else:
+            self._wait_ready()
             out_psl = self._query(in_seq, mini_identity)
 
         return out_psl

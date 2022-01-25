@@ -216,7 +216,6 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
     logger.info(f"{options.input=}")
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
-    blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
     motif_required = not options.noncanonical
