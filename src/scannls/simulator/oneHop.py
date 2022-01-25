@@ -275,7 +275,6 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
-                        self.logger.trace(f"TDUP: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
@@ -313,7 +312,6 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
-                        self.logger.trace(f"TDUP: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
                             flag = False
@@ -338,9 +336,7 @@ class OneHop:
                     nls_type="IDUP",
                 )
                 if _metaexon1.chrom:
-                    self.logger.trace(f"IDUP metaexon1: {_metaexon1=}")
                     _metaexon2 = OneHop.reverse_metaexon(_metaexon1)
-                    self.logger.trace(f"IDUP: {_metaexon2=}")
                     if _metaexon2.chrom:
                         current_metaexons.append(_metaexon1)
                         current_metaexons.append(_metaexon2)
@@ -350,7 +346,6 @@ class OneHop:
             current_metaexons[-1].nls_type = "IDUP"
             last_metaexon = current_metaexons[-1]
             _metaexon2 = OneHop.reverse_metaexon(last_metaexon)
-            self.logger.trace(f"IDUP: {_metaexon2=}")
             if _metaexon2.chrom:
                 current_metaexons.append(_metaexon2)
 
@@ -393,7 +388,6 @@ class OneHop:
                             direction="downstream",
                         )
 
-                        self.logger.trace(f"INV: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
@@ -431,7 +425,6 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
-                        self.logger.trace(f"INV: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
                             flag = False
@@ -467,7 +460,6 @@ class OneHop:
                     locus_type=_locus_type,
                     direction="downstream",
                 )
-                self.logger.trace(f"TRA: {_metaexon2=}")
                 if _metaexon1.chrom and _metaexon2.chrom:
                     current_metaexons.append(_metaexon1)
                     current_metaexons.append(_metaexon2)
@@ -491,7 +483,6 @@ class OneHop:
                         locus_type=_locus_type,
                         direction="downstream",
                     )
-                    self.logger.trace(f"TRA: {_metaexon2=}")
                     if _metaexon2.chrom:
                         current_metaexons.append(_metaexon2)
                         flag = False
@@ -536,7 +527,6 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
-                        self.logger.trace(f"DEL: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon1)
                             current_metaexons.append(_metaexon2)
@@ -573,7 +563,6 @@ class OneHop:
                             locus_type=_locus_type,
                             direction="downstream",
                         )
-                        self.logger.trace(f"DEL: {_metaexon2=}")
                         if _metaexon2.chrom:
                             current_metaexons.append(_metaexon2)
                             flag = False
@@ -589,7 +578,6 @@ class OneHop:
 
         .. note:: candidate_hop_types = ["TDUP", "IDUP", "INV", "TRA"]
         """
-        total_metaexons: List[MetaExon] = []
         _select_type = hop_type
         flag = True
         while flag:
@@ -611,20 +599,20 @@ class OneHop:
             ["TDUP"] * 30 + ["INV"] * 30 + ["TRA"] * 30 + ["DEL"] * 3 + ["IDUP"] * 3
         )
 
-        hops_type_list = []
         total_metaexons: List[MetaExon] = []
         flag = True
         while flag:
             for _hop_idx in range(num_of_hops):
                 _select_type = secrets.choice(candidate_hop_types)
-                hops_type_list.append(_select_type)
                 self.function_dict[_select_type](total_metaexons)
-
-            if (
-                len(total_metaexons) == 1 + num_of_hops
-                and hops_type_list.count("DEL") < num_of_hops
-            ):
-                flag = False
+                _del_num = sum(1 for i in total_metaexons if i.nls_type == "DEL")
+                if len(total_metaexons) == 1 + num_of_hops and _del_num < num_of_hops:
+                    flag = False
+                    break
+            if flag and len(total_metaexons) >= 1:
+                total_metaexons.pop()
+            self.logger.debug(f"num_of_hops:{len(total_metaexons) - 1}")
+            self.logger.debug(f"{_del_num=}")
         repr_metaexons = [repr(i) for i in total_metaexons]
         self.logger.trace(f"{';'.join(repr_metaexons)}")
         return total_metaexons
