@@ -62,6 +62,16 @@ class ModesNotFoundError(ScannlsExceptionError):
         super().__init__("Cannot find modes in current node")
 
 
+class ModesNotEqualError(ScannlsExceptionError):
+    """Exception raised for errors when modes not equal."""
+
+    def __init__(self) -> None:
+        """Initialize the exception."""
+        super().__init__(
+            "modes not equal from reads in the same chrom and the different strands"
+        )
+
+
 class GenesNotFoundError(ScannlsExceptionError):
     """Exception raised for errors when genes not found."""
 

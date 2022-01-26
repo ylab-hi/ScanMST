@@ -13,6 +13,7 @@ from ._class.basicRead import Read
 from ._class.exception import ReadNotFoundError
 from ._class.exception import ToolNotFoundError
 from ._class.exception import BreakpointNotFoundError
+from ._class.exception import ModesNotEqualError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement
 from ._class.basicClass import Series, NodeType, Node
@@ -51,6 +52,7 @@ __all__ = [
     "ToolNotFoundError",
     "ReadNotFoundError",
     "BreakpointNotFoundError",
+    "ModesNotEqualError",
     "cli",
     "Options",
     "LoggerType",
