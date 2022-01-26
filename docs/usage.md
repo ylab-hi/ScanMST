@@ -1,7 +1,8 @@
 # Usage
 
 ```{eval-rst}
-.. click:: scannls.__main__:main
+.. argparse::
+    :module: scannls
     :prog: scannls
-    :nested: full
+
 ```

@@ -22,6 +22,7 @@ from . import Options
 from . import SpliceGraph
 from . import SRRescuer
 from . import VCFWriter
+from ._class.writer import Writers
 from .core.main import scanbam_run
 from .utils import external_tool_checking
 
@@ -122,6 +123,14 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
+        "-c",
+        "--closed",
+        action="store_true",
+        dest="closed",
+        default=True,
+        help="Considering Non-canonical spliced sites",
+    )
+    parser.add_argument(
         "-p",
         "--port",
         action="store",
@@ -192,7 +201,7 @@ def parse_args() -> argparse.ArgumentParser:
     return parser
 
 
-def cli(options: Union[argparse.Namespace, Options]) -> None:
+def cli(options: Union[argparse.Namespace, Options]):
     """Cli function."""
     # add logger
     logger.remove()
@@ -213,65 +222,70 @@ def cli(options: Union[argparse.Namespace, Options]) -> None:
     else:
         logger.info("scannls starts running in normal mode")
 
-    logger.info(f"{options.input=}")
+    logger.info(f"{options.input=} {options.closed=}")
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
     motif_required = not options.noncanonical
+    try:
+        intact_series_list, in_bam_io_object = scanbam_run(
+            two_bit=options.two_bit,
+            port=options.port,
+            tmp_dir=options.tmp_dir,
+            blat_info=blat_info,
+            in_bam_path=options.input,
+            mapq_cutoff=options.mapq,
+            ref_genome=options.ref,
+            gtf=options.gtf,
+            splice_bin=options.splice_bin,
+            blat=blat,
+            logger=logger,
+            motif_required=motif_required,
+            parallel=options.parallel,
+            max_allowed_nm=options.max_allowed_nm,
+            min_soft_seg_len=options.min_soft_seg_len,
+            blat_ident_pct_cutoff=options.ident_cutoff,
+        )
 
-    intact_series_list, in_bam_io_object = scanbam_run(
-        two_bit=options.two_bit,
-        port=options.port,
-        tmp_dir=options.tmp_dir,
-        blat_info=blat_info,
-        in_bam_path=options.input,
-        mapq_cutoff=options.mapq,
-        ref_genome=options.ref,
-        gtf=options.gtf,
-        splice_bin=options.splice_bin,
-        blat=blat,
-        logger=logger,
-        motif_required=motif_required,
-        parallel=options.parallel,
-        max_allowed_nm=options.max_allowed_nm,
-        min_soft_seg_len=options.min_soft_seg_len,
-        blat_ident_pct_cutoff=options.ident_cutoff,
-    )
+        fasta_writer = FastaWriter("test.fasta", options.ref, logger)
+        gtf_writer = GTFWriter("test.gtf", logger)
+        vcf_writer = VCFWriter(
+            "test.vcf", options.ref, in_bam_io_object, options.output, logger
+        )
 
-    fasta_writer = FastaWriter("test.fasta", options.ref, logger)
-    with fasta_writer.open() as _:
-        fasta_writer.write_data(intact_series_list[0])
+        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
+        writers.write_series_list(intact_series_list[:1])
 
-    gtf_writer = GTFWriter("test.gtf", logger)
-    with gtf_writer.open() as _:
-        gtf_writer.write_data(intact_series_list[0])
+        logger.info(f"Total Series: {len(intact_series_list)}")
+        rescuer = SRRescuer(
+            in_bam_io_object,
+            options.mapq,
+            options.soft_len,
+            options.mismatch,
+            options.alignment_fraction,
+            logger,
+        )
+        splice_graph = SpliceGraph(logger)
+        clique_finder = CliqueFinder(intact_series_list, logger)
+        # cliques is generator
+        cliques = clique_finder.find_clique()
+        for clique in cliques:
+            for i in splice_graph(clique, rescuer):
+                logger.debug(f"Series{i}")
+        in_bam_io_object.close()
 
-    vcf_writer = VCFWriter(
-        "test.vcf", options.ref, in_bam_io_object, options.output, logger
-    )
-    with vcf_writer.open() as _:
-        vcf_writer.write_header()
-        vcf_writer.write_data(intact_series_list[0])
+        logger.info("ScanNLS build running done")
+        end = time.time()
+        logger.info(f"ScanNLS build takes {end - start} seconds.")
 
-    logger.info(f"Total Series: {len(intact_series_list)}")
-    rescuer = SRRescuer(
-        in_bam_io_object,
-        options.mapq,
-        options.soft_len,
-        options.mismatch,
-        options.alignment_fraction,
-        logger,
-    )
-    splice_graph = SpliceGraph(logger)
-    clique_finder = CliqueFinder(intact_series_list, logger)
-    # cliques is generator
-    cliques = clique_finder.find_clique()
-    for clique in cliques:
-        for i in splice_graph(clique, rescuer):
-            logger.debug(f"Series{i}")
-    in_bam_io_object.close()
-    logger.info("ScanNLS build running done")
-    end = time.time()
-    logger.info(f"ScanNLS build takes {end - start} seconds.")
+    except KeyboardInterrupt:
+        if options.closed and not blat.is_stop_server:
+            logger.info("KeyboardInterrupt, stop blat server")
+            blat.stop_server()
+        raise
+    finally:
+        if options.closed and not blat.is_stop_server:
+            logger.info("Program ends, stop blat server")
+            blat.stop_server()
