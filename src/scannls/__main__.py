@@ -22,9 +22,8 @@ def main():
 
     try:
         cli(options)
-    except KeyboardInterrupt:
-        sys.stderr.write("User interrupt me ^_^ \n")
-        sys.exit(1)
+    except Exception as e:
+        raise e
 
 
 if __name__ == "__main__":

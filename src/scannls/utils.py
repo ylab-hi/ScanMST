@@ -19,7 +19,7 @@ __funcs__ = {"reverse_complement", "external_tool_checking", "get_softclip_lengt
 
 def external_tool_checking(logger: LoggerType) -> None:
     """Checking dependencies are installed."""
-    software = ["bedtools", "samtools", "gfClient", "gfServer"]
+    software = ["gfClient", "gfServer"]
     for tool in software:
         output = subprocess.getoutput(tool)
         if "command not found" in output:

@@ -69,6 +69,7 @@ class Options:
     splice_bin: int = 5
     mapq: int = 15
     noncanonical: bool = False
+    closed: bool = True
     log: str = "info"
     parallel: int = 1
     port: int = 88888
