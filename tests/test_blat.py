@@ -26,7 +26,8 @@ def process():
     names = ["gfServer", "test"]
 
     class _Process:
-        def __init__(self, name):
+        def __init__(self, name: str, status: str):
+            self._status = status
             self._name = name
 
         def name(self) -> str:
@@ -35,7 +36,10 @@ def process():
         def cmdline(self) -> bool:
             return True
 
-    return [_Process(name) for name in names]
+        def status(self) -> str:
+            return self._status
+
+    return [_Process(name, "running") for name in names]
 
 
 @pytest.mark.usefixtures("blat")
@@ -53,9 +57,8 @@ class TestBlat:
         log_file = Path(blat.log_file_path)
         assert log_file.is_absolute()
 
-    def test_is_ready_when_self_open_server(self, blat, mocker):
+    def test_is_ready_when_self_open_server(self, blat):
         """Test is_ready."""
-        blat.stop_server()
         assert blat.is_ready() is False
 
         with open(blat.log_file_path, "a") as log:
@@ -63,14 +66,6 @@ class TestBlat:
         blat.is_start_server = True
 
         assert blat.is_ready() is True
-        blat.stop_server()
-
-    def test_is_ready_when_others_open_server(self, blat):
-        """Test is_ready when others open server."""
-        blat.is_start_server = False
-        blat.set_env(True)
-        assert blat.is_ready() is True
-        blat.stop_server()
 
     def test_is_running(self, blat, process, mocker):
         """Test is running."""

@@ -6,12 +6,10 @@
 @Time:        12/15/21 2:00 PM
 """
 import os
-import platform
 import random
 import subprocess
 import time
 from multiprocessing import Process
-from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Tuple
@@ -57,9 +55,6 @@ class Blat:
     False, NovelInsertion(ATCG:10)
     """
 
-    ENV_SCANNLS_SERVER_IS_READY = "SCANNLS_SERVER_IS_READY"
-    ENV_DIR = Path.home() / ".scannls"
-
     def __init__(
         self,
         ref_2bit: str,
@@ -77,25 +72,7 @@ class Blat:
         self.is_stop_server = False
         self.logger = logger
         self.fix_log_file = fix_log_file
-        self.env_file = Blat.ENV_DIR / f"env_{platform.node()}.conf"
         self.handle_process = None
-
-    def set_env(self, is_ready: bool = False) -> None:
-        """Set the environment variable for blat."""
-        with open(self.env_file, "w") as f:
-            f.write(f"{Blat.ENV_SCANNLS_SERVER_IS_READY}={is_ready}\n")
-
-    @property
-    def env_is_ready(self) -> bool:
-        """Check if the blat server is ready."""
-        flag = False
-        if not self.env_file.exists():
-            return flag
-
-        with open(self.env_file) as f:
-            content_list = [line.strip() for line in f.readlines()]
-            flag = content_list[0].split("=")[1] == "True"
-        return flag
 
     @property
     def ref_dir(self) -> str:
@@ -134,15 +111,9 @@ class Blat:
         flag = False
         if os.path.exists(self.log_file_path) and self.is_start_server:
             with open(self.log_file_path) as f:
-                for line in f:
-                    if "Server ready" in line:
-                        # set env variable
-                        self.set_env(is_ready=True)
-                        flag = True
-                        break
-        else:
-            # when do not start server check env variable
-            flag = self.env_is_ready and not self.is_start_server
+                return any("Server ready" in line for line in f)
+
+        # other open by try except to check if the server is ready
         return flag
 
     def is_running(self) -> bool:
@@ -150,7 +121,13 @@ class Blat:
 
         :return: the boolean value of whether the server is running or not
         """
-        return bool(self._search_processing())
+        flag = False
+        for proc in self._search_processing():
+            if proc.status() in ["running", "sleeping"]:
+                flag = True
+            elif proc.status() == "stopped":
+                proc.kill()
+        return flag
 
     def _search_processing(self) -> List[psutil.Process]:
         """Function for searching the process of blat server.
@@ -173,14 +150,17 @@ class Blat:
         """
         try:
             subprocess.check_call(cmd, shell=True)
-        except KeyboardInterrupt:
-            self.stop_server()
+        except (KeyboardInterrupt, subprocess.CalledProcessError) as e:
+            if isinstance(e, KeyboardInterrupt) and not self.is_stop_server:
+                self.stop_server()
 
     def _start_server(self) -> None:
         """The GfServer should run at the directory.
 
         where gfServer gfClient and hg38.2bit located.
         """
+        self.is_start_server = True
+        self.logger.debug(f"start server service{self.is_start_server=}")
         cwd = os.path.abspath(os.getcwd())
         logger.debug(os.getcwd())
 
@@ -198,6 +178,8 @@ class Blat:
         )
         logger.trace(f"{cmd=}")
         self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
+        if self.handle_process is None:
+            raise SystemExit from ValueError("handle process is None")
         self.handle_process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
@@ -208,23 +190,22 @@ class Blat:
 
         we will start the server service
         """
-        self.logger.debug(f"is running {self.is_running()}")
         running_flag = self.is_running()
         if not running_flag:
             self._start_server()
-            self.is_start_server = True
         else:
             self.is_start_server = False
 
     def stop_server(self) -> None:
         """Function for stopping the server service, if the server is running."""
         # self open then self close
+        self.logger.trace(f"{self.is_start_server=}")
         if self.is_start_server:
             self.logger.debug("stopping server service")
-            if self.handle_process is None:
-                raise SystemExit("Not Start Server Want to Stop")
-            self.handle_process.close()
-            self._remove(str(self.env_file))
+
+            for proc in self._search_processing():
+                proc.kill()
+
             self._remove(self.log_file_path)  # remove temp log file
             self.is_stop_server = True
 
@@ -252,7 +233,7 @@ class Blat:
         os.chdir(self.ref_dir)
         logger.trace(f"{self.ref_dir=}")
         logger.trace(os.getcwd())
-        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} 2> /dev/null".format(
+        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} &> /dev/null".format(
             mini_identity, self.port, in_fasta, out_psl
         )
         logger.trace(f"{cmd=}")
@@ -268,11 +249,13 @@ class Blat:
 
         :param interval: the interval time for checking the server service
         """
+        # self open and sever is running
         if self.is_ready() and self.is_running():
             return
-
+        # self do not open and sever is running by others
         if not self.is_ready() and self.is_running():
             time.sleep(interval)
+        # self do not open and server is not running by others, then open server
         elif not self.is_ready() and not self.is_running():
             self.start_server()
 
@@ -285,33 +268,20 @@ class Blat:
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
-        # check if need to start server service
+        # check if need to start server service in case prog that start sever service is not running
         self.start_server()
 
-        out_psl = ""
-
-        if self.is_ready():
-            out_psl = self._query(in_seq, mini_identity)
-        #  not ready as no others is running
-        elif not self.is_running():
-            # self open check if ready
-            if self.is_ready():
+        while self.is_running():  # self or other is running service
+            try:
                 out_psl = self._query(in_seq, mini_identity)
+            except subprocess.CalledProcessError:
+                time.sleep(30)
             else:
-                self._wait_ready()
-                out_psl = self._query(in_seq, mini_identity)
-        else:  # not ready but others or self is running
-            while self.is_running():
-                try:
-                    out_psl = self._query(in_seq, mini_identity)
-                except subprocess.CalledProcessError:
-                    time.sleep(30)
-                else:
-                    break
+                return out_psl
 
-            if not self.is_running():
-                self._wait_ready()
-                out_psl = self._query(in_seq, mini_identity)
+        # self or other is not running service, then self open
+        self._wait_ready()
+        out_psl = self._query(in_seq, mini_identity)
 
         return out_psl
 

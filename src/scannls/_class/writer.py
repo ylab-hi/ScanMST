@@ -7,6 +7,7 @@
 import datetime
 from abc import ABC
 from abc import abstractmethod
+from contextlib import contextmanager
 from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,44 @@ from .exception import ModesNotFoundError
 
 
 # todo: add asyncio support
+
+
+class Writers:
+    """Writers."""
+
+    def __init__(self, writers: Tuple["Writer", ...]):
+        """Init writers."""
+        self.writers_list = writers
+
+    def write_series_list(self, series_list: List[Series]) -> None:
+        """Write series list."""
+        for writer in self.writers_list:
+            with writer.open("a") as _:
+                writer_header = getattr(writer, "write_header", None)
+                if callable(writer_header):
+                    writer.write_header()  # type: ignore
+                for series in series_list:
+                    writer.write_data(series)
+
+    def open_writers(self, mode: str = "w") -> List[IO]:
+        """Open writers."""
+        writers_list = []
+        for writer in self.writers_list:
+            writers_list.append(writer.open(mode))
+        return writers_list
+
+    def close_writers(self) -> None:
+        """Close writers."""
+        for writer in self.writers_list:
+            writer.close()
+
+    @contextmanager
+    def open(self, mode: str = "w") -> Any:
+        """Open writers contextmanager."""
+        try:
+            yield self.open_writers(mode)
+        finally:
+            self.close_writers()
 
 
 class Writer(ABC):

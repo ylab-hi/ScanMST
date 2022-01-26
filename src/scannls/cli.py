@@ -22,6 +22,7 @@ from . import Options
 from . import SpliceGraph
 from . import SRRescuer
 from . import VCFWriter
+from ._class.writer import Writers
 from .core.main import scanbam_run
 from .utils import external_tool_checking
 
@@ -221,9 +222,10 @@ def cli(options: Union[argparse.Namespace, Options]):
     else:
         logger.info("scannls starts running in normal mode")
 
-    logger.info(f"{options.input=}")
+    logger.info(f"{options.input=} {options.closed=}")
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
+    blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
     motif_required = not options.noncanonical
@@ -248,19 +250,13 @@ def cli(options: Union[argparse.Namespace, Options]):
         )
 
         fasta_writer = FastaWriter("test.fasta", options.ref, logger)
-        with fasta_writer.open() as _:
-            fasta_writer.write_data(intact_series_list[0])
-
         gtf_writer = GTFWriter("test.gtf", logger)
-        with gtf_writer.open() as _:
-            gtf_writer.write_data(intact_series_list[0])
-
         vcf_writer = VCFWriter(
             "test.vcf", options.ref, in_bam_io_object, options.output, logger
         )
-        with vcf_writer.open() as _:
-            vcf_writer.write_header()
-            vcf_writer.write_data(intact_series_list[0])
+
+        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
+        writers.write_series_list(intact_series_list[:1])
 
         logger.info(f"Total Series: {len(intact_series_list)}")
         rescuer = SRRescuer(
@@ -283,16 +279,13 @@ def cli(options: Union[argparse.Namespace, Options]):
         logger.info("ScanNLS build running done")
         end = time.time()
         logger.info(f"ScanNLS build takes {end - start} seconds.")
-        if options.closed and not blat.is_stop_server:
-            logger.info("Stopping server in cli")
-            blat.stop_server()
-            raise SystemExit
 
-    except (SystemExit, KeyboardInterrupt):
+    except KeyboardInterrupt:
         if options.closed and not blat.is_stop_server:
+            logger.info("KeyboardInterrupt, stop blat server")
             blat.stop_server()
         raise
     finally:
         if options.closed and not blat.is_stop_server:
+            logger.info("Program ends, stop blat server")
             blat.stop_server()
-        raise SystemExit
