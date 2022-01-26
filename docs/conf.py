@@ -8,7 +8,7 @@ copyright = f"{datetime.now().year}, {author}"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx_click",
+    "sphinxarg.ext",
     "myst_parser",
 ]
 autodoc_typehints = "description"
