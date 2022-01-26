@@ -12,7 +12,14 @@ __funcs__ = {
     "update_breakpoints",
     "cigar_validity",
     "blat2chimeric_alignment",
-    "event_to_str",
+    "same_chrom_same_strand_mode21_handler",
+    "same_chrom_same_strand_handler",
+    "same_chrom_diff_strand_handler",
+    "diff_chrom_same_strand_mode21_handler",
+    "diff_chrom_same_strand_handler",
+    "diff_chrom_diff_strand_handler",
+    "softclipped_length_and_event_size_checker",
+    "obtain_bp_region_seq",
 }
 
 from typing import Tuple, List, Dict, Any
@@ -534,33 +541,6 @@ def softclipped_length_and_event_size_checker(
     return flag
 
 
-def obtain_ins_seq_from_softclipped_part_read(
-    read, mode, event_size, bp_region_seq_len
-) -> str:
-    """Obtain insertion sequence from soft-clipped part of read.
-
-    :param read: a chimeric read
-    :param mode: mode for the chimeric read
-    :param event_size: event size inferred from 'query_offset - target_offset'
-    :param bp_region_seq_len: bp_region_seq_len
-
-    :type read : Read
-    :type mode: int
-    :type event_size: int
-    :return: putative insertion sequence from the read
-
-    """
-    read_seq = read.query_sequence
-
-    ins_seq_in_read = (
-        read_seq[: read.lt_soft_len][-(event_size + bp_region_seq_len) :]
-        if mode == 2
-        else read_seq[-read.rt_soft_len :][: (event_size + bp_region_seq_len)]
-    )
-
-    return ins_seq_in_read
-
-
 def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
     """Obtain breakpoint region sequence from read.
 
@@ -793,6 +773,7 @@ def same_chrom_same_strand_handler(
     logger,
 ):
     """Handler for same chrom and same strand."""
+    logger.trace("same_chrom_same_strand_handler takes over the task.")
     if lt_mode == 2 and rt_mode == 1:
         return same_chrom_same_strand_mode21_handler(
             read_lt,
@@ -834,6 +815,7 @@ def same_chrom_diff_strand_handler(
     logger,
 ):
     """Handler for same chrom and different strand."""
+    logger.trace("same_chrom_diff_strand_handler takes over the task.")
     # lt_mode must be equal to rt_mode
     if lt_mode != rt_mode:
         raise SystemExit from ModesNotEqualError
@@ -1031,8 +1013,9 @@ def diff_chrom_same_strand_handler(
     logger,
 ):
     """Diff chrom same strand handler."""
+    logger.trace("diff_chrom_same_strand_handler takes over the task.")
     if lt_mode == 2 and rt_mode == 1:
-        diff_chrom_same_strand_mode21_handler(
+        return diff_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
             lt_mode,
@@ -1045,7 +1028,7 @@ def diff_chrom_same_strand_handler(
             logger,
         )
     elif lt_mode == 1 and rt_mode == 2:
-        diff_chrom_same_strand_mode21_handler(
+        return diff_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
             rt_mode,
@@ -1072,6 +1055,7 @@ def diff_chrom_diff_strand_handler(
     logger,
 ):
     """Diff chrom different strand handler."""
+    logger.trace("diff_chrom_diff_strand_handler takes over the task.")
     # lt_mode must be equal to rt_mode
     if lt_mode != rt_mode:
         raise SystemExit from ModesNotEqualError
