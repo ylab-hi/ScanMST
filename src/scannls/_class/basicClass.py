@@ -740,7 +740,7 @@ class Series:
 
     def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
         """Check if all nodes in the series have sr > threshold."""
-        return all(node.sr > threshold for node in self.nodes)
+        return all(node.sr >= threshold for node in self.nodes)
 
     @classmethod
     def create_series_from_node_list(

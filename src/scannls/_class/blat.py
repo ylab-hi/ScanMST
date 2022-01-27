@@ -201,7 +201,7 @@ class Blat:
         # self open then self close
         self.logger.trace(f"{self.is_start_server=}")
         if self.is_start_server:
-            self.logger.debug("stopping server service")
+            self.logger.info("Stopping  server service")
 
             for proc in self._search_processing():
                 proc.kill()

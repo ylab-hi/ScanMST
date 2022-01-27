@@ -293,10 +293,10 @@ def cli(options: Union[argparse.Namespace, Options]):
 
     except KeyboardInterrupt:
         if options.closed and not blat.is_stop_server:
-            logger.info("KeyboardInterrupt, stop blat server")
+            logger.info("KeyboardInterrupt")
             blat.stop_server()
         raise
     finally:
         if options.closed and not blat.is_stop_server:
-            logger.info("Program ends, stop blat server")
+            logger.info("Program ends")
             blat.stop_server()
