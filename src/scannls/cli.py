@@ -286,10 +286,12 @@ def cli(options: Union[argparse.Namespace, Options]):
             for clique in cliques:
                 for series in splice_graph(clique, rescuer):
                     logger.debug(f"Series{series}")
-                    if series.is_all_node_sr_higher_than_threshold(1):
+                    if series.is_all_node_sr_higher_than_threshold(
+                        options.support_reads
+                    ):
                         writers.write_series(series)
                         vcf_writer.write_data(series)
-
+        vcf_writer.close()
         in_bam_io_object.close()
 
         logger.info("ScanNLS build running done")
