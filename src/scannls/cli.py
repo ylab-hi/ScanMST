@@ -34,7 +34,7 @@ def parse_args() -> argparse.ArgumentParser:
         " long-reads data",
         epilog=textwrap.dedent(
             """Authors: Ting-You Wang and Yangyang Li, Hormel Institute,
-            University of Minnesota, 2021"""
+            University of Minnesota, 2022"""
         ),
     )
     parser.add_argument(
@@ -70,8 +70,16 @@ def parse_args() -> argparse.ArgumentParser:
         "--output",
         action="store",
         dest="output",
-        help="output BAM file",
+        help="output prefix",
         required=True,
+    )
+    parser.add_argument(
+        "--sr",
+        action="store",
+        dest="support_reads",
+        type=int,
+        help="minimum number of support reads for reporting NLS (default: %(default)s)",
+        default=1,
     )
     parser.add_argument(
         "-s",
@@ -79,7 +87,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="splice_bin",
         type=int,
-        help="minimal observation count for ITD (default: %(default)s)",
+        help="splice site bin size (default: %(default)s)",
         default=5,
     )
     parser.add_argument(
@@ -88,7 +96,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="mapq",
         type=int,
-        help="minimal MAPQ in BAM for calling NLS (default: %(default)s)",
+        help="minimum MAPQ of reads for calling NLS (default: %(default)s)",
         default=15,
     )
     parser.add_argument(
@@ -125,10 +133,10 @@ def parse_args() -> argparse.ArgumentParser:
     parser.add_argument(
         "-c",
         "--closed",
-        action="store_true",
+        action="store_false",
         dest="closed",
         default=True,
-        help="Considering Non-canonical spliced sites",
+        help="close BLAT server when job has done (default: %(default)s)",
     )
     parser.add_argument(
         "-p",
@@ -249,10 +257,14 @@ def cli(options: Union[argparse.Namespace, Options]):
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
 
-        fasta_writer = FastaWriter("test.fasta", options.ref, logger)
-        gtf_writer = GTFWriter("test.gtf", logger)
+        fasta_writer = FastaWriter(f"{options.output}.fasta", options.ref, logger)
+        gtf_writer = GTFWriter(f"{options.output}.gtf", logger)
         vcf_writer = VCFWriter(
-            "test.vcf", options.ref, in_bam_io_object, options.output, logger
+            f"{options.output}.vcf",
+            options.ref,
+            in_bam_io_object,
+            options.output,
+            logger,
         )
 
         writers = Writers((fasta_writer, gtf_writer, vcf_writer))

@@ -6,7 +6,7 @@
 @Time:        12/15/21 2:00 PM
 """
 import os
-import random
+import secrets
 import subprocess
 import time
 from multiprocessing import Process
@@ -67,7 +67,7 @@ class Blat:
         """Initialize the blat class."""
         self.port, self.ref_2bit = port, ref_2bit
         self.output_dir = output_dir
-        self.ran_id = random.getrandbits(30)
+        self.ran_id = secrets.randbits(42)
         self.is_start_server = is_start_server
         self.is_stop_server = False
         self.logger = logger
@@ -219,7 +219,7 @@ class Blat:
         :return: the path for PSL file
         """
         self.logger.debug("querying the sequence")
-        ran_id = random.getrandbits(30)
+        ran_id = secrets.randbits(42)
         in_fasta = os.path.join(self.output_dir, f"{ran_id}.fasta")
         with open(in_fasta, "w", buffering=1) as fasta_file:
             fasta_file.write(f">{ran_id}\n")

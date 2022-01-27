@@ -66,6 +66,7 @@ class Options:
     gtf: str
     output: str
     two_bit: str
+    support_reads: int = 1
     splice_bin: int = 5
     mapq: int = 15
     noncanonical: bool = False
