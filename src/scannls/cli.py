@@ -275,7 +275,11 @@ def cli(options: Union[argparse.Namespace, Options]):
         vcf_writer = VCFWriter(
             f"{options.output}.vcf", options.ref, in_bam_io_object, logger
         )
-        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
+
+        vcf_writer.open()
+        vcf_writer.write_header()
+
+        writers = Writers((fasta_writer, gtf_writer))
 
         cliques = clique_finder.find_clique()
         with writers.open() as _:
@@ -284,6 +288,7 @@ def cli(options: Union[argparse.Namespace, Options]):
                     logger.debug(f"Series{series}")
                     if series.is_all_node_sr_higher_than_threshold(1):
                         writers.write_series(series)
+                        vcf_writer.write_data(series)
 
         in_bam_io_object.close()
 
