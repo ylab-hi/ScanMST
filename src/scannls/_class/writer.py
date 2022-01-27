@@ -144,7 +144,7 @@ class FastaWriter(Writer):
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = open(self.file_path, mode)  # add asyncio support
         if hasattr(self, "write_header"):
-            self.write_header()
+            self.write_header()  # type: ignore
         return self.io
 
     def close(self) -> None:
@@ -226,7 +226,7 @@ class GTFWriter(Writer):
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = open(self.file_path, mode)
         if hasattr(self, "write_header"):
-            self.write_header()
+            self.write_header()  # type: ignore
         return self.io
 
     def close(self) -> None:
