@@ -74,7 +74,6 @@ class SpliceGraph:
         self.construct()
         # sr rescuer
         rescuer(self)
-        self.print_path()
         self.prune()
         # prun the graph
 
