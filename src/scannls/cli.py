@@ -276,10 +276,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             f"{options.output}.vcf", options.ref, in_bam_io_object, logger
         )
 
-        vcf_writer.open()
-        vcf_writer.write_header()
-
-        writers = Writers((fasta_writer, gtf_writer))
+        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
 
         cliques = clique_finder.find_clique()
         with writers.open() as _:
@@ -290,8 +287,6 @@ def cli(options: Union[argparse.Namespace, Options]):
                         options.support_reads
                     ):
                         writers.write_series(series)
-                        vcf_writer.write_data(series)
-        vcf_writer.close()
         in_bam_io_object.close()
 
         logger.info("ScanNLS build running done")
