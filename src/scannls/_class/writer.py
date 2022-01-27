@@ -51,9 +51,6 @@ class Writers:
              This method need all writers to be opened.
         """
         for writer in self.writers_list:
-            writer_header = getattr(writer, "write_header", None)
-            if callable(writer_header):
-                writer.write_header()  # type: ignore
             writer.write_data(series)
 
     def open_writers(self, mode: str = "w") -> List[IO]:
@@ -146,6 +143,8 @@ class FastaWriter(Writer):
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = open(self.file_path, mode)  # add asyncio support
+        if hasattr(self, "write_header"):
+            self.write_header()
         return self.io
 
     def close(self) -> None:
@@ -226,6 +225,8 @@ class GTFWriter(Writer):
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = open(self.file_path, mode)
+        if hasattr(self, "write_header"):
+            self.write_header()
         return self.io
 
     def close(self) -> None:
@@ -396,6 +397,8 @@ class VCFWriter(Writer):
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = open(self.file_path, mode)  # add asyncio support
+        if hasattr(self, "write_header"):
+            self.write_header()
         return self.io
 
     def close(self) -> None:
