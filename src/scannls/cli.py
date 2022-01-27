@@ -9,6 +9,7 @@ import argparse
 import sys
 import textwrap
 import time
+from pathlib import Path
 from typing import Union
 
 from loguru import logger
@@ -231,8 +232,13 @@ def cli(options: Union[argparse.Namespace, Options]):
         logger.info("scannls starts running in normal mode")
 
     logger.info(f"{options.input=} {options.closed=}")
+
+    tmp_dir = Path(options.tmp_dir)
+    if not tmp_dir.exists():
+        tmp_dir.mkdir()
+        logger.info(f"Created temporary directory: {tmp_dir.resolve()}")
     start = time.time()
-    blat = Blat(options.two_bit, logger, options.port, options.tmp_dir)
+    blat = Blat(options.two_bit, logger, options.port, str(tmp_dir.resolve()))
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
@@ -241,7 +247,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         intact_series_list, in_bam_io_object = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
-            tmp_dir=options.tmp_dir,
+            tmp_dir=str(tmp_dir.resolve()),
             blat_info=blat_info,
             in_bam_path=options.input,
             mapq_cutoff=options.mapq,
