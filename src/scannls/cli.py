@@ -257,19 +257,6 @@ def cli(options: Union[argparse.Namespace, Options]):
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
 
-        fasta_writer = FastaWriter(f"{options.output}.fasta", options.ref, logger)
-        gtf_writer = GTFWriter(f"{options.output}.gtf", logger)
-        vcf_writer = VCFWriter(
-            f"{options.output}.vcf",
-            options.ref,
-            in_bam_io_object,
-            options.output,
-            logger,
-        )
-
-        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
-        writers.write_series_list(intact_series_list[:1])
-
         logger.info(f"Total Series: {len(intact_series_list)}")
         rescuer = SRRescuer(
             in_bam_io_object,
@@ -282,10 +269,22 @@ def cli(options: Union[argparse.Namespace, Options]):
         splice_graph = SpliceGraph(logger)
         clique_finder = CliqueFinder(intact_series_list, logger)
         # cliques is generator
+
+        fasta_writer = FastaWriter(f"{options.output}.fasta", options.ref, logger)
+        gtf_writer = GTFWriter(f"{options.output}.gtf", logger)
+        vcf_writer = VCFWriter(
+            f"{options.output}.vcf", options.ref, in_bam_io_object, logger
+        )
+        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
+
         cliques = clique_finder.find_clique()
-        for clique in cliques:
-            for i in splice_graph(clique, rescuer):
-                logger.debug(f"Series{i}")
+        with writers.open() as _:
+            for clique in cliques:
+                for series in splice_graph(clique, rescuer):
+                    logger.debug(f"Series{series}")
+                    if series.is_all_node_sr_higher_than_threshold(1):
+                        writers.write_series(series)
+
         in_bam_io_object.close()
 
         logger.info("ScanNLS build running done")

@@ -738,6 +738,10 @@ class Series:
             node.sv_type == "DEL" for node in self.nodes if node.sv_type is not None
         )
 
+    def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
+        """Check if all nodes in the series have sr > threshold."""
+        return all(node.sr > threshold for node in self.nodes)
+
     @classmethod
     def create_series_from_node_list(
         cls, node_list: List[NodeType], logger: LoggerType

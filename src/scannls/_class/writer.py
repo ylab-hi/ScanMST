@@ -44,15 +44,17 @@ class Writers:
         """Init writers."""
         self.writers_list = writers
 
-    def write_series_list(self, series_list: List[Series]) -> None:
-        """Write series list."""
+    def write_series(self, series: Series) -> None:
+        """Write series.
+
+        .. note::
+             This method need all writers to be opened.
+        """
         for writer in self.writers_list:
-            with writer.open("a") as _:
-                writer_header = getattr(writer, "write_header", None)
-                if callable(writer_header):
-                    writer.write_header()  # type: ignore
-                for series in series_list:
-                    writer.write_data(series)
+            writer_header = getattr(writer, "write_header", None)
+            if callable(writer_header):
+                writer.write_header()  # type: ignore
+            writer.write_data(series)
 
     def open_writers(self, mode: str = "w") -> List[IO]:
         """Open writers."""
@@ -149,6 +151,7 @@ class FastaWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
+            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -174,7 +177,6 @@ class FastaWriter(Writer):
             self.logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file."
             )
-        self.logger.trace(f"{self.__class__.__name__}: Writing Series to file.")
         sequence = get_nodes_sequence_from_series(
             data_object, reference_io=self.reference_io
         )
@@ -229,6 +231,7 @@ class GTFWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
+            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -257,7 +260,6 @@ class GTFWriter(Writer):
             self.logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file."
             )
-        self.logger.trace(f"{self.__class__.__name__}: Writing Series to file.")
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object, self.id
         ):
@@ -363,7 +365,6 @@ class VCFWriter(Writer):
         file_path: str,
         reference: str,
         bam_io: pysam.AlignmentFile,
-        output_prefix: str,
         logger: LoggerType,
     ) -> None:
         """Initialize VCFWriter object."""
@@ -374,7 +375,7 @@ class VCFWriter(Writer):
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.id = 1
         self.bam_header = bam_io.header
-        self.sample_name = output_prefix
+        self.sample_name = self.file_path.stem
 
     @property
     def is_opened(self) -> bool:
@@ -400,6 +401,7 @@ class VCFWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
+            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -431,7 +433,6 @@ class VCFWriter(Writer):
             self.logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to VCF file."
             )
-        self.logger.trace(f"{self.__class__.__name__}: Writing Series to VCF file.")
         for hop_vcf_feature in get_vcf_features_from_series(
             data_object, self.id, self.reference_io
         ):
