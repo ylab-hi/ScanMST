@@ -21,6 +21,8 @@ def single_hop_generator(
     sv_type: str,
     num_of_transcripts: int,
     output_prefix: str,
+    shift: int,
+    max_len: int,
     logger: LoggerType,
 ):
     """Generate One-hop NLS events."""
@@ -37,6 +39,8 @@ def single_hop_generator(
         trx_to_introns=gtf.trx_to_introns,
         gene_to_intergenic=gtf.gene_to_intergenic,
         reference=reference,
+        shift=shift,
+        max_length=max_len,
         logger=logger,
     )
 
@@ -58,6 +62,8 @@ def multi_hop_generator(
     num_of_hops: int,
     num_of_transcripts: int,
     output_prefix: str,
+    shift: int,
+    max_len: int,
     logger: LoggerType,
 ):
     """Generate Multi-hop NLS events."""
@@ -74,6 +80,8 @@ def multi_hop_generator(
         trx_to_introns=gtf.trx_to_introns,
         gene_to_intergenic=gtf.gene_to_intergenic,
         reference=reference,
+        shift=shift,
+        max_length=max_len,
         logger=logger,
     )
 

@@ -32,6 +32,8 @@ class SimulatorOptions:
     hops: int = 2
     choice: str = "s"
     log: str = "info"
+    shift: int = 7
+    max_len: int = 200
     nls_type: str = "TDUP"
 
 
@@ -98,6 +100,24 @@ def parse_args() -> argparse.ArgumentParser:
         default=2,
     )
     parser.add_argument(
+        "-s",
+        "--shift",
+        action="store",
+        dest="shift",
+        type=int,
+        help="The shift size (default: %(default)s)",
+        default=7,
+    )
+    parser.add_argument(
+        "-m",
+        "--max_len",
+        action="store",
+        dest="max_len",
+        type=int,
+        help="maximum sequence length of MT (intergenic and intronic) (default: %(default)s)",
+        default=200,
+    )
+    parser.add_argument(
         "-t",
         "--type",
         action="store",
@@ -143,6 +163,8 @@ def cli(options: Union[argparse.Namespace, SimulatorOptions]) -> None:
             num_of_transcripts=options.num,
             sv_type=options.nls_type,
             output_prefix=options.output,
+            shift=options.shift,
+            max_len=options.max_len,
             logger=logger,
         )
     else:
@@ -152,6 +174,8 @@ def cli(options: Union[argparse.Namespace, SimulatorOptions]) -> None:
             num_of_transcripts=options.num,
             num_of_hops=options.hops,
             output_prefix=options.output,
+            shift=options.shift,
+            max_len=options.max_len,
             logger=logger,
         )
 

@@ -61,7 +61,8 @@ class OneHop:
         gene_to_intergenic: dict,
         reference: str,
         logger: LoggerType,
-        shift: int = 20,
+        shift: int = 7,
+        max_length: int = 200,
     ) -> None:
         """Initialize OneHop.
 
@@ -72,6 +73,7 @@ class OneHop:
         :param gene_to_intergenic: gene => {"upstream": (start, end), "downstream": (start, end)}
         :param reference: reference fasta file
         :param logger: logger
+        :param max_length: max_length of MT seq for intergenic and intronic
         """
         self.chrom_to_genes = chrom_to_genes
         self.available_chroms = list(chrom_to_genes)
@@ -85,6 +87,7 @@ class OneHop:
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.logger = logger
         self.shift = shift
+        self.max_length = max_length
         self.function_dict = {
             "TDUP": self._tdup_hopper,
             "IDUP": self._idup_hopper,
@@ -180,6 +183,8 @@ class OneHop:
             tgt_intron_index = secrets.choice(range(_num_intron))
             # GenomicInterval
             _metaexon = self.trx_to_introns[_tgt_trx][tgt_intron_index]
+            if _metaexon.end - _metaexon.start > self.max_length:
+                _metaexon.end = _metaexon.start + self.max_length
             if strand == "+":
                 mt_seq += self.reference_io[_metaexon.chrom][
                     _metaexon.start : _metaexon.end
@@ -195,6 +200,8 @@ class OneHop:
         elif locus_type == "intergenic":
             # GenomicInterval
             _metaexon = self.gene_to_intergenic[locus][direction]
+            if _metaexon.end - _metaexon.start > self.max_length:
+                _metaexon.end = _metaexon.start + self.max_length
             if strand == "+":
                 mt_seq = self.reference_io[_metaexon.chrom][
                     _metaexon.start : _metaexon.end
