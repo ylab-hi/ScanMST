@@ -330,7 +330,7 @@ class Node(BasicNode):
         """Get a string representation of a node."""
         exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return (
-            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
             f"{exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
             f"{self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
