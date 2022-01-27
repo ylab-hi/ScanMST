@@ -726,7 +726,7 @@ def get_gtf_features_from_insertion(
         "+",
         ".",
         f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>3}"; '
-        f'sequence "{insertion.query_sequence}" ',
+        f'sequence "{insertion.query_sequence}";',
     ]
 
 
@@ -764,7 +764,7 @@ def get_gtf_features_from_node(
         info = [
             f'transcript_id "{series_id:0>6}"; '
             f'mega_exon_id "{node_id:0>3}"; '
-            f'exon_id "{index:0>3}" '
+            f'exon_id "{index:0>3}";'
         ]
         nodes_gtf_features.append(
             [
