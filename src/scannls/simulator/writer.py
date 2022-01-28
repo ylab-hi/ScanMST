@@ -128,12 +128,15 @@ class SimVCFWriter:
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)  # noqa
+        self.io = self.file_path.open(mode)
+        if hasattr(self, "write_header"):
+            self.write_header()  # type: ignore
         return self.io
 
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
+            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None  # type: ignore
 
@@ -242,3 +245,122 @@ def get_vcf_features_from_metaexons(
         series_hops_features.append(item)
         # current_node insertion_seq: #TODO
     return series_hops_features
+
+
+class GTFWriter:
+    """Writer for GTF files.
+
+    .. note::
+        1. seqname: chromosome
+        2. source:  name of the program that generated the feature
+        3. feature: feature type name, eg. gene, mRNA, exon, CDS
+        4. start: start position of the feature
+        5. end: end position of the feature
+        6. score: a floating point value
+        7. strand: defined as + (forward) - (reverse) or . (unknown)
+        8. frame: one of '0', '1' or '2'. '0' indicates that the first base of the feature
+                  is the first base of a codon, '1' that the second base is the first base
+                  of a codon, and so on..
+        9. attribute: a semicolon-separated list of tag-value pairs (separated by spaces)
+    """
+
+    num_fields: int = 9
+
+    def __init__(self, file_path: str, logger: LoggerType) -> None:
+        """Initialize GTFWriter object."""
+        self.file_path = Path(file_path)
+        self.logger = logger
+        if self.file_path.exists():
+            self.logger.warning(f"{self.file_path} exists, will be overwritten.")
+        self.id = 1
+        self.io: Optional[IO] = None
+
+    @property
+    def is_opened(self) -> bool:
+        """Check if file is opened."""
+        return self.io is not None and not self.io.closed
+
+    def formatter(self, fields: List[str], delimiter: str = "\t") -> str:
+        """Formatter for writing data."""
+        if fields is None or len(fields) != GTFWriter.num_fields:
+            self.logger.warning(
+                f"{self.__class__.__name__}: Number of fields is not equal to 9."
+            )
+            raise SystemExit
+        return delimiter.join(fields) + "\n"
+
+    def open(self, mode: str = "w") -> IO:
+        """Open file."""
+        if self.is_opened:
+            self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
+        self.io = self.file_path.open(mode)
+        return self.io
+
+    def close(self) -> None:
+        """Close file."""
+        if self.is_opened:
+            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
+            self.io.close()  # type: ignore
+            self.io = None
+
+    def write_line(self, line: str) -> None:
+        """Write line to file."""
+        if self.is_opened:
+            self.io.write(line)  # type: ignore
+        else:
+            self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
+
+    @singledispatchmethod
+    def write_data(self, data_object: Any) -> None:
+        """Write data to file.
+
+        :param: data_object: Data to write to file.
+        """
+        if len(data_object) == 0:
+            self.logger.warning(
+                f"{self.__class__.__name__}: No nodes to write to file."
+            )
+        for metaexon_gtf_feature in get_nodes_gtf_features_from_metaexons(
+            data_object, self.id
+        ):
+            self.write_line(self.formatter(metaexon_gtf_feature))
+        self.id += 1
+
+
+def get_nodes_gtf_features_from_metaexons(
+    series: List[MetaExon], series_id: int
+) -> List[List[str]]:
+    """Get_nodes_gtf_features_from_metaexons."""
+    series_gtf_features = []
+    for metaexon_id, metaexon in enumerate(series, 1):
+        series_gtf_features.extend(
+            get_gtf_features_from_metaexon(metaexon, series_id, metaexon_id)
+        )
+    return series_gtf_features
+
+
+def get_gtf_features_from_metaexon(metaexon, series_id, metaexon_id) -> List[List[str]]:
+    """Get_gtf_features_from_metaexon."""
+    exons = metaexon.exons[::-1] if metaexon.strand == "-" else metaexon.exons
+    metaexons_gtf_features = []
+
+    for index, exon in enumerate(exons, 1):
+        info = [
+            f'transcript_id "{series_id:0>6}"; '
+            f'metaexon_id "{metaexon_id:0>3}"; '
+            f'exon_id "{index:0>3}";'
+        ]
+        metaexons_gtf_features.append(
+            [
+                f"{exon.chrom}",
+                "exon",
+                "scannls-simulator",
+                f"{exon.start + 1}",
+                f"{exon.end}",
+                ".",
+                f"{metaexon.strand}",
+                ".",
+            ]
+            + info
+        )
+    return metaexons_gtf_features

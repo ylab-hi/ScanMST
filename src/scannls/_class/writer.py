@@ -142,7 +142,7 @@ class FastaWriter(Writer):
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)  # add asyncio support
+        self.io = self.file_path.open(mode)
         if hasattr(self, "write_header"):
             self.write_header()  # type: ignore
         return self.io
@@ -224,7 +224,7 @@ class GTFWriter(Writer):
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)
+        self.io = self.file_path.open(mode)
         if hasattr(self, "write_header"):
             self.write_header()  # type: ignore
         return self.io
@@ -396,7 +396,7 @@ class VCFWriter(Writer):
         """Open file."""
         if self.is_opened:
             self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
-        self.io = open(self.file_path, mode)  # add asyncio support
+        self.io = self.file_path.open(mode)  # add asyncio support
         if hasattr(self, "write_header"):
             self.write_header()
         return self.io

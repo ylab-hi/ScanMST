@@ -632,11 +632,9 @@ class OneHop:
         if num_of_hops < 1:
             raise SystemExit from NumberOfHopIsNotValidError
         elif num_of_hops == 1:  # user must provide hop_type
-            for trx_idx in range(num_of_transcripts):
-                transcripts_dict[f"nls_{trx_idx}"] = self.one_hop_generator(hop_type)  # type: ignore
+            for trx_idx, _ in enumerate(range(num_of_transcripts), 1):
+                transcripts_dict[f"{trx_idx}"] = self.one_hop_generator(hop_type)  # type: ignore
         else:  # hop number > 1
-            for trx_idx in range(num_of_transcripts):
-                transcripts_dict[f"nls_{trx_idx}"] = self.multi_hop_generator(
-                    num_of_hops
-                )
+            for trx_idx, _ in enumerate(range(num_of_transcripts), 1):
+                transcripts_dict[f"{trx_idx}"] = self.multi_hop_generator(num_of_hops)
         return transcripts_dict
