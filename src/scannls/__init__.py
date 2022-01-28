@@ -50,6 +50,7 @@ __all__ = [
     "FastaWriter",
     "GTFWriter",
     "VCFWriter",
+    "Writers",
     "ToolNotFoundError",
     "ReadNotFoundError",
     "BreakpointNotFoundError",
