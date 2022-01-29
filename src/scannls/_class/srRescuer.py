@@ -9,6 +9,7 @@ import re
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Set
 from typing import Union
 
 import parasail  # type: ignore
@@ -59,8 +60,14 @@ class SRRescuer:
 
         :param nodes_in_graph: Series
         """
+        query_names_in_graph = set()
         for node in nodes_in_graph:
-            self.update_sr(node)
+            query_names_in_graph.update(node.query_name.split(","))
+
+        for node in nodes_in_graph:
+            self.update_sr(node, query_names_in_graph)
+
+        del query_names_in_graph
 
     @staticmethod
     def check_if_sr_rescued_depended_on_alignment(
@@ -127,10 +134,13 @@ class SRRescuer:
                 increment_sr += 1
         return increment_sr
 
-    def _calculate_sr_for_reads(self, region, query_names, sr_list, sv_list, mode):
+    def _calculate_sr_for_reads(
+        self, region, query_names, query_names_in_graph, sr_list, sv_list, mode
+    ):
         """Calculate SR for reads.
 
         :param query_names:
+        :param query_names_in_graph:
         :param sr_list:
         :param sv_list:
         :param mode:
@@ -152,13 +162,19 @@ class SRRescuer:
                 if read.query_name in query_names:
                     if _pos == _reference_pos:
                         sv_list[strand].append(_seq)
-                elif _pos == _reference_pos and _len >= self.soft_len_cutoff:
+                elif (
+                    (read.query_name not in query_names_in_graph)
+                    and _pos == _reference_pos
+                    and _len >= self.soft_len_cutoff
+                ):
                     # the pileup position is equal to the soft-clipped connection point
                     # xxxxxxxxSyyyyyyyyMzzzzzS
                     #         ^      ^
                     sr_list[strand].append(_seq)
 
-    def calculate_sr(self, region: str, mode: int, query_name: str) -> int:
+    def calculate_sr(
+        self, region: str, mode: int, query_name: str, query_names_in_graph: Set
+    ) -> int:
         """Calculate SR from softclipped reads without SV tag, provided target region.
 
         region = 'chrm:start-end'
@@ -174,7 +190,9 @@ class SRRescuer:
         self.logger.trace(f"{region=}")
 
         # read is an instance of pysam.PileupRead
-        self._calculate_sr_for_reads(region, query_names, sr_list, sv_list, mode)
+        self._calculate_sr_for_reads(
+            region, query_names, query_names_in_graph, sr_list, sv_list, mode
+        )
 
         rescued_sr = 0
 
@@ -221,7 +239,7 @@ class SRRescuer:
         region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
-    def update_sr(self, current_node: NodeType) -> None:
+    def update_sr(self, current_node: NodeType, query_names_in_graph: Set) -> None:
         """Update SR for input node."""
         if current_node.is_end_node():
             return
@@ -236,14 +254,18 @@ class SRRescuer:
         _region_current = SRRescuer.obtain_region_for_rescue_sr(
             current_node, "next_breakpoint", mode1
         )
-        rescued_sr = self.calculate_sr(_region_current, mode1, query_name_current)
+        rescued_sr = self.calculate_sr(
+            _region_current, mode1, query_name_current, query_names_in_graph
+        )
         for next_node in current_node.successors:
             next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
             query_name_next = next_node.query_name
             _region_next = SRRescuer.obtain_region_for_rescue_sr(
                 next_node, "prev_breakpoint", mode2
             )
-            rescued_sr_next = self.calculate_sr(_region_next, mode2, query_name_next)
+            rescued_sr_next = self.calculate_sr(
+                _region_next, mode2, query_name_next, query_names_in_graph
+            )
             rescued_sr += rescued_sr_next
         self.logger.trace(f"{rescued_sr=}")
         if rescued_sr > 0:
