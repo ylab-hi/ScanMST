@@ -571,7 +571,7 @@ def get_vcf_features_from_series(
                 (
                     f"{can_field};BOUNDARY={anno_field};"
                     f"SVTYPE={current_node.sv_type};"
-                    f"CHR2={_chrom2};END={int(_pos2) + 1};DP1={_dp1};"
+                    f"CHR2={_chrom2};END={int(_pos2) + 1};SR={current_node.sr};DP1={_dp1};"
                     f"DP2={_dp2};PSO={_pso:.3g};SVLEN={sv_distance};"
                     f"GENE1={gene1};GENE2={gene2};"
                     f"STRAND1={current_node.strand};STRAND2={next_node.strand};"
@@ -604,7 +604,7 @@ def get_vcf_features_from_series(
                     ".",
                     (
                         f"{can_field};BOUNDARY={anno_field};SVTYPE={_sv_type};"
-                        f"CHR2={_chrom2};END={int(_pos2) + 1};DP={_dp1};AF={_af:.3g};"
+                        f"CHR2={_chrom2};END={int(_pos2) + 1};AO={insertion.ao};DP={_dp1};AF={_af:.3g};"
                         f"SVLEN={sv_distance};GENE={gene1};STRAND={current_node.strand};"
                         f"TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS"
                     ),

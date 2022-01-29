@@ -293,7 +293,7 @@ def cli(options: Union[argparse.Namespace, Options]):
                     if series.is_all_node_sr_higher_than_threshold(
                         options.support_reads
                     ):
-                        pass
+                        writers.write_series(series)
         in_bam_io_object.close()
 
         logger.info("ScanNLS build running done")
