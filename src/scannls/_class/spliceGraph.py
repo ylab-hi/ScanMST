@@ -27,6 +27,7 @@ from .basicClass import Node
 from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
+from .plotGraph import plot_graph
 
 NodeType = Union[Node, Insertion]
 
@@ -54,7 +55,13 @@ class SpliceGraph:
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
-    def __call__(self, series_list: Iterable[Series], rescuer: Any) -> Iterable[Series]:
+    def __call__(
+        self,
+        series_list: Iterable[Series],
+        rescuer: Any,
+        clique_ind: int,
+        is_plot: bool = False,
+    ) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
         :param series_list: series list
@@ -72,11 +79,9 @@ class SpliceGraph:
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
         # construct splice graph
         self.construct()
-        # sr rescuer
-        rescuer(self)
-        self.prune()
-        # prun the graph
-
+        self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
+        if is_plot:
+            plot_graph(self, f"clique_{clique_ind}", False)
         # trace path
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
@@ -427,7 +432,7 @@ class SpliceGraph:
         """Main function to construct graph."""
         # iterate all series
         merged_nodes_pool: Set[NodeType] = set()
-        self.logger.trace(f"{self.series_list=}")
+        self.logger.debug(f"Input Clique {self.series_list=}")
         for series in self.series_list:
             # iterate all nodes in series
             for index, current_node in enumerate(series):

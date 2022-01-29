@@ -416,9 +416,9 @@ def _scan_bam_helper(
                     series.disable_blat_logger()
                     if not series.is_all_type_del():
                         nls_src_forms_list.append(series)
-                        logger.debug(f"{series=}")
+                        logger.trace(f"{series=}")
 
-    logger.debug(f"{nls_src_forms_list=}")
+    logger.debug(f"Total Series: {nls_src_forms_list}")
     logger.complete()
     in_bam_io_object.close()
     return nls_src_forms_list

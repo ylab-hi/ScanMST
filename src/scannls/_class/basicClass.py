@@ -334,7 +334,7 @@ class Node(BasicNode):
             f"{exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
             f"{self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
-            f"SR={self.sr}, query_name={self.query_name}, trace_id={self.trace_id})"
+            f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
         )
 
     @classmethod
