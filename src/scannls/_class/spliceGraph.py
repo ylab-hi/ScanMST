@@ -79,6 +79,8 @@ class SpliceGraph:
         self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
         # construct splice graph
         self.construct()
+        # sr rescuer
+        rescuer(self)
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
         if is_plot:
             plot_graph(self, f"clique_{clique_ind}", False)
