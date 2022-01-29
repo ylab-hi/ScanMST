@@ -335,10 +335,17 @@ class SpliceGraph:
             if current_node.sv_type is not None
             else updated_node.sv_type
         )
+        # update prev_sv_type
         updated_node.prev_sv_type = (
             current_node.prev_sv_type
             if current_node.prev_sv_type is not None
             else updated_node.prev_sv_type
+        )
+        # update splice_code
+        updated_node.splicing_code = (
+            current_node.splicing_code
+            if current_node.splicing_code is not None
+            else updated_node.splicing_code
         )
         # update breakpoints
         if updated_node.prev_breakpoint is None:
