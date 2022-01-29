@@ -52,14 +52,14 @@ class SRRescuer:
             f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
         )
 
-    def __call__(self, series: Union[Iterable[NodeType], SpliceGraph]) -> None:
+    def __call__(self, nodes_in_graph: Union[Iterable[NodeType], SpliceGraph]) -> None:
         """Rescue SR from softclipped non-chimeric reads.
 
         changed in place
 
-        :param series: Series
+        :param nodes_in_graph: Series
         """
-        for node in series:
+        for node in nodes_in_graph:
             self.update_sr(node)
 
     @staticmethod
