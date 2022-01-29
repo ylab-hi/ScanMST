@@ -10,8 +10,8 @@ from typing import Any
 from typing import Dict
 from typing import Union
 
-import networkx as nx
-from matplotlib import pyplot as plt
+import networkx as nx  # type: ignore
+from matplotlib import pyplot as plt  # type: ignore
 
 from .basicClass import Insertion
 from .basicClass import Node
@@ -69,7 +69,7 @@ def plot_graph(graph: Any, figure_name: str, is_matplotlib=True) -> None:
         fig.tight_layout()
         plt.savefig(f"graph_{figure_name}.png")
     else:
-        from pyvis.network import Network
+        from pyvis.network import Network  # type: ignore
 
         nt = Network(height="750px", directed=True, width="100%")
         nt.from_nx(g)
