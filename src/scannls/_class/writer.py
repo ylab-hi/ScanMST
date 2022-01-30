@@ -305,7 +305,6 @@ class VCFWriter(Writer):
         "DP2": "Integer",
         "SR": "Integer",
         "PSO": "Float",
-        "AO": "Integer",
         "AF": "Float",
         "SVMETHOD": "String",
         "SVTYPE": "String",
@@ -332,8 +331,6 @@ class VCFWriter(Writer):
         "DP1": "Total read depth at the breakpoint1",
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
-        "AO": "Alternate allele observations, "
-        "with partial observations recorded fractionally",
         "AF": "Estimated allele frequency in the range (0,1], "
         "representing the ratio of reads showing the alternative allele to all reads",
         "PSO": "Estimated Percent splice-out in the range (0,1], "
@@ -427,20 +424,42 @@ class VCFWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: Series) -> None:
-        """Write Series to fasta file.
+    def _(self, data_object: List[Series]) -> None:
+        """Write Series to VCF file.
 
         :param data_object: Series to write to file.
         """
-        if len(data_object.nodes) == 0:
-            self.logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to VCF file."
-            )
-        for hop_vcf_feature in get_vcf_features_from_series(
-            data_object, self.id, self.reference_io
-        ):
+        hops_feature_in_series_list = []
+        for series in data_object:
+            if len(series.nodes) == 0:
+                self.logger.warning(
+                    f"{self.__class__.__name__}: No nodes to write to VCF file."
+                )
+            # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
+            for _hop_vcf_feature in get_vcf_features_from_series(
+                series, self.id, self.reference_io
+            ):
+                hops_feature_in_series_list.append(_hop_vcf_feature)
+            self.id += 1  # series/transcript id
+
+        out_vcf_dict = {}
+        for hop_feature in hops_feature_in_series_list:
+            type_position_key = [*hop_feature][0]
+            if type_position_key not in out_vcf_dict:
+                out_vcf_dict[type_position_key] = hop_feature[type_position_key]
+            else:
+                if (
+                    hop_feature[type_position_key]["SR"]
+                    > out_vcf_dict[type_position_key]["SR"]
+                ):
+                    out_vcf_dict[type_position_key] = hop_feature[type_position_key]
+                    out_vcf_dict[type_position_key][
+                        "TRANSCRIPT_ID"
+                    ] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
+
+        for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
+            hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
             self.write_line(self.formatter(hop_vcf_feature))
-        self.id += 1
 
     @property
     def header(self) -> str:
@@ -519,10 +538,9 @@ def get_vcf_features_from_series(
     series: Series,
     series_id: int,
     reference_io: Fasta,
-) -> List[List[str]]:
+) -> List[Dict[str]]:
     """Obtain hop vcf features from one series."""
     series_hops_features = []
-    ins_id = 1
 
     can_field_dict = {0: "NONCANONICAL", 1: "CANONICAL"}
     anno_field_dict = {0: "NEITHER", 1: "RIGHT", 2: "LEFT"}
@@ -560,27 +578,33 @@ def get_vcf_features_from_series(
         )
 
         series_hops_features.append(
-            [
-                _chrom1,
-                f"{int(_pos1) + 1}",
-                f"HOP_{event_id}",
-                ".",
-                f"<{current_node.sv_type}>",
-                ".",
-                ".",
-                (
-                    f"{can_field};BOUNDARY={anno_field};"
-                    f"SVTYPE={current_node.sv_type};"
-                    f"CHR2={_chrom2};END={int(_pos2) + 1};SR={current_node.sr};DP1={_dp1};"
-                    f"DP2={_dp2};PSO={_pso:.3g};SVLEN={sv_distance};"
-                    f"GENE1={gene1};GENE2={gene2};"
-                    f"STRAND1={current_node.strand};STRAND2={next_node.strand};"
-                    f"MODE1={mode1};MODE2={mode2};"
-                    f"TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS"
-                ),
-                "GT",
-                "0/1",
-            ]
+            {
+                f"{current_node.sv_type}_{_chrom1}|{int(_pos1)+1}"
+                f"_{_chrom2}|{int(_pos2) + 1}": {
+                    "CHROM": _chrom1,
+                    "POS": f"{int(_pos1) + 1}",
+                    "REF": ".",
+                    "ALT": f"<{current_node.sv_type}>",
+                    "SVTYPE": current_node.sv_type,
+                    "SR": current_node.sr,
+                    "CAN": can_field,
+                    "BOUNDARY": anno_field,
+                    "CHR2": _chrom2,
+                    "END": f"{int(_pos2) + 1}",
+                    "DP1": f"{_dp1}",
+                    "DP2": f"{_dp2}",
+                    "PSO": f"{_pso:.3g}",
+                    "SVLEN": f"{sv_distance}",
+                    "GENE1": f"{gene1}",
+                    "GENE2": f"{gene2}",
+                    "STRAND1": f"{current_node.strand}",
+                    "STRAND2": f"{next_node.strand}",
+                    "MODE1": f"{mode1}",
+                    "MODE2": f"{mode2}",
+                    "TRANSCRIPT_ID": f"{series_id}",
+                    "SVMETHOD": "ScanNLS",
+                }
+            }
         )
         if current_node.insertion_info and isinstance(
             current_node.insertion_info[1], NovelInsertion
@@ -594,26 +618,68 @@ def get_vcf_features_from_series(
             _sv_type = "INS"
             anno_field = "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
             series_hops_features.append(
-                [
-                    _chrom1,
-                    f"{int(_pos1) + 1}",
-                    f"INS_{ins_id}",
-                    ref_allele,
-                    alt_allele,
-                    ".",
-                    ".",
-                    (
-                        f"{can_field};BOUNDARY={anno_field};SVTYPE={_sv_type};"
-                        f"CHR2={_chrom2};END={int(_pos2) + 1};AO={insertion.ao};DP={_dp1};AF={_af:.3g};"
-                        f"SVLEN={sv_distance};GENE={gene1};STRAND={current_node.strand};"
-                        f"TRANSCRIPT_ID={series_id};SVMETHOD=ScanNLS"
-                    ),
-                    "GT",
-                    "0/1",
-                ]
+                {
+                    f"{_sv_type}_{_chrom1}|{int(_pos1)+1}"
+                    f"_{_chrom1}|{int(_pos1) + 1}": {
+                        "CHROM": _chrom1,
+                        "POS": f"{int(_pos1) + 1}",
+                        "REF": f"{ref_allele}",
+                        "ALT": f"{alt_allele}",
+                        "SVTYPE": _sv_type,
+                        "SR": insertion.ao,
+                        "CAN": can_field,
+                        "BOUNDARY": anno_field,
+                        "CHR2": _chrom1,
+                        "END": f"{int(_pos1) + 1}",
+                        "DP": f"{_dp1}",
+                        "AF": f"{_af:.3g}",
+                        "SVLEN": f"{sv_distance}",
+                        "GENE": f"{gene1}",
+                        "STRAND": f"{current_node.strand}",
+                        "TRANSCRIPT_ID": f"{series_id}",
+                        "SVMETHOD": "ScanNLS",
+                    }
+                }
             )
-            ins_id += 1
     return series_hops_features
+
+
+def vcf_feature_transformer(feature_dict: dict, idx: int) -> List[str]:
+    """VCF feature transformer."""
+    if feature_dict["SVTYPE"] == "INS":
+        info_field = (
+            f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
+            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};'
+            f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};DP={feature_dict["DP"]};'
+            f'AF={feature_dict["AF"]};SVLEN={feature_dict["SVLEN"]};'
+            f'GENE={feature_dict["GENE"]};'
+            f'STRAND={feature_dict["STRAND"]};'
+            f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        )
+    else:
+        info_field = (
+            f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
+            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};'
+            f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};DP1={feature_dict["DP1"]};'
+            f'DP2={feature_dict["DP2"]};PSO={feature_dict["PSO"]};SVLEN={feature_dict["SVLEN"]};'
+            f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
+            f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
+            f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
+            f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        )
+
+    return [
+        feature_dict["CHROM"],
+        feature_dict["POS"],
+        str(idx),
+        feature_dict["REF"],
+        feature_dict["ALT"],
+        ".",
+        ".",
+        info_field,
+        "GT",
+        "0/1",
+    ]
 
 
 def get_vcf_features_from_insertion(
