@@ -9,13 +9,13 @@ from typing import Union
 
 import pysam  # type: ignore
 from Bio.Seq import Seq  # type: ignore
-from src.scannls._class.type import EventType
-from src.scannls._class.type import LoggerType
 
 from .. import Read
 from ..core.helper import cigar_validity
 from ..core.nls_inference import infer_nls_from_connected_reads
 from .exception import ReadNotFoundError
+from .type import EventType
+from .type import LoggerType
 
 NodeType = Union["Node", "Insertion"]
 

@@ -17,10 +17,10 @@ from typing import Tuple
 import psutil  # type: ignore
 from Bio import SearchIO  # type: ignore
 from loguru import logger
-from src.scannls._class.type import LoggerType
 
 from .basicClass import Insertion
 from .basicClass import NovelInsertion
+from .type import LoggerType
 
 
 class Blat:

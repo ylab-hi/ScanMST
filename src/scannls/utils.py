@@ -14,7 +14,7 @@ from . import Read
 from . import ToolNotFoundError
 from ._class.type import LoggerType
 
-__all__ = ["external_tool_checking", "get_softclip_length"]
+__all__ = ["external_tool_checking", "get_softclip_length", "timeit"]
 
 
 def external_tool_checking(logger: LoggerType) -> None:

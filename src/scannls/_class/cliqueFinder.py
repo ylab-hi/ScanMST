@@ -14,12 +14,12 @@ from typing import Union
 
 import networkx as nx  # type: ignore
 from networkx import find_cliques  # type: ignore
-from src.scannls._class.type import LoggerType
 
 from ..utils import timeit
 from .basicClass import Series
 from .exception import ExonsNotFoundError
 from .spliceGraph import NodeType
+from .type import LoggerType
 
 
 class Ruler:
