@@ -6,6 +6,7 @@
 @Time:        12/30/21 15:00 PM
 """
 import re
+from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -219,16 +220,15 @@ class SRRescuer:
         return rescued_sr
 
     @staticmethod
-    def obtain_region_for_rescue_sr(node: NodeType, tgt_name: str, mode: int) -> str:
+    def obtain_region_for_rescue_sr(
+        strand: str, chrom: str, exons: Any, tgt_name: str, mode: int
+    ) -> str:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
               Due to microhomology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
-        strand = node.strand
-        chrom = node.chrom
-        exons = node.exons
         if exons is None:
             raise SystemExit from ExonsNotFoundError
 
@@ -252,7 +252,11 @@ class SRRescuer:
 
         query_name_current = current_node.query_name
         _region_current = SRRescuer.obtain_region_for_rescue_sr(
-            current_node, "next_breakpoint", mode1
+            current_node.strand,
+            current_node.chrom,
+            current_node.exons,
+            "next_breakpoint",
+            mode1,
         )
         rescued_sr = self.calculate_sr(
             _region_current, mode1, query_name_current, query_names_in_graph
@@ -261,7 +265,11 @@ class SRRescuer:
             next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
             query_name_next = next_node.query_name
             _region_next = SRRescuer.obtain_region_for_rescue_sr(
-                next_node, "prev_breakpoint", mode2
+                next_node.strand,
+                next_node.chrom,
+                next_node.exons,
+                "prev_breakpoint",
+                mode2,
             )
             rescued_sr_next = self.calculate_sr(
                 _region_next, mode2, query_name_next, query_names_in_graph
