@@ -26,7 +26,6 @@ from .basicClass import Node
 from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
-from .plotGraph import plot_graph
 from .type import LoggerType
 
 NodeType = Union[Node, Insertion]
@@ -83,6 +82,8 @@ class SpliceGraph:
         rescuer(self)
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
         if is_plot:
+            from .plotGraph import plot_graph
+
             plot_graph(self, f"clique_{clique_ind}", False)
         # trace path
         for node_list in self.trace():

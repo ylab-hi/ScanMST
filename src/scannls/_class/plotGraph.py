@@ -11,7 +11,6 @@ from typing import Dict
 from typing import Union
 
 import networkx as nx  # type: ignore
-from matplotlib import pyplot as plt  # type: ignore
 
 from .basicClass import Insertion
 from .basicClass import Node
@@ -62,6 +61,8 @@ def plot_graph(graph: Any, figure_name: str, is_matplotlib=True) -> None:
         "width": 2,
     }
     if is_matplotlib:
+        from matplotlib import pyplot as plt  # type: ignore
+
         fig, ax = plt.subplots(figsize=(20, 20))
         nx.draw_networkx(g, **options, ax=ax)
         ax.set_title(f"Node number: {len(list(graph))}")
