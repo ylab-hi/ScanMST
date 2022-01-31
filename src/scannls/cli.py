@@ -281,26 +281,21 @@ def cli(options: Union[argparse.Namespace, Options]):
         vcf_writer = VCFWriter(
             f"{options.output}.vcf", options.ref, in_bam_io_object, logger
         )
-        vcf_writer.open()
 
-        writers = Writers((fasta_writer, gtf_writer))
+        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
 
         cliques = clique_finder.find_clique()
 
         with writers.open() as _:
             for ind, clique in enumerate(cliques, 1):
                 logger.debug(f"processing clique {ind}")
-                series_list = []
                 for series in splice_graph(clique, rescuer, ind, True):
                     logger.debug(f"Output Clique{ind}: {series}")
                     if series.is_all_node_sr_higher_than_threshold(
                         options.support_reads
                     ):
-                        writers.write_series(series)
-                        series_list.append(series)
-                vcf_writer.write_data(series_list)
-                del series_list
-        vcf_writer.close()
+                        writers.write_series(series, ind)
+
         in_bam_io_object.close()
 
         logger.info("ScanNLS build running done")

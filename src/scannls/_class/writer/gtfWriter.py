@@ -80,14 +80,14 @@ class GTFWriter(Writer):
             self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
-    def write_data(self, data_object: Any) -> None:
+    def write_data(self, data_object: Any, object_id: int) -> None:
         """Write data to file.
 
         :param: data_object: Data to write to file.
         """
 
     @write_data.register
-    def _(self, data_object: Series) -> None:
+    def _(self, data_object: Series, object_id: int) -> None:
         """Write Series to GTF file.
 
         :param data_object:
@@ -95,7 +95,7 @@ class GTFWriter(Writer):
         """
         if len(data_object.nodes) == 0:
             self.logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to file."
+                f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
             )
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object, self.id

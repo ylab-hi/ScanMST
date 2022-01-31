@@ -33,7 +33,7 @@ class Writer(ABC):
         self.io: Optional[IO] = None
 
     @abstractmethod
-    def write_data(self, data_object: Any):
+    def write_data(self, data_object: Any, object_id: int):
         """Write data to file.
 
         :param: data_object: Data to write to file.
@@ -65,14 +65,14 @@ class Writers:
         """Init writers."""
         self.writers_list = writers
 
-    def write_series(self, series: Series) -> None:
+    def write_series(self, series: Series, clique_id: int) -> None:
         """Write series.
 
         .. note::
              This method need all writers to be opened.
         """
         for writer in self.writers_list:
-            writer.write_data(series)
+            writer.write_data(series, clique_id)
 
     def open_writers(self, mode: str = "w") -> List[IO]:
         """Open writers."""

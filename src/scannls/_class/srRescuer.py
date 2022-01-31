@@ -10,6 +10,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Optional
 from typing import Set
 from typing import Union
 
@@ -221,7 +222,11 @@ class SRRescuer:
 
     @staticmethod
     def obtain_region_for_rescue_sr(
-        strand: str, chrom: str, exons: Any, tgt_name: str, mode: int
+        strand: Optional[str],
+        chrom: Optional[str],
+        exons: Any,
+        tgt_name: str,
+        mode: int,
     ) -> str:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
@@ -229,7 +234,7 @@ class SRRescuer:
               Due to microhomology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
-        if exons is None:
+        if exons is None or strand is None or chrom is None:
             raise SystemExit from ExonsNotFoundError
 
         if strand == "+":

@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta  # type: ignore
+from pyfaidx import FastaNotFoundError  # type: ignore
 
 from ..basicClass import MicroHomology
 from ..basicClass import NodeType
@@ -74,18 +74,18 @@ class FastaWriter(Writer):
             self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
-    def write_data(self, data_object: Any):
+    def write_data(self, data_object: Any, object_id: int):
         """Write data to file.
 
         :param: data_object: Data to write to file.
         """
 
     @write_data.register
-    def _(self, data_object: Series):
+    def _(self, data_object: Series, object_id: int = -1):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
             self.logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to file."
+                f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
             )
         sequence = get_nodes_sequence_from_series(
             data_object, reference_io=self.reference_io

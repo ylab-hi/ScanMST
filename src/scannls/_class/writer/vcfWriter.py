@@ -15,8 +15,8 @@ from typing import List
 from typing import Tuple
 
 import pysam  # type: ignore
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta  # type: ignore
+from pyfaidx import FastaNotFoundError  # type: ignore
 
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
@@ -133,10 +133,12 @@ class VCFWriter(Writer):
         self.reference = Path(reference)
         if not self.reference.exists():
             raise SystemExit from FastaNotFoundError
-        self.reference_io = Fasta(reference, sequence_always_upper=True)
-        self.id = 1
+        self.reference_io: Fasta = Fasta(reference, sequence_always_upper=True)
+        self.series_id: int = 1
         self.bam_header = bam_io.header
-        self.sample_name = self.file_path.stem
+        self.sample_name: Path = self.file_path.stem
+        self.hops_feature_in_series_list: List[Any] = []
+        self.clique_id: int = 1
 
     @property
     def is_opened(self) -> bool:
@@ -180,33 +182,41 @@ class VCFWriter(Writer):
         self.write_line(self.header)
 
     @singledispatchmethod
-    def write_data(self, data_object: Any) -> None:
+    def write_data(self, data_object: Any, object_id: int) -> None:
         """Write data to file.
 
         :param: data_object: Data to write to file.
         """
 
     @write_data.register
-    def _(self, data_object: List[Series]) -> None:
+    def _(self, data_object: Series, clique_id: int) -> None:
         """Write Series to VCF file.
 
         :param data_object: Series to write to file.
         """
-        hops_feature_in_series_list = []
-        for series in data_object:
-            if len(series.nodes) == 0:
-                self.logger.warning(
-                    f"{self.__class__.__name__}: No nodes to write to VCF file."
-                )
-            # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
-            for _hop_vcf_feature in get_vcf_features_from_series(
-                series, self.id, self.reference_io
-            ):
-                hops_feature_in_series_list.append(_hop_vcf_feature)
-            self.id += 1  # series/transcript id
+        if clique_id != self.clique_id:
+            # next clique
+            # write all features in the clique
+            self.write_data_helper()
+            # clear all features in the clique, start a new clique
+            self.hops_feature_in_series_list.clear()
+            self.clique_id = clique_id
 
+        if len(data_object.nodes) == 0:
+            self.logger.warning(
+                f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {clique_id} Series."
+            )
+        # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
+        for _hop_vcf_feature in get_vcf_features_from_series(
+            data_object, self.series_id, self.reference_io
+        ):
+            self.hops_feature_in_series_list.append(_hop_vcf_feature)
+        self.series_id += 1  # series/transcript id
+
+    def write_data_helper(self) -> None:
+        """Write series data for every clique."""
         out_vcf_dict = {}
-        for hop_feature in hops_feature_in_series_list:
+        for hop_feature in self.hops_feature_in_series_list:
             type_position_key = [*hop_feature][0]
             if type_position_key not in out_vcf_dict:
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
