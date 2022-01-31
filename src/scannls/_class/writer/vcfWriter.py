@@ -166,6 +166,7 @@ class VCFWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
+            self.write_data_helper()
             self.logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
