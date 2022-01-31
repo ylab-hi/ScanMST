@@ -217,7 +217,6 @@ class VCFWriter(Writer):
     def write_data_helper(self) -> None:
         """Write series data for every clique."""
         out_vcf_dict = {}
-        self.logger.warning(self.hops_feature_in_series_list)
         for hop_feature in self.hops_feature_in_series_list:
             type_position_key = [*hop_feature][0]
             if type_position_key not in out_vcf_dict:
