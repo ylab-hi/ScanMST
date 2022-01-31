@@ -21,7 +21,7 @@ from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
-from ..type import LoggerType
+from .._class.type import LoggerType
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
@@ -416,9 +416,9 @@ def _scan_bam_helper(
                     series.disable_blat_logger()
                     if not series.is_all_type_del():
                         nls_src_forms_list.append(series)
-                        logger.debug(f"{series=}")
+                        logger.trace(f"{series=}")
 
-    logger.debug(f"{nls_src_forms_list=}")
+    logger.debug(f"Total Series: {nls_src_forms_list}")
     logger.complete()
     in_bam_io_object.close()
     return nls_src_forms_list

@@ -12,7 +12,7 @@ from typing import NewType
 from typing import Protocol
 from typing import Tuple
 
-from . import Read
+from .basicRead import Read
 
 ReadType = NewType("ReadType", Read)
 
