@@ -17,12 +17,12 @@ from typing import Union
 import parasail  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
-from ..type import LoggerType
 from ..utils import get_softclip_length
 from .basicClass import NodeType
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 from .spliceGraph import SpliceGraph
+from .type import LoggerType
 
 
 class SRRescuer:

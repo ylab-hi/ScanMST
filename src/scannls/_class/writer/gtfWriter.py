@@ -14,8 +14,8 @@ from ..basicClass import NodeType
 from ..basicClass import NovelInsertion
 from ..basicClass import Series
 from ..exception import ExonsNotFoundError
+from ..type import LoggerType
 from .writer import Writer
-from scannls import LoggerType
 
 
 class GTFWriter(Writer):

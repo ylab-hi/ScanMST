@@ -18,8 +18,8 @@ from ..basicClass import NodeType
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
 from ..basicClass import Series
+from ..type import LoggerType
 from .writer import Writer
-from scannls import LoggerType
 
 
 class FastaWriter(Writer):

@@ -20,7 +20,6 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-from ..type import LoggerType
 from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
@@ -28,6 +27,7 @@ from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
 from .plotGraph import plot_graph
+from .type import LoggerType
 
 NodeType = Union[Node, Insertion]
 

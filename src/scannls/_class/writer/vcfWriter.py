@@ -18,6 +18,8 @@ import pysam  # type: ignore
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError  # type: ignore
 
+from .. import __version__
+from ..basicClass import NodeType
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
 from ..basicClass import Series
@@ -25,10 +27,8 @@ from ..exception import BreakpointNotFoundError
 from ..exception import ExonsNotFoundError
 from ..exception import GenesNotFoundError
 from ..exception import ModesNotFoundError
+from ..type import LoggerType
 from .writer import Writer
-from scannls import __version__
-from scannls import LoggerType
-from scannls import NodeType
 
 
 class VCFWriter(Writer):
@@ -136,7 +136,7 @@ class VCFWriter(Writer):
         self.reference_io: Fasta = Fasta(reference, sequence_always_upper=True)
         self.series_id: int = 1
         self.bam_header = bam_io.header
-        self.sample_name: Path = self.file_path.stem
+        self.sample_name: str = self.file_path.stem
         self.hops_feature_in_series_list: List[Any] = []
         self.clique_id: int = 1
 
@@ -311,7 +311,7 @@ def get_vcf_features_from_series(
     series: Series,
     series_id: int,
     reference_io: Fasta,
-) -> List[Dict[str]]:
+) -> Any:
     """Obtain hop vcf features from one series."""
     series_hops_features = []
 

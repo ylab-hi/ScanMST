@@ -15,7 +15,7 @@ from typing import Optional
 from typing import Tuple
 
 from ..basicClass import Series
-from scannls import LoggerType
+from ..type import LoggerType
 
 
 # todo: add asyncio support

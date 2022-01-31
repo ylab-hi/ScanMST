@@ -12,7 +12,7 @@ from loguru import logger
 
 from . import Read
 from . import ToolNotFoundError
-from .type import LoggerType
+from ._class.type import LoggerType
 
 __all__ = ["external_tool_checking", "get_softclip_length"]
 

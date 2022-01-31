@@ -30,7 +30,7 @@ from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
 from ._class.writer import Writers
-from .type import Options, LoggerType
+from ._class.type import Options, LoggerType
 
 __all__ = [
     "Read",

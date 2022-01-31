@@ -21,7 +21,7 @@ from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
-from ..type import LoggerType
+from .._class.type import LoggerType
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
 from .helper import strand_mode_checker
