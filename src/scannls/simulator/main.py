@@ -96,11 +96,15 @@ def multi_hop_generator(
 
     to_wt_and_mt_fasta(input_dict=nls_dict, output_prefix=output_prefix)
 
-    vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", output_prefix, logger)
     gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
 
-    writers = Writers((gtf_writer, vcf_writer))
+    writers = Writers(gtf_writer)
 
     with writers.open() as _:
         for trx_idx in nls_dict:
             writers.write_series(nls_dict[trx_idx])
+
+    vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", output_prefix, logger)
+    vcf_writer.open()
+    vcf_writer.write_data(nls_dict)
+    vcf_writer.close()

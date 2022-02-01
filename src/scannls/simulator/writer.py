@@ -8,6 +8,7 @@ import datetime
 from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any
+from typing import Dict
 from typing import IO
 from typing import List
 from typing import Optional
@@ -157,14 +158,47 @@ class SimVCFWriter:
 
         :param: data_object: Data to write to file.
         """
-        if len(data_object) == 0:
-            self.logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to VCF file."
+        if isinstance(data_object, list):
+            if len(data_object) == 0:
+                self.logger.warning(
+                    f"{self.__class__.__name__}: No nodes to write to VCF file."
+                )
+            self.logger.trace(
+                f"{self.__class__.__name__}: Writing metaexons to VCF file."
             )
-        self.logger.trace(f"{self.__class__.__name__}: Writing metaexons to VCF file.")
-        for hop_vcf_feature in get_vcf_features_from_metaexons(data_object, self.id):
-            self.write_line(self.formatter(hop_vcf_feature))
-        self.id += 1
+            for hop_vcf_feature in get_vcf_features_from_metaexons(
+                data_object, self.id
+            ):
+                self.write_line(self.formatter(hop_vcf_feature))
+            self.id += 1
+        elif isinstance(data_object, dict):
+            self.logger.trace(
+                f"{self.__class__.__name__}: Writing metaexons to VCF file."
+            )
+
+            hops_feature_in_trx_list = []
+            for trx_id in data_object:
+                # _hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
+                for _hop_vcf_feature in _get_vcf_features_from_metaexons(
+                    data_object[trx_id], trx_id
+                ):
+                    hops_feature_in_trx_list.append(_hop_vcf_feature)
+
+            out_vcf_dict = {}
+            for hop_feature in hops_feature_in_trx_list:
+                type_position_key = [*hop_feature][0]
+                if type_position_key not in out_vcf_dict:
+                    out_vcf_dict[type_position_key] = hop_feature[type_position_key]
+                else:
+                    out_vcf_dict[type_position_key][
+                        "TRANSCRIPT_ID"
+                    ] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
+
+            for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
+                hop_vcf_feature = vcf_feature_transformer(
+                    out_vcf_dict[_out_vcf_hop], _idx
+                )
+                self.write_line(self.formatter(hop_vcf_feature))
 
     @property
     def header(self) -> str:
@@ -245,6 +279,81 @@ def get_vcf_features_from_metaexons(
         series_hops_features.append(item)
         # current_node insertion_seq: #TODO
     return series_hops_features
+
+
+def _get_vcf_features_from_metaexons(
+    series: List[MetaExon],
+    series_id: int,
+) -> List[Dict[str]]:
+    """Obtain hop vcf features from one list of metaexons."""
+    series_hops_features = []
+
+    for event_id, current_node in enumerate(series[:-1], 1):
+        next_node = series[event_id]
+
+        _chrom1 = current_node.chrom
+        _chrom2 = next_node.chrom
+
+        _pos1 = current_node.p3_pos
+        _pos2 = next_node.p5_pos
+
+        if _pos1 is None or _pos2 is None:
+            raise SystemExit from BreakpointNotFoundError
+
+        sv_distance = abs(_pos1 - _pos2) if current_node.nls_type != "TRA" else 0
+        item = {
+            f"{current_node.nls_type}_{_chrom1}|{int(_pos1)+1}"
+            f"_{_chrom2}|{int(_pos2) + 1}": {
+                "CHROM": _chrom1,
+                "POS": f"{int(_pos1) + 1}",
+                "REF": ".",
+                "ALT": f"<{current_node.nls_type}>",
+                "SVTYPE": current_node.nls_type,
+                "CHR2": _chrom2,
+                "END": f"{int(_pos2) + 1}",
+                "SVLEN": f"{sv_distance}",
+                "STRAND1": f"{current_node.strand}",
+                "STRAND2": f"{next_node.strand}",
+                "TRANSCRIPT_ID": f"{series_id}",
+                "SVMETHOD": "ScanNLS_Simulator",
+            }
+        }
+        series_hops_features.append(item)
+        # current_node insertion_seq: #TODO
+    return series_hops_features
+
+
+def vcf_feature_transformer(feature_dict: dict, idx: int) -> List[str]:
+    """VCF feature transformer."""
+    if feature_dict["SVTYPE"] == "INS":
+        info_field = (
+            f'SVTYPE={feature_dict["SVTYPE"]};'
+            f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};'
+            f'SVLEN={feature_dict["SVLEN"]};'
+            f'STRAND={feature_dict["STRAND"]};'
+            f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        )
+    else:
+        info_field = (
+            f'SVTYPE={feature_dict["SVTYPE"]};'
+            f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};'
+            f'SVLEN={feature_dict["SVLEN"]};'
+            f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
+            f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        )
+
+    return [
+        feature_dict["CHROM"],
+        feature_dict["POS"],
+        str(idx),
+        feature_dict["REF"],
+        feature_dict["ALT"],
+        ".",
+        ".",
+        info_field,
+        "GT",
+        "0/1",
+    ]
 
 
 class GTFWriter:
