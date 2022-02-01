@@ -284,7 +284,7 @@ def get_vcf_features_from_metaexons(
 def _get_vcf_features_from_metaexons(
     series: List[MetaExon],
     series_id: int,
-) -> List[Dict[str]]:
+) -> List[Dict[str, Any]]:
     """Obtain hop vcf features from one list of metaexons."""
     series_hops_features = []
 
