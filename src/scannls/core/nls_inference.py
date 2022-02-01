@@ -5,7 +5,7 @@ from typing import Any
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 
-from ..type import LoggerType
+from .._class.type import LoggerType
 from .helper import diff_chrom_diff_strand_handler
 from .helper import diff_chrom_same_strand_handler
 from .helper import same_chrom_diff_strand_handler

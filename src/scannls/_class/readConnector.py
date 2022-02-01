@@ -14,12 +14,12 @@ from Bio import SearchIO  # type: ignore
 from loguru import logger
 from pysam import AlignedSegment  # type: ignore
 
-from .. import Read
 from ..core.helper import cigar_validity
-from ..type import LoggerType
 from .basicClass import reverse_complement
+from .basicRead import Read
 from .blat import Blat
 from .exception import ReadNotConnectedError
+from .type import LoggerType
 
 
 class ReadsConnector:

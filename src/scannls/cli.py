@@ -279,20 +279,30 @@ def cli(options: Union[argparse.Namespace, Options]):
         fasta_writer = FastaWriter(f"{options.output}.fasta", options.ref, logger)
         gtf_writer = GTFWriter(f"{options.output}.gtf", logger)
         vcf_writer = VCFWriter(
-            f"{options.output}.vcf", options.ref, in_bam_io_object, logger
+            f"{options.output}.vcf",
+            options.ref,
+            in_bam_io_object.header.as_dict(),
+            logger,
         )
 
         writers = Writers((fasta_writer, gtf_writer, vcf_writer))
 
         cliques = clique_finder.find_clique()
+
         with writers.open() as _:
-            for clique in cliques:
-                for series in splice_graph(clique, rescuer):
-                    logger.debug(f"Series{series}")
+            for ind, clique in enumerate(cliques, 1):
+                logger.debug(f"processing clique {ind}")
+                for series in splice_graph(clique, rescuer, ind, True):
+                    logger.debug(f"Output Clique{ind}: {series}")
+                    if len(series) == 1:
+                        logger.warning(
+                            f"Single Series {ind}: {series}{series[0].query_name}"
+                        )
                     if series.is_all_node_sr_higher_than_threshold(
                         options.support_reads
                     ):
-                        writers.write_series(series)
+                        writers.write_series(series, ind)
+
         in_bam_io_object.close()
 
         logger.info("ScanNLS build running done")

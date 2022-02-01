@@ -20,13 +20,13 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-from ..type import LoggerType
 from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
 from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
+from .type import LoggerType
 
 NodeType = Union[Node, Insertion]
 
@@ -54,7 +54,13 @@ class SpliceGraph:
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
 
-    def __call__(self, series_list: Iterable[Series], rescuer: Any) -> Iterable[Series]:
+    def __call__(
+        self,
+        series_list: Iterable[Series],
+        rescuer: Any,
+        clique_ind: int,
+        is_plot: bool = False,
+    ) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
         :param series_list: series list
@@ -74,9 +80,12 @@ class SpliceGraph:
         self.construct()
         # sr rescuer
         rescuer(self)
+        self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
         self.prune()
-        # prun the graph
+        if is_plot:
+            from .plotGraph import plot_graph
 
+            plot_graph(self, f"clique_{clique_ind}", False)
         # trace path
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
@@ -323,7 +332,7 @@ class SpliceGraph:
             updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
         )
         # update sr
-        updated_node.update_sr()
+        updated_node.update_sr(current_node.sr)
         # update novel insertion ao
         if updated_node.insertion_info and isinstance(
             updated_node.insertion_info[1], NovelInsertion
@@ -427,7 +436,7 @@ class SpliceGraph:
         """Main function to construct graph."""
         # iterate all series
         merged_nodes_pool: Set[NodeType] = set()
-        self.logger.trace(f"{self.series_list=}")
+        self.logger.debug(f"Input Clique {self.series_list=}")
         for series in self.series_list:
             # iterate all nodes in series
             for index, current_node in enumerate(series):
@@ -439,7 +448,6 @@ class SpliceGraph:
                 # initialize and get unique key of current node and set node.unique_key
                 # if not set when you reach node.unique_key, will return None
                 _ = current_node.get_unique_key()
-
                 # get similar key(chrom and intron) of current node
                 similar_key = current_node.similar_key
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
@@ -449,6 +457,7 @@ class SpliceGraph:
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
                     current_node, similar_key, merged_nodes_pool
                 )
+                current_node.clear_next_and_previous_node_in_series()
 
     def _trace_forward(
         self,
@@ -596,6 +605,9 @@ class SpliceGraph:
         """Check if two nodes can battle."""
         self.logger.trace(f"{node_a=}\n{node_b=}")
         if node_a.prev_sv_type != node_b.prev_sv_type:
+            return False
+
+        if node_a.introns != node_b.introns:
             return False
 
         if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:
