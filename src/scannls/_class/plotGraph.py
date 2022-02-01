@@ -20,8 +20,9 @@ NodeType = Union[Node, Insertion]
 
 def get_label_from_node(node: NodeType) -> str:
     """Get label from node."""
-    query_name = node.query_name.split(",")
-    return f"{node.chrom}_{node.ref_start}_{node.ref_end}:{len(query_name)}{node.is_start_node()}"
+    return (
+        f"{node.chrom}_{node.ref_start}_{node.ref_end}:{node.sr}{node.is_start_node()}"
+    )
 
 
 def plot_graph_helper(
@@ -50,8 +51,11 @@ def plot_graph(graph: Any, figure_name: str, is_matplotlib=True) -> None:
     g = nx.DiGraph()
     labels = {}
     for start_node in graph.get_start_nodes():
-        labels.update({start_node: get_label_from_node(start_node)})
-        plot_graph_helper(start_node, [], g, labels)  # type: ignore
+        if not start_node.successors:
+            g.add_node(get_label_from_node(start_node))
+        else:
+            labels.update({start_node: get_label_from_node(start_node)})
+            plot_graph_helper(start_node, [], g, labels)  # type: ignore
     options = {
         "font_size": 10,
         "node_size": 100,

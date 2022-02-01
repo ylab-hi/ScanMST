@@ -14,7 +14,6 @@ from typing import IO
 from typing import List
 from typing import Tuple
 
-import pysam  # type: ignore
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError  # type: ignore
 
@@ -125,7 +124,7 @@ class VCFWriter(Writer):
         self,
         file_path: str,
         reference: str,
-        bam_io: pysam.AlignmentFile,
+        bam_header: Dict[str, Any],
         logger: LoggerType,
     ) -> None:
         """Initialize VCFWriter object."""
@@ -135,7 +134,7 @@ class VCFWriter(Writer):
             raise SystemExit from FastaNotFoundError
         self.reference_io: Fasta = Fasta(reference, sequence_always_upper=True)
         self.series_id: int = 1
-        self.bam_header = bam_io.header
+        self.bam_header = bam_header
         self.sample_name: str = self.file_path.stem
         self.hops_feature_in_series_list: List[Any] = []
         self.clique_id: int = 1

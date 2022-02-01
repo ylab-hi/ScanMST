@@ -81,6 +81,7 @@ class SpliceGraph:
         # sr rescuer
         rescuer(self)
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
+        self.prune()
         if is_plot:
             from .plotGraph import plot_graph
 
@@ -331,7 +332,7 @@ class SpliceGraph:
             updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
         )
         # update sr
-        updated_node.update_sr()
+        updated_node.update_sr(current_node.sr)
         # update novel insertion ao
         if updated_node.insertion_info and isinstance(
             updated_node.insertion_info[1], NovelInsertion
@@ -447,7 +448,6 @@ class SpliceGraph:
                 # initialize and get unique key of current node and set node.unique_key
                 # if not set when you reach node.unique_key, will return None
                 _ = current_node.get_unique_key()
-
                 # get similar key(chrom and intron) of current node
                 similar_key = current_node.similar_key
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
@@ -457,6 +457,7 @@ class SpliceGraph:
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
                     current_node, similar_key, merged_nodes_pool
                 )
+                current_node.clear_next_and_previous_node_in_series()
 
     def _trace_forward(
         self,
@@ -604,6 +605,9 @@ class SpliceGraph:
         """Check if two nodes can battle."""
         self.logger.trace(f"{node_a=}\n{node_b=}")
         if node_a.prev_sv_type != node_b.prev_sv_type:
+            return False
+
+        if node_a.introns != node_b.introns:
             return False
 
         if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:

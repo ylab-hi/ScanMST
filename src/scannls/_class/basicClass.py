@@ -107,6 +107,10 @@ class BasicNode:
         self.trace_id: int = -1
         self.original_sr: int = 1
 
+    def __eq__(self, other) -> bool:
+        """Compare two nodes in strict mode same memory address."""
+        return id(self) == id(other)
+
     def set_original_sr(self, sr: int) -> None:
         """Set original_sr."""
         self.original_sr = sr
@@ -189,6 +193,11 @@ class BasicNode:
             self.next_node_in_series = series[index + 1]
             self.previous_node_in_series = series[index - 1]
 
+    def clear_next_and_previous_node_in_series(self) -> None:
+        """Clear next and previous node in series."""
+        self.next_node_in_series = None
+        self.previous_node_in_series = None
+
 
 class Node(BasicNode):
     """Build a breakpoint node class for storing information of every breakpoint.
@@ -239,6 +248,7 @@ class Node(BasicNode):
         "ref_start",
         "ref_end",
         "exons",
+        "_introns",
         "sv_type",
         "prev_sv_type",
         "modes",
@@ -280,6 +290,7 @@ class Node(BasicNode):
     ) -> None:
         """Initialize a Node object."""
         super().__init__()  # initialize BasicNode object
+        self._introns = None
         self.chrom = chrom
         self.query_name = ""
         self.prev_breakpoint = prev_bp
@@ -299,20 +310,6 @@ class Node(BasicNode):
         self.sr = sr
         self.insertion_info = None
         self.unique_key = None
-
-    def __eq__(self, other) -> bool:
-        """Compare two nodes."""
-        if isinstance(other, Node) and (
-            self.chrom == other.chrom
-            and self.ref_start == other.ref_start
-            and self.ref_end == other.ref_end
-            and self.sv_type == other.sv_type
-            and self.prev_breakpoint == other.prev_breakpoint
-            and self.next_breakpoint == other.next_breakpoint
-            and self.strand == other.strand
-        ):
-            return True
-        return False
 
     def __hash__(self) -> int:
         """Hash a node."""
@@ -349,23 +346,26 @@ class Node(BasicNode):
     @property
     def introns(self):
         """Get introns of a node."""
-        if len(self.exons) <= 1:
-            return []
+        if self._introns is not None:
+            return self._introns
+        else:
+            if len(self.exons) <= 1:
+                return []
 
-        _positions = []
-        for i, j in self.exons:
-            _positions.extend([i, j])
-        _positions.pop(0)
-        _positions.pop(-1)
-        _introns = list(zip(_positions[::2], _positions[1::2]))
-        return _introns
+            _positions = []
+            for i, j in self.exons:
+                _positions.extend([i, j])
+            _positions.pop(0)
+            _positions.pop(-1)
+            _introns = list(zip(_positions[::2], _positions[1::2]))
+            self._introns = _introns
+            return _introns
 
     @property
     def similar_key(self) -> str:
         """Get similar key of a node."""
         introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
         key = f"{self.chrom}-{key}"
 
         return key
@@ -374,7 +374,7 @@ class Node(BasicNode):
         """Get unique key of a node."""
         introns = self.introns
 
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
 
         key = f"{self.chrom}-{key}-{self.sv_type}-{self.prev_breakpoint}-{self.next_breakpoint}"
 
@@ -594,8 +594,7 @@ class Insertion(Read, BasicNode):
             similar key is consisted of chrom and introns info.
         """
         introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
         key = f"{self.chrom}-{key}"
 
         return key
@@ -607,8 +606,7 @@ class Insertion(Read, BasicNode):
             unique key is consisted of chrom, introns, and breakpoints info
         """
         introns = self.introns
-
-        key = "-".join([f"{i - j}" for i, j in introns]) if introns else "None"
+        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
 
         key = f"{self.chrom}-{key}-{self.prev_breakpoint}-{self.next_breakpoint}"
 
@@ -741,6 +739,10 @@ class Series:
     def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
         """Check if all nodes in the series have sr > threshold."""
         return all(node.sr >= threshold for node in self.nodes)
+
+    def get_sr_sum_for_all_node(self) -> int:
+        """Get sum of sr for all nodes in the series."""
+        return sum(node.sr for node in self.nodes)
 
     @classmethod
     def create_series_from_node_list(
