@@ -18,7 +18,7 @@ import parasail  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
 from ..utils import get_softclip_length
-from .basicClass import NodeType
+from .basicClass import Node
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 from .spliceGraph import SpliceGraph
@@ -55,7 +55,7 @@ class SRRescuer:
             f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
         )
 
-    def __call__(self, nodes_in_graph: Union[Iterable[NodeType], SpliceGraph]) -> None:
+    def __call__(self, nodes_in_graph: Union[Iterable[Node], SpliceGraph]) -> None:
         """Rescue SR from softclipped non-chimeric reads.
 
         changed in place
@@ -244,7 +244,7 @@ class SRRescuer:
         region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
-    def update_sr(self, current_node: NodeType, query_names_in_graph: Set) -> None:
+    def update_sr(self, current_node: Node, query_names_in_graph: Set) -> None:
         """Update SR for input node."""
         if current_node.is_end_node():
             return

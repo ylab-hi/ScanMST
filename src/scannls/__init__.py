@@ -16,7 +16,7 @@ from ._class.exception import BreakpointNotFoundError
 from ._class.exception import ModesNotEqualError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement
-from ._class.basicClass import Series, NodeType, Node
+from ._class.basicClass import Series, Node
 from ._class.blat import Blat
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
@@ -38,7 +38,6 @@ __all__ = [
     "reverse_complement",
     "Series",
     "Node",
-    "NodeType",
     "Blat",
     "MyLogger",
     "ParallelWorker",

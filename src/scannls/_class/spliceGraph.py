@@ -18,17 +18,13 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
-from typing import Union
 
-from .basicClass import Insertion
 from .basicClass import MicroHomology
 from .basicClass import Node
 from .basicClass import NovelInsertion
 from .basicClass import Series
 from .exception import ExonsNotFoundError
 from .type import LoggerType
-
-NodeType = Union[Node, Insertion]
 
 
 class SpliceType(Enum):
@@ -75,7 +71,7 @@ class SpliceGraph:
             series_list = list(series_list)
         self.series_list = copy.deepcopy(series_list)
         del series_list  # remove reference to series_list
-        self.nodes: Dict[str, List[NodeType]] = self.dict_factory()
+        self.nodes: Dict[str, List[Node]] = self.dict_factory()
         # construct splice graph
         self.construct()
         # sr rescuer
@@ -90,7 +86,7 @@ class SpliceGraph:
         for node_list in self.trace():
             yield Series.create_series_from_node_list(node_list, self.logger)
 
-    def __contains__(self, node: NodeType) -> bool:
+    def __contains__(self, node: Node) -> bool:
         """Check if node is in graph.
 
         :param node: node to be checked
@@ -106,7 +102,7 @@ class SpliceGraph:
             for other_node in self.get_nodes_with_similar_key(node.similar_key)
         )
 
-    def __iter__(self) -> Iterator[NodeType]:
+    def __iter__(self) -> Iterator[Node]:
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             yield from nodes
@@ -116,7 +112,7 @@ class SpliceGraph:
         for node_list in self.trace():
             print(Series.create_series_from_node_list(node_list, self.logger))
 
-    def get_start_nodes(self) -> Iterable[NodeType]:
+    def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
         return (
             node
@@ -125,7 +121,7 @@ class SpliceGraph:
             if node.is_start_node()
         )
 
-    def get_end_nodes(self) -> Iterable[NodeType]:
+    def get_end_nodes(self) -> Iterable[Node]:
         """Get end nodes based if node has successors."""
         return (
             node
@@ -134,7 +130,7 @@ class SpliceGraph:
             if node.is_end_node()
         )
 
-    def remove_node(self, node: NodeType) -> None:
+    def remove_node(self, node: Node) -> None:
         """Remove node from graph.
 
         :param node: node to be removed
@@ -148,11 +144,11 @@ class SpliceGraph:
         for node in self:
             node.reset_trace_id()
 
-    def get_nodes_with_similar_key(self, similar_key: str) -> List[NodeType]:
+    def get_nodes_with_similar_key(self, similar_key: str) -> List[Node]:
         """Get nodes in graph with similar key."""
         return self.nodes.get(similar_key, [])
 
-    def add_node_with_similar_key(self, node: NodeType) -> None:
+    def add_node_with_similar_key(self, node: Node) -> None:
         """Add node to the splice graph.
 
         :param node: node to be added
@@ -163,9 +159,7 @@ class SpliceGraph:
             self.nodes[node.similar_key] = [node]
 
     @staticmethod
-    def _check_insertion_conditions_for_compare(
-        node1: NodeType, node2: NodeType
-    ) -> bool:
+    def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
         """Check if node1 and node2 can be merged based on insertion info."""
         flag = True
         insertion_info1 = node1.insertion_info
@@ -197,8 +191,8 @@ class SpliceGraph:
 
     @staticmethod
     def _compare_is_merged_helper_check_condition_for_head_tail_node_mode(
-        node1: NodeType,
-        node2: NodeType,
+        node1: Node,
+        node2: Node,
         threshold: float = 0.8,
     ) -> bool:
         """Check if node1 and node2 can be merged based on overlap info.
@@ -243,7 +237,7 @@ class SpliceGraph:
         return False
 
     @staticmethod
-    def _compare_is_merged_helper(node1: NodeType, node2: NodeType) -> bool:
+    def _compare_is_merged_helper(node1: Node, node2: Node) -> bool:
         """Check if node1 and node2 can be merged."""
         condition = (
             node1.sv_type == node2.sv_type
@@ -298,7 +292,7 @@ class SpliceGraph:
         return False
 
     @staticmethod
-    def _compare_is_merged(node1: NodeType, node2: NodeType) -> bool:
+    def _compare_is_merged(node1: Node, node2: Node) -> bool:
         """Node1 is similar as node2 is precommit of the function.
 
          compare if node1 can merge node2
@@ -316,7 +310,7 @@ class SpliceGraph:
 
     @staticmethod
     def update_exon_coord_sr_svtype_breakpoints_name_mode(
-        updated_node: NodeType, current_node: NodeType
+        updated_node: Node, current_node: Node
     ) -> None:
         """Update exon coordinates of the updated node based on current node.
 
@@ -370,9 +364,9 @@ class SpliceGraph:
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
-        current_node: NodeType,
+        current_node: Node,
         similar_key: str,
-        merged_nodes_pool: Set[NodeType],
+        merged_nodes_pool: Set[Node],
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
         # get similar nodes in the graph
@@ -402,9 +396,9 @@ class SpliceGraph:
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
         self,
-        current_node: NodeType,
+        current_node: Node,
         similar_key: str,
-        merged_nodes_pool: Set[NodeType],
+        merged_nodes_pool: Set[Node],
     ) -> None:
         """Check if current node is added in graph and update predecessor and successor."""
         if not current_node.is_merged:  # false
@@ -435,7 +429,7 @@ class SpliceGraph:
     def construct(self) -> None:
         """Main function to construct graph."""
         # iterate all series
-        merged_nodes_pool: Set[NodeType] = set()
+        merged_nodes_pool: Set[Node] = set()
         self.logger.debug(f"Input Clique {self.series_list=}")
         for series in self.series_list:
             # iterate all nodes in series
@@ -461,10 +455,10 @@ class SpliceGraph:
 
     def _trace_forward(
         self,
-        start_node: NodeType,
+        start_node: Node,
         trace_id: int,
-        path: List[NodeType],
-        group_paths: List[List[NodeType]],
+        path: List[Node],
+        group_paths: List[List[Node]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -492,10 +486,10 @@ class SpliceGraph:
 
     def _trace_backward(
         self,
-        end_node: NodeType,
+        end_node: Node,
         trace_id: int,
-        path: List[NodeType],
-        group_paths: List[List[NodeType]],
+        path: List[Node],
+        group_paths: List[List[Node]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -557,18 +551,18 @@ class SpliceGraph:
 
         return result_series_list
 
-    def create_same_level_node_list(self) -> List[List[NodeType]]:
+    def create_same_level_node_list(self) -> List[List[Node]]:
         """Create node trace id dict.
 
         :return: trace_id: List[node] dict
         """
-        node_trace_id_dict: Dict[int, List[NodeType]] = defaultdict(list)
+        node_trace_id_dict: Dict[int, List[Node]] = defaultdict(list)
         for node in self:
             node_trace_id_dict[node.trace_id].append(node)
 
         return [i for i in node_trace_id_dict.values() if len(i) > 1]
 
-    def _rule_out(self, winner: NodeType, loser: NodeType) -> None:
+    def _rule_out(self, winner: Node, loser: Node) -> None:
         """Rule out loser and add sr to winner.
 
         Loser is out, and its sr, successors, predecessors are added to winner.
@@ -601,7 +595,7 @@ class SpliceGraph:
             < threshold
         )
 
-    def check_can_battle(self, node_a: NodeType, node_b: NodeType) -> bool:
+    def check_can_battle(self, node_a: Node, node_b: Node) -> bool:
         """Check if two nodes can battle."""
         self.logger.trace(f"{node_a=}\n{node_b=}")
         if node_a.prev_sv_type != node_b.prev_sv_type:
@@ -626,7 +620,7 @@ class SpliceGraph:
             node_a.next_breakpoint, node_a.next_breakpoint, self.prune_threshold
         )
 
-    def _begin_battle(self, node_a: NodeType, node_b: NodeType) -> Tuple[bool, ...]:
+    def _begin_battle(self, node_a: Node, node_b: Node) -> Tuple[bool, ...]:
         """Begin battle between two nodes.
 
         :return: Two bool values:
@@ -646,7 +640,7 @@ class SpliceGraph:
         self._rule_out(node_b, node_a)
         return True, False
 
-    def battle(self, same_level_node_list: List[List[NodeType]]) -> None:
+    def battle(self, same_level_node_list: List[List[Node]]) -> None:
         """Nodes with same trace id battle each other.
 
         Node with larger number of sr wins, otherwise lose.
@@ -684,7 +678,7 @@ class SpliceGraph:
 
         Algorithm:
         1. trace graph and mark every node with trace id
-        2. save every node with trace id as a Dict[int, List[NodeType]]
+        2. save every node with trace id as a Dict[int, List[Node]]
         3. check nodes of Dict in terms of trace id if len(values)>1,
         4. then compare them and rule out loser in terms of sr number
         """

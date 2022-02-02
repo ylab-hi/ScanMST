@@ -12,8 +12,6 @@ from typing import Any
 from typing import List
 from typing import Tuple
 
-import pyfaidx  # type: ignore
-
 
 class Read:
     """Build a read class for storing information of every junction read.
@@ -77,7 +75,6 @@ class Read:
         "nm",
         "query_sequence",
         "query_name",
-        "linked_paths",
         "lt_soft_len",
         "rt_soft_len",
         "read_match_size",
@@ -121,7 +118,6 @@ class Read:
         self.mapq = mapq
         self.nm = nm
         self.query_sequence = query_sequence
-        self.linked_paths = []  # type: Any
         self.lt_soft_len = lt_soft_len
         self.rt_soft_len = rt_soft_len
         self.read_match_size = read_match_size
@@ -191,26 +187,6 @@ class Read:
         return (
             f"Read({self.chrom}, {self.ref_start}, {self.ref_end}, "
             f"{self.strand}, {self.mapq}, {self.nm})"
-        )
-
-    def __str__(self) -> str:
-        """Get the string representation of the read.
-
-        :return: string representation of the read
-        """
-        return ",".join(
-            map(
-                str,
-                [
-                    self.chrom,
-                    self.ref_start,
-                    self.ref_end,
-                    self.strand,
-                    self.mapq,
-                    self.nm,
-                    f"{self.lt_soft_len}:{self.read_match_size}:{self.rt_soft_len}",
-                ],
-            ),
         )
 
     @staticmethod
@@ -315,15 +291,6 @@ class Read:
             cigartuples,
         )
 
-    @property
-    def reference_span(self) -> int:
-        """M+N+D."""
-        return self.reference_match_size
-
-    def add_path(self, path) -> None:
-        """Path is an instance of Path class."""
-        self.linked_paths.append(path)
-
     def get_exons_and_introns(self) -> Any:
         """Get the coordinates for reads matched part (without softclipping).
 
@@ -357,43 +324,3 @@ class Read:
             _positions.pop(-1)
             introns = [[x, y] for x, y in zip(_positions[::2], _positions[1::2])]
         return exons, introns
-
-    def splice_site_checker(
-        self, genome_fasta: pyfaidx.Fasta, fraction_cutoff=0
-    ) -> bool:
-        """Check whether the fraction of canonical splice site usage in read reference.
-
-        Which matched part is bigger than 'fraction_cutoff' or not
-
-        :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
-        :param fraction_cutoff: fraction of canonical splice sites used in the putative
-            introns inferred from the CIGAR
-        :type genome_fasta: pyfaidx.Fasta
-        :type fraction_cutoff: float
-        :return: using canonical splice sites OR not
-        :rtype: bool
-        """
-        exons, introns = self.get_exons_and_introns()
-
-        if len(introns) == 0:
-            return True
-
-        intron_count = 0
-        can_count = 0
-        can_sites = {"GT-AG", "GC-AG", "AT-AC"}
-        for start, end in introns:
-            if end - start >= 10:
-                intron_count += 1
-                if self.strand == "-":
-                    left_site = genome_fasta[self.chrom][
-                        end - 2 : end
-                    ].reverse.complement.seq
-                    right_site = genome_fasta[self.chrom][
-                        start : start + 2
-                    ].reverse.complement.seq
-                else:
-                    left_site = genome_fasta[self.chrom][start : start + 2].seq
-                    right_site = genome_fasta[self.chrom][end - 2 : end].seq
-                if f"{left_site}-{right_site}" in can_sites:
-                    can_count += 1
-        return bool(can_count / intron_count >= fraction_cutoff)

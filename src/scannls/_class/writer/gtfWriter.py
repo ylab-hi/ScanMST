@@ -10,7 +10,7 @@ from typing import Any
 from typing import IO
 from typing import List
 
-from ..basicClass import NodeType
+from ..basicClass import Node
 from ..basicClass import NovelInsertion
 from ..basicClass import Series
 from ..exception import ExonsNotFoundError
@@ -145,7 +145,7 @@ def get_gtf_features_from_insertion(
 
 
 def get_gtf_features_from_node(
-    node: NodeType, series_id: int, node_id: int
+    node: Node, series_id: int, node_id: int
 ) -> List[List[str]]:
     """Get exon gtf features of a node.
 

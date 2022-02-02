@@ -8,17 +8,13 @@
 """
 from typing import Any
 from typing import Dict
-from typing import Union
 
 import networkx as nx  # type: ignore
 
-from .basicClass import Insertion
 from .basicClass import Node
 
-NodeType = Union[Node, Insertion]
 
-
-def get_label_from_node(node: NodeType) -> str:
+def get_label_from_node(node: Node) -> str:
     """Get label from node."""
     return (
         f"{node.chrom}_{node.ref_start}_{node.ref_end}:{node.sr}{node.is_start_node()}"
@@ -26,7 +22,7 @@ def get_label_from_node(node: NodeType) -> str:
 
 
 def plot_graph_helper(
-    start_node: NodeType, path, nx_graph: nx.Graph, labels: Dict[NodeType, str]
+    start_node: Node, path, nx_graph: nx.Graph, labels: Dict[Node, str]
 ) -> None:
     """Plot graph helper."""
     if not start_node or start_node in path:
