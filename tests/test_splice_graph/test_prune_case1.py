@@ -9,7 +9,7 @@ import pytest
 from loguru import logger
 
 from . import add_edge_according_order
-from . import assign_value_for_node
+from .. import assign_value_for_node
 from scannls import Node
 from scannls import SpliceGraph
 from scannls import SpliceType
