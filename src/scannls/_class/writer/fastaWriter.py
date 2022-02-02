@@ -14,7 +14,7 @@ from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError  # type: ignore
 
 from ..basicClass import MicroHomology
-from ..basicClass import NodeType
+from ..basicClass import Node
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
 from ..basicClass import Series
@@ -107,7 +107,7 @@ def get_nodes_sequence_from_series(series: Series, reference_io: Fasta) -> str:
     return sequence
 
 
-def get_exon_sequence_from_node(node: NodeType, reference_io: Fasta) -> str:
+def get_exon_sequence_from_node(node: Node, reference_io: Fasta) -> str:
     """Get exon sequence of a node.
 
     remove microhomology from the sequence, and add novel insertion sequence.

@@ -11,10 +11,10 @@ from typing import Any
 from typing import Dict
 from typing import Sequence
 
-from scannls import NodeType
+from scannls import Node
 
 
-def assign_value_for_node(node: NodeType, **kwargs: Dict[str, Any]):
+def assign_value_for_node(node: Node, **kwargs: Dict[str, Any]):
     """Assign value to node."""
     for key, value in kwargs.items():
         if key in node.__slots__:
@@ -22,7 +22,7 @@ def assign_value_for_node(node: NodeType, **kwargs: Dict[str, Any]):
 
 
 def add_edge_according_order(
-    nodes: Sequence[NodeType], parent_order: int, child_order: int
+    nodes: Sequence[Node], parent_order: int, child_order: int
 ):
     """Add edge according order.
 

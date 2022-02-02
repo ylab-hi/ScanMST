@@ -18,7 +18,7 @@ from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError  # type: ignore
 
 from .. import __version__
-from ..basicClass import NodeType
+from ..basicClass import Node
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
 from ..basicClass import Series
@@ -464,7 +464,7 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
 
 
 def get_vcf_features_from_insertion(
-    insertion: NovelInsertion, node: NodeType, reference_io: Fasta
+    insertion: NovelInsertion, node: Node, reference_io: Fasta
 ) -> Tuple[str, str]:
     """Get novel insertion sequence of a node.
 

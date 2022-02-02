@@ -16,9 +16,9 @@ import networkx as nx  # type: ignore
 from networkx import find_cliques  # type: ignore
 
 from ..utils import timeit
+from .basicClass import Node
 from .basicClass import Series
 from .exception import ExonsNotFoundError
-from .spliceGraph import NodeType
 from .type import LoggerType
 
 
@@ -76,9 +76,7 @@ class Ruler:
         return abs(int(pos1) - int(pos2)) if chrm1 == chrm2 else float("inf")
 
     @staticmethod
-    def first_node_last_node_distance(
-        first_node: NodeType, last_node: NodeType
-    ) -> float:
+    def first_node_last_node_distance(first_node: Node, last_node: Node) -> float:
         """Calculate distance between first node of Series A and last node of Series B.
 
         :param first_node: the first node of Series A
@@ -178,10 +176,10 @@ class Ruler:
 
     @staticmethod
     def __decide_flag(
-        left_query_node: NodeType,
-        right_query_node: NodeType,
-        left_subject_node: Optional[NodeType],
-        right_subject_node: Optional[NodeType],
+        left_query_node: Node,
+        right_query_node: Node,
+        left_subject_node: Optional[Node],
+        right_subject_node: Optional[Node],
     ) -> bool:
         """Decide the flag.
 
