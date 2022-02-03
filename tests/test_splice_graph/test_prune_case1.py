@@ -9,7 +9,7 @@ import pytest
 from loguru import logger
 
 from . import add_edge_according_order
-from .. import assign_value_for_node
+from .. import assign_value_for_instance
 from scannls import Node
 from scannls import SpliceGraph
 from scannls import SpliceType
@@ -271,7 +271,7 @@ def graph_for_prun():
     num_nodes = 13
     nodes = [Node() for _ in range(num_nodes)]
     for ind, node in enumerate(nodes):
-        assign_value_for_node(node, **param_dict[ind])
+        assign_value_for_instance(node, **param_dict[ind])
         node.get_unique_key()
 
     # add successors and predecessors  12 edges

@@ -4,8 +4,40 @@ from typing import List
 
 import pytest
 
-from . import assign_value_for_node
+from . import assign_value_for_instance
+from scannls import Event
+from scannls import Insertion
+from scannls import MicroHomology
 from scannls import Node
+from scannls import NovelInsertion
+from scannls import Read
+
+
+@pytest.fixture()
+def novel_insertion():
+    """Novel insertion."""
+    return NovelInsertion(hit_num=0, query_sequence="ATCA")
+
+
+@pytest.fixture()
+def microhomology():
+    """Microhomology."""
+    return MicroHomology(query_sequence="ATCA")
+
+
+@pytest.fixture()
+def insertion():
+    """Insertion."""
+    return Insertion(
+        hit_num=1,
+        chrom="1",
+        ref_start=1,
+        strand="+",
+        cigarstring="1S2M1S",
+        mapq=60,
+        nm=0,
+        query_sequence="AGCT",
+    )
 
 
 @pytest.fixture(scope="function")
@@ -53,6 +85,140 @@ def nodes() -> List[Node]:
     ]
     node_list = [Node() for _ in range(len(param_dict))]
     for ind, node in enumerate(node_list):
-        assign_value_for_node(node, **param_dict[ind])  # type: ignore
+        assign_value_for_instance(node, **param_dict[ind])  # type: ignore
         node.get_unique_key()
     return node_list
+
+
+@pytest.fixture()
+def reads():
+    """Reads fixture."""
+    read_init_params = [
+        "query_name",
+        "chrom",
+        "ref_start",
+        "strand",
+        "cigar_str",
+        "mapq",
+        "nm",
+        "query_seq",
+    ]
+
+    param_dict = [
+        {
+            "chrom": "chr17",
+            "ref_start": 7701655,
+            "strand": "+",
+            "cigar_str": "711S734M",
+            "mapq": 60,
+            "nm": 0,
+            "query_seq": "CGCCCGGTCCCCGGCTCCCCCAGTCCCCCACTTAGGCGGGCTCACAGATCCCGGGGTG"
+            "CTGGCGCGTGGGCCGGGGGCGCGTAGGGCGCCTGCAGACGGCCCCTGGAAGGGCTCTG"
+            "GTGGGGCTGAGCGCTCTGCCGCGGGGGCGCGGGCACAGCAGGAAGCAGGTCCGCGTGG"
+            "GCGCTGGGGGCATCAGCTACCGGGGTGGTCCGGGCTGAAGAGCCAGGCAGCCAAGGCA"
+            "GCCACCCCGGGGGGTGGGCGACTTTGGGGGAGTTGGTGCCCCGCCCCCCAGGCCTTGG"
+            "CGGGGTCATGGGGCCCCCCCATTCTGGGCCGGGGGGCGTGCGAGTCGGGGCCCTGCTG"
+            "CTGCTGGGGGTTTTGGGGCTGGTGTCTGGGCTCAGCCTGGAGCCTGTCTACTGGAACT"
+            "CGGCGAATAAGAGGTTCCAGGCAGAGGGTGGTTATGTGCTGTACCCTCAGATCGGGGA"
+            "CCGGCTAGACCTGCTCTGCCCCCGGGCCCGGCCTCCTGGCCCTCACTCCTCTCCTAAT"
+            "TATGAGTTCTACAAGCTGTACCTGGTAGGGGGTGCTCAGGGCCGGCGCTGTGAGGCAC"
+            "CCCCTGCCCCAAACCTCCTTCTCACTTGTGATCGCCCAGACCTGGATCTCCGCTTCAC"
+            "CATCAAGTTCCAGGAGTATAGCCCTAATCTCTGGGGCCACGAGTTCCGCTCGCACCAC"
+            "GATTACTACATCATTGGATGAGCTGACGGCAGCCCATTCGCTCTGCTTCTCCCCGGAT"
+            "GGCTCCCAGCTCTTCTGTGGCTTCAACCGGACTGTGCGTGTTTTTTCCACGGCCCGGC"
+            "CTGGCCGAGACTGCGAGGTCCGAGCCACATTTGGTAAGCATCTGTGCCTCCAAGGGAG"
+            "GAGGAGAGGGAAGGGCACTGCCACCTGCACAGGGGCCTTTTGTGAGCCGGGGGCCACC"
+            "TGTGGGGGTTCACGCCGTCCTCTGTACGGCCCCGGGAGCAGGTGCAGCCCAGTCGGCA"
+            "GAGGAGCAAACAGGCTCAGAGCAGGTAGGAAACCTTCCCAAGGCCAACCAGCTGGTCAA"
+            "AGGACTGCTTCCTTCCTGAACTCATACCCTGTCAGCTGTGGAGCTTTTGGTCTCTGAAA"
+            "TCTTTCTAGAAAATTGTTGATAAAGCTGATTCCGTTTTCCTGTAGGCCTTCAACTTGCA"
+            "TCTCTCCAAGGAAGAACTGGGATTTGAGAGGGATGAAGTGGGGCTTGGGCATTTAGGTC"
+            "CTTTGGGAGGATAGATGTGGGGAGCATCAGAGGTCTTTGTCCTGCTTGTGACAGACAGC"
+            "ATGGGGGGGATGTTGAGTCCAAGCATGTTGGTGCTGGGACGGGAGACAGACCTCTGCTT"
+            "AGCCTGGTTAGTGCCAGGAGCCATTGCCCCCTCCCCCACTTTGTTCCTTCCCTCTCTAG"
+            "CAAAAAAGCAGGGCCAGAGCGGCATCATCTCCTGCATAGCCTTCAG",
+            "query_name": "B",
+            "lt_soft_len": 711,
+            "rt_soft_len": 0,
+            "read_match_size": 734,
+            "reference_match_size": 734,
+            "indel_size": 0,
+            "cigartuples_without_soft": [[0, 734]],
+            "cigartuples": [(4, 711), (0, 734)],
+            "query_length": 1445,
+            "mode": 2,
+            "sms": (711, 734, 0),
+            "ref_end": 7702389,
+        },
+        {
+            "chrom": "chr17",
+            "ref_start": 7705301,
+            "strand": "+",
+            "cigar_str": "419M2237N294M732S",
+            "mapq": 60,
+            "nm": 0,
+            "query_seq": "CGCCCGGTCCCCGGCTCCCCCAGTCCCCCACTTAGGCGGGCTCACAGATCCCGGGGTG"
+            "CTGGCGCGTGGGCCGGGGGCGCGTAGGGCGCCTGCAGACGGCCCCTGGAAGGGCTCTG"
+            "GTGGGGCTGAGCGCTCTGCCGCGGGGGCGCGGGCACAGCAGGAAGCAGGTCCGCGTGG"
+            "GCGCTGGGGGCATCAGCTACCGGGGTGGTCCGGGCTGAAGAGCCAGGCAGCCAAGGCA"
+            "GCCACCCCGGGGGGTGGGCGACTTTGGGGGAGTTGGTGCCCCGCCCCCCAGGCCTTGG"
+            "CGGGGTCATGGGGCCCCCCCATTCTGGGCCGGGGGGCGTGCGAGTCGGGGCCCTGCTG"
+            "CTGCTGGGGGTTTTGGGGCTGGTGTCTGGGCTCAGCCTGGAGCCTGTCTACTGGAACT"
+            "CGGCGAATAAGAGGTTCCAGGCAGAGGGTGGTTATGTGCTGTACCCTCAGATCGGGGA"
+            "CCGGCTAGACCTGCTCTGCCCCCGGGCCCGGCCTCCTGGCCCTCACTCCTCTCCTAAT"
+            "TATGAGTTCTACAAGCTGTACCTGGTAGGGGGTGCTCAGGGCCGGCGCTGTGAGGCAC"
+            "CCCCTGCCCCAAACCTCCTTCTCACTTGTGATCGCCCAGACCTGGATCTCCGCTTCAC"
+            "CATCAAGTTCCAGGAGTATAGCCCTAATCTCTGGGGCCACGAGTTCCGCTCGCACCAC"
+            "GATTACTACATCATTGGATGAGCTGACGGCAGCCCATTCGCTCTGCTTCTCCCCGGAT"
+            "GGCTCCCAGCTCTTCTGTGGCTTCAACCGGACTGTGCGTGTTTTTTCCACGGCCCGGC"
+            "CTGGCCGAGACTGCGAGGTCCGAGCCACATTTGGTAAGCATCTGTGCCTCCAAGGGAG"
+            "GAGGAGAGGGAAGGGCACTGCCACCTGCACAGGGGCCTTTTGTGAGCCGGGGGCCACC"
+            "TGTGGGGGTTCACGCCGTCCTCTGTACGGCCCCGGGAGCAGGTGCAGCCCAGTCGGCA"
+            "GAGGAGCAAACAGGCTCAGAGCAGGTAGGAAACCTTCCCAAGGCCAACCAGCTGGTCA"
+            "AAGGACTGCTTCCTTCCTGAACTCATACCCTGTCAGCTGTGGAGCTTTTGGTCTCTGA"
+            "AATCTTTCTAGAAAATTGTTGATAAAGCTGATTCCGTTTTCCTGTAGGCCTTCAACTT"
+            "GCATCTCTCCAAGGAAGAACTGGGATTTGAGAGGGATGAAGTGGGGCTTGGGCATTTA"
+            "GGTCCTTTGGGAGGATAGATGTGGGGAGCATCAGAGGTCTTTGTCCTGCTTGTGACAG"
+            "ACAGCATGGGGGGGATGTTGAGTCCAAGCATGTTGGTGCTGGGACGGGAGACAGACCT"
+            "CTGCTTAGCCTGGTTAGTGCCAGGAGCCATTGCCCCCTCCCCCACTTTGTTCCTTCCC"
+            "TCTCTAGCAAAAAAGCAGGGCCAGAGCGGCATCATCTCCTGCATAGCCTTCAG",
+            "query_name": "B",
+            "lt_soft_len": 0,
+            "rt_soft_len": 732,
+            "read_match_size": 713,
+            "reference_match_size": 2950,
+            "indel_size": 2237,
+            "cigartuples_without_soft": [[0, 419], [3, 2237], [0, 294]],
+            "cigartuples": [(0, 419), (3, 2237), (0, 294), (4, 732)],
+            "query_length": 1445,
+            "adhocsms": None,
+            "adhocseq": None,
+            "mode": 1,
+            "sms": (0, 713, 732),
+            "ref_end": 7708251,
+        },
+    ]
+
+    read_instances = []
+    for read_param in param_dict:
+        temp = Read.init(**{param: read_param[param] for param in read_init_params})  # type: ignore
+        read_instances.append(temp)
+    return read_instances
+
+
+@pytest.fixture()
+def event():
+    """Event fixture."""
+    event_tuple = (
+        "TDUP",  # svtype
+        0,  # annotation_code
+        1,  # splicing code
+        ("chr17:7701655", "chr17:7708249", 2, 1),  # bp1, bp2, mode1, mode2
+        (7701655, 7702389, [[7701655, 7702389]]),  # r1 start, r1 end, r1 exons
+        (7705301, 7708251, [[7705301, 7705720], [7707957, 7708251]]),  # r2
+        ("-GG", "-GG"),  # insertions info
+        ("+", "+"),  # strand1, strand2
+        ["INTERGENIC", "INTERGENIC"],
+    )  # gene1, gene2
+
+    return Event(event_tuple)  # type: ignore
