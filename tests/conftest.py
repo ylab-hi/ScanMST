@@ -53,6 +53,6 @@ def nodes() -> List[Node]:
     ]
     node_list = [Node() for _ in range(len(param_dict))]
     for ind, node in enumerate(node_list):
-        assign_value_for_node(node, **param_dict[ind])
+        assign_value_for_node(node, **param_dict[ind])  # type: ignore
         node.get_unique_key()
     return node_list

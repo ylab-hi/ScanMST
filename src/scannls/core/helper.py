@@ -1,15 +1,13 @@
-# !/usr/bin/env python
 """Helper functions."""
 import re
 from collections import defaultdict
 
 from scannls import ModesNotEqualError
 
-__funcs__ = {
+__all__ = [
     "extract_splice_sites",
     "gene_annotation",
     "splicing_confirmation",
-    "update_breakpoints",
     "cigar_validity",
     "blat2chimeric_alignment",
     "same_chrom_same_strand_mode21_handler",
@@ -20,7 +18,7 @@ __funcs__ = {
     "diff_chrom_diff_strand_handler",
     "softclipped_length_and_event_size_checker",
     "obtain_bp_region_seq",
-}
+]
 
 from typing import Tuple, List, Dict, Any
 
@@ -44,6 +42,7 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     cvg = HTSeq.GenomicArrayOfSets("auto", stranded=False)
     gene_iv = HTSeq.GenomicArrayOfSets("auto", stranded=False)
     trx_to_exon = defaultdict(list)
+
     for feature in gtf_file:
         biotype = feature.attr["gene_type"]
         gene_name = feature.attr["gene_name"]
@@ -353,10 +352,11 @@ def splicing_confirmation(
                 break
         return paired
 
-    if strand_changed:
-        splice_motif_dict = {"GT": "CT", "AG": "AC", "CT": "GT", "AC": "AG"}
-    else:
-        splice_motif_dict = {"GT": "AG", "AG": "GT", "CT": "AC", "AC": "CT"}
+    splice_motif_dict = (
+        {"GT": "CT", "AG": "AC", "CT": "GT", "AC": "AG"}
+        if strand_changed
+        else {"GT": "AG", "AG": "GT", "CT": "AC", "AC": "CT"}
+    )
     try:
         junc1 = list(cvg[HTSeq.GenomicPosition(chrm1, pos1)])[0]
     except IndexError:
@@ -410,28 +410,24 @@ def cigar_validity(cigar_str: str) -> str:
     :return: valid cigarstring
     :rtype: str
 
-    ..note ::
-        assert cigar_validity('45S50S100M1S') == '95S100M1S'
+    :Example:
+
+    >>> cigarstring =  '1S2S5M3S2S'
+    >>> cigar_validity(cigarstring)
+    '3S5M5S'
     """
-    cigartuple = list(map(list, re.findall(r"(\d+)(\w)", cigar_str)))
-    # first two operations are the same
-    if cigartuple[0][1] == cigartuple[1][1]:
-        cigartuple[1][0] = str(
-            int(cigartuple[0][0]) + int(cigartuple[1][0])  # type: ignore
-        )
-        del cigartuple[0]
+    pattern = re.compile(r"((?P<length>\d+)(?P<op>\D))")
+    items_list = pattern.findall(cigar_str)
+    stack = [items_list[0]]
+    for item in items_list[1:]:  # [('1S', '1', 'S'),..]
+        last_item = stack[-1]
+        if last_item[2] == item[2]:
+            length = int(last_item[1]) + int(item[1])
+            stack[-1] = (f"{length}{last_item[2]}", f"{length}", last_item[2])
+        else:
+            stack.append(item)
 
-    # last two operations are the same
-    elif cigartuple[-1][1] == cigartuple[-2][1]:
-        cigartuple[-2][0] = str(
-            int(cigartuple[-1][0]) + int(cigartuple[-2][0])  # type: ignore
-        )
-        del cigartuple[-1]
-
-    valid_cigar = ""
-    for len_str, op_str in cigartuple:
-        valid_cigar = valid_cigar + len_str + op_str  # type: ignore
-    return valid_cigar
+    return "".join(i[0] for i in stack)
 
 
 def blat2chimeric_alignment(

@@ -17,6 +17,9 @@ from ._class.exception import ModesNotEqualError
 from ._class.basicClass import Event
 from ._class.basicClass import reverse_complement
 from ._class.basicClass import Series, Node
+from ._class.basicClass import NovelInsertion
+from ._class.basicClass import MicroHomology
+from ._class.basicClass import Insertion
 from ._class.blat import Blat
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
@@ -58,4 +61,7 @@ __all__ = [
     "Options",
     "LoggerType",
     "external_tool_checking",
+    "NovelInsertion",
+    "MicroHomology",
+    "Insertion",
 ]
