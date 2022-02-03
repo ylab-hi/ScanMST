@@ -8,37 +8,6 @@
 """
 import pytest
 
-from scannls import Insertion
-from scannls import MicroHomology
-from scannls import NovelInsertion
-
-
-@pytest.fixture()
-def novel_insertion():
-    """Novel insertion."""
-    return NovelInsertion(hit_num=0, query_sequence="ATCA")
-
-
-@pytest.fixture()
-def microhomology():
-    """Microhomology."""
-    return MicroHomology(query_sequence="ATCA")
-
-
-@pytest.fixture()
-def insertion():
-    """Insertion."""
-    return Insertion(
-        hit_num=1,
-        chrom="1",
-        ref_start=1,
-        strand="+",
-        cigarstring="1S2M1S",
-        mapq=60,
-        nm=0,
-        query_sequence="AGCT",
-    )
-
 
 class TestInsertion:
     """Test Insertion."""
