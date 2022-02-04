@@ -9,29 +9,20 @@
 import copy
 
 import pytest
-from loguru import logger
 
 from scannls import Series
 
 
-class FakeBlat:
-    """Fake Blat class."""
-
-    def __init__(self, name="fake_blat"):
-        """Init."""
-        self.name = name
-
-
 @pytest.fixture()
-def empty_series():
+def empty_series(fake_logger, fake_blat):
     """Empty Series fixture."""
-    return Series(blat=FakeBlat(), logger=logger)
+    return Series(blat=fake_blat, logger=fake_logger)
 
 
 @pytest.fixture()
-def series(nodes):
+def series(nodes, fake_logger, fake_blat):
     """Series fixture."""
-    series = Series(blat=FakeBlat(), logger=logger)
+    series = Series(blat=fake_blat, logger=fake_logger)
     for node in nodes:
         series.add_node(node)
     return series
@@ -61,9 +52,9 @@ class TestSeries:
         node1, node2 = nodes
         assert series.get_sr_sum_for_all_node() == node1.sr + node2.sr
 
-    def test_create_series_from_node_list(self, nodes):
+    def test_create_series_from_node_list(self, nodes, fake_logger):
         """Test create series from node list."""
-        series_instance = Series.create_series_from_node_list(nodes, logger)
+        series_instance = Series.create_series_from_node_list(nodes, fake_logger)
         assert len(series_instance) == len(nodes)
 
     def test_disable_blat_logger(self, series):
@@ -89,9 +80,9 @@ class TestSeries:
         assert len(result) == 1
         assert result[0].mode1 == original_event.mode2
 
+    @pytest.mark.skip(reason="Not implemented")
     def test_init(self):
         """Test init.
 
         .. todo:: Add test for init.
         """
-        assert True

@@ -3,14 +3,28 @@
 from typing import List
 
 import pytest
+from tests import assign_value_for_instance
+from tests import FakeBlat
+from tests import FakeLogger
 
-from . import assign_value_for_instance
 from scannls import Event
 from scannls import Insertion
 from scannls import MicroHomology
 from scannls import Node
 from scannls import NovelInsertion
 from scannls import Read
+
+
+@pytest.fixture(scope="session")
+def fake_logger():
+    """Fake logger."""
+    return FakeLogger()
+
+
+@pytest.fixture(scope="session")
+def fake_blat():
+    """Fake blat."""
+    return FakeBlat()
 
 
 @pytest.fixture()
@@ -91,20 +105,9 @@ def nodes() -> List[Node]:
 
 
 @pytest.fixture()
-def reads():
-    """Reads fixture."""
-    read_init_params = [
-        "query_name",
-        "chrom",
-        "ref_start",
-        "strand",
-        "cigar_str",
-        "mapq",
-        "nm",
-        "query_seq",
-    ]
-
-    param_dict = [
+def read_param_dict():
+    """Return a dict of read parameters."""
+    return [
         {
             "chrom": "chr17",
             "ref_start": 7701655,
@@ -199,8 +202,23 @@ def reads():
         },
     ]
 
+
+@pytest.fixture()
+def reads(read_param_dict):
+    """Reads fixture."""
+    read_init_params = [
+        "query_name",
+        "chrom",
+        "ref_start",
+        "strand",
+        "cigar_str",
+        "mapq",
+        "nm",
+        "query_seq",
+    ]
+
     read_instances = []
-    for read_param in param_dict:
+    for read_param in read_param_dict:
         temp = Read.init(**{param: read_param[param] for param in read_init_params})  # type: ignore
         read_instances.append(temp)
     return read_instances

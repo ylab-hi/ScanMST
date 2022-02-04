@@ -9,15 +9,14 @@
 from pathlib import Path
 
 import pytest
-from loguru import logger
 
 from scannls import Blat
 
 
 @pytest.fixture(scope="module")
-def blat() -> Blat:
+def blat(fake_logger) -> Blat:
     """Create Blat instance."""
-    return Blat(ref_2bit=".", logger=logger, port=88888, output_dir=".")
+    return Blat(ref_2bit=".", logger=fake_logger, port=88888, output_dir=".")
 
 
 @pytest.fixture()

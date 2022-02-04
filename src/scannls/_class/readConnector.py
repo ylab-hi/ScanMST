@@ -25,16 +25,16 @@ from .type import LoggerType
 class ReadsConnector:
     """ReadsConnector class is used to connect the reads and identify the mode of the reads.
 
-    :param aln_list: the list of the alignment
+    :param read_list: the list of the alignment
     :param blat: :class: `class.Blat` for the BLAT search
     :param logger: :class: `loguru.logger` for logging
 
     :Example:
 
     >>> from loguru import  logger
-    >>> aln_list = []
+    >>> read_list = []
     >>> blat = Blat(ref_2bit='reference.2bit', logger= logger, port=88888, output_dir='/tmp')
-    >>> readconnector = ReadsConnector(aln_list=aln_list, blat=blat, logger=logger)
+    >>> readconnector = ReadsConnector(read_list=read_list, blat=blat, logger=logger)
     >>> readconnector.connect()
     >>> readconnector.reads_chain
     [Read(chr1, 6524193, 6524850, +, 60, 8), Read(chr1, 6522473, 6522883, +, 60, 4)]
@@ -44,7 +44,7 @@ class ReadsConnector:
 
     def __init__(
         self,
-        aln_list: List[Read],
+        read_list: List[Read],
         blat: Blat,
         logger: LoggerType,
         align_len_threshold: int = 20,
@@ -55,7 +55,7 @@ class ReadsConnector:
         self.candidate_nodes: List[Read] = []
         self.reads_chain: List[Read] = []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
-        self.aln_list = aln_list
+        self.aln_list = read_list
         self.logger = logger
         self.blat = blat
         self.index = 0
@@ -711,7 +711,7 @@ def detect_read_read_connections_from_cigar(
         return noreturn
     else:
         read_connector = ReadsConnector(
-            aln_list=chimeric_aln_list, blat=blat, logger=logger
+            read_list=chimeric_aln_list, blat=blat, logger=logger
         )
         flag = read_connector.connect()
         if flag:

@@ -57,15 +57,15 @@ def id_func(fixture_value):
 
 
 @pytest.fixture(params=positions, ids=id_func)
-def one_postion(request):
+def one_position(request):
     """Use id_func to generate ids."""
     return request.param
 
 
-def test_extract_splice_sites(gtf_setup, one_postion):
+def test_extract_splice_sites(gtf_setup, one_position):
     """Test for extract_splice_sites func."""
     cvg, gene_iv = gtf_setup
-    _chrm, _pos, _expect = one_postion
+    _chrm, _pos, _expect = one_position
     _result = list(cvg[HTSeq.GenomicPosition(_chrm, _pos)])[0]
     assert _result == _expect
 
