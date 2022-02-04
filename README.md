@@ -1,6 +1,5 @@
-# ScanNLS
-
 <div align="center">
+<h1>ScanNLS</h1>
 
 [![PyPI](https://img.shields.io/pypi/v/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "PyPI")
 [![Status](https://img.shields.io/pypi/status/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "Status")
@@ -21,7 +20,7 @@
 ## Requirements
 
 <details>
-<summary> Biopython </summary>
+<summary> Blat </summary>
 </details>
 
 ## Installation
@@ -42,7 +41,7 @@ Contributions are very welcome. To learn more, see the [Contributor Guide].
 
 ## License
 
-Distributed under the terms of the [{{cookiecutter.license.replace("-", " ")}} license],
+Distributed under the terms of the [MIT license],
 _scannls_ is free and open source software.
 
 ## Issues
@@ -51,7 +50,7 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 
 ## Credits
 
-[{{cookiecutter.license.replace("-", " ")}} license]: https://opensource.org/licenses/{{cookiecutter.license}}
+[mit license]: https://opensource.org/licenses/{{cookiecutter.license}}
 [pypi]: https://pypi.org/
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
 [file an issue]: https://github.com/{{cookiecutter.github_user}}/{{cookiecutter.project_name}}/issues
