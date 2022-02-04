@@ -17,39 +17,23 @@ class Read:
     """Build a read class for storing information of every junction read.
 
     :param chrom: chromosome of genome
-    :type chrom: str
     :param ref_start: start position of chimeric read
-    :type ref_start: int
     :param strand: direction of chimeric read (-|+)
-    :type strand: str
     :param cigarstring: cigar string of chimeric read (-|+)
-    :type cigarstring: str
     :param mapq: MAPQ of chimeric read
-    :type mapq: int
     :param nm: number of mismatches of chimeric read
-    :type nm: int
     :param query_sequence: read sequence in the BAM file
-    :type query_sequence: str
     :param linked_paths: linked paths for the read
-    :type linked_paths: list
     :param lt_soft_len: softclipped segment length on the left side
-    :type lt_soft_len: int
     :param rt_soft_len: softclipped segment length on the right side
-    :type rt_soft_len: int
     :param read_match_size: M+I
-    :type read_match_size: int
     :param reference_match_size: M+D+N
-    :type reference_match_size: int
     :param indel_size: D+N-I
-    :type indel_size: int
     :param cigartuples: cigarstring tuple version: [ (operation code, length) ];
         operation code: {'M':0,'I':1,'D':2,'N':3,'S':4,'H':5}
-    :type cigartuples: list
     :param cigartuples_without_soft: cigarstring tuple verion [exclude softclipping]:
         [(operation code, length)]; operation code: {'M':0,'I':1,'D':2,'N':3}
-    :type cigartuples_without_soft: list
     :param query_length: length of the chimeric read
-    :type query_length: int
 
     :Example:
 
@@ -133,23 +117,6 @@ class Read:
         self.adhocseq: Any = None
         self.mode: Any = None
 
-    def __eq__(self, other: Any) -> bool:
-        """Compare two reads.
-
-        :param other: other read to compare
-        :return: True if two reads are equal, False otherwise
-        """
-        if isinstance(other, Read) and (
-            self.chrom == other.chrom
-            and self.ref_start == other.ref_start
-            and self.ref_end == other.ref_end
-            and self.strand == other.strand
-            and self.mapq == other.mapq
-            and self.nm == other.nm
-        ):
-            return True
-        return False
-
     def __hash__(self) -> int:
         """Get the hash value of the read.
 
@@ -163,21 +130,6 @@ class Read:
             ^ hash(self.mapq)
             ^ hash(self.nm)
         )
-
-    def __lt__(self, other) -> bool:
-        """Compare two reads.
-
-        :param other:  other read to compare
-        :return: True if self is smaller than other, False otherwise
-        """
-        if self.chrom == other.chorm:
-            return bool(self.ref_start < other.ref_start)
-        else:
-            chrm_dict = {"chrM": 0, "MT": 0, "chrX": 23, "chrY": 24, "X": 23, "Y": 24}
-            for i in range(1, 23):
-                chrm_dict.update({f"chr{i}": i})
-                chrm_dict.update({f"{i}": i})
-            return bool(chrm_dict[self.chrom] < chrm_dict[other.chrom])
 
     def __repr__(self) -> str:
         """Get the representation of the read.
