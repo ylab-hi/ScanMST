@@ -66,6 +66,7 @@ class TestBlat:
         blat.is_start_server = True
 
         assert blat.is_ready() is True
+        Path(blat.log_file_path).unlink()
 
     def test_is_running(self, blat, process, mocker):
         """Test is running."""
