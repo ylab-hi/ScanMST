@@ -2,13 +2,6 @@
 """Init file for scannls package."""
 __version__ = "0.0.1"
 
-try:
-    import pysam  # type: ignore
-    import numpy as np
-    import HTSeq  # type: ignore
-except ModuleNotFoundError as e:
-    raise SystemExit from e
-
 from ._class.basicRead import Read
 from ._class.exception import ReadNotFoundError
 from ._class.exception import ToolNotFoundError
