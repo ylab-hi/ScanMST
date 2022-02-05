@@ -866,5 +866,23 @@ def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads):
         motif_required,
         logger,
     )
-    expect = None
+    expect = (
+        "INV",
+        3,
+        1,
+        ("chr17:1651554", "chr17:1730946", 1, 1),
+        (
+            1650628,
+            1651554,
+            [[1650628, 1650956], [1651107, 1651310], [1651413, 1651554]],
+        ),
+        (
+            1727989,
+            1730946,
+            [[1727989, 1728626], [1730379, 1730487], [1730754, 1730946]],
+        ),
+        ("-CC", "-GG"),
+        ("-", "+"),
+        ["PRPF8", "WDR81"],
+    )
     assert result == expect
