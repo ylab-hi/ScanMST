@@ -13,6 +13,7 @@ from scannls.core.helper import cigar_validity
 from scannls.core.helper import diff_chrom_diff_strand_handler
 from scannls.core.helper import diff_chrom_same_strand_mode21_handler
 from scannls.core.helper import extract_splice_sites
+from scannls.core.helper import gene_annotation
 from scannls.core.helper import same_chrom_diff_strand_handler
 from scannls.core.helper import same_chrom_same_strand_mode21_handler
 from scannls.core.helper import splicing_confirmation
@@ -122,6 +123,19 @@ def test_splicing_confirmation(prepare_fasta_and_gtf, one_pair_pbs):
     )
 
     assert _result == _expect
+
+
+@pytest.mark.parametrize(
+    "chrm1, pos1, chrm2, pos2, expected_result",
+    [
+        ("chr20", 391287, "chr20", 410025, ("TRIB3", "RBCK1")),
+        ("chr17", 172536, "chr17", 247286, ("DOC2B", "RPH3AL")),
+    ],
+)
+def test_gene_annotation(gtf_setup, chrm1, pos1, chrm2, pos2, expected_result):
+    """Test gene_annotation func."""
+    cvg, gene_iv = gtf_setup
+    assert gene_annotation(chrm1, pos1, chrm2, pos2, gene_iv) == expected_result
 
 
 def test_same_chrom_same_strand_mode21_handler(prepare_fasta_and_gtf, tdup_reads):

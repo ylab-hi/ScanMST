@@ -19,7 +19,6 @@ profile/
 # jupyter notebook
 *.ipynb
 # bam
-*.bam
 *.sam
 # debug reprot
 /debuglog/

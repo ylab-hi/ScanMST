@@ -1,0 +1,5 @@
+chr17	ScanNLS	exon	1400047	1400222	.	-	.	transcript_id "1"; part "1";
+chr17	ScanNLS	exon	1364859	1365058	.	-	.	transcript_id "1"; part "1";
+chr17	ScanNLS	exon	1423350	1423650	.	-	.	transcript_id "1"; part "2";
+chr20	ScanNLS	exon	391287	391579	.	+	.	transcript_id "1"; part "3";
+chr20	ScanNLS	exon	396198	397559	.	+	.	transcript_id "1"; part "3";
