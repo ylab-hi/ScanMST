@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 import HTSeq  # type: ignore
 import pytest
-from loguru import logger
 from pyfaidx import Fasta  # type: ignore
 
 from scannls.core.helper import cigar_validity
@@ -102,9 +101,9 @@ breakpoints = [
 
 def bp_id_func(fixture_value):
     """A func for generating ids."""
-    breakpoints = fixture_value[0]
+    break_point = fixture_value[0]
     return (
-        f"{breakpoints.chrm1}:{breakpoints.pos1}-{breakpoints.chrm2}:{breakpoints.pos2}"
+        f"{break_point.chrm1}:{break_point.pos1}-{break_point.chrm2}:{break_point.pos2}"
     )
 
 
@@ -138,7 +137,9 @@ def test_gene_annotation(gtf_setup, chrm1, pos1, chrm2, pos2, expected_result):
     assert gene_annotation(chrm1, pos1, chrm2, pos2, gene_iv) == expected_result
 
 
-def test_same_chrom_same_strand_mode21_handler(prepare_fasta_and_gtf, tdup_reads):
+def test_same_chrom_same_strand_mode21_handler(
+    prepare_fasta_and_gtf, tdup_reads, fake_logger
+):
     """Test same_chrom_same_strand_mode21_handler func."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = tdup_reads
@@ -155,7 +156,7 @@ def test_same_chrom_same_strand_mode21_handler(prepare_fasta_and_gtf, tdup_reads
         cvg,
         gene_iv,
         motif_required,
-        logger,
+        fake_logger,
     )
     expect = (
         "TDUP",
@@ -172,7 +173,7 @@ def test_same_chrom_same_strand_mode21_handler(prepare_fasta_and_gtf, tdup_reads
 
 
 def test_diff_chrom_same_strand_mode21_handler(
-    prepare_fasta_and_gtf, trans_same_strand_reads
+    prepare_fasta_and_gtf, trans_same_strand_reads, fake_logger
 ):
     """Test diff_chrom_same_strand_mode21_handler func (TRA)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
@@ -190,7 +191,7 @@ def test_diff_chrom_same_strand_mode21_handler(
         cvg,
         gene_iv,
         motif_required,
-        logger,
+        fake_logger,
     )
     expect = (
         "TRA",
@@ -210,7 +211,9 @@ def test_diff_chrom_same_strand_mode21_handler(
     assert result == expect
 
 
-def test_diff_chrom_diff_strand_handler(prepare_fasta_and_gtf, trans_diff_strand_reads):
+def test_diff_chrom_diff_strand_handler(
+    prepare_fasta_and_gtf, trans_diff_strand_reads, fake_logger
+):
     """Test diff_chrom_diff_strand_handler func (TRA)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = trans_diff_strand_reads
@@ -227,7 +230,7 @@ def test_diff_chrom_diff_strand_handler(prepare_fasta_and_gtf, trans_diff_strand
         cvg,
         gene_iv,
         motif_required,
-        logger,
+        fake_logger,
     )
     expect = (
         "TRA",
@@ -247,7 +250,7 @@ def test_diff_chrom_diff_strand_handler(prepare_fasta_and_gtf, trans_diff_strand
     assert result == expect
 
 
-def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads):
+def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads, fake_logger):
     """Test same_chrom_diff_strand_handler func (INV)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = inv_reads
@@ -264,7 +267,7 @@ def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads):
         cvg,
         gene_iv,
         motif_required,
-        logger,
+        fake_logger,
     )
     expect = (
         "INV",
