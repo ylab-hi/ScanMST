@@ -7,7 +7,6 @@ from .oneHop import OneHop
 from .writer import GTFWriter
 from .writer import SimVCFWriter
 from scannls import LoggerType
-from scannls import Writers
 
 
 def prepare_intergenic_gtf(input_gtf: str, output_gtf: str, logger: LoggerType) -> str:
@@ -52,13 +51,16 @@ def single_hop_generator(
     to_wt_and_mt_fasta(input_dict=nls_dict, output_prefix=output_prefix)
 
     vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", output_prefix, logger)
+
+    vcf_writer.open()
+    vcf_writer.write_data(nls_dict)
+    vcf_writer.close()
+
     gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
-
-    writers = Writers((gtf_writer, vcf_writer))
-
-    with writers.open() as _:
-        for trx_idx in nls_dict:
-            writers.write_series(nls_dict[trx_idx])
+    gtf_writer.open()
+    for trx_idx in nls_dict:
+        gtf_writer.write_data(nls_dict[trx_idx])
+    gtf_writer.close()
 
 
 def multi_hop_generator(
@@ -97,12 +99,10 @@ def multi_hop_generator(
     to_wt_and_mt_fasta(input_dict=nls_dict, output_prefix=output_prefix)
 
     gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
-
-    writers = Writers(gtf_writer)
-
-    with writers.open() as _:
-        for trx_idx in nls_dict:
-            writers.write_series(nls_dict[trx_idx])
+    gtf_writer.open()
+    for trx_idx in nls_dict:
+        gtf_writer.write_data(nls_dict[trx_idx])
+    gtf_writer.close()
 
     vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", output_prefix, logger)
     vcf_writer.open()
