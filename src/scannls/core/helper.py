@@ -2,7 +2,7 @@
 import re
 from collections import defaultdict
 
-from scannls import ModesNotEqualError
+from .._class.exception import ModesNotEqualError
 
 __all__ = [
     "extract_splice_sites",
@@ -814,7 +814,9 @@ def same_chrom_diff_strand_handler(
     logger.trace("same_chrom_diff_strand_handler takes over the task.")
     # lt_mode must be equal to rt_mode
     if lt_mode != rt_mode:
-        raise SystemExit from ModesNotEqualError
+        raise ModesNotEqualError(
+            f"read_lt:{read_lt.query_name} read_rt:{read_rt.query_name}"
+        )
 
     lt_chrm = read_lt.chrom
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
@@ -1054,7 +1056,9 @@ def diff_chrom_diff_strand_handler(
     logger.trace("diff_chrom_diff_strand_handler takes over the task.")
     # lt_mode must be equal to rt_mode
     if lt_mode != rt_mode:
-        raise SystemExit from ModesNotEqualError
+        raise ModesNotEqualError(
+            f"read_lt:{read_lt.query_name} read_rt:{read_rt.query_name}"
+        )
 
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
     rt_exons, rt_introns = read_rt.get_exons_and_introns()

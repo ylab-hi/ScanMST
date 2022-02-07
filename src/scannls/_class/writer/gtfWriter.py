@@ -53,7 +53,6 @@ class GTFWriter(Writer):
             self.logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 9."
             )
-            raise SystemExit
         return delimiter.join(fields) + "\n"
 
     def open(self, mode: str = "w") -> IO:
@@ -168,7 +167,7 @@ def get_gtf_features_from_node(
         9. attribute: a semicolon-separated list of tag-value pairs (separated by spaces)
     """
     if node.exons is None:
-        raise SystemExit from ExonsNotFoundError
+        raise ExonsNotFoundError(f"{node.query_name}")
 
     exons = node.exons[::-1] if node.strand == "-" else node.exons
 

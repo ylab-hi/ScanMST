@@ -624,10 +624,6 @@ class Series:
         """Return the hash of the event."""
         return hash(";".join(map(str, self.nodes)))
 
-    def __eq__(self, other) -> bool:
-        """Return True if the events are equal."""
-        return ";".join(map(str, self.nodes)) == ";".join(map(str, other.nodes))
-
     def __len__(self) -> int:
         """Return the number of events."""
         return len(self.nodes)

@@ -5,6 +5,7 @@
 @license:     MIT Licence
 @Time:        2/6/22 11:43 AM
 """
+import contextlib
 import os
 from pathlib import Path
 
@@ -44,6 +45,9 @@ def test_cli(tmpdir, data_name, monkeypatch):
             out_gtf = og.readlines()
             expect_fasta = ef.readlines()
             expect_gtf = eg.readlines()
+
+        with contextlib.suppress(OSError):
+            os.remove(f"{data_dir}/dummy.fasta.fai")
 
         assert expect_fasta[1].strip() == out_fasta[1].strip()
         assert len(expect_gtf) == len(out_gtf)

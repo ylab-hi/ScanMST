@@ -30,9 +30,7 @@ class FastaWriter(Writer):
         super().__init__(file_path, logger)
         self.reference = Path(reference)
         if not self.reference.exists():
-            raise SystemExit from FastaNotFoundError(
-                f"{self.reference} does not exist."
-            )
+            raise FastaNotFoundError(f"{self.reference} does not exist.")
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.id = 1
 
