@@ -18,7 +18,6 @@ from ..core.helper import cigar_validity
 from .basicClass import reverse_complement
 from .basicRead import Read
 from .blat import Blat
-from .exception import ReadNotConnectedError
 from .type import LoggerType
 
 
@@ -557,10 +556,10 @@ class ReadsConnector:
             candidate_read_len = len(self.candidate_nodes)
             while self.candidate_nodes:
                 if self.index == candidate_read_len:
-                    logger.error(
-                        "ReadsConnector: cannot connect all reads in candidate_nodes"
+                    logger.warning(
+                        f"ReadsConnector: cannot connect all reads in candidate_nodes "
+                        f"{start_read.query_name}"
                     )
-                    raise ReadNotConnectedError
                 read = self.candidate_nodes[self.index]
                 ReadsConnector.init_mode_judge(start_read, read)
                 flag, start_read = self.test_2case(
