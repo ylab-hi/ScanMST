@@ -5,6 +5,7 @@
 @license:     MIT Licence
 @Time:        1/19/22 7:59 PM
 """
+from itertools import combinations
 from typing import Any
 from typing import Dict
 from typing import List
@@ -314,16 +315,21 @@ class CliqueFinder:
     """
 
     def __init__(
-        self, intact_series_list: Any, logger: LoggerType, threshold: float = 0.2
+        self,
+        intact_series_list: Any,
+        intact_series_list_len: int,
+        logger: LoggerType,
+        threshold: float = 0.2,
     ):
         """Initialize CliqueFinder."""
         self.ruler = Ruler(logger)
+        self.intact_series_list_len = intact_series_list_len
         self.intact_series_list = intact_series_list
-        self.distance_dict: Dict[Any, float] = {}
+        self.distance_dict: Dict[Tuple[int, int], float] = {}
         self.graph = nx.Graph()
         self.threshold = threshold
 
-    def _calculate_distance(self, x: Series, y: Series) -> Tuple[bool, float]:
+    def _calculate_distance(self, x: int, y: int) -> float:
         """Calculate distance between two series. If distance has been calculated before.
 
         return True and distance value. Otherwise, calculate distance and return False and
@@ -333,18 +339,9 @@ class CliqueFinder:
         :param y: series y
         :return: is_calculated, distance value
         """
-        distance1 = self.distance_dict.get((x, y), None)
-        if distance1 is not None:
-            return True, distance1
-        distance2 = self.distance_dict.get((y, x), None)
-        if distance2 is not None:
-            return True, distance2
+        return self.ruler(self.intact_series_list[x], self.intact_series_list[y])
 
-        distance = self.ruler(x, y)
-        self.distance_dict[(x, y)] = distance
-        return False, distance
-
-    def _add_edge_between_two_series(self, x: Series, y: Series) -> None:
+    def _add_edge_between_two_series(self, x: int, y: int) -> None:
         """Add edge between two series according to the distance between them.
 
         if the distance is less than threshold, add edge. Otherwise, do nothing.
@@ -358,11 +355,13 @@ class CliqueFinder:
             indicates that the two series have been checked and determined if they
             should be connected in graph.
         """
-        if x != y:
-            is_calculated, distance = self._calculate_distance(x, y)
-            if not is_calculated and distance < self.threshold:
-                self.graph.add_edge(x, y)
-                x.is_in_graph = True
+        if self._calculate_distance(x, y) < self.threshold:
+            self.graph.add_edge(x, y)
+            if not self.intact_series_list[x].is_in_graph:
+                self.intact_series_list[x].is_in_graph = True
+
+            if not self.intact_series_list[y].is_in_graph:
+                self.intact_series_list[y].is_in_graph = True
 
     def _create_graph_for_series(self) -> None:
         """Create graph for all series in intact_series_list.
@@ -371,12 +370,22 @@ class CliqueFinder:
 
         :return: None
         """
-        for x in self.intact_series_list:
-            for y in self.intact_series_list:
-                self._add_edge_between_two_series(x, y)
+        last_x = 0
+        ind_x, ind_y = 0, 0
 
-            if not x.is_in_graph:
-                self.graph.add_node(x)
+        for ind_x, ind_y in combinations(range(self.intact_series_list_len), 2):
+            self._add_edge_between_two_series(ind_x, ind_y)
+            if last_x != ind_x:
+                if not self.intact_series_list[last_x].is_in_graph:
+                    self.graph.add_node(last_x)
+                last_x = ind_x
+
+        # solve last two node
+        if not self.intact_series_list[ind_x].is_in_graph:
+            self.graph.add_node(last_x)
+
+        if not self.intact_series_list[ind_y].is_in_graph:
+            self.graph.add_node(ind_y)
 
     @timeit
     def find_clique(self) -> Any:
@@ -395,4 +404,5 @@ class CliqueFinder:
         """
         self._create_graph_for_series()
 
-        yield from find_cliques(self.graph)
+        for clique_index in find_cliques(self.graph):
+            yield (self.intact_series_list[i] for i in clique_index)

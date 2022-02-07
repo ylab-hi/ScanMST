@@ -262,8 +262,9 @@ def cli(options: Union[argparse.Namespace, Options]):
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
+        intact_series_list_len = len(intact_series_list)
 
-        logger.info(f"Total Series: {len(intact_series_list)}")
+        logger.info(f"Total Series: {intact_series_list_len}")
         rescuer = SRRescuer(
             in_bam_io_object,
             options.mapq,
@@ -273,7 +274,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             logger,
         )
         splice_graph = SpliceGraph(logger)
-        clique_finder = CliqueFinder(intact_series_list, logger)
+        clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
         # cliques is generator
 
         fasta_writer = FastaWriter(f"{options.output}.fasta", options.ref, logger)
