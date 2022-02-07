@@ -17,7 +17,7 @@ from ._class.type import LoggerType
 __all__ = ["external_tool_checking", "get_softclip_length", "timeit"]
 
 
-def external_tool_checking(logger: LoggerType) -> None:
+def external_tool_checking(log_handler: LoggerType) -> None:
     """Checking dependencies are installed."""
     software = ["gfClient", "gfServer"]
     for tool in software:
@@ -25,7 +25,7 @@ def external_tool_checking(logger: LoggerType) -> None:
         if "command not found" in output:
             raise ToolNotFoundError(tool)
         else:
-            logger.success(f"Checking for {tool} found ")
+            log_handler.success(f"Checking for {tool} found ")
 
 
 def get_softclip_length(
