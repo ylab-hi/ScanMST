@@ -558,7 +558,7 @@ class ReadsConnector:
             while self.candidate_nodes:
                 if self.index == candidate_read_len:
                     logger.error(
-                        "ReadsConnector: cannot connect all reads in candidate_nodes"
+                        f"ReadsConnector: cannot connect all reads in candidate_nodes, {start_read.query_name}"
                     )
                     raise ReadNotConnectedError
                 read = self.candidate_nodes[self.index]
