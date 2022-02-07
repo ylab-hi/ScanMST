@@ -350,6 +350,16 @@ class SpliceGraph:
             if current_node.splicing_code is not None
             else updated_node.splicing_code
         )
+        # update annotation_code
+        updated_node.annotation_code = (
+            current_node.annotation_code
+            if current_node.annotation_code is not None
+            else updated_node.annotation_code
+        )
+        # update genes
+        updated_node.genes = (
+            current_node.genes if current_node.genes is not None else updated_node.genes
+        )
         # update breakpoints
         if updated_node.prev_breakpoint is None:
             updated_node.prev_breakpoint = current_node.prev_breakpoint
