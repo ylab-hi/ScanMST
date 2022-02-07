@@ -80,6 +80,22 @@ class GenesNotFoundError(ScannlsExceptionError):
         super().__init__(f"Cannot find genes in current node {msg}")
 
 
+class SplicingCodeNotFoundError(ScannlsExceptionError):
+    """Exception raised for errors when splicing code not found."""
+
+    def __init__(self, msg: str) -> None:
+        """Initialize the exception."""
+        super().__init__(f"Cannot find splicing code in current node {msg}")
+
+
+class AnnotationCodeNotFoundError(ScannlsExceptionError):
+    """Exception raised for errors when annotation code not found."""
+
+    def __init__(self, msg: str) -> None:
+        """Initialize the exception."""
+        super().__init__(f"Cannot find annotation code in current node {msg}")
+
+
 class BreakpointNotFoundError(ScannlsExceptionError):
     """Exception raised for errors when breakpoint not found."""
 

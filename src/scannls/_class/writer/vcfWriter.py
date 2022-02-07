@@ -22,10 +22,12 @@ from ..basicClass import Node
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
 from ..basicClass import Series
+from ..exception import AnnotationCodeNotFoundError
 from ..exception import BreakpointNotFoundError
 from ..exception import ExonsNotFoundError
 from ..exception import GenesNotFoundError
 from ..exception import ModesNotFoundError
+from ..exception import SplicingCodeNotFoundError
 from ..type import LoggerType
 from .writer import Writer
 
@@ -325,7 +327,13 @@ def get_vcf_features_from_series(
     anno_field_dict = {0: "NEITHER", 1: "RIGHT", 2: "LEFT"}
     for event_id, current_node in enumerate(series.nodes[:-1], 1):
         next_node = series[event_id]
+
+        if current_node.splicing_code is None:
+            raise SplicingCodeNotFoundError(current_node.query_name)
         can_field = can_field_dict[current_node.splicing_code]  # type: ignore
+
+        if current_node.annotation_code is None:
+            raise AnnotationCodeNotFoundError(current_node.query_name)
         anno_field = anno_field_dict.get(current_node.annotation_code, "BOTH")  # type: ignore
 
         if current_node.genes is None:

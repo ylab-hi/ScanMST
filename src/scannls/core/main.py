@@ -122,9 +122,7 @@ class BamScanner:
                         f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     ] = sup_aln_cigar
         except ValueError:
-            raise SystemExit(
-                "BAM index file is not found in supplementary alignments"
-            ) from None
+            raise SystemExit("BAM index file is not found!") from None
         else:
             return self.representative_alignments_new_cigar
 
@@ -135,7 +133,7 @@ def _get_genome_fasta(ref_genome):
         return Fasta(str(ref_genome), sequence_always_upper=True)
     except FastaNotFoundError:
         raise SystemExit(
-            f"Reference File {ref_genome} Not Found!"
+            f"Reference File {ref_genome} is Not Found!"
         ) from FastaNotFoundError
 
 
@@ -148,7 +146,7 @@ def _get_cvg_gene_iv(gtf, splice_bin):
     try:
         return extract_splice_sites(str(gtf), splice_bin)
     except OSError:
-        raise SystemExit(f"read GTF file {gtf} error!") from None
+        raise SystemExit(f"Reading GTF file {gtf} error!") from None
 
 
 def detect_sv_from_cigar(

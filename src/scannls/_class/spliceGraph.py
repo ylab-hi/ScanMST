@@ -136,7 +136,7 @@ class SpliceGraph:
         :param node: node to be removed
         """
         if node.similar_key is None:
-            raise ValueError("node.similar_key is None")
+            raise ValueError(f"node.similar_key is None, {node.query_name}")
         self.get_nodes_with_similar_key(node.similar_key).remove(node)
 
     def reset_trace_id(self) -> None:
