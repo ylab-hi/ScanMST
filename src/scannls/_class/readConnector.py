@@ -560,6 +560,7 @@ class ReadsConnector:
                         f"ReadsConnector: cannot connect all reads in candidate_nodes "
                         f"{start_read.query_name}"
                     )
+                    return False
                 read = self.candidate_nodes[self.index]
                 ReadsConnector.init_mode_judge(start_read, read)
                 flag, start_read = self.test_2case(
