@@ -152,7 +152,7 @@ def cli(options: Union[argparse.Namespace, SimulatorOptions]) -> None:
     )
 
     # check external tools used
-    external_tool_checking(logger=logger)
+    external_tool_checking(logger)
 
     logger.info(f"{options.gtf=}")
     start = time.time()
