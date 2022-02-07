@@ -224,7 +224,7 @@ def cli(options: Union[argparse.Namespace, Options]):
     )
 
     # check external tools used
-    external_tool_checking(logger=logger)
+    external_tool_checking(logger)
 
     if options.parallel > 1:
         logger.info("scannls starts running in parallel mode")

@@ -235,7 +235,7 @@ class SRRescuer:
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
         if exons is None or strand is None or chrom is None:
-            raise SystemExit from ExonsNotFoundError
+            raise SystemExit("ExonsNotFound") from ExonsNotFoundError
 
         if strand == "+":
             pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
@@ -250,7 +250,7 @@ class SRRescuer:
             return
 
         if current_node.modes is None:
-            raise SystemExit from ModesNotFoundError
+            raise SystemExit("ModesNotFound") from ModesNotFoundError
 
         mode1, mode2 = current_node.modes
         current_node.update_next_breakpoint_depth(self.in_bam, mode1)
