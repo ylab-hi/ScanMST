@@ -630,7 +630,7 @@ class OneHop:
         """Generate transcripts."""
         transcripts_dict = {}
         if num_of_hops < 1:
-            raise SystemExit from NumberOfHopIsNotValidError
+            raise NumberOfHopIsNotValidError
         elif num_of_hops == 1:  # user must provide hop_type
             for trx_idx, _ in enumerate(range(num_of_transcripts), 1):
                 transcripts_dict[f"{trx_idx}"] = self.one_hop_generator(hop_type)  # type: ignore

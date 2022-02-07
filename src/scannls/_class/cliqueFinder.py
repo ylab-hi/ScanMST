@@ -90,7 +90,9 @@ class Ruler:
              * The output distance will be [0, 1]
         """
         if first_node.exons is None or last_node.exons is None:
-            raise SystemExit from ExonsNotFoundError
+            raise ExonsNotFoundError(
+                f"{first_node.query_name} or {last_node.query_name}"
+            )
 
         _ft_strand = first_node.strand
         _lt_strand = last_node.strand

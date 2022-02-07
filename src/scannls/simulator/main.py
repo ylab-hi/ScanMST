@@ -31,7 +31,7 @@ def single_hop_generator(
     gtf.parser()
 
     if gtf.chrom_to_genes is None:
-        raise SystemExit from ValueError("chrom_to_genes is None")
+        raise ValueError("chrom_to_genes is None")
     # initialize OneHop class using GTF information
     one_hop = OneHop(
         chrom_to_genes=gtf.chrom_to_genes,
@@ -78,7 +78,7 @@ def multi_hop_generator(
     gtf.parser()
 
     if gtf.chrom_to_genes is None:
-        raise SystemExit from ValueError("chrom_to_genes is None")
+        raise ValueError("chrom_to_genes is None")
     # initialize OneHop class using GTF information
     one_hop = OneHop(
         chrom_to_genes=gtf.chrom_to_genes,

@@ -179,7 +179,7 @@ class Blat:
         logger.trace(f"{cmd=}")
         self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
         if self.handle_process is None:
-            raise SystemExit from ValueError("handle process is None")
+            raise ValueError("handle process is None")
         self.handle_process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)

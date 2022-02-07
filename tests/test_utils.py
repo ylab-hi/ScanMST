@@ -4,6 +4,8 @@ import subprocess
 
 import pytest
 
+from scannls import ToolNotFoundError
+from scannls.utils import external_tool_checking
 from scannls.utils import get_softclip_length
 
 
@@ -78,14 +80,11 @@ def test_get_softclip_length(read, mode, expected_result):
     assert get_softclip_length(read, mode) == expected_result
 
 
-@pytest.mark.parametrize(
-    "tool, expected_result",
-    [
-        ("gfClient", "gfClient_output"),
-        ("gfServer", "gfServer_output"),
-    ],
-)
-def test_external_tool_checking(tool, expected_result, fake_process, fake_logger):
+def test_external_tool_checking(monkeypatch, fake_logger):
     """Test external_tool_checking func."""
-    fake_process.register_subprocess([tool], stdout=(f"{tool}_output"))
-    assert subprocess.getoutput(tool) == expected_result
+    monkeypatch.setattr(subprocess, "getoutput", lambda x: "TEST")
+    assert external_tool_checking(fake_logger) is None
+
+    monkeypatch.setattr(subprocess, "getoutput", lambda x: "command not found")
+    with pytest.raises(ToolNotFoundError):
+        external_tool_checking(fake_logger)

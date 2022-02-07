@@ -131,7 +131,7 @@ class VCFWriter(Writer):
         super().__init__(file_path, logger)
         self.reference = Path(reference)
         if not self.reference.exists():
-            raise SystemExit from FastaNotFoundError
+            raise FastaNotFoundError
         self.reference_io: Fasta = Fasta(reference, sequence_always_upper=True)
         self.series_id: int = 1
         self.bam_header = bam_header
@@ -150,7 +150,6 @@ class VCFWriter(Writer):
             self.logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 10."
             )
-            raise SystemExit
         return delimiter.join(fields) + "\n"
 
     def open(self, mode: str = "w") -> IO:
@@ -225,7 +224,6 @@ class VCFWriter(Writer):
                     hop_feature[type_position_key]["SR"]
                     >= out_vcf_dict[type_position_key]["SR"]
                 ):
-
                     out_vcf_dict[type_position_key]["SR"] = hop_feature[
                         type_position_key
                     ]["SR"]
@@ -331,19 +329,19 @@ def get_vcf_features_from_series(
         anno_field = anno_field_dict.get(current_node.annotation_code, "BOTH")  # type: ignore
 
         if current_node.genes is None:
-            raise SystemExit from GenesNotFoundError
+            raise GenesNotFoundError(current_node.query_name)
         gene1, gene2 = current_node.genes
 
         if current_node.modes is None:
-            raise SystemExit from ModesNotFoundError
+            raise ModesNotFoundError(current_node.query_name)
         _mode1, _mode2 = current_node.modes
         mode1 = "MS" if _mode1 == 1 else "SM"
         mode2 = "MS" if _mode2 == 1 else "SM"
 
         if current_node.next_breakpoint is None:
-            raise SystemExit from BreakpointNotFoundError
+            raise BreakpointNotFoundError(current_node.query_name)
         if next_node.prev_breakpoint is None:
-            raise SystemExit from BreakpointNotFoundError
+            raise BreakpointNotFoundError(next_node.query_name)
         _chrom1, _pos1 = current_node.next_breakpoint.split(":")
         _chrom2, _pos2 = next_node.prev_breakpoint.split(":")
 
@@ -477,7 +475,7 @@ def get_vcf_features_from_insertion(
     novel_insertion_sequence = insertion.query_sequence
 
     if node.exons is None:
-        raise SystemExit from ExonsNotFoundError
+        raise ExonsNotFoundError(node.query_name)
 
     _pos = node.exons[-1][1] if node.strand == "+" else node.exons[0][0]
 

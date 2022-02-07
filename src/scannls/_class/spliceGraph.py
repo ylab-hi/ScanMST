@@ -211,7 +211,7 @@ class SpliceGraph:
                 [node2] ->
         """
         if node1.exons is None or node2.exons is None:
-            raise SystemExit from ExonsNotFoundError
+            raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
         node1_first_exon_start = node1.exons[0][0]
         node1_last_exon_end = node1.exons[-1][1]
         node2_first_exon_start = node2.exons[0][0]
@@ -589,7 +589,7 @@ class SpliceGraph:
         :return: True or False
         """
         if breakpoint1 is None or breakpoint2 is None:
-            raise SystemExit from ValueError("breakpoint is None")
+            raise ValueError("breakpoint is None")
         return (
             abs(int(breakpoint1.split(":")[1]) - int(breakpoint2.split(":")[1]))
             < threshold

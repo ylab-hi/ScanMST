@@ -122,7 +122,6 @@ class SimVCFWriter:
             self.logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 10."
             )
-            raise SystemExit
         return delimiter.join(fields) + "\n"
 
     def open(self, mode: str = "w") -> IO:
@@ -255,7 +254,7 @@ def get_vcf_features_from_metaexons(
         _strand2, _pos2 = next_node.strand, next_node.p5_pos
 
         if _pos1 is None or _pos2 is None:
-            raise SystemExit from BreakpointNotFoundError
+            raise BreakpointNotFoundError(f"{current_node} {next_node}")
 
         sv_distance = abs(_pos1 - _pos2) if current_node.nls_type != "TRA" else 0
         item = [
@@ -298,11 +297,11 @@ def _get_vcf_features_from_metaexons(
         _pos2 = next_node.p5_pos
 
         if _pos1 is None or _pos2 is None:
-            raise SystemExit from BreakpointNotFoundError
+            raise BreakpointNotFoundError(f"{current_node} {next_node}")
 
         sv_distance = abs(_pos1 - _pos2) if current_node.nls_type != "TRA" else 0
         item = {
-            f"{current_node.nls_type}_{_chrom1}|{int(_pos1)+1}"
+            f"{current_node.nls_type}_{_chrom1}|{int(_pos1) + 1}"
             f"_{_chrom2}|{int(_pos2) + 1}": {
                 "CHROM": _chrom1,
                 "POS": f"{int(_pos1) + 1}",
@@ -395,7 +394,6 @@ class GTFWriter:
             self.logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 9."
             )
-            raise SystemExit
         return delimiter.join(fields) + "\n"
 
     def open(self, mode: str = "w") -> IO:
