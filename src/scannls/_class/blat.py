@@ -403,7 +403,7 @@ class Blat:
         try:
             blat = SearchIO.read(psl_file, "blat-psl")
         except ValueError:
-            self.logger.warning(f"No Blat hit found {in_seq}")
+            self.logger.warning(f"No Blat hit found {in_seq[:10]}...")
             return None, None
         else:
             hsps = blat.hsps
