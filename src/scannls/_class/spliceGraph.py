@@ -599,7 +599,7 @@ class SpliceGraph:
         :return: True or False
         """
         if breakpoint1 is None or breakpoint2 is None:
-            raise ValueError("breakpoint is None")
+            return False
         return (
             abs(int(breakpoint1.split(":")[1]) - int(breakpoint2.split(":")[1]))
             < threshold
