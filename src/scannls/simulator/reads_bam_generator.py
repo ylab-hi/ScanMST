@@ -5,8 +5,20 @@ import glob
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from Bio import SeqIO  # type: ignore
+from loguru import logger
+
+
+class ProfileNotFoundError(Exception):
+    """Exception raised for errors when external tool not found."""
+
+    def __init__(self, file: str) -> None:
+        """Initialize the exception."""
+        super().__init__(
+            f"profile file: {file} not found, please rerun sampling-based PBSIM2!"
+        )
 
 
 def status_message(msg) -> None:
@@ -21,14 +33,9 @@ def remove(infile):
         os.remove(infile)
 
 
-def run_cmd(cmd, msg=None):
+def run_cmd(cmd, logger=logger):
     """Run cmd with message."""
-    status_message(cmd)
-    if "," in msg:
-        begin, finish = msg.split(",")
-        status_message(begin)
-    else:
-        finish = msg
+    logger.info(cmd)
     try:
         subprocess.check_output(
             cmd,
@@ -36,18 +43,13 @@ def run_cmd(cmd, msg=None):
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as err:
-        error_msg = f"Error happend!: {err}\n{err.output}"
+        logger.warning(f"Error happend!: {err}\n{err.output}")
+        raise SystemExit from None
     else:
-        error_msg = ""
-    if not error_msg:
-        status_message(finish)
         return True
-    else:
-        status_message(error_msg)
-        return False
 
 
-def fastq_simulation(in_fa_file, out_prefix, model, depth=10):
+def fastq_simulation(in_fa_file, out_prefix, model, logger, depth=10):
     """Generate simulated fastq using pbsim_rna."""
 
     def combine_fastq(out_prefix):
@@ -60,13 +62,26 @@ def fastq_simulation(in_fa_file, out_prefix, model, depth=10):
                 remove(f"{_prefix}.ref")
                 remove(f"{_prefix}.maf")
 
+    profile_checker(model, logger)
+
     cmd = f"pbsim_rna --depth {depth} --prefix {out_prefix} --sample-profile-id {model} {in_fa_file}"
-    run_cmd(cmd, f"{in_fa_file} simulation has done using PBSIM2!")
+    run_cmd(cmd)
     combine_fastq(out_prefix)
     return f"{out_prefix}.fastq"
 
 
-def combine_fastq(in_mt_fq, in_wt_fq, out_fq):
+def profile_checker(model, logger) -> None:
+    """Check profile files of PBSIM2."""
+    profile_files = [f"sample_profile_{model}.stats", f"sample_profile_{model}.fastq"]
+    for _file in profile_files:
+        file = Path(_file)
+        if not (file.exists() and file.stat().st_size > 0):
+            raise ProfileNotFoundError(_file)
+        else:
+            logger.success(f"Checking for {_file} found ")
+
+
+def combine_fastq(in_mt_fq, in_wt_fq, out_fq) -> str:
     """Combine MT and WT fastq into one."""
     with open(out_fq, "w") as out:
         for r in SeqIO.parse(in_mt_fq, "fastq"):
@@ -84,13 +99,13 @@ def alignment_runner(in_fq, ref_fa, bigbed, data_type, thread_num, out_prefix):
     if data_type == "pacbio":
         cmd1 = (
             f"minimap2 -t {thread_num} -Y -ax splice:hq -uf -R "
-            f"@RG\\tID:{out_prefix}\\tSM:hs\\tLB:ga\\tPL:PacBio "
+            f'"@RG\\tID:{out_prefix}\\tSM:hs\\tLB:ga\\tPL:PacBio" '
             f"--MD --secondary=no --junc-bed {bigbed} {ref_fa} {in_fq} > {out_prefix}.tmp.sam"
         )
     elif data_type == "nanopore":
         cmd1 = (
             f"minimap2 -t {thread_num} -Y -ax splice -uf -k14 -R "
-            f"@RG\\tID:{out_prefix}\\tSM:hs\\tLB:ga\\tPL:ONT "
+            f'"@RG\\tID:{out_prefix}\\tSM:hs\\tLB:ga\\tPL:ONT" '
             f"--MD --junc-bed {bigbed} {ref_fa} {in_fq} > {out_prefix}.tmp.sam"
         )
     cmd2 = (
@@ -203,13 +218,21 @@ if __name__ == "__main__":
     model = args.model
 
     mt_fq = fastq_simulation(
-        in_fa_file=mt_fa, out_prefix=f"{out_prefix}.MT", model=model, depth=mt_depth
+        in_fa_file=mt_fa,
+        out_prefix=f"{out_prefix}.MT",
+        model=model,
+        logger=logger,
+        depth=mt_depth,
     )
 
     wt_fq = None
     if wt_depth > 0:
         wt_fq = fastq_simulation(
-            in_fa_file=wt_fa, out_prefix=f"{out_prefix}.WT", model=model, depth=wt_depth
+            in_fa_file=wt_fa,
+            out_prefix=f"{out_prefix}.WT",
+            model=model,
+            logger=logger,
+            depth=wt_depth,
         )
 
     out_fq = f"{out_prefix}.fastq"
