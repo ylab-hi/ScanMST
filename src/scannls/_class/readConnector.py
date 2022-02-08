@@ -129,7 +129,6 @@ class ReadsConnector:
         :param same_strand: whether the start read and read are on the same strand
         :param target_seq: the s of the read
         :param query_seq: the m of the start read
-
         """
         match_flag = False
 
