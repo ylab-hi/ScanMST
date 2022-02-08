@@ -65,7 +65,7 @@ def fastq_simulation(in_fa_file, out_prefix, model, logger, depth=10):
     profile_checker(model, logger)
 
     cmd = f"pbsim_rna --depth {depth} --prefix {out_prefix} --sample-profile-id {model} {in_fa_file}"
-    run_cmd(cmd)
+    run_cmd(cmd, logger)
     combine_fastq(out_prefix)
     return f"{out_prefix}.fastq"
 
@@ -94,7 +94,7 @@ def combine_fastq(in_mt_fq, in_wt_fq, out_fq) -> str:
     return out_fq
 
 
-def alignment_runner(in_fq, ref_fa, bigbed, data_type, thread_num, out_prefix):
+def alignment_runner(in_fq, ref_fa, bigbed, data_type, thread_num, out_prefix, logger):
     """Warpper for minimap2."""
     if data_type == "pacbio":
         cmd1 = (
@@ -115,12 +115,12 @@ def alignment_runner(in_fq, ref_fa, bigbed, data_type, thread_num, out_prefix):
     cmd3 = "samtools view -b {0}.sam -o {0}.bam".format(out_prefix)
     cmd4 = f"samtools index {out_prefix}.bam"
 
-    step1 = run_cmd(cmd1, "minimap2 mapping done!")
+    step1 = run_cmd(cmd1, logger)
     if step1:
-        step2 = run_cmd(cmd2, "sort SAM done!")
+        step2 = run_cmd(cmd2, logger)
         if step2:
             remove(f"{out_prefix}.tmp.sam")
-            run_cmd(f"{cmd3} && {cmd4}", "convert BAM and sort BAM done!")
+            run_cmd(f"{cmd3} && {cmd4}")
             return f"{out_prefix}.sam", f"{out_prefix}.bam"
 
     return False
@@ -246,4 +246,5 @@ if __name__ == "__main__":
         data_type=args.library,
         thread_num=thread_num,
         out_prefix=out_prefix,
+        logger=logger,
     )
