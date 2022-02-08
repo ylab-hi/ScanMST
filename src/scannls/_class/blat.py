@@ -5,6 +5,7 @@
 @license:     MIT Licence
 @Time:        12/15/21 2:00 PM
 """
+import contextlib
 import os
 import secrets
 import subprocess
@@ -139,8 +140,9 @@ class Blat:
         result = []
         self.logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
-            if "gfServer".lower() == proc.name().lower() and proc.cmdline():
-                result.append(proc)
+            with contextlib.suppress(psutil.NoSuchProcess):
+                if "gfServer".lower() == proc.name().lower() and proc.cmdline():
+                    result.append(proc)
         return result
 
     def _run_cmd(self, cmd: str) -> None:
