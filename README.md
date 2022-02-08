@@ -1,6 +1,5 @@
-# ScanNLS
-
 <div align="center">
+<h1>ScanNLS</h1>
 
 [![PyPI](https://img.shields.io/pypi/v/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "PyPI")
 [![Status](https://img.shields.io/pypi/status/ScanNLS.svg)](https://pypi.org/project/ScanNLS/ "Status")
@@ -21,58 +20,43 @@
 ## Requirements
 
 <details>
-<summary> Python </summary>
-</details>
-
-<details>
-<summary> Biopython </summary>
-</details>
-
-<details>
-<summary> gapmis </summary>
-We use the <em>gmapmis</em> package, a tool based on <em>C</em>,  to perform the alignment. you can find the gapmis package <a href="https://github.com/xflouris/gapmis">here</a> Install that:
-
-```bash
-$ git clone https://github.com/xflouris/gapmis
-$ cd gapmis
-$ make
-```
-
-You may need to add the path to the gapmis folder to your `$PATH` environment variable.
-
-```bash
-$ export PATH=$PATH:$HOME/<gapmis folder>
-```
-
+<summary> Blat </summary>
 </details>
 
 ## Installation
 
 You can install _ScanNLS_ via pip* from PyPI*:
 
-```bash
+```console
 $ pip install scannls
 ```
 
 ## Usage
 
-Please see the `Command-line Reference <Usage_>`\_ for details.
+Please see the [Command-line Reference] for details.
 
 ## Contributing
 
-Contributions are very welcome.
-To learn more, see the `Contributor Guide`\_.
+Contributions are very welcome. To learn more, see the [Contributor Guide].
 
 ## License
 
-Distributed under the terms of the `MIT license`\_,
-_ScanNLS_ is free and open source software.
+Distributed under the terms of the [MIT license],
+_scannls_ is free and open source software.
 
 ## Issues
 
-If you encounter any problems,
-please `file an issue`\_ along with a detailed description.
+If you encounter any problems, please [file an issue] along with a detailed description.
 
 ## Credits
 
-This project was generated from `@cjolowicz`_'s `Hypermodern Python Cookiecutter`_ template.
+[mit license]: https://opensource.org/licenses/{{cookiecutter.license}}
+[pypi]: https://pypi.org/
+[hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
+[file an issue]: https://github.com/{{cookiecutter.github_user}}/{{cookiecutter.project_name}}/issues
+[pip]: https://pip.pypa.io/
+
+% github-only
+
+[contributor guide]: CONTRIBUTING.md
+[command-line reference]: https://{{cookiecutter.project_name}}.readthedocs.io/en/latest/usage.html

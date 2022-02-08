@@ -5,17 +5,24 @@
 @license:     MIT Licence
 @Time:        12/30/21 15:00 PM
 """
+import re
 from typing import Any
 from typing import Dict
+from typing import Iterable
 from typing import List
+from typing import Optional
+from typing import Set
+from typing import Union
 
-import skbio  # type: ignore
-from loguru._logger import Logger  # type: ignore
+import parasail  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
 from ..utils import get_softclip_length
-from .basicClass import Node  # type: ignore
-from .basicClass import Series  # type: ignore
+from .basicClass import Node
+from .exception import ExonsNotFoundError
+from .exception import ModesNotFoundError
+from .spliceGraph import SpliceGraph
+from .type import LoggerType
 
 
 class SRRescuer:
@@ -28,7 +35,7 @@ class SRRescuer:
         soft_len_cutoff: int,
         mismatch_cutoff: int,
         alignment_frac: float,
-        logger: Logger,
+        logger: LoggerType,
     ) -> None:
         """Initialize Rescuer.
 
@@ -41,107 +48,139 @@ class SRRescuer:
         self.alignment_frac = alignment_frac
         self.logger = logger
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent Rescuer."""
         return (
             f"{self.__class__.__name__}({self.in_bam.filename}, "
             f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
         )
 
-    @staticmethod
-    def mismatch_count(seq: str, seqs: list, alignment_frac: float, mode: int) -> float:
-        """Local alignment."""
-        mismatch = 1e6
-        for each_seq in seqs:
-            seq = skbio.DNA(seq)
-            each_seq = skbio.DNA(each_seq)
-            # if seq or each_seq is an empty string, ignore it
-            if not seq or not each_seq:
-                continue
-            try:
-                (
-                    alignment,
-                    score,
-                    start_end_pos,
-                ) = skbio.alignment.local_pairwise_align_ssw(seq, each_seq)
-            # raise IndexError if SSW cannot work
-            except (IndexError, ValueError):
-                continue
-            if (
-                len(alignment[0]) / float(len(seq)) < alignment_frac
-                and len(alignment[1]) / float(len(each_seq)) < alignment_frac
-            ):
-                continue
-            if (
-                (mode == 1 and start_end_pos[0][0] == 0 and start_end_pos[1][0] == 0)
-                or (
-                    mode == 2
-                    and start_end_pos[0][1] == len(seq) - 1
-                    and start_end_pos[1][1] == len(each_seq) - 1
-                )
-            ) and sum(alignment[0].mismatches(alignment[1])) < mismatch:
-                mismatch = sum(alignment[0].mismatches(alignment[1]))
-        return mismatch
+    def __call__(self, nodes_in_graph: Union[Iterable[Node], SpliceGraph]) -> None:
+        """Rescue SR from softclipped non-chimeric reads.
 
-    def _calculate_sr_for_reads(self, col, query_names, sr_list, sv_list, mode):
+        changed in place
+
+        :param nodes_in_graph: Series
+        """
+        query_names_in_graph = set()
+        for node in nodes_in_graph:
+            query_names_in_graph.update(node.query_name.split(","))
+
+        for node in nodes_in_graph:
+            self.update_sr(node, query_names_in_graph)
+
+        del query_names_in_graph
+
+    @staticmethod
+    def check_if_sr_rescued_depended_on_alignment(
+        query_origin_len: int,
+        align_result: parasail.bindings_v2.Result,
+        alignment_frac: float,
+        mismatch_threshold: int,
+    ) -> bool:
+        """Check if SR is rescued depended on alignment result.
+
+        index style: [ )
+
+        :param mismatch_threshold:
+        :param query_origin_len:
+        :param align_result:
+        :param alignment_frac:
+        :return:
+        """
+        flag = False
+        cigar = align_result.cigar.decode.decode()
+        pattern = re.compile(r"((?P<length>\d+)(?P<op>\D))")
+        if not cigar or re.match(r"^\d+=", cigar) is None:
+            return flag
+        query_len, mismatch_count = 0, 0
+        for match in re.finditer(pattern, cigar):
+            length = int(match.group("length"))
+            if match.group("op") == "=":
+                query_len += length
+            else:
+                mismatch_count += length
+        query_end = align_result.end_query + 1
+        query_start = query_end - query_len
+        target_end = align_result.end_ref + 1
+        target_start = target_end - query_len
+
+        if (
+            query_len / query_origin_len >= alignment_frac
+            and query_start + target_start == 0
+            and mismatch_count <= mismatch_threshold
+        ):
+            flag = True
+        return flag
+
+    @staticmethod
+    def determined_num_increment_sr(
+        seq: str, seqs: list, alignment_frac: float, mode: int, mismatch_threshold: int
+    ) -> int:
+        """Local alignment."""
+        gap_open_penalty = 11
+        gap_extension_penalty = 1
+        increment_sr = 0
+        if not seq:
+            return increment_sr
+        seq = seq[::-1] if mode == 2 else seq
+        for each_seq in [each_seq for each_seq in seqs if each_seq]:
+            each_seq = each_seq[::-1] if mode == 2 else each_seq
+
+            align_result = parasail.sw_trace_striped_sat(
+                seq, each_seq, gap_open_penalty, gap_extension_penalty, parasail.dnafull
+            )
+            if SRRescuer.check_if_sr_rescued_depended_on_alignment(
+                len(seq), align_result, alignment_frac, mismatch_threshold
+            ):
+                increment_sr += 1
+        return increment_sr
+
+    def _calculate_sr_for_reads(
+        self, region, query_names, query_names_in_graph, sr_list, sv_list, mode
+    ):
         """Calculate SR for reads.
 
-        :param col:
         :param query_names:
+        :param query_names_in_graph:
         :param sr_list:
         :param sv_list:
         :param mode:
         :return:
         """
-        for read in col.pileups:
-            # read.alignment is an instance of pysam.AlignedSegment
-            aln = read.alignment
-            read_name = aln.query_name
-            strand = "-" if aln.is_reverse else "+"
-            if aln.mapq >= self.mapq_cutoff and read.query_position:
-                # the read has soft-clipped part but not an anchor read
-                if read_name not in query_names:
-                    if "S" in aln.cigarstring:
-                        (
-                            soft_len,
-                            soft_seq,
-                            soft_pos,
-                            soft_mode,
-                        ) = get_softclip_length(aln, mode)
-                        # the pileup position is equal to the soft-clipped connection point
-                        # xxxxxxxxSyyyyyyyyMzzzzzS
-                        #         ^      ^
-                        soft_pos = soft_pos - 1 if mode == 1 else soft_pos
-                        self.logger.trace(
-                            f"{read_name=}, {col.reference_pos=}, {soft_pos=}"
-                        )
-                        if (
-                            soft_pos == col.reference_pos
-                            and soft_len >= self.soft_len_cutoff
-                        ):
-                            sr_list[strand].append(soft_seq)
-                # the anchor read
-                else:
-                    (
-                        _,
-                        anchor_soft_seq,
-                        anchor_soft_pos,
-                        anchor_soft_mode,
-                    ) = get_softclip_length(aln, mode)
-                    anchor_soft_pos = (
-                        anchor_soft_pos - 1 if mode == 1 else anchor_soft_pos
-                    )
-                    self.logger.trace(
-                        f"{read_name=}, {col.reference_pos=}, {anchor_soft_pos=}"
-                    )
-                    if anchor_soft_pos == col.reference_pos:
-                        sv_list[strand].append(anchor_soft_seq)
+        for read in self.in_bam.fetch(region=region):
+            # read is an instance of pysam.AlignedSegment
+            strand = "-" if read.is_reverse else "+"
+            if read.mapping_quality >= self.mapq_cutoff and "S" in read.cigarstring:
+                (
+                    _len,
+                    _seq,
+                    _pos,
+                    _mode,
+                ) = get_softclip_length(read, mode)
+                _reference_pos = (
+                    read.reference_start if mode == 2 else read.reference_end
+                )
+                if read.query_name in query_names:
+                    if _pos == _reference_pos:
+                        sv_list[strand].append(_seq)
+                elif (
+                    (read.query_name not in query_names_in_graph)
+                    and _pos == _reference_pos
+                    and _len >= self.soft_len_cutoff
+                ):
+                    # the pileup position is equal to the soft-clipped connection point
+                    # xxxxxxxxSyyyyyyyyMzzzzzS
+                    #         ^      ^
+                    sr_list[strand].append(_seq)
 
-    def calculate_sr(self, region: str, mode: int, query_name: str) -> int:
+    def calculate_sr(
+        self, region: str, mode: int, query_name: str, query_names_in_graph: Set
+    ) -> int:
         """Calculate SR from softclipped reads without SV tag, provided target region.
 
         region = 'chrm:start-end'
-        ..note.
+        .. note.
             rescued reads strand should be the same as the anchor ones
             For 'MS' mode, softclipped position should subtract by one
         """
@@ -152,84 +191,95 @@ class SRRescuer:
 
         self.logger.trace(f"{region=}")
 
-        for col in self.in_bam.pileup(
-            region=region, truncate=True, stepper="nofilter", min_base_quality=0
-        ):
-            # read is an instance of pysam.PileupRead
-            self._calculate_sr_for_reads(col, query_names, sr_list, sv_list, mode)
+        # read is an instance of pysam.PileupRead
+        self._calculate_sr_for_reads(
+            region, query_names, query_names_in_graph, sr_list, sv_list, mode
+        )
 
         rescued_sr = 0
+
         if sv_list["+"] and sr_list["+"]:
             for _soft_seq in sr_list["+"]:
-                if (
-                    SRRescuer.mismatch_count(
-                        _soft_seq, sv_list["+"], self.alignment_frac, mode
-                    )
-                    <= self.mismatch_cutoff
-                ):
-                    rescued_sr += 1
+                rescued_sr += SRRescuer.determined_num_increment_sr(
+                    _soft_seq,
+                    sv_list["+"],
+                    self.alignment_frac,
+                    mode,
+                    self.mismatch_cutoff,
+                )
 
         if sv_list["-"] and sr_list["-"]:
             for _soft_seq in sr_list["-"]:
-                if (
-                    SRRescuer.mismatch_count(
-                        _soft_seq, sv_list["-"], self.alignment_frac, mode
-                    )
-                    <= self.mismatch_cutoff
-                ):
-                    rescued_sr += 1
-        self.logger.trace(f"{sv_list=}")
-        self.logger.trace(f"{sr_list=}")
+                rescued_sr += SRRescuer.determined_num_increment_sr(
+                    _soft_seq,
+                    sv_list["-"],
+                    self.alignment_frac,
+                    mode,
+                    self.mismatch_cutoff,
+                )
 
         return rescued_sr
 
     @staticmethod
-    def obtain_region_for_rescue_sr(node: Node, tgt_name: str, mode: int) -> str:
+    def obtain_region_for_rescue_sr(
+        strand: Optional[str],
+        chrom: Optional[str],
+        exons: Any,
+        tgt_name: str,
+        mode: int,
+    ) -> str:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
               Due to microhomology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
-        strand = node.strand
-        chrom = node.chrom
-        exons = node.exons
-        if exons:
-            if strand == "+":
-                if tgt_name == "next_breakpoint":
-                    pos = exons[-1][1]
-                elif tgt_name == "prev_breakpoint":
-                    pos = exons[0][0]
-            else:
-                if tgt_name == "next_breakpoint":
-                    pos = exons[0][0]
-                elif tgt_name == "prev_breakpoint":
-                    pos = exons[-1][1]
+        if exons is None or strand is None or chrom is None:
+            raise ExonsNotFoundError(f"{chrom=} {strand=} {exons=}")
+
+        if strand == "+":
+            pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
+        else:
+            pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
         region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
         return region
 
-    def update_sr(self, series: Series) -> Any:
-        """Update SR for input series."""
-        for idx in range(len(series) - 1):
-            current_node = series[idx]
-            next_node = series[idx + 1]
-            mode1, mode2 = current_node.modes
-            current_node.update_next_breakpoint_depth(self.in_bam, mode1)
+    def update_sr(self, current_node: Node, query_names_in_graph: Set) -> None:
+        """Update SR for input node."""
+        if current_node.is_end_node():
+            return
+
+        if current_node.modes is None:
+            raise ModesNotFoundError(f"{current_node.query_name}")
+
+        mode1, mode2 = current_node.modes
+        current_node.update_next_breakpoint_depth(self.in_bam, mode1)
+
+        query_name_current = current_node.query_name
+        _region_current = SRRescuer.obtain_region_for_rescue_sr(
+            current_node.strand,
+            current_node.chrom,
+            current_node.exons,
+            "next_breakpoint",
+            mode1,
+        )
+        rescued_sr = self.calculate_sr(
+            _region_current, mode1, query_name_current, query_names_in_graph
+        )
+        for next_node in current_node.successors:
             next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
-            query_name1 = current_node.query_name
-            query_name2 = next_node.query_name
-
-            _region1 = SRRescuer.obtain_region_for_rescue_sr(
-                current_node, "next_breakpoint", mode1
+            query_name_next = next_node.query_name
+            _region_next = SRRescuer.obtain_region_for_rescue_sr(
+                next_node.strand,
+                next_node.chrom,
+                next_node.exons,
+                "prev_breakpoint",
+                mode2,
             )
-            _region2 = SRRescuer.obtain_region_for_rescue_sr(
-                next_node, "prev_breakpoint", mode2
+            rescued_sr_next = self.calculate_sr(
+                _region_next, mode2, query_name_next, query_names_in_graph
             )
-
-            rescued_sr1 = self.calculate_sr(_region1, mode1, query_name1)
-            rescued_sr2 = self.calculate_sr(_region2, mode2, query_name2)
-            rescued_sr = rescued_sr1 + rescued_sr2
-            self.logger.trace(f"{rescued_sr=}")
-            if rescued_sr > 0:
-                series[idx].update_sr(rescued_sr)
-        return series
+            rescued_sr += rescued_sr_next
+        self.logger.trace(f"{rescued_sr=}")
+        if rescued_sr > 0:
+            current_node.update_sr(rescued_sr)

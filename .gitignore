@@ -11,13 +11,18 @@
 __pycache__/
 
 # editor
+profile/
 .idea/
 .run/
+#profile
+profile/
 # jupyter notebook
 *.ipynb
 # bam
-*.bam
 *.sam
 # debug reprot
 /debuglog/
 .DS*
+
+# profile file
+*.pstat

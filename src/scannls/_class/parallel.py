@@ -11,8 +11,9 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 
-from loguru._logger import Logger
 from tqdm import tqdm  # type: ignore
+
+from .type import LoggerType
 
 
 class ParallelWorker:
@@ -41,7 +42,7 @@ class ParallelWorker:
     """
 
     def __init__(
-        self, func: Callable[..., Any], logger: Logger, n_jobs: int = 1
+        self, func: Callable[..., Any], logger: LoggerType, n_jobs: int = 1
     ) -> None:
         """Initialize the ParallelWorker class."""
         self.func = func
