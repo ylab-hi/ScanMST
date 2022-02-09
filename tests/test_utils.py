@@ -1,6 +1,6 @@
 # !/usr/bin/env python
 """Test the utils.py module."""
-import subprocess
+import shutil
 
 import pytest
 
@@ -28,11 +28,13 @@ class FakeRead:
         self.query_sequence = query_sequence
         self.mapping_quality = 60
 
-    def get_tag(self, *_):
+    @staticmethod
+    def get_tag(*_):
         """Fake trace."""
         return 0
 
-    def is_reverse(self, *_):
+    @staticmethod
+    def is_reverse(*_):
         """Fake debug."""
         return False
 
@@ -82,9 +84,9 @@ def test_get_softclip_length(read, mode, expected_result):
 
 def test_external_tool_checking(monkeypatch, fake_logger):
     """Test external_tool_checking func."""
-    monkeypatch.setattr(subprocess, "getoutput", lambda x: "TEST")
+    monkeypatch.setattr(shutil, "which", lambda x: "TEST")
     assert external_tool_checking(fake_logger) is None
 
-    monkeypatch.setattr(subprocess, "getoutput", lambda x: "command not found")
+    monkeypatch.setattr(shutil, "which", lambda x: None)
     with pytest.raises(ToolNotFoundError):
         external_tool_checking(fake_logger)
