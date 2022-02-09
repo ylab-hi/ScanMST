@@ -76,11 +76,13 @@ class SpliceGraph:
         self.construct()
         # sr rescuer
         rescuer(self)
+
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
         self.prune()
         if is_plot:
             from .plotGraph import plot_graph
 
+            # viz graph by js
             plot_graph(self, f"clique_{clique_ind}", False)
         # trace path
         for node_list in self.trace():
@@ -157,6 +159,18 @@ class SpliceGraph:
             similar_nodes.append(node)
         else:
             self.nodes[node.similar_key] = [node]
+
+    @staticmethod
+    def update_node_with_other_node(
+        node: Node, other_node: Node, features: Iterable[str]
+    ) -> None:
+        """Update node with other node.
+
+        if current feature of node is None, then use other node's feature.
+        """
+        for feature in features:
+            if getattr(node, feature) is None:
+                setattr(node, feature, getattr(other_node, feature))
 
     @staticmethod
     def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
@@ -332,45 +346,23 @@ class SpliceGraph:
             updated_node.insertion_info[1], NovelInsertion
         ):
             updated_node.insertion_info[1].increment_ao()
-        # update sv_type
-        updated_node.sv_type = (
-            current_node.sv_type
-            if current_node.sv_type is not None
-            else updated_node.sv_type
+
+        SpliceGraph.update_node_with_other_node(
+            updated_node,
+            current_node,
+            (
+                "sv_type",
+                "prev_sv_type",
+                "splicing_code",
+                "annotation_code",
+                "genes",
+                "prev_breakpoint",
+                "next_breakpoint",
+                "modes",
+            ),
         )
-        # update prev_sv_type
-        updated_node.prev_sv_type = (
-            current_node.prev_sv_type
-            if current_node.prev_sv_type is not None
-            else updated_node.prev_sv_type
-        )
-        # update splice_code
-        updated_node.splicing_code = (
-            current_node.splicing_code
-            if current_node.splicing_code is not None
-            else updated_node.splicing_code
-        )
-        # update annotation_code
-        updated_node.annotation_code = (
-            current_node.annotation_code
-            if current_node.annotation_code is not None
-            else updated_node.annotation_code
-        )
-        # update genes
-        updated_node.genes = (
-            current_node.genes if current_node.genes is not None else updated_node.genes
-        )
-        # update breakpoints
-        if updated_node.prev_breakpoint is None:
-            updated_node.prev_breakpoint = current_node.prev_breakpoint
-        if updated_node.next_breakpoint is None:
-            updated_node.next_breakpoint = current_node.next_breakpoint
         # update query name
         updated_node.query_name += "," + current_node.query_name
-
-        # update mode of the node
-        if updated_node.modes is None:
-            updated_node.modes = current_node.modes
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
@@ -580,6 +572,15 @@ class SpliceGraph:
         winner.update_sr(loser.sr)
         winner.add_successor_from_list(loser.successors)
         winner.add_predecessor_from_list(loser.predecessors)
+        SpliceGraph.update_node_with_other_node(
+            winner,
+            loser,
+            (
+                "splicing_code",
+                "annotation_code",
+                "genes",
+            ),
+        )
 
         for loser_predecessor in loser.predecessors:
             loser_predecessor.successors.remove(loser)
@@ -625,9 +626,9 @@ class SpliceGraph:
             )
 
         return SpliceGraph._check_can_battle_condition(
-            node_a.prev_breakpoint, node_a.prev_breakpoint, self.prune_threshold
+            node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
         ) and SpliceGraph._check_can_battle_condition(
-            node_a.next_breakpoint, node_a.next_breakpoint, self.prune_threshold
+            node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
         )
 
     def _begin_battle(self, node_a: Node, node_b: Node) -> Tuple[bool, ...]:
