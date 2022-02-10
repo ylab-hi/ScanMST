@@ -1,6 +1,6 @@
 # !/usr/bin/env python
 """Useful functions for scannls."""
-import subprocess
+import shutil
 import time
 from functools import wraps
 from typing import Any
@@ -21,11 +21,10 @@ def external_tool_checking(log_handler: LoggerType) -> None:
     """Checking dependencies are installed."""
     software = ["gfClient", "gfServer"]
     for tool in software:
-        output = subprocess.getoutput(tool)
-        if "command not found" in output:
+        output = shutil.which(tool)
+        if not output:
             raise ToolNotFoundError(tool)
-        else:
-            log_handler.success(f"Checking for {tool} found ")
+        log_handler.success(f"Checking for {tool} found ")
 
 
 def get_softclip_length(
