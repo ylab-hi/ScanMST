@@ -255,14 +255,6 @@ toml = "*"
 pipenv = ["pipenv"]
 
 [[package]]
-name = "edlib"
-version = "1.3.9"
-description = "Lightweight, super fast library for sequence alignment using edit (Levenshtein) distance."
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "eradicate"
 version = "2.0.0"
 description = "Removes commented-out code."
@@ -420,11 +412,7 @@ smmap = ">=3.0.1,<6"
 
 [[package]]
 name = "gitpython"
-<<<<<<< HEAD
-version = "3.1.25"
-=======
 version = "3.1.26"
->>>>>>> develop
 description = "GitPython is a python library used to interact with Git repositories"
 category = "dev"
 optional = false
@@ -461,11 +449,7 @@ htseq-qa = ["matplotlib (>=1.4)"]
 
 [[package]]
 name = "identify"
-<<<<<<< HEAD
-version = "2.4.2"
-=======
-version = "2.4.8"
->>>>>>> develop
+version = "2.4.9"
 description = "File identification library for Python"
 category = "dev"
 optional = false
@@ -705,7 +689,7 @@ flake8-polyfill = ">=1.0.2,<2"
 
 [[package]]
 name = "platformdirs"
-version = "2.4.1"
+version = "2.5.0"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
@@ -776,14 +760,14 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "pybind11"
-version = "2.9.0"
+version = "2.9.1"
 description = "Seamless operability between C++11 and Python"
 category = "main"
 optional = false
-python-versions = "!=3.0,!=3.1,!=3.2,!=3.3,!=3.4,>=2.7"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [package.extras]
-global = ["pybind11-global (==2.9.0)"]
+global = ["pybind11-global (==2.9.1)"]
 
 [[package]]
 name = "pycodestyle"
@@ -1332,11 +1316,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-<<<<<<< HEAD
-content-hash = "1bac62217b719fd212463d6e63c3248d4330bbc3abde4bd98b998ed010a493d0"
-=======
-content-hash = "84bded2e19eda44c0200f299da29caa00ecd258ceadab5722749b22c95bf40f5"
->>>>>>> develop
+content-hash = "2e9c0083bb5cffcf372a65c9d083ca8a526f49e2f8a92abcab18ab10ba559ecb"
 
 [metadata.files]
 alabaster = [
@@ -1514,24 +1494,6 @@ dparse = [
     {file = "dparse-0.5.1-py3-none-any.whl", hash = "sha256:e953a25e44ebb60a5c6efc2add4420c177f1d8404509da88da9729202f306994"},
     {file = "dparse-0.5.1.tar.gz", hash = "sha256:a1b5f169102e1c894f9a7d5ccf6f9402a836a5d24be80a986c7ce9eaed78f367"},
 ]
-edlib = [
-    {file = "edlib-1.3.9-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:b2f640f3aeeaa681d9f41ce94a38469beb1d1f3662e798dde635b0b62ebfada4"},
-    {file = "edlib-1.3.9-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:1c7e5137fe5187b09ec00748ef09c3ddd4e3df0356c7c45fce2d938ab63bd221"},
-    {file = "edlib-1.3.9-cp35-cp35m-manylinux2010_x86_64.whl", hash = "sha256:edb81a1aad1c390ead8e456b2bd3e549f462f90c4c19b12902a3f84d5716f37c"},
-    {file = "edlib-1.3.9-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:5c4fc8d362a2608dbae7d02c1ff875f79ccbd9153b54c5160d3a8618daeb3109"},
-    {file = "edlib-1.3.9-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:7f5033d4dc9ae1723348175a96437d3fad2784cdd3944bb9104abbfc633ceeb0"},
-    {file = "edlib-1.3.9-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:7fc232ece8ba16c1d3c90819beb51a74fd5e04aec22bd09adbfbcb84b32b2aca"},
-    {file = "edlib-1.3.9-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:b91a80d3e6763a5ba1ee8f6eb87abb22edd2243d1672b227dc9f8f5eacc2f09e"},
-    {file = "edlib-1.3.9-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:40af82e085a6b8dac6d055e69ad4e4ca2e502e2a7c8e4b48e7c9c46534f249ec"},
-    {file = "edlib-1.3.9-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:d32939d7433c92e836daf6622c1f26252c84a6b7729a0aa93e960e36ffdff386"},
-    {file = "edlib-1.3.9-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:0ee63131cdf127d1f4849aa0f98bf3d6974cc60c1ca51ebefbf3d4356eb9f638"},
-    {file = "edlib-1.3.9-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:b1e5d136091383bb5b1ebc6b5a74feeb0651b4455c6630be11594a84c02e9ba6"},
-    {file = "edlib-1.3.9-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:21099859eaa656bea35e21ce0d8562df57e55838812a43521cd46096a5d206ff"},
-    {file = "edlib-1.3.9-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:402c17b2ee5c684c543fb5120ca2a24a288a798d083839bf8cab2560808ca4df"},
-    {file = "edlib-1.3.9-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:499ec22da9f078a199c73b5e1455e31130e4026baacc0b84e9c516fcea551ad0"},
-    {file = "edlib-1.3.9-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:20d3743e231334ed8f3db3b400dd5b3db66b8eca5f6176114fef947978c20293"},
-    {file = "edlib-1.3.9.tar.gz", hash = "sha256:64c3dfab3ebe3e759565a0cc71eb4df23cf3ce1713fd558af3c473dddc2a3766"},
-]
 eradicate = [
     {file = "eradicate-2.0.0.tar.gz", hash = "sha256:27434596f2c5314cc9b31410c93d8f7e8885747399773cd088d3adea647a60c8"},
 ]
@@ -1650,8 +1612,8 @@ htseq = [
     {file = "HTSeq-0.13.5.tar.gz", hash = "sha256:2015aea9b682785e26bf8f2ec61be352843760b677c3f8c1c20022c58adac648"},
 ]
 identify = [
-    {file = "identify-2.4.8-py2.py3-none-any.whl", hash = "sha256:a55bdd671b6063eb837af938c250ec00bba6e610454265133b0d2db7ae718d0f"},
-    {file = "identify-2.4.8.tar.gz", hash = "sha256:97e839c1779f07011b84c92af183e1883d9745d532d83412cca1ca76d3808c1c"},
+    {file = "identify-2.4.9-py2.py3-none-any.whl", hash = "sha256:bff7c4959d68510bc28b99d664b6a623e36c6eadc933f89a4e0a9ddff9b4fee4"},
+    {file = "identify-2.4.9.tar.gz", hash = "sha256:e926ae3b3dc142b6a7a9c65433eb14ccac751b724ee255f7c2ed3b5970d764fb"},
 ]
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
@@ -1875,8 +1837,8 @@ pep8-naming = [
     {file = "pep8_naming-0.12.1-py2.py3-none-any.whl", hash = "sha256:4a8daeaeb33cfcde779309fc0c9c0a68a3bbe2ad8a8308b763c5068f86eb9f37"},
 ]
 platformdirs = [
-    {file = "platformdirs-2.4.1-py3-none-any.whl", hash = "sha256:1d7385c7db91728b83efd0ca99a5afb296cab9d0ed8313a45ed8ba17967ecfca"},
-    {file = "platformdirs-2.4.1.tar.gz", hash = "sha256:440633ddfebcc36264232365d7840a970e75e1018d15b4327d11f91909045fda"},
+    {file = "platformdirs-2.5.0-py3-none-any.whl", hash = "sha256:30671902352e97b1eafd74ade8e4a694782bd3471685e78c32d0fdfd3aa7e7bb"},
+    {file = "platformdirs-2.5.0.tar.gz", hash = "sha256:8ec11dfba28ecc0715eb5fb0147a87b1bf325f349f3da9aab2cd6b50b96b692b"},
 ]
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
@@ -1929,8 +1891,8 @@ py = [
     {file = "py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719"},
 ]
 pybind11 = [
-    {file = "pybind11-2.9.0-py2.py3-none-any.whl", hash = "sha256:0c178c6e5806e8e58a7eec5a363d052bb9dac860a3ff64fbddb7226110644977"},
-    {file = "pybind11-2.9.0.tar.gz", hash = "sha256:46d315a669a59b660def6c5ca4e128f6fa975ec4abce6019a43d92084ad1bf89"},
+    {file = "pybind11-2.9.1-py2.py3-none-any.whl", hash = "sha256:b570d17ed34b0f8ff43f5647833db87353be9afca0c7d1d69e92706b10a9c961"},
+    {file = "pybind11-2.9.1.tar.gz", hash = "sha256:40f8e57af6fcaa7eb5d727707125f90f8daa0993f28a9981a232d40c85dbbcb0"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},

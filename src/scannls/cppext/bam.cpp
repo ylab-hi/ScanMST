@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 #include "bam.h"
+#include <pybind11/pybind11.h>
+
 
 
 void printChrome(const bam_hdr_t *har) {

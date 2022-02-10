@@ -31,6 +31,4 @@ void printChrome(const bam_hdr_t *har);
 void readBam(const char *bamFile);
 parseCigarResult_t parseCigar(const char *cigar);
 
-
-
 #endif //SCANNLSEXT_BAM_H

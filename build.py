@@ -12,7 +12,11 @@ from pybind11.setup_helpers import Pybind11Extension
 def build(setup_kwargs):
     """Build cpp extension."""
     ext_modules = [
-        Pybind11Extension("scannls.cppext.align", ["src/scannls/cppext/align.cpp"])
+        Pybind11Extension(
+            "scannls.cppext",
+            sources=["src/scannls/cppext/bam.cpp", "src/scannls/cppext/binding.cpp"],
+            language="c++",
+        )
     ]
     setup_kwargs.update(
         {

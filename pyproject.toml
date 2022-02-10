@@ -32,7 +32,6 @@ tqdm = "^4.62.3"
 networkx = "^2.6.3"
 parasail = "^1.2.4"
 pybind11 = "^2.9.0"
-edlib = "^1.3.9"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.0"
@@ -64,8 +63,8 @@ flake8-comprehensions = "^3.7.0"
 flake8-eradicate = "^1.2.0"
 flake8-simplify = "^0.14.2"
 
-#[tool.poetry.build]
-#script = "build.py"
+[tool.poetry.build]
+script = "build.py"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
