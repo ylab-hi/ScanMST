@@ -129,7 +129,7 @@ class Insertion(Read):
         query_sequence: str,
     ):
         """Initialize Insertion."""
-        parse_cigar_result = cppext.parse_cigar(cigarstring)
+        parse_cigar_result = cppext.parseCigar(cigarstring)
         super().__init__(
             "",  # query_name
             chrom,

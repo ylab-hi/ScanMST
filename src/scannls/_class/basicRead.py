@@ -152,7 +152,7 @@ class Read:
         query_seq: str,
     ) -> "Read":
         """Calculate the features of the read and initialize the read."""
-        parse_cigar_result = cppext.parse_cigar(cigar_str)
+        parse_cigar_result = cppext.parseCigar(cigar_str)
 
         return cls(
             query_name,
@@ -182,7 +182,7 @@ class Read:
         current_pos = self.ref_start
         start_pos = self.ref_start
 
-        for ind in range(len(self.cigartuples_without_soft), 2):
+        for ind in range(0, len(self.cigartuples_without_soft), 2):
             op_code = self.cigartuples_without_soft[ind]
             _len = self.cigartuples_without_soft[ind + 1]
 

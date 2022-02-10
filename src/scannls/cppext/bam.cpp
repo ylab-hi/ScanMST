@@ -78,6 +78,7 @@ parseCigarResult_t parseCigar(const char *cigar) {
             case 3:
                 result.indel_len += len;
                 result.ref_match += len;
+                result.cigartuples_without_soft.insert(result.cigartuples_without_soft.end(), {op, len});
                 break;
             case 4:
                 result.query_len += len;

@@ -9,6 +9,7 @@
 import pytest
 from tests import FakeHsp
 
+from scannls import cppext
 from scannls import Read
 from scannls import ReadsConnector
 
@@ -34,7 +35,7 @@ class TestRead:
     @pytest.mark.parametrize(
         "cigar, expected_result",
         [
-            ("10S50M5S", (10, 5, 50, 50, 0, [[0, 50]], 65, [(4, 10), (0, 50), (4, 5)])),
+            ("10S50M5S", (10, 5, 50, 50, 0, [0, 50], 65, [4, 10, 0, 50, 4, 5])),
             (
                 "15S5I1D80M",
                 (
@@ -43,16 +44,24 @@ class TestRead:
                     85,
                     81,
                     -4,
-                    [[1, 5], [2, 1], [0, 80]],
+                    [1, 5, 2, 1, 0, 80],
                     100,
-                    [(4, 15), (1, 5), (2, 1), (0, 80)],
+                    [4, 15, 1, 5, 2, 1, 0, 80],
                 ),
             ),
         ],
     )
-    def test__calculate_features(self, cigar, expected_result):
+    def test_parse_cigar(self, cigar, expected_result):
         """Test the calculate_features function."""
-        assert Read._calculate_features(cigar) == expected_result
+        result = cppext.parseCigar(cigar)
+        assert result.lt_soft_len == expected_result[0]
+        assert result.rt_soft_len == expected_result[1]
+        assert result.read_match == expected_result[2]
+        assert result.ref_match == expected_result[3]
+        assert result.indel_len == expected_result[4]
+        assert result.cigartuples_without_soft == expected_result[5]
+        assert result.query_len == expected_result[6]
+        assert result.cigartuples == expected_result[7]
 
     def test_init(self, param_dict):
         """Test the init function."""
