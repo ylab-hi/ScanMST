@@ -47,7 +47,7 @@ def build(setup_kwargs):
     setup_kwargs.update(
         {
             "ext_modules": ext_modules,
-            "cmd_class": {"build_ext": build_ext},
+            "cmdclass": {"build_ext": build_ext},
             "zip_safe": False,
         }
     )

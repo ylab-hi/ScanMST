@@ -16,6 +16,9 @@ profile/
 .run/
 #profile
 profile/
+
+#cmake
+/cmake-build*/
 # jupyter notebook
 *.ipynb
 # bam

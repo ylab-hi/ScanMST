@@ -425,7 +425,7 @@ gitdb = ">=4.0.1,<5"
 name = "greenlet"
 version = "1.1.2"
 description = "Lightweight in-process concurrent programming"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*"
 
@@ -559,7 +559,7 @@ python-versions = "*"
 name = "msgpack"
 version = "1.0.3"
 description = "MessagePack (de)serializer."
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 
