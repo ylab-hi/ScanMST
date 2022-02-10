@@ -10,7 +10,8 @@
 import re
 from typing import Any
 from typing import List
-from typing import Tuple
+
+from scannls import cppext
 
 
 class Read:
@@ -89,9 +90,8 @@ class Read:
         read_match_size: int,
         reference_match_size: int,
         indel_size: int,
-        cigartuples_without_soft: List[Tuple[str, int]],
+        cigartuples_without_soft: List[int],
         query_length: int,
-        cigartuples: Any,
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name
@@ -109,7 +109,6 @@ class Read:
         self.indel_size = indel_size
         self.cigartuples_without_soft = cigartuples_without_soft
         self.query_length = query_length
-        self.cigartuples = cigartuples
         self.ref_end = self.ref_start + self.reference_match_size
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
@@ -213,16 +212,7 @@ class Read:
         query_seq: str,
     ) -> "Read":
         """Calculate the features of the read and initialize the read."""
-        (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        ) = Read._calculate_features(cigar_str)
+        parse_cigar_result = cppext.parse_cigar(cigar_str)
 
         return cls(
             query_name,
@@ -233,14 +223,13 @@ class Read:
             mapq,
             nm,
             query_seq,
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
+            parse_cigar_result.lt_soft_len,
+            parse_cigar_result.rt_soft_len,
+            parse_cigar_result.read_match,
+            parse_cigar_result.ref_match,
+            parse_cigar_result.indel_len,
+            parse_cigar_result.cigartuples_without_soft,
+            parse_cigar_result.query_len,
         )
 
     def get_exons_and_introns(self) -> Any:
@@ -249,18 +238,19 @@ class Read:
         :return: exons coordinates and introns coordinates
         :rtype: tuple
         """
-        cigartuples_without_soft = self.cigartuples_without_soft
         exons = []
         current_pos = self.ref_start
         start_pos = self.ref_start
 
-        for op_code, _len_ in cigartuples_without_soft:
+        for ind in range(len(self.cigartuples_without_soft), 2):
+            op_code = self.cigartuples_without_soft[ind]
+            _len = self.cigartuples_without_soft[ind + 1]
 
             if op_code in {0, 2}:  # M, D
-                current_pos = current_pos + _len_
+                current_pos = current_pos + _len
             elif op_code == 3:  # N
                 exons.append([start_pos, current_pos])
-                current_pos = current_pos + _len_
+                current_pos = current_pos + _len
                 start_pos = current_pos
 
         exons.append([start_pos, current_pos])

@@ -16,6 +16,7 @@ from ..core.nls_inference import infer_nls_from_connected_reads
 from .exception import ReadNotFoundError
 from .type import EventType
 from .type import LoggerType
+from scannls import cppext
 
 
 class NovelInsertion:
@@ -128,6 +129,7 @@ class Insertion(Read):
         query_sequence: str,
     ):
         """Initialize Insertion."""
+        parse_cigar_result = cppext.parse_cigar(cigarstring)
         super().__init__(
             "",  # query_name
             chrom,
@@ -137,8 +139,14 @@ class Insertion(Read):
             mapq,
             nm,
             query_sequence,
-            *Read._calculate_features(cigarstring),
-        )
+            parse_cigar_result.lt_soft_len,
+            parse_cigar_result.rt_soft_len,
+            parse_cigar_result.read_match,
+            parse_cigar_result.ref_match,
+            parse_cigar_result.indel_len,
+            parse_cigar_result.cigartuples_without_soft,
+            parse_cigar_result.query_len,
+        ),
 
         self.hit_num = hit_num
 

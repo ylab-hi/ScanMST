@@ -18,6 +18,8 @@ PYBIND11_MODULE(cppext, m){
             .def_readonly("ref_match", &parseCigarResult_t::ref_match)
             .def_readonly("read_match", &parseCigarResult_t::read_match)
             .def_readonly("query_len", &parseCigarResult_t::query_len)
-            .def_readonly("indel_len", &parseCigarResult_t::indel_len);
-
+            .def_readonly("indel_len", &parseCigarResult_t::indel_len)
+            .def("__repr__", [](const parseCigarResult_t &r) {
+            return "parseCigarResult()";
+            });
 }
