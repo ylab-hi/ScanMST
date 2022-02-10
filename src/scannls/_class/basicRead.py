@@ -7,7 +7,6 @@
 @license:     MIT Licence
 @Time:        1/9/22 12:13 PM
 """
-import re
 from typing import Any
 from typing import List
 
@@ -30,7 +29,7 @@ class Read:
     :param read_match_size: M+I
     :param reference_match_size: M+D+N
     :param indel_size: D+N-I
-    :param cigartuples: cigarstring tuple version: [ (operation code, length) ];
+    :param cigar_tuples: cigarstring tuple version: [ (operation code, length) ];
         operation code: {'M':0,'I':1,'D':2,'N':3,'S':4,'H':5}
     :param cigartuples_without_soft: cigarstring tuple verion [exclude softclipping]:
         [(operation code, length)]; operation code: {'M':0,'I':1,'D':2,'N':3}
@@ -138,65 +137,6 @@ class Read:
         return (
             f"Read({self.chrom}, {self.ref_start}, {self.ref_end}, "
             f"{self.strand}, {self.mapq}, {self.nm})"
-        )
-
-    @staticmethod
-    def _calculate_features(cigar_str: str) -> Any:
-        """Calculate the features of the read.
-
-        :param cigar_str: cigar string of the read
-        """
-        cigar_char_dict = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5}
-        # 'length', 'operation char'
-        len_type_tuple = re.findall(r"(\d+)(\w)", cigar_str)
-        # (operation code, length)
-        cigartuples = [(cigar_char_dict[j], int(i)) for i, j in len_type_tuple]
-
-        query_length = 0
-        indel_size = 0
-        reference_match_size = 0
-        read_match_size = 0
-        cigartuples_without_soft = []
-
-        for op_code, _len_ in cigartuples:
-            if op_code == 0:  # M
-                reference_match_size += _len_
-                read_match_size += _len_
-                query_length += _len_
-                cigartuples_without_soft.append([0, _len_])
-            elif op_code == 1:  # I
-                indel_size += -_len_
-                read_match_size += _len_
-                query_length += _len_
-                cigartuples_without_soft.append([1, _len_])
-            elif op_code == 2:  # D
-                indel_size += _len_
-                reference_match_size += _len_
-                cigartuples_without_soft.append([2, _len_])
-            elif op_code == 3:  # N
-                indel_size += _len_
-                reference_match_size += _len_
-                cigartuples_without_soft.append([3, _len_])
-            elif op_code == 4:  # S
-                query_length += _len_
-
-        lt_soft_len = 0
-        rt_soft_len = 0
-        lt_op, lt_len = cigartuples[0]
-        rt_op, rt_len = cigartuples[-1]
-        if lt_op == 4:
-            lt_soft_len = lt_len
-        if rt_op == 4:
-            rt_soft_len = rt_len
-        return (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
         )
 
     @classmethod
