@@ -1,14 +1,13 @@
 #include "bam.h"
-
-
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(bam, m){
+PYBIND11_MODULE(cppext, m){
     m.doc() = "BAM file parser";
     m.def("parseCigar", &parseCigar, "parse cigar string");
     py::class_<parseCigarResult_t>(m, "parseCigarResult")
