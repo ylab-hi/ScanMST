@@ -56,6 +56,8 @@ parseCigarResult_t parseCigar(const char *cigar) {
     if (sam_parse_cigar(cigar, nullptr, &buf, &m) == -1) {
         std::cerr << "Error: Cannot parse Cigar  " << cigar << "\n";
     }
+    result.cigartuples.reserve(2*m);
+    result.cigartuples_without_soft.reserve(2*m);
 
     for (size_t i{0}; i < m; i++) {
         uint op{bam_cigar_op(buf[i])};
