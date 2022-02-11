@@ -50,7 +50,7 @@ def single_hop_generator(
     )
     to_wt_and_mt_fasta(input_dict=nls_dict, output_prefix=output_prefix)
 
-    vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", output_prefix, logger)
+    vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", logger)
 
     vcf_writer.open()
     vcf_writer.write_data(nls_dict)
@@ -104,7 +104,7 @@ def multi_hop_generator(
         gtf_writer.write_data(nls_dict[trx_idx])
     gtf_writer.close()
 
-    vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", output_prefix, logger)
+    vcf_writer = SimVCFWriter(f"{output_prefix}.vcf", logger)
     vcf_writer.open()
     vcf_writer.write_data(nls_dict)
     vcf_writer.close()

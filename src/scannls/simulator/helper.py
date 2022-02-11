@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Helper functions."""
 # ===============================================================================
+import os.path
 from itertools import tee
 
 
@@ -14,8 +15,20 @@ def pairwise(iterable):
     return zip(a, b)
 
 
+def real_path(output_prefix) -> str:
+    """Obtain real path according to the output_prefix."""
+    if output_prefix.startswith("~"):
+        real_path = os.path.join(
+            os.path.expanduser("~"), output_prefix.replace("~/", "")
+        )
+    else:
+        real_path = os.path.abspath(output_prefix)
+    return real_path
+
+
 def to_wt_and_mt_fasta(input_dict: dict, output_prefix: str):
     """Output WT and MT fasta."""
+    output_prefix = real_path(output_prefix)
     with open(f"{output_prefix}.WT.fa", "w") as wt_fa, open(
         f"{output_prefix}.MT.fa", "w"
     ) as mt_fa:
