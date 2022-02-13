@@ -9,6 +9,7 @@ from functools import singledispatchmethod
 from pathlib import Path
 from typing import Any
 from typing import IO
+from typing import Tuple
 
 from pyfaidx import Fasta  # type: ignore
 from pyfaidx import FastaNotFoundError  # type: ignore
@@ -39,13 +40,13 @@ class FastaWriter(Writer):
         """Check if file is opened."""
         return self.io is not None and not self.io.closed
 
-    def formatter(self, seq_id: int, node_length: str, sequence: str) -> str:
+    def formatter(self, seq_id: str, sequence: str) -> str:
         """Formatter for writing data."""
         if sequence == "":
             self.logger.warning(
                 f"{self.__class__.__name__}: Sequence ID or sequence is empty."
             )
-        return f">{seq_id:0>6} {node_length}\n{sequence}\n"
+        return f">{seq_id:0>6}\n{sequence}\n"
 
     def open(self, mode: str = "w") -> IO:
         """Open file."""
@@ -85,30 +86,16 @@ class FastaWriter(Writer):
             self.logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
             )
-        sequence = get_nodes_sequence_from_series(
+        sequence, node_length_str = get_nodes_sequence_from_series(
             data_object, reference_io=self.reference_io
         )
-        node_length = get_nodes_len_from_series(
-            data_object, reference_io=self.reference_io
-        )
-        self.write_line(self.formatter(self.id, node_length, sequence))
+
+        self.write_line(self.formatter(f"{self.id} {node_length_str}", sequence))
 
 
-def get_nodes_len_from_series(series: Series, reference_io: Fasta) -> str:
-    """Get length of sequence of nodes of series.
-
-    :param series: Series including nodes.
-    :param reference_io: ReferenceIO object.
-
-    :return: Sequence of nodes.
-    """
-    length_list = []
-    for node in series:
-        length_list.append(str(len(get_exon_sequence_from_node(node, reference_io))))
-    return "|".join(length_list)
-
-
-def get_nodes_sequence_from_series(series: Series, reference_io: Fasta) -> str:
+def get_nodes_sequence_from_series(
+    series: Series, reference_io: Fasta
+) -> Tuple[str, str]:
     """Get sequence of nodes of series.
 
     :param series: Series including nodes.
@@ -117,9 +104,12 @@ def get_nodes_sequence_from_series(series: Series, reference_io: Fasta) -> str:
     :return: Sequence of nodes.
     """
     sequence = ""
+    node_length_str = ""
     for node in series:
-        sequence += get_exon_sequence_from_node(node, reference_io)
-    return sequence
+        node_seq = get_exon_sequence_from_node(node, reference_io)
+        sequence += node_seq
+        node_length_str += f"{len(node_seq)}|"
+    return sequence, node_length_str[:-1]
 
 
 def get_exon_sequence_from_node(node: Node, reference_io: Fasta) -> str:
