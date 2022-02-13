@@ -53,7 +53,7 @@ def fastq_simulation(in_fa_file, out_prefix, model, logger, depth=10):
     """Generate simulated fastq using pbsim_rna."""
 
     def combine_fastq(out_prefix):
-        with open(f"{out_prefix}.fastq", "w") as out:
+        with open(f"{out_prefix}.fq", "w") as out:
             for _filename in glob.iglob(f"{out_prefix}_*.fastq"):
                 with open(_filename) as f:
                     out.write(f.read())
@@ -67,7 +67,7 @@ def fastq_simulation(in_fa_file, out_prefix, model, logger, depth=10):
     cmd = f"pbsim_rna --depth {depth} --prefix {out_prefix} --sample-profile-id {model} {in_fa_file}"
     run_cmd(cmd, logger)
     combine_fastq(out_prefix)
-    return f"{out_prefix}.fastq"
+    return f"{out_prefix}.fq"
 
 
 def profile_checker(model, logger) -> None:
@@ -120,6 +120,8 @@ def alignment_runner(in_fq, ref_fa, bigbed, data_type, thread_num, out_prefix, l
         step2 = run_cmd(cmd2, logger)
         if step2:
             remove(f"{out_prefix}.tmp.sam")
+            remove(f"{out_prefix}.MT.fq")
+            remove(f"{out_prefix}.WT.fq")
             run_cmd(f"{cmd3} && {cmd4}")
             return f"{out_prefix}.sam", f"{out_prefix}.bam"
 
