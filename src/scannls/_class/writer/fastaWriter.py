@@ -39,13 +39,13 @@ class FastaWriter(Writer):
         """Check if file is opened."""
         return self.io is not None and not self.io.closed
 
-    def formatter(self, seq_id: int, sequence: str) -> str:
+    def formatter(self, seq_id: int, node_length: str, sequence: str) -> str:
         """Formatter for writing data."""
         if sequence == "":
             self.logger.warning(
                 f"{self.__class__.__name__}: Sequence ID or sequence is empty."
             )
-        return f">{seq_id:0>6}\n{sequence}\n"
+        return f">{seq_id:0>6} {node_length}\n{sequence}\n"
 
     def open(self, mode: str = "w") -> IO:
         """Open file."""
@@ -88,7 +88,24 @@ class FastaWriter(Writer):
         sequence = get_nodes_sequence_from_series(
             data_object, reference_io=self.reference_io
         )
-        self.write_line(self.formatter(self.id, sequence))
+        node_length = get_nodes_len_from_series(
+            data_object, reference_io=self.reference_io
+        )
+        self.write_line(self.formatter(self.id, node_length, sequence))
+
+
+def get_nodes_len_from_series(series: Series, reference_io: Fasta) -> str:
+    """Get length of sequence of nodes of series.
+
+    :param series: Series including nodes.
+    :param reference_io: ReferenceIO object.
+
+    :return: Sequence of nodes.
+    """
+    length_list = []
+    for node in series:
+        length_list.append(str(len(get_exon_sequence_from_node(node, reference_io))))
+    return "|".join(length_list)
 
 
 def get_nodes_sequence_from_series(series: Series, reference_io: Fasta) -> str:
