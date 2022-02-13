@@ -35,10 +35,13 @@ def to_wt_and_mt_fasta(input_dict: dict, output_prefix: str):
         for trx_id in input_dict:
             _metaexon_list = input_dict[trx_id]
             mt_seq = ""
+            mt_seq_len = []
             for _idx, _metaexon in enumerate(_metaexon_list, 1):
                 wt_seq = _metaexon.wt_seq
                 mt_seq += _metaexon.mt_seq
+                mt_seq_len.append(str(len(mt_seq)))
                 if wt_seq:
                     wt_fa.write(f">{trx_id}_{_idx}\n{wt_seq}\n")
+            mt_seq_len_info = "|".join(mt_seq_len)
             if mt_seq:
-                mt_fa.write(f">{trx_id}\n{mt_seq}\n")
+                mt_fa.write(f">{trx_id} {mt_seq_len_info}\n{mt_seq}\n")
