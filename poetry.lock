@@ -389,7 +389,7 @@ restructuredtext-lint = "*"
 
 [[package]]
 name = "flake8-simplify"
-version = "0.15.2"
+version = "0.17.0"
 description = "flake8 plugin which checks for code that can be simplified"
 category = "dev"
 optional = false
@@ -844,7 +844,7 @@ python-versions = "*"
 
 [[package]]
 name = "pytest"
-version = "7.0.0"
+version = "7.0.1"
 description = "pytest: simple powerful testing with Python"
 category = "dev"
 optional = false
@@ -1305,7 +1305,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3918aaa79aebb02b86729aabb269e1f51d69e8233f08631642a420d1207bfded"
+content-hash = "f0d6cbe0c6b8c991f14455e636fb761959bb7b466cb13abe273c8a5bf4ddd576"
 
 [metadata.files]
 alabaster = [
@@ -1527,8 +1527,8 @@ flake8-rst-docstrings = [
     {file = "flake8_rst_docstrings-0.2.5-py3-none-any.whl", hash = "sha256:b99d9041b769b857efe45a448dc8c71b1bb311f9cacbdac5de82f96498105082"},
 ]
 flake8-simplify = [
-    {file = "flake8_simplify-0.15.2-py3-none-any.whl", hash = "sha256:5e0e311743af57d6eb17f46a5c3c5d04df6a5adddc6183573a0ea455833816d6"},
-    {file = "flake8_simplify-0.15.2.tar.gz", hash = "sha256:852d9ba96b572f530e14e2b393985b4d017f82039910c38b107388ef28ceb6dc"},
+    {file = "flake8_simplify-0.17.0-py3-none-any.whl", hash = "sha256:a566bb550706dbdc637b46729b760a7ac6442e2b28d64b729bc9da44a4dfd3b1"},
+    {file = "flake8_simplify-0.17.0.tar.gz", hash = "sha256:fd4076e0f9e9af4a18d91dfe32b1d460b7da97322d5e083fc3a5bbe487075877"},
 ]
 gitdb = [
     {file = "gitdb-4.0.9-py3-none-any.whl", hash = "sha256:8033ad4e853066ba6ca92050b9df2f89301b8fc8bf7e9324d412a63f8bf1a8fd"},
@@ -1930,8 +1930,8 @@ pysam = [
     {file = "pysam-0.18.0.tar.gz", hash = "sha256:1d6d49a0b3c626fae410a93d4c80583a8b5ddaacc9b46a080b250dbcebd30a59"},
 ]
 pytest = [
-    {file = "pytest-7.0.0-py3-none-any.whl", hash = "sha256:42901e6bd4bd4a0e533358a86e848427a49005a3256f657c5c8f8dd35ef137a9"},
-    {file = "pytest-7.0.0.tar.gz", hash = "sha256:dad48ffda394e5ad9aa3b7d7ddf339ed502e5e365b1350e0af65f4a602344b11"},
+    {file = "pytest-7.0.1-py3-none-any.whl", hash = "sha256:9ce3ff477af913ecf6321fe337b93a2c0dcf2a0a1439c43f5452112c1e4280db"},
+    {file = "pytest-7.0.1.tar.gz", hash = "sha256:e30905a0c131d3d94b89624a1cc5afec3e0ba2fbdb151867d8e0ebd49850f171"},
 ]
 pytest-mock = [
     {file = "pytest-mock-3.7.0.tar.gz", hash = "sha256:5112bd92cc9f186ee96e1a92efc84969ea494939c3aead39c50f421c4cc69534"},

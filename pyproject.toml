@@ -33,7 +33,7 @@ networkx = "^2.6.3"
 parasail = "^1.2.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.0.0"
+pytest = "^7.0.1"
 coverage = {extras = ["toml"], version = "^6.3"}
 safety = "^1.10.3"
 mypy = "^0.931"
@@ -60,7 +60,7 @@ nox = "^2022.1.7"
 flake8-broken-line = "^0.4.0"
 flake8-comprehensions = "^3.7.0"
 flake8-eradicate = "^1.2.0"
-flake8-simplify = "^0.15.2"
+flake8-simplify = "^0.17.0"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
