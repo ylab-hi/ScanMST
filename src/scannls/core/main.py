@@ -70,6 +70,7 @@ class BamScanner:
         self.pat_left_s = re.compile(r"^(\d+)S")
         self.pat_right_s = re.compile(r"(\d+)S$")
         self.header = self._get_bam_header()
+        self.total_length = 0
 
         self.representative_alignments_new_cigar = {}
 
@@ -106,6 +107,7 @@ class BamScanner:
         try:
             for read in self.in_bam.fetch():
                 self._count_chrom_info(read)
+                self.total_length += read.query_length
                 if read.is_supplementary:
                     sup_aln_cigar = read.cigarstring
                     left_mat = self.pat_left_s.search(sup_aln_cigar)
@@ -455,6 +457,11 @@ def scanbam_run(
     )
     # iterate over all read of the bam file
     representative_alignments_new_cigar = bam_scanner.iter_bam()
+    avg_cov = bam_scanner.total_length / 150000000
+    num_chimeric_reads = len(representative_alignments_new_cigar)
+    logger.info(
+        f"Reads coverage: {avg_cov}, Number of chimeric reads: {num_chimeric_reads}"
+    )
     # get the chromosome name we want to scan
     filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
     filter_chrom_list.extend(["chrX", "chrY"])
