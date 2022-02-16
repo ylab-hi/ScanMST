@@ -24,6 +24,7 @@ def single_hop_generator(
     output_prefix: str,
     shift: int,
     max_len: int,
+    minimum_length: int,
     logger: LoggerType,
 ):
     """Generate One-hop NLS events."""
@@ -42,6 +43,7 @@ def single_hop_generator(
         reference=reference,
         shift=shift,
         max_length=max_len,
+        minimum_length=minimum_length,
         logger=logger,
     )
 
@@ -71,6 +73,7 @@ def multi_hop_generator(
     output_prefix: str,
     shift: int,
     max_len: int,
+    minimum_length: int,
     logger: LoggerType,
 ):
     """Generate Multi-hop NLS events."""
@@ -89,6 +92,7 @@ def multi_hop_generator(
         reference=reference,
         shift=shift,
         max_length=max_len,
+        minimum_length=minimum_length,
         logger=logger,
     )
 

@@ -34,6 +34,7 @@ class SimulatorOptions:
     log: str = "info"
     shift: int = 7
     max_len: int = 200
+    minimum_length: int = 400
     nls_type: str = "TDUP"
 
 
@@ -118,6 +119,14 @@ def parse_args() -> argparse.ArgumentParser:
         default=200,
     )
     parser.add_argument(
+        "--minimum_length",
+        action="store",
+        dest="minimum_length",
+        type=int,
+        help="minimum sequence length of transcripts (default: %(default)s)",
+        default=400,
+    )
+    parser.add_argument(
         "-t",
         "--type",
         action="store",
@@ -165,6 +174,7 @@ def cli(options: Union[argparse.Namespace, SimulatorOptions]) -> None:
             output_prefix=options.output,
             shift=options.shift,
             max_len=options.max_len,
+            minimum_length=options.minimum_length,
             logger=logger,
         )
     else:
@@ -176,6 +186,7 @@ def cli(options: Union[argparse.Namespace, SimulatorOptions]) -> None:
             output_prefix=options.output,
             shift=options.shift,
             max_len=options.max_len,
+            minimum_length=options.minimum_length,
             logger=logger,
         )
 

@@ -28,8 +28,8 @@ class MetaExon:
     p3_pos: Optional[int] = None
     wt_seq: Optional[str] = None
     mt_seq: Optional[str] = None
-    mt_len: Optional[int] = None
-    wt_len: Optional[int] = None
+    mt_len: int = 0
+    wt_len: int = 0
     nls_type: Optional[str] = None
 
     def __repr__(self) -> str:
