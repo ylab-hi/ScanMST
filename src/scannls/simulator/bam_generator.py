@@ -37,7 +37,7 @@ def run_cmd(cmd, logger=logger):
     """Run cmd with message."""
     logger.info(cmd)
     try:
-        subprocess.check_output(
+        ret = subprocess.check_call(
             cmd,
             shell=True,
             stderr=subprocess.STDOUT,
@@ -46,7 +46,7 @@ def run_cmd(cmd, logger=logger):
         logger.warning(f"Error happend!: {err}\n{err.output}")
         raise SystemExit from None
     else:
-        return True
+        return ret == 0
 
 
 def fastq_simulation(in_fa_file, out_prefix, model, logger, depth=10):
@@ -61,13 +61,13 @@ def fastq_simulation(in_fa_file, out_prefix, model, logger, depth=10):
                 remove(_filename)
                 remove(f"{_prefix}.ref")
                 remove(f"{_prefix}.maf")
+        return f"{out_prefix}.fq"
 
     profile_checker(model, logger)
 
     cmd = f"pbsim_rna --depth {depth} --prefix {out_prefix} --sample-profile-id {model} {in_fa_file}"
-    run_cmd(cmd, logger)
-    combine_fastq(out_prefix)
-    return f"{out_prefix}.fq"
+    if run_cmd(cmd, logger):
+        return combine_fastq(out_prefix)
 
 
 def profile_checker(model, logger) -> None:
@@ -122,8 +122,8 @@ def alignment_runner(in_fq, ref_fa, bigbed, data_type, thread_num, out_prefix, l
             remove(f"{out_prefix}.tmp.sam")
             remove(f"{out_prefix}.MT.fq")
             remove(f"{out_prefix}.WT.fq")
-            run_cmd(f"{cmd3} && {cmd4}")
-            return f"{out_prefix}.sam", f"{out_prefix}.bam"
+            if run_cmd(f"{cmd3} && {cmd4}"):
+                return f"{out_prefix}.sam", f"{out_prefix}.bam"
 
     return False
 
@@ -239,14 +239,15 @@ if __name__ == "__main__":
 
     out_fq = f"{out_prefix}.fastq"
 
-    combined_fq = combine_fastq(mt_fq, wt_fq, out_fq)
+    if mt_fq:
+        combined_fq = combine_fastq(mt_fq, wt_fq, out_fq)
 
-    alignment_runner(
-        in_fq=combined_fq,
-        ref_fa=ref_fa,
-        bigbed=args.annot,
-        data_type=args.library,
-        thread_num=thread_num,
-        out_prefix=out_prefix,
-        logger=logger,
-    )
+        alignment_runner(
+            in_fq=combined_fq,
+            ref_fa=ref_fa,
+            bigbed=args.annot,
+            data_type=args.library,
+            thread_num=thread_num,
+            out_prefix=out_prefix,
+            logger=logger,
+        )
