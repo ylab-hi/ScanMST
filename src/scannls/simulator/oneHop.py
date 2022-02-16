@@ -28,6 +28,8 @@ class MetaExon:
     p3_pos: Optional[int] = None
     wt_seq: Optional[str] = None
     mt_seq: Optional[str] = None
+    mt_len: Optional[int] = None
+    wt_len: Optional[int] = None
     nls_type: Optional[str] = None
 
     def __repr__(self) -> str:
@@ -63,6 +65,7 @@ class OneHop:
         logger: LoggerType,
         shift: int = 7,
         max_length: int = 200,
+        minimum_length: int = 400,
     ) -> None:
         """Initialize OneHop.
 
@@ -74,6 +77,7 @@ class OneHop:
         :param reference: reference fasta file
         :param logger: logger
         :param max_length: max_length of MT seq for intergenic and intronic
+        :param minimum_length: minimum_length of transcript (including MT and WT)
         """
         self.chrom_to_genes = chrom_to_genes
         self.available_chroms = list(chrom_to_genes)
@@ -88,6 +92,7 @@ class OneHop:
         self.logger = logger
         self.shift = shift
         self.max_length = max_length
+        self.minimum_length = minimum_length
         self.function_dict = {
             "TDUP": self._tdup_hopper,
             "IDUP": self._idup_hopper,
@@ -224,6 +229,8 @@ class OneHop:
             p3_pos=p3_pos,
             wt_seq=wt_seq,
             mt_seq=mt_seq,
+            wt_len=len(wt_seq),
+            mt_len=len(mt_seq),
             nls_type=nls_type,
         )
 
@@ -241,6 +248,8 @@ class OneHop:
             p3_pos=input_metaexon.p5_pos,
             wt_seq=input_metaexon.wt_seq,
             mt_seq=reverse_complement(input_metaexon.mt_seq),  # type: ignore
+            wt_len=input_metaexon.wt_len,
+            mt_len=input_metaexon.mt_len,
             nls_type=input_metaexon.nls_type,
         )
 
@@ -590,7 +599,13 @@ class OneHop:
         while flag:
             total_metaexons: List[MetaExon] = []
             self.function_dict[_select_type](total_metaexons)
-            if len(total_metaexons) == 2:
+            total_mt_len = sum(_metaexon.mt_len for _metaexon in total_metaexons)
+            total_wt_len = sum(_metaexon.wt_len for _metaexon in total_metaexons)
+            if (
+                len(total_metaexons) == 2
+                and total_wt_len > self.minimum_length
+                and total_mt_len > self.minimum_length
+            ):
                 flag = False
         repr_metaexons = [repr(i) for i in total_metaexons]
         self.logger.trace(f"{'; '.join(repr_metaexons)}")
@@ -612,8 +627,15 @@ class OneHop:
             for _hop_idx in range(num_of_hops):
                 _select_type = secrets.choice(candidate_hop_types)
                 self.function_dict[_select_type](total_metaexons)
+                total_mt_len = sum(_metaexon.mt_len for _metaexon in total_metaexons)
+                total_wt_len = sum(_metaexon.wt_len for _metaexon in total_metaexons)
                 _del_num = sum(1 for i in total_metaexons if i.nls_type == "DEL")
-                if len(total_metaexons) == 1 + num_of_hops and _del_num < num_of_hops:
+                if (
+                    len(total_metaexons) == 1 + num_of_hops
+                    and _del_num < num_of_hops
+                    and total_wt_len > self.minimum_length
+                    and total_mt_len > self.minimum_length
+                ):
                     flag = False
                     break
             if flag and len(total_metaexons) >= 1:
