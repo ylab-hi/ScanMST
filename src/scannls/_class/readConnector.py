@@ -709,6 +709,11 @@ def detect_read_read_connections_from_cigar(
     if len(chimeric_aln_list) < 1 + len(chimeric_aln):
         return noreturn
     else:
+        # filter reads in  uncommon chromosome
+        for read in chimeric_aln_list:
+            if "_" in read.chrom:
+                return noreturn
+
         read_connector = ReadsConnector(
             read_list=chimeric_aln_list, blat=blat, logger=logger
         )
