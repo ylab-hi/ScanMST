@@ -60,7 +60,7 @@ nox = "^2022.1.7"
 flake8-broken-line = "^0.4.0"
 flake8-comprehensions = "^3.7.0"
 flake8-eradicate = "^1.2.0"
-flake8-simplify = "^0.17.0"
+flake8-simplify = "^0.17.1"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
