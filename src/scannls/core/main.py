@@ -394,6 +394,7 @@ def _scan_bam_helper(
                     blat=blat,
                     logger=logger,
                 )
+                logger.trace(f"{read_chains=}")
                 nls_event_list = []
                 for event in event_lists:
                     if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
