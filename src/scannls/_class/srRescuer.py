@@ -241,7 +241,13 @@ class SRRescuer:
             pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
         else:
             pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
-        region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
+
+        if mode == 2:
+            region = f"{chrom}:{pos + 1}-{pos + 1}"
+        else:
+            if pos == 0:
+                pos = pos + 1
+            region = f"{chrom}:{pos}-{pos}"
         return region
 
     def update_sr(self, current_node: Node, query_names_in_graph: Set) -> None:
