@@ -461,7 +461,7 @@ def scanbam_run(
     avg_cov = bam_scanner.total_length / 150000000
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(
-        f"Reads coverage: {avg_cov}, Number of chimeric reads: {num_chimeric_reads}"
+        f"Reads coverage: {avg_cov:.4f}, Number of chimeric reads: {num_chimeric_reads}"
     )
     # get the chromosome name we want to scan
     filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
