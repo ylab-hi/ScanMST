@@ -24,6 +24,7 @@ def single_hop_generator(
     output_prefix: str,
     shift: int,
     max_len: int,
+    min_len: int,
     minimum_length: int,
     logger: LoggerType,
 ):
@@ -43,6 +44,7 @@ def single_hop_generator(
         reference=reference,
         shift=shift,
         max_length=max_len,
+        min_length=min_len,
         minimum_length=minimum_length,
         logger=logger,
     )
@@ -73,6 +75,7 @@ def multi_hop_generator(
     output_prefix: str,
     shift: int,
     max_len: int,
+    min_len: int,
     minimum_length: int,
     logger: LoggerType,
 ):
@@ -92,6 +95,7 @@ def multi_hop_generator(
         reference=reference,
         shift=shift,
         max_length=max_len,
+        min_length=min_len,
         minimum_length=minimum_length,
         logger=logger,
     )
