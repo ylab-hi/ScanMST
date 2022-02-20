@@ -647,38 +647,27 @@ def same_chrom_same_strand_mode21_handler(
             )
             _genes = gene_annotation(lt_chrm, del_start, lt_chrm, del_end, gene_iv)
             # 1 => 2
-            if not is_reverse:
-                return (
-                    "DEL",
-                    _anno,
-                    _can,
-                    (
-                        f"{lt_chrm}:{del_start}",
-                        f"{lt_chrm}:{del_end}",
-                        1,
-                        2,
-                    ),
-                    (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                    (rt_bp_seq, lt_bp_seq),
-                    (read_rt.strand, read_lt.strand),
-                    [*_genes],
-                )
+            if is_reverse:
+                if _anno == 1:
+                    _anno = 2
+                elif _anno == 2:
+                    _anno = 1
+                _genes = _genes[::-1]
             return (
                 "DEL",
                 _anno,
                 _can,
                 (
-                    f"{lt_chrm}:{del_end}",
                     f"{lt_chrm}:{del_start}",
-                    2,
+                    f"{lt_chrm}:{del_end}",
                     1,
+                    2,
                 ),
-                (read_lt.ref_start, read_lt.ref_end, lt_exons),
                 (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                (lt_bp_seq, rt_bp_seq),
-                (read_lt.strand, read_rt.strand),
-                [*_genes][::-1],
+                (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                (rt_bp_seq, lt_bp_seq),
+                (read_rt.strand, read_lt.strand),
+                [*_genes],
             )
 
         # reads length < tandem duplication size
@@ -701,6 +690,12 @@ def same_chrom_same_strand_mode21_handler(
             _genes = gene_annotation(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
             )
+            if is_reverse:
+                if _anno == 1:
+                    _anno = 2
+                elif _anno == 2:
+                    _anno = 1
+                _genes = _genes[::-1]
             if _nls:
                 if not is_reverse:
                     return (
@@ -733,7 +728,7 @@ def same_chrom_same_strand_mode21_handler(
                     (read_lt.ref_start, read_lt.ref_end, lt_exons),
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
-                    [*_genes][::-1],
+                    [*_genes],
                 )
             else:
                 return noreturn
@@ -769,6 +764,12 @@ def same_chrom_same_strand_mode21_handler(
                 _genes = gene_annotation(
                     chrm_start, junc_start, chrm_end, junc_end, gene_iv
                 )
+                if is_reverse:
+                    if _anno == 1:
+                        _anno = 2
+                    elif _anno == 2:
+                        _anno = 1
+                    _genes = _genes[::-1]
                 # 2 => 1
                 if _nls:
                     if not is_reverse:
@@ -802,7 +803,7 @@ def same_chrom_same_strand_mode21_handler(
                         (read_lt.ref_start, read_lt.ref_end, lt_exons),
                         (rt_bp_seq, lt_bp_seq),
                         (read_rt.strand, read_lt.strand),
-                        [*_genes][::-1],
+                        [*_genes],
                     )
                 else:
                     return noreturn
@@ -847,6 +848,7 @@ def same_chrom_same_strand_handler(
             gene_iv,
             motif_required,
             logger,
+            is_reverse=True,
         )
 
 
@@ -1035,6 +1037,13 @@ def diff_chrom_same_strand_mode21_handler(
         motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+    if is_reverse:
+        if _anno == 1:
+            _anno = 2
+        elif _anno == 2:
+            _anno = 1
+        _genes = _genes[::-1]
+
     if _nls:
         if not is_reverse:
             return (
@@ -1057,7 +1066,7 @@ def diff_chrom_same_strand_mode21_handler(
             (read_lt.ref_start, read_lt.ref_end, lt_exons),
             (rt_bp_seq, lt_bp_seq),
             (read_rt.strand, read_lt.strand),
-            [*_genes][::-1],
+            [*_genes],
         )
 
     else:
