@@ -594,6 +594,7 @@ def same_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
+    is_reverse=False,
 ):
     """Same chrom same strand mode 21 handler."""
     lt_chrm = read_lt.chrom
@@ -646,21 +647,38 @@ def same_chrom_same_strand_mode21_handler(
             )
             _genes = gene_annotation(lt_chrm, del_start, lt_chrm, del_end, gene_iv)
             # 1 => 2
+            if not is_reverse:
+                return (
+                    "DEL",
+                    _anno,
+                    _can,
+                    (
+                        f"{lt_chrm}:{del_start}",
+                        f"{lt_chrm}:{del_end}",
+                        1,
+                        2,
+                    ),
+                    (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                    (rt_bp_seq, lt_bp_seq),
+                    (read_rt.strand, read_lt.strand),
+                    [*_genes],
+                )
             return (
                 "DEL",
                 _anno,
                 _can,
                 (
-                    f"{lt_chrm}:{del_start}",
                     f"{lt_chrm}:{del_end}",
-                    1,
+                    f"{lt_chrm}:{del_start}",
                     2,
+                    1,
                 ),
-                (read_rt.ref_start, read_rt.ref_end, rt_exons),
                 (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                (rt_bp_seq, lt_bp_seq),
-                (read_rt.strand, read_lt.strand),
-                [*_genes],
+                (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                (lt_bp_seq, rt_bp_seq),
+                (read_lt.strand, read_rt.strand),
+                [*_genes][::-1],
             )
 
         # reads length < tandem duplication size
@@ -684,21 +702,38 @@ def same_chrom_same_strand_mode21_handler(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
             )
             if _nls:
+                if not is_reverse:
+                    return (
+                        "TDUP",
+                        _anno,
+                        _can,
+                        (
+                            f"{lt_chrm}:{junc_start}",
+                            f"{lt_chrm}:{junc_end}",
+                            2,
+                            1,
+                        ),
+                        (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                        (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                        (lt_bp_seq, rt_bp_seq),
+                        (read_lt.strand, read_rt.strand),
+                        [*_genes],
+                    )
                 return (
                     "TDUP",
                     _anno,
                     _can,
                     (
-                        f"{lt_chrm}:{junc_start}",
                         f"{lt_chrm}:{junc_end}",
-                        2,
+                        f"{lt_chrm}:{junc_start}",
                         1,
+                        2,
                     ),
-                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
                     (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                    (lt_bp_seq, rt_bp_seq),
-                    (read_lt.strand, read_rt.strand),
-                    [*_genes],
+                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                    (rt_bp_seq, lt_bp_seq),
+                    (read_rt.strand, read_lt.strand),
+                    [*_genes][::-1],
                 )
             else:
                 return noreturn
@@ -736,21 +771,38 @@ def same_chrom_same_strand_mode21_handler(
                 )
                 # 2 => 1
                 if _nls:
+                    if not is_reverse:
+                        return (
+                            "TDUP",
+                            _anno,
+                            _can,
+                            (
+                                f"{lt_chrm}:{junc_start}",
+                                f"{lt_chrm}:{junc_end}",
+                                2,
+                                1,
+                            ),
+                            (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                            (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                            (lt_bp_seq, rt_bp_seq),
+                            (read_lt.strand, read_rt.strand),
+                            [*_genes],
+                        )
                     return (
                         "TDUP",
                         _anno,
                         _can,
                         (
-                            f"{lt_chrm}:{junc_start}",
                             f"{lt_chrm}:{junc_end}",
-                            2,
+                            f"{lt_chrm}:{junc_start}",
                             1,
+                            2,
                         ),
-                        (read_lt.ref_start, read_lt.ref_end, lt_exons),
                         (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                        (lt_bp_seq, rt_bp_seq),
-                        (read_lt.strand, read_rt.strand),
-                        [*_genes],
+                        (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                        (rt_bp_seq, lt_bp_seq),
+                        (read_rt.strand, read_lt.strand),
+                        [*_genes][::-1],
                     )
                 else:
                     return noreturn
@@ -950,6 +1002,7 @@ def diff_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
+    is_reverse=False,
 ):
     """Different chrom same stand mode 21 handler."""
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
@@ -983,17 +1036,30 @@ def diff_chrom_same_strand_mode21_handler(
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
     if _nls:
+        if not is_reverse:
+            return (
+                "TRA",
+                _anno,
+                _can,
+                (f"{chrm_start}:{junc_start}", f"{chrm_end}:{junc_end}", 2, 1),
+                (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                (lt_bp_seq, rt_bp_seq),
+                (read_lt.strand, read_rt.strand),
+                [*_genes],
+            )
         return (
             "TRA",
             _anno,
             _can,
-            (f"{chrm_start}:{junc_start}", f"{chrm_end}:{junc_end}", 2, 1),
-            (read_lt.ref_start, read_lt.ref_end, lt_exons),
+            (f"{chrm_end}:{junc_end}", f"{chrm_start}:{junc_start}", 1, 2),
             (read_rt.ref_start, read_rt.ref_end, rt_exons),
-            (lt_bp_seq, rt_bp_seq),
-            (read_lt.strand, read_rt.strand),
-            [*_genes],
+            (read_lt.ref_start, read_lt.ref_end, lt_exons),
+            (rt_bp_seq, lt_bp_seq),
+            (read_rt.strand, read_lt.strand),
+            [*_genes][::-1],
         )
+
     else:
         return noreturn
 
@@ -1037,6 +1103,7 @@ def diff_chrom_same_strand_handler(
             gene_iv,
             motif_required,
             logger,
+            is_reverse=True,
         )
 
 

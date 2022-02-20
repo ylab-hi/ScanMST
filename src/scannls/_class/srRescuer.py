@@ -245,9 +245,9 @@ class SRRescuer:
         if mode == 2:
             region = f"{chrom}:{pos + 1}-{pos + 1}"
         else:
-            if pos == 0:
-                pos = pos + 1
+            pos = pos + 1 if pos == 0 else pos
             region = f"{chrom}:{pos}-{pos}"
+
         return region
 
     def update_sr(self, current_node: Node, query_names_in_graph: Set) -> None:
