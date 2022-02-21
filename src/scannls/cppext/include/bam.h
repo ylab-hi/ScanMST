@@ -51,7 +51,8 @@ namespace bam_parser {
     hts_idx_t *sam_index{nullptr};
     bam1_t *sam_record{bam_init1()};
 
-    explicit bam_handler(const char *bamFile);
+    bam_handler() = default;
+    bam_handler(const char *bamFile);
     ~bam_handler();
 
     [[maybe_unused]] std::vector<read_t> fetch(const char *t_chrom, long t_start, long t_end);

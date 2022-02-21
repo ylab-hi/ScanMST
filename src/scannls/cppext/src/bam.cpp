@@ -114,6 +114,7 @@ namespace bam_parser {
     return result;
   }
 
+
   bam_handler::bam_handler(const char *file_path) {
     sam_file = sam_open(file_path, "r");
     if (sam_file == nullptr) {

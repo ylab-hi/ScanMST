@@ -35,13 +35,14 @@ def build(setup_kwargs):
             "scannls.cppext",
             sources=[
                 "src/scannls/cppext/bam.cpp",
+                "src/scannls/cppext/rescuer.cpp",
+                "src/scannls/cppext/ssw.c",
+                "src/scannls/cppext/ssw_cpp.cpp",
                 "src/scannls/cppext/binding.cpp",
             ],
-            depends=["src/scannls/cppext/bam.h"],
-            include_dirs=htslib_include_dirs + ["src/scannls/cppext"],
+            include_dirs=htslib_include_dirs + ["src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,
-            language="c++",
         )
     ]
     setup_kwargs.update(

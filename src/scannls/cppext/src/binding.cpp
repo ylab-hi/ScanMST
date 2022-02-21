@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 
 #include "bam.h"
+#include "rescuer.h"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
@@ -9,18 +10,63 @@
 namespace py = pybind11;
 using bam_parser::parseCigar;
 using bam_parser::parseCigarResult_t;
+using rescuer::Rescuer;
 
 PYBIND11_MODULE(cppext, m) {
-  m.doc() = "BAM file parser";
-  m.def("parseCigar", &parseCigar, "parse cigar string");
-  py::class_<parseCigarResult_t>(m, "parseCigarResult")
-      .def_readonly("cigartuples", &parseCigarResult_t::cigartuples)
-      .def_readonly("cigartuples_without_soft", &parseCigarResult_t::cigartuples_without_soft)
-      .def_readonly("lt_soft_len", &parseCigarResult_t::lt_soft_len)
-      .def_readonly("rt_soft_len", &parseCigarResult_t::rt_soft_len)
-      .def_readonly("ref_match", &parseCigarResult_t::ref_match)
-      .def_readonly("read_match", &parseCigarResult_t::read_match)
-      .def_readonly("query_len", &parseCigarResult_t::query_len)
-      .def_readonly("indel_len", &parseCigarResult_t::indel_len)
-      .def("__repr__", [](const parseCigarResult_t &r) { return "parseCigarResult()"; });
+      m.doc() = "Cpp extension for BAM file parser";
+      m.def("parseCigar", &parseCigar, "parse cigar string");
+      py::class_<parseCigarResult_t>(m, "parseCigarResult")
+          .def_readonly("cigartuples", &parseCigarResult_t::cigartuples)
+          .def_readonly("cigartuples_without_soft", &parseCigarResult_t::cigartuples_without_soft)
+          .def_readonly("lt_soft_len", &parseCigarResult_t::lt_soft_len)
+          .def_readonly("rt_soft_len", &parseCigarResult_t::rt_soft_len)
+          .def_readonly("ref_match", &parseCigarResult_t::ref_match)
+          .def_readonly("read_match", &parseCigarResult_t::read_match)
+          .def_readonly("query_len", &parseCigarResult_t::query_len)
+          .def_readonly("indel_len", &parseCigarResult_t::indel_len)
+          .def("__repr__", [](const parseCigarResult_t &r) { return "parseCigarResult()"; });
+
+      py::class_<StripedSmithWaterman::Alignment>(m, "Alignment")
+            .def(py::init<>())
+            .def_readwrite("best_score", &StripedSmithWaterman::Alignment::sw_score)
+            .def_readwrite("best_score2", &StripedSmithWaterman::Alignment::sw_score_next_best)
+            .def_readwrite("reference_begin", &StripedSmithWaterman::Alignment::ref_begin)
+            .def_readwrite("reference_end", &StripedSmithWaterman::Alignment::ref_end)
+            .def_readwrite("query_begin", &StripedSmithWaterman::Alignment::query_begin)
+            .def_readwrite("query_end", &StripedSmithWaterman::Alignment::query_end)
+            .def_readwrite("ref_end_next_best", &StripedSmithWaterman::Alignment::ref_end_next_best)
+            .def_readwrite("mismatches", &StripedSmithWaterman::Alignment::mismatches)
+            .def_readwrite("cigar_string", &StripedSmithWaterman::Alignment::cigar_string)
+            .def_readwrite("cigar", &StripedSmithWaterman::Alignment::cigar)
+            .def("Clear", &StripedSmithWaterman::Alignment::Clear);
+
+    // Filter Class
+    py::class_<StripedSmithWaterman::Filter>(m, "Filter")
+        .def_readwrite("report_begin_position", &StripedSmithWaterman::Filter::report_begin_position)
+        .def_readwrite("report_cigar", &StripedSmithWaterman::Filter::report_cigar)
+        .def_readwrite("score_filter", &StripedSmithWaterman::Filter::score_filter)
+        .def_readwrite("distance_filter", &StripedSmithWaterman::Filter::distance_filter)
+        .def(py::init<>())
+        .def(py::init<const bool&, const bool&, const uint16_t&, const uint16_t&>());
+
+
+    // Aligner Class
+    py::class_<StripedSmithWaterman::Aligner>(m, "Aligner")
+        .def(py::init<>())
+        .def(py::init<const uint8_t&, const uint8_t&, const uint8_t&, const uint8_t&>())
+        .def("SetReferenceSequence", &StripedSmithWaterman::Aligner::SetReferenceSequence)
+        .def("Align_cpp", &StripedSmithWaterman::Aligner::Align,
+        "Align_cpp(query_seq, ref_seq, ref_len, filter, alignment, mark_len) -> int");
+
+
+
+    py::class_<Rescuer>(m, "Rescuer")
+      .def(py::init<>())
+      .def(py::init<const char *, int, int, int, double>())
+      .def("calculate_sr", &Rescuer::calculate_sr,
+       "calculate_sr(chrom, start, end, mode, current_names, names_in_graph) -> int")
+      .def("__repr__", [](const Rescuer &r) { return "Rescuer()"; });
+
+
+
 }

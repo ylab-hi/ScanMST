@@ -88,7 +88,8 @@ namespace rescuer {
 
   class Rescuer {
   private:
-    const char *bam_file{};
+    const char * m_file_path{};
+    bam_handler m_bam_handler{};
     int min_mapq{};
     int min_soft_len{};
     int min_mismatch{};

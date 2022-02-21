@@ -14,7 +14,8 @@ namespace rescuer {
   // Constructor for rescuer
   Rescuer::Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch,
                    double t_identity)
-      : bam_file{t_file},
+      : m_file_path{t_file},
+        m_bam_handler{t_file},
         min_mapq{t_mapq},
         min_soft_len{t_soft_len},
         min_mismatch{t_mismatch},
@@ -26,9 +27,8 @@ namespace rescuer {
     std::vector<std::string> sr_list{};
     std::vector<std::string> sv_list{};
 
-    bam_handler bam_reader{bam_file};
 
-    add_sr_sv_list(sr_list, sv_list, bam_reader, t_chrom, t_start, t_end, t_mode, min_mapq,
+    add_sr_sv_list(sr_list, sv_list, m_bam_handler, t_chrom, t_start, t_end, t_mode, min_mapq,
                    min_soft_len, t_current_query_name, t_query_name_list);
 
     if (sr_list.empty() || sv_list.empty()) return 0;
