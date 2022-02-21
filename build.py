@@ -34,11 +34,11 @@ def build(setup_kwargs):
         Pybind11Extension(
             "scannls.cppext",
             sources=[
-                "src/scannls/cppext/bam.cpp",
-                "src/scannls/cppext/rescuer.cpp",
-                "src/scannls/cppext/ssw.c",
-                "src/scannls/cppext/ssw_cpp.cpp",
-                "src/scannls/cppext/binding.cpp",
+                "src/scannls/cppext/src/bam.cpp",
+                "src/scannls/cppext/src/rescuer.cpp",
+                "src/scannls/cppext/src/ssw.c",
+                "src/scannls/cppext/src/ssw_cpp.cpp",
+                "src/scannls/cppext/src/binding.cpp",
             ],
             include_dirs=htslib_include_dirs + ["src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,

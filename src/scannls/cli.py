@@ -271,6 +271,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         logger.info(f"Total Series: {intact_series_list_len}")
         rescuer = SRRescuer(
             in_bam_io_object,
+            options.input,
             options.mapq,
             options.soft_len,
             options.mismatch,

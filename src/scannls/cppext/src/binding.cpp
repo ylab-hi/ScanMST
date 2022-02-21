@@ -8,13 +8,12 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
-using bam_parser::parseCigar;
 using bam_parser::parseCigarResult_t;
 using rescuer::Rescuer;
 
 PYBIND11_MODULE(cppext, m) {
       m.doc() = "Cpp extension for BAM file parser";
-      m.def("parseCigar", &parseCigar, "parse cigar string");
+      m.def("parseCigar", &bam_parser::parseCigar, "parse cigar string");
       py::class_<parseCigarResult_t>(m, "parseCigarResult")
           .def_readonly("cigartuples", &parseCigarResult_t::cigartuples)
           .def_readonly("cigartuples_without_soft", &parseCigarResult_t::cigartuples_without_soft)
@@ -54,13 +53,10 @@ PYBIND11_MODULE(cppext, m) {
     py::class_<StripedSmithWaterman::Aligner>(m, "Aligner")
         .def(py::init<>())
         .def(py::init<const uint8_t&, const uint8_t&, const uint8_t&, const uint8_t&>())
-        .def("SetReferenceSequence", &StripedSmithWaterman::Aligner::SetReferenceSequence)
-        .def("Align_cpp", &StripedSmithWaterman::Aligner::Align,
-        "Align_cpp(query_seq, ref_seq, ref_len, filter, alignment, mark_len) -> int");
+        .def("SetReferenceSequence", &StripedSmithWaterman::Aligner::SetReferenceSequence);
 
 
-
-    py::class_<Rescuer>(m, "Rescuer")
+    py::class_<Rescuer>(m, "Rescuer", "Rescuer(bam_file, min_mapq, min_soft_len, min_mis, min_frac)")
       .def(py::init<>())
       .def(py::init<const char *, int, int, int, double>())
       .def("calculate_sr", &Rescuer::calculate_sr,
