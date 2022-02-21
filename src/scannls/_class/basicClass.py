@@ -946,7 +946,8 @@ class Event:
         """Return the string representation of the event."""
         if self.sv_type != "NA":
             return (
-                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} {self.positions} "
+                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} ({self.bp1} "
+                f"{self.bp2} {self.mode1} {self.mode2}) "
                 f"{self.strand1} {self.read1_ref_start} {self.read1_ref_end} {self.read1_exons} "
                 f"{self.strand2} {self.read2_ref_start} {self.read2_ref_end} {self.read2_exons} "
                 f"{self.insertion_info})"

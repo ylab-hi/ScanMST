@@ -265,7 +265,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         intact_series_list_len = len(intact_series_list)
 
         if intact_series_list_len == 0:
-            logger.error("No valid series found")
+            logger.warning("No valid series found")
             raise SystemExit
 
         logger.info(f"Total Series: {intact_series_list_len}")

@@ -675,7 +675,11 @@ def detect_read_read_connections_from_cigar(
     nm_ra = read.get_tag("NM")
     seq_ra = read.query_sequence
 
-    if mapq_ra > mapq_cutoff and nm_ra < max_allowed_nm:
+    # filter reads in  uncommon chromosome
+    if "_" in chrm_ra:
+        return noreturn
+
+    if mapq_ra >= mapq_cutoff and nm_ra < max_allowed_nm:
         chimeric_aln_list.append(
             Read.init(
                 read.query_name,
@@ -692,6 +696,11 @@ def detect_read_read_connections_from_cigar(
     for sa_string in chimeric_aln:
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
+
+        # filter reads in  uncommon chromosome
+        if "_" in chrm_ra:
+            return noreturn
+
         if mapq_sa > mapq_cutoff and nm_sa < max_allowed_nm:
             chimeric_aln_list.append(
                 Read.init(
@@ -709,6 +718,7 @@ def detect_read_read_connections_from_cigar(
     if len(chimeric_aln_list) < 1 + len(chimeric_aln):
         return noreturn
     else:
+
         read_connector = ReadsConnector(
             read_list=chimeric_aln_list, blat=blat, logger=logger
         )

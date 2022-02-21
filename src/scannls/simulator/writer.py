@@ -13,6 +13,7 @@ from typing import IO
 from typing import List
 from typing import Optional
 
+from .helper import real_path
 from .oneHop import MetaExon
 from scannls import __version__
 from scannls import BreakpointNotFoundError
@@ -99,16 +100,16 @@ class SimVCFWriter:
     def __init__(
         self,
         file_path: str,
-        output_prefix: str,
         logger: LoggerType,
     ) -> None:
         """Initialize SimVCFWriter object."""
+        file_path = real_path(file_path)
         self.file_path = Path(file_path)
         self.logger = logger
         if self.file_path.exists():
             self.logger.warning(f"{self.file_path} exists, will be overwritten.")
         self.id = 1
-        self.sample_name = output_prefix
+        self.sample_name = self.file_path.stem
         self.io: Optional[IO] = None
 
     @property
@@ -376,6 +377,7 @@ class GTFWriter:
 
     def __init__(self, file_path: str, logger: LoggerType) -> None:
         """Initialize GTFWriter object."""
+        file_path = real_path(file_path)
         self.file_path = Path(file_path)
         self.logger = logger
         if self.file_path.exists():

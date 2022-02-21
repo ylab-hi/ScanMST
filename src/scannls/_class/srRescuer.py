@@ -158,6 +158,9 @@ class SRRescuer:
                     _pos,
                     _mode,
                 ) = get_softclip_length(read, mode)
+                self.logger.trace(
+                    f"qn: {read.query_name} seq: {_seq} len: {_len} pos: {_pos} mode: {_mode}"
+                )
                 _reference_pos = (
                     read.reference_start if mode == 2 else read.reference_end
                 )
@@ -173,6 +176,8 @@ class SRRescuer:
                     # xxxxxxxxSyyyyyyyyMzzzzzS
                     #         ^      ^
                     sr_list[strand].append(_seq)
+
+        self.logger.trace(f"sr: {len(sr_list['+'])} sv: {len(sv_list['+'])}")
 
     def calculate_sr(
         self, region: str, mode: int, query_name: str, query_names_in_graph: Set
@@ -241,7 +246,13 @@ class SRRescuer:
             pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
         else:
             pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
-        region = f"{chrom}:{pos + 1}-{pos + 1}" if mode == 2 else f"{chrom}:{pos}-{pos}"
+
+        if mode == 2:
+            region = f"{chrom}:{pos + 1}-{pos + 1}"
+        else:
+            pos = pos + 1 if pos == 0 else pos
+            region = f"{chrom}:{pos}-{pos}"
+
         return region
 
     def update_sr(self, current_node: Node, query_names_in_graph: Set) -> None:
