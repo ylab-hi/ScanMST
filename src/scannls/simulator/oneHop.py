@@ -64,7 +64,8 @@ class OneHop:
         reference: str,
         logger: LoggerType,
         shift: int = 7,
-        max_length: int = 200,
+        max_length: int = 300,
+        min_length: int = 200,
         minimum_length: int = 400,
     ) -> None:
         """Initialize OneHop.
@@ -77,6 +78,7 @@ class OneHop:
         :param reference: reference fasta file
         :param logger: logger
         :param max_length: max_length of MT seq for intergenic and intronic
+        :param min_length: min_length of MT seq of metaexon
         :param minimum_length: minimum_length of transcript (including MT and WT)
         """
         self.chrom_to_genes = chrom_to_genes
@@ -92,6 +94,7 @@ class OneHop:
         self.logger = logger
         self.shift = shift
         self.max_length = max_length
+        self.min_length = min_length
         self.minimum_length = minimum_length
         self.function_dict = {
             "TDUP": self._tdup_hopper,
@@ -601,8 +604,12 @@ class OneHop:
             self.function_dict[_select_type](total_metaexons)
             total_mt_len = sum(_metaexon.mt_len for _metaexon in total_metaexons)
             total_wt_len = sum(_metaexon.wt_len for _metaexon in total_metaexons)
+            mt_len_checker = all(
+                _metaexon.mt_len >= self.min_length for _metaexon in total_metaexons
+            )
             if (
                 len(total_metaexons) == 2
+                and mt_len_checker
                 and total_wt_len > self.minimum_length
                 and total_mt_len > self.minimum_length
             ):
@@ -629,9 +636,13 @@ class OneHop:
                 self.function_dict[_select_type](total_metaexons)
                 total_mt_len = sum(_metaexon.mt_len for _metaexon in total_metaexons)
                 total_wt_len = sum(_metaexon.wt_len for _metaexon in total_metaexons)
+                mt_len_checker = all(
+                    _metaexon.mt_len >= self.min_length for _metaexon in total_metaexons
+                )
                 _del_num = sum(1 for i in total_metaexons if i.nls_type == "DEL")
                 if (
                     len(total_metaexons) == 1 + num_of_hops
+                    and mt_len_checker
                     and _del_num < num_of_hops
                     and total_wt_len > self.minimum_length
                     and total_mt_len > self.minimum_length
