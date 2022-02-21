@@ -643,10 +643,14 @@ class OneHop:
                     and total_wt_len > self.minimum_length
                     and total_mt_len > self.minimum_length
                 ):
-                    flag = False
-                    break
-            if flag and len(total_metaexons) >= 1:
-                total_metaexons.pop()
+                    if any(
+                        _metaexon.mt_len < self.min_length
+                        for _metaexon in total_metaexons
+                    ):
+                        total_metaexons.clear()
+                    else:
+                        flag = False
+                        break
             self.logger.debug(f"num_of_hops:{len(total_metaexons) - 1}")
             self.logger.debug(f"{_del_num=}")
         repr_metaexons = [repr(i) for i in total_metaexons]
