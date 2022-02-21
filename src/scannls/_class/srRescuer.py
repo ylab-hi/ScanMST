@@ -158,6 +158,9 @@ class SRRescuer:
                     _pos,
                     _mode,
                 ) = get_softclip_length(read, mode)
+                self.logger.trace(
+                    f"qn: {read.query_name} seq: {_seq} len: {_len} pos: {_pos} mode: {_mode}"
+                )
                 _reference_pos = (
                     read.reference_start if mode == 2 else read.reference_end
                 )
@@ -173,6 +176,8 @@ class SRRescuer:
                     # xxxxxxxxSyyyyyyyyMzzzzzS
                     #         ^      ^
                     sr_list[strand].append(_seq)
+
+        self.logger.trace(f"sr: {len(sr_list['+'])} sv: {len(sv_list['+'])}")
 
     def calculate_sr(
         self, region: str, mode: int, query_name: str, query_names_in_graph: Set
