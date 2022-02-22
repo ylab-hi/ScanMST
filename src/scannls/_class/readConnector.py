@@ -701,7 +701,7 @@ def detect_read_read_connections_from_cigar(
         if "_" in chrm_ra:
             return noreturn
 
-        if mapq_sa > mapq_cutoff and nm_sa < max_allowed_nm:
+        if mapq_sa >= mapq_cutoff and nm_sa < max_allowed_nm:
             chimeric_aln_list.append(
                 Read.init(
                     read.query_name,
