@@ -83,6 +83,7 @@ class VCFWriter(Writer):
         "GENE": "String",
         "GENE1": "String",
         "GENE2": "String",
+        "TRANSCRIPT_ID": "String",
     }
     reserved_format = {"GT": "String"}
     reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA"]
