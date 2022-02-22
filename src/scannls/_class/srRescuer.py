@@ -103,7 +103,7 @@ class SRRescuer:
             raise ModesNotFoundError(f"{current_node.query_name}")
 
         mode1, mode2 = current_node.modes
-        current_node.update_next_breakpoint_depth(self.in_bam, mode1)
+        current_node.update_next_breakpoint_depth(self.cppext_rescuer, mode1)
 
         query_name_current = current_node.query_name.split(",")
         chrom, start = SRRescuer.obtain_region_for_rescue_sr(
@@ -129,7 +129,7 @@ class SRRescuer:
         self.logger.trace(f"current {rescued_sr=}")
 
         for next_node in current_node.successors:
-            next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
+            next_node.update_prev_breakpoint_depth(self.cppext_rescuer, mode2)
             query_name_next = next_node.query_name.split(",")
             chrom, start = SRRescuer.obtain_region_for_rescue_sr(
                 next_node.strand,

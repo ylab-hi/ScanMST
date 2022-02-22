@@ -7,7 +7,6 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-import pysam  # type: ignore
 from Bio.Seq import Seq  # type: ignore
 
 from .. import Read
@@ -488,7 +487,7 @@ class Node(BasicNode):
         """Update the sr of a node."""
         self.sr += key
 
-    def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+    def update_next_breakpoint_depth(self, bam: any, mode: int) -> None:
         """Update next breakpoint depth.
 
         :param bam: bam AlignmentFile object
@@ -499,9 +498,9 @@ class Node(BasicNode):
             pos = int(pos)  # type: ignore
             if mode == 1:
                 pos = pos - 1  # type: ignore
-            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
+            self.next_breakpoint_depth = bam.count_reads(chrom, pos, pos + 1)  # type: ignore
 
-    def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
+    def update_prev_breakpoint_depth(self, bam: any, mode: int) -> None:
         """Update prev breakpoint depth.
 
         :param bam: bam AlignmentFile object
@@ -512,7 +511,7 @@ class Node(BasicNode):
             pos = int(pos)  # type: ignore
             if mode == 1:
                 pos = pos - 1  # type: ignore
-            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
+            self.prev_breakpoint_depth = bam.count_reads(chrom, pos, pos + 1)  # type: ignore
 
 
 class Series:
