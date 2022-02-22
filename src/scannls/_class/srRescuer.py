@@ -105,7 +105,7 @@ class SRRescuer:
         mode1, mode2 = current_node.modes
         current_node.update_next_breakpoint_depth(self.in_bam, mode1)
 
-        query_name_current = current_node.query_name
+        query_name_current = current_node.query_name.split(",")
         chrom, start = SRRescuer.obtain_region_for_rescue_sr(
             current_node.strand,
             current_node.chrom,
@@ -114,18 +114,23 @@ class SRRescuer:
             mode1,
         )
 
+        self.logger.trace(
+            f"{chrom=} {start=} {mode1=} {query_name_current=}"
+            f" {query_names_in_graph=}"
+        )
         rescued_sr = self.cppext_rescuer.calculate_sr(
             chrom,
             start,
             start,
             mode1,
-            query_name_current.split(","),
+            query_name_current,
             query_names_in_graph,
         )
+        self.logger.trace(f"current {rescued_sr=}")
 
         for next_node in current_node.successors:
             next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
-            query_name_next = next_node.query_name
+            query_name_next = next_node.query_name.split(",")
             chrom, start = SRRescuer.obtain_region_for_rescue_sr(
                 next_node.strand,
                 next_node.chrom,
@@ -133,15 +138,17 @@ class SRRescuer:
                 "prev_breakpoint",
                 mode2,
             )
+
             rescued_sr += self.cppext_rescuer.calculate_sr(
                 chrom,
                 start,
                 start,
-                mode1,
-                query_name_next.split(","),
+                mode2,
+                query_name_next,
                 query_names_in_graph,
             )
+            self.logger.trace(f"successors {rescued_sr=}")
 
-        self.logger.trace(f"{rescued_sr=}")
+        self.logger.trace(f"final {rescued_sr=}")
         if rescued_sr > 0:
             current_node.update_sr(rescued_sr)

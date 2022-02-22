@@ -43,17 +43,19 @@ class SpliceGraph:
     dict_factory = dict
     list_factory = list
 
-    def __init__(self, logger: LoggerType, prune_threshold: int = 10) -> None:
+    def __init__(
+        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 10
+    ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.prune_threshold = prune_threshold
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
+        self.rescuer = rescuer
 
     def __call__(
         self,
         series_list: Iterable[Series],
-        rescuer: Any,
         clique_ind: int,
         is_plot: bool = False,
     ) -> Iterable[Series]:
@@ -75,7 +77,7 @@ class SpliceGraph:
         # construct splice graph
         self.construct()
         # sr rescuer
-        rescuer(self)
+        self.rescuer(self)
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
         self.prune()

@@ -278,7 +278,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             options.alignment_fraction,
             logger,
         )
-        splice_graph = SpliceGraph(logger)
+        splice_graph = SpliceGraph(logger, rescuer)
         clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
         # cliques is generator
 
@@ -298,7 +298,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         with writers.open() as _:
             for ind, clique in enumerate(cliques, 1):
                 logger.debug(f"processing clique {ind}")
-                for series in splice_graph(clique, rescuer, ind):
+                for series in splice_graph(clique, ind):
                     logger.debug(f"Output Clique{ind}: {series}")
                     if len(series) == 1:
                         logger.warning(
