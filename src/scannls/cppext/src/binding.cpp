@@ -11,7 +11,7 @@ namespace py = pybind11;
 using bam_parser::parseCigarResult_t;
 using rescuer::Rescuer;
 
-PYBIND11_MODULE(cppext, m) {
+PYBIND11_MODULE(_cppext, m) {
       m.doc() = "Cpp extension for BAM file parser";
       m.def("parseCigar", &bam_parser::parseCigar, "parse cigar string");
       py::class_<parseCigarResult_t>(m, "parseCigarResult")
@@ -57,7 +57,6 @@ PYBIND11_MODULE(cppext, m) {
 
 
     py::class_<Rescuer>(m, "Rescuer", "Rescuer(bam_file, min_mapq, min_soft_len, min_mis, min_frac)")
-      .def(py::init<>())
       .def(py::init<const char *, int, int, int, double>())
       .def("calculate_sr", &Rescuer::calculate_sr,
        "calculate_sr(chrom, start, end, mode, current_names, names_in_graph) -> int")

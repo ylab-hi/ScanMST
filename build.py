@@ -32,7 +32,7 @@ def build(setup_kwargs):
     """Build cpp extension."""
     ext_modules = [
         Pybind11Extension(
-            "scannls.cppext",
+            "scannls._cppext",
             sources=[
                 "src/scannls/cppext/src/bam.cpp",
                 "src/scannls/cppext/src/rescuer.cpp",

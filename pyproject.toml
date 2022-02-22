@@ -80,6 +80,9 @@ show_error_context = true
 exclude = "cppext"
 allow_untyped_calls = true
 
+[tool.pytest]
+norecursedirs = ["cppext"]
+
 [build-system]
 requires = ["pybind11>2.9.1", "poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
