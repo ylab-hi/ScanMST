@@ -6,6 +6,7 @@
 @Time:        1/11/22 4:28 PM
 """
 import argparse
+import secrets
 import sys
 import textwrap
 import time
@@ -239,6 +240,8 @@ def cli(options: Union[argparse.Namespace, Options]):
         logger.info(f"Created temporary directory: {tmp_dir.resolve()}")
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, str(tmp_dir.resolve()))
+    # delay random seconds to preventing from starting multiple servers simultaneously
+    time.sleep(secrets.choice(range(30)))
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
