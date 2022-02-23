@@ -741,8 +741,6 @@ class SpliceGraph:
             is not None
         ):
             current_nodes_keys: Set[str] = set()
-            if (key := start_node.unique_key) is not None:
-                current_nodes_keys.add(key)
             self._trace_forward_record_node_unique_keys(
                 start_node, [], result_paths, current_nodes_keys
             )
