@@ -510,6 +510,56 @@ def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> b
     return flag
 
 
+def annotation_splice_site_checker(
+    chrom: str, strand: str, introns: List[[int, int]], cvg: HTSeq.GenomicArrayOfSets
+) -> bool:
+    """Check whether the splice site used in introns.
+
+    inferred from the read is consistent with overlapped transcript.
+
+    :param chrom: read chrom
+    :param strand: read strand
+    :param introns: intron positions inferred from the read
+    :type chrom: str
+    :type strand: str
+    :type introns: List[[int, int]]
+    :type cvg: HTSeq.GenomicArrayOfSets
+    :return: using canonical splice sites OR not
+    :rtype: bool
+    """
+    _sites = {"GT": "GT", "AG": "AG", "AC": "GT", "CT": "AG", "XX": "XX", "": ""}
+    if len(introns) == 0:
+        return None
+
+    flag = True
+    for start, end in introns:
+        if strand == "+":
+            try:
+                _donor_site = list(cvg[HTSeq.GenomicPosition(chrom, start)])[0]
+            except IndexError:
+                _donor_site = ""
+            try:
+                _acceptor_site = list(cvg[HTSeq.GenomicPosition(chrom, end)])[0]
+            except IndexError:
+                _acceptor_site = ""
+        else:
+            try:
+                _donor_site = list(cvg[HTSeq.GenomicPosition(chrom, end)])[0]
+            except IndexError:
+                _donor_site = ""
+            try:
+                _acceptor_site = list(cvg[HTSeq.GenomicPosition(chrom, start)])[0]
+            except IndexError:
+                _acceptor_site = ""
+        donor_site = _sites[_donor_site]
+        acceptor_site = _sites[_acceptor_site]
+
+        if donor_site == "AG" or acceptor_site == "GT":
+            flag = False
+            break
+    return flag
+
+
 def softclipped_length_and_event_size_checker(
     read, mode, event_size, bp_region_seq_len
 ) -> bool:
@@ -924,25 +974,41 @@ def same_chrom_diff_strand_handler(
             _genes = gene_annotation(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
             )
-            return (
-                "IDUP",
-                _anno,
-                _can,
+            if (len(lt_introns) == 0 and len(rt_introns) == 0) or (
                 (
-                    f"{lt_chrm}:{junc_start}",
-                    f"{lt_chrm}:{junc_end}",
-                    same_mode,
-                    same_mode,
-                ),
-                lt_start_end_exons,
-                rt_start_end_exons,
-                (lt_bp_seq, rt_bp_seq),
-                tuple([*strands]),
-                [*_genes],
-            )
+                    read_lt.splice_site_checker(genome_fasta)
+                    ^ read_rt.splice_site_checker(genome_fasta)
+                )
+                and (
+                    annotation_splice_site_checker(
+                        lt_chrm, read_lt.strand, lt_introns, cvg
+                    )
+                    ^ annotation_splice_site_checker(
+                        lt_chrm, read_rt.strand, rt_introns, cvg
+                    )
+                )
+            ):
+                return (
+                    "IDUP",
+                    _anno,
+                    _can,
+                    (
+                        f"{lt_chrm}:{junc_start}",
+                        f"{lt_chrm}:{junc_end}",
+                        same_mode,
+                        same_mode,
+                    ),
+                    lt_start_end_exons,
+                    rt_start_end_exons,
+                    (lt_bp_seq, rt_bp_seq),
+                    tuple([*strands]),
+                    [*_genes],
+                )
+            else:
+                return noreturn
         else:
             return noreturn
-    else:
+    else:  # conventional INV
         chrm_start = lt_chrm
         junc_start = min(ra_bp, sa_bp)
         chrm_end = lt_chrm
