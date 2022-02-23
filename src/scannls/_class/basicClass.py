@@ -498,7 +498,8 @@ class Node(BasicNode):
             pos = int(pos)  # type: ignore
             if mode == 1:
                 pos = pos - 1  # type: ignore
-            self.next_breakpoint_depth = bam.count_reads(chrom, pos, pos + 1)  # type: ignore
+        return chrom, pos
+        # self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
     def update_prev_breakpoint_depth(self, bam: any, mode: int) -> None:
         """Update prev breakpoint depth.
@@ -511,7 +512,8 @@ class Node(BasicNode):
             pos = int(pos)  # type: ignore
             if mode == 1:
                 pos = pos - 1  # type: ignore
-            self.prev_breakpoint_depth = bam.count_reads(chrom, pos, pos + 1)  # type: ignore
+        return chrom, pos
+        # self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
 
 class Series:
