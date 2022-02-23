@@ -4,6 +4,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import Tuple
 from typing import Union
 
@@ -600,11 +601,12 @@ class Series:
 
     @classmethod
     def create_series_from_node_list(
-        cls, node_list: List[Node], logger: LoggerType
+        cls, node_list: List[Node], logger: LoggerType, nodes_keys: Set[str]
     ) -> "Series":
         """Create a series from a list of nodes."""
         series_instance = cls(None, logger)
         for node in node_list:
+            nodes_keys.add(node.unique_key)
             series_instance.add_node(node)
         return series_instance
 

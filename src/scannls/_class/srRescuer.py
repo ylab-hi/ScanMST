@@ -57,6 +57,7 @@ class SRRescuer:
         :param nodes_in_graph: Series
         """
         query_names_in_graph = set()
+
         for node in nodes_in_graph:
             query_names_in_graph.update(node.query_name.split(","))
 
