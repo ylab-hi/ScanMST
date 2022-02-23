@@ -104,10 +104,9 @@ class SRRescuer:
 
         mode1, mode2 = current_node.modes
 
-        c, s = current_node.update_next_breakpoint_depth(None, mode1)
-
-        current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
-            c, s, s + 1
+        chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
+        current_node.next_breakpoint_depth = self.in_bam.count(
+            chrom_n, pos_n, pos_n + 1
         )
 
         query_name_current = current_node.query_name.split(",")
@@ -134,10 +133,9 @@ class SRRescuer:
         self.logger.trace(f"current {rescued_sr=}")
 
         for next_node in current_node.successors:
-
-            c, s = next_node.update_prev_breakpoint_depth(None, mode2)
-            next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
-                c, s, s + 1
+            chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
+            next_node.prev_breakpoint_depth = self.in_bam.count(
+                chrom_p, pos_p, pos_p + 1
             )
 
             query_name_next = next_node.query_name.split(",")

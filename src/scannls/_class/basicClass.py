@@ -487,33 +487,16 @@ class Node(BasicNode):
         """Update the sr of a node."""
         self.sr += key
 
-    def update_next_breakpoint_depth(self, bam: any, mode: int) -> None:
-        """Update next breakpoint depth.
-
-        :param bam: bam AlignmentFile object
-        :param mode: if 'MS', pos = pos - 1
-        """
-        if self.next_breakpoint is not None:
-            chrom, pos = self.next_breakpoint.split(":")
+    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, int]:
+        """Get update breakpoint depth and position of a node."""
+        break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
+        if break_point is not None:
+            chrom, pos = break_point.split(":")
             pos = int(pos)  # type: ignore
             if mode == 1:
                 pos = pos - 1  # type: ignore
-        return chrom, pos
-        # self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
-    def update_prev_breakpoint_depth(self, bam: any, mode: int) -> None:
-        """Update prev breakpoint depth.
-
-        :param bam: bam AlignmentFile object
-        :param mode: if 'MS', pos = pos - 1
-        """
-        if self.prev_breakpoint is not None:
-            chrom, pos = self.prev_breakpoint.split(":")
-            pos = int(pos)  # type: ignore
-            if mode == 1:
-                pos = pos - 1  # type: ignore
-        return chrom, pos
-        # self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
+            return chrom, pos
 
 
 class Series:
