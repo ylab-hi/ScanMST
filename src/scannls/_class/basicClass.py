@@ -601,12 +601,17 @@ class Series:
 
     @classmethod
     def create_series_from_node_list(
-        cls, node_list: List[Node], logger: LoggerType, nodes_keys: Set[str]
+        cls,
+        node_list: List[Node],
+        logger: LoggerType,
+        nodes_keys: Set[str],
+        is_add_key: bool = True,
     ) -> "Series":
         """Create a series from a list of nodes."""
         series_instance = cls(None, logger)
         for node in node_list:
-            nodes_keys.add(node.unique_key)
+            if is_add_key:
+                nodes_keys.add(node.unique_key)
             series_instance.add_node(node)
         return series_instance
 
