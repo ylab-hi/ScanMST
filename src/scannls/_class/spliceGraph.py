@@ -87,7 +87,7 @@ class SpliceGraph:
             # viz graph by js
             plot_graph(self, f"clique_{clique_ind}", False)
         # trace path
-        current_nodes_keys = set()
+        current_nodes_keys: Set[str] = set()
         for node_list in self.trace():
             yield Series.create_series_from_node_list(
                 node_list, self.logger, current_nodes_keys
@@ -123,7 +123,7 @@ class SpliceGraph:
     def print_path(self) -> None:
         """Print path based on splice graph."""
         for node_list in self.trace():
-            print(Series.create_series_from_node_list(node_list, self.logger))
+            print(Series.create_series_from_node_list(node_list, self.logger, set()))
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
@@ -157,7 +157,7 @@ class SpliceGraph:
         for node in self:
             node.reset_trace_id()
 
-    def get_node_with_unique_key(self, unique_key: str) -> Node:
+    def get_node_with_unique_key(self, unique_key: str) -> Optional[Node]:
         """Get node with unique key.
 
         :param unique_key: unique key
@@ -166,6 +166,7 @@ class SpliceGraph:
         for node in self:
             if node.unique_key == unique_key:
                 return node
+        return None
 
     def get_nodes_with_similar_key(self, similar_key: str) -> List[Node]:
         """Get nodes in graph with similar key."""
@@ -720,11 +721,12 @@ class SpliceGraph:
 
     def check_circle_in_graph(self, nodes_keys: Set[str]):
         """Check if there is circle in graph."""
-        all_nodes_keys = set()
-        result_paths = []
+        all_nodes_keys: Set[str] = set()
+        result_paths: List[List[Node]] = []
 
         for node in self:
-            all_nodes_keys.add(node.unique_key)
+            if (key := node.unique_key) is not None:
+                all_nodes_keys.add(key)
 
         self.check_circle_in_graph_helper(all_nodes_keys - nodes_keys, result_paths)
         return result_paths
@@ -738,8 +740,9 @@ class SpliceGraph:
             and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
             is not None
         ):
-            current_nodes_keys = set()
-            current_nodes_keys.add(start_node.unique_key)
+            current_nodes_keys: Set[str] = set()
+            if (key := start_node.unique_key) is not None:
+                current_nodes_keys.add(key)
             self._trace_forward_record_node_unique_keys(
                 start_node, [], result_paths, current_nodes_keys
             )
@@ -764,7 +767,8 @@ class SpliceGraph:
         else:
             if successors := start_node.successors:
                 for successor in successors:
-                    nodes_keys.add(successor.unique_key)
+                    if (key := successor.unique_key) is not None:
+                        nodes_keys.add(key)
                     self._trace_forward_record_node_unique_keys(
                         successor, path + [start_node], group_paths, nodes_keys
                     )

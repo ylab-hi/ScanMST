@@ -55,15 +55,6 @@ class TestNode:
         node1.update_sr(node2.sr)
         assert node1.sr == node2.sr + node1_original_sr
 
-    def test_update_next_previous_breakpoint_depth(self, nodes, bam):
-        """Test Update next previous breakpoint depth."""
-        node1, node2 = nodes
-        assert node1.next_breakpoint is not None
-        node1.update_next_breakpoint_depth(bam, 1)
-        assert node1.next_breakpoint_depth == 3
-        node2.update_prev_breakpoint_depth(bam, 1)
-        assert node2.prev_breakpoint_depth == 3
-
     @pytest.mark.parametrize("sr", [1, 4, 5])
     def test_set_original_sr(self, nodes, sr):
         """Test set original sr."""

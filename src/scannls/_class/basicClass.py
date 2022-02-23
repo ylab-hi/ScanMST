@@ -488,7 +488,7 @@ class Node(BasicNode):
         """Update the sr of a node."""
         self.sr += key
 
-    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, int]:
+    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, Any]:
         """Get update breakpoint depth and position of a node."""
         break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
         if break_point is not None:
@@ -498,6 +498,7 @@ class Node(BasicNode):
                 pos = pos - 1  # type: ignore
 
             return chrom, pos
+        return " ", 1
 
 
 class Series:
@@ -610,8 +611,8 @@ class Series:
         """Create a series from a list of nodes."""
         series_instance = cls(None, logger)
         for node in node_list:
-            if is_add_key:
-                nodes_keys.add(node.unique_key)
+            if is_add_key and (key := node.unique_key) is not None:
+                nodes_keys.add(key)
             series_instance.add_node(node)
         return series_instance
 

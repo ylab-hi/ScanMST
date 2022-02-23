@@ -54,7 +54,9 @@ class TestSeries:
 
     def test_create_series_from_node_list(self, nodes, fake_logger):
         """Test create series from node list."""
-        series_instance = Series.create_series_from_node_list(nodes, fake_logger)
+        series_instance = Series.create_series_from_node_list(
+            nodes, fake_logger, set(), False
+        )
         assert len(series_instance) == len(nodes)
 
     def test_disable_blat_logger(self, series):
