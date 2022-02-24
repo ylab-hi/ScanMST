@@ -186,6 +186,9 @@ class Rescuer:
     @typing.overload
     def calculate_sr(chrom, start, end, mode, current_names, names_in_graph) -> int: ...
 
+    @staticmethod
+    def count_reads(chrom: str, start: int, end: int) -> int: ...
+
 
 class parseCigarResult:
     def __repr__(self) -> str: ...
