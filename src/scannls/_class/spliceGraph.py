@@ -253,6 +253,8 @@ class SpliceGraph:
     @staticmethod
     def _compare_is_merged_helper(node1: Node, node2: Node) -> bool:
         """Check if node1 and node2 can be merged."""
+        if node1.strand != node2.strand:
+            return False
         condition = (
             node1.sv_type == node2.sv_type
             and SpliceGraph._check_insertion_conditions_for_compare(node1, node2)
