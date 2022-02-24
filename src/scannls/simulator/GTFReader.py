@@ -107,7 +107,8 @@ class GTFReader:
             chrom = item["chrom"]
             gene_name = item["gene_name"]
             strand = item["strand"]
-            chrom_to_ordered_genes[chrom].append((gene_name, strand))
+            if chrom in available_chroms:
+                chrom_to_ordered_genes[chrom].append((gene_name, strand))
 
         sorted_trx_to_exon = {}
         for trx_id in trx_to_exon:

@@ -636,21 +636,20 @@ class OneHop:
                 self.function_dict[_select_type](total_metaexons)
                 total_mt_len = sum(_metaexon.mt_len for _metaexon in total_metaexons)
                 total_wt_len = sum(_metaexon.wt_len for _metaexon in total_metaexons)
-                mt_len_checker = all(
-                    _metaexon.mt_len >= self.min_length for _metaexon in total_metaexons
-                )
                 _del_num = sum(1 for i in total_metaexons if i.nls_type == "DEL")
-                if (
-                    len(total_metaexons) == 1 + num_of_hops
-                    and mt_len_checker
-                    and _del_num < num_of_hops
-                    and total_wt_len > self.minimum_length
-                    and total_mt_len > self.minimum_length
-                ):
-                    flag = False
-                    break
-            if flag and len(total_metaexons) >= 1:
-                total_metaexons.pop()
+                if len(total_metaexons) == 1 + num_of_hops and _del_num < num_of_hops:
+                    if (
+                        all(
+                            _metaexon.mt_len >= self.min_length
+                            for _metaexon in total_metaexons
+                        )
+                        and total_wt_len > self.minimum_length
+                        and total_mt_len > self.minimum_length
+                    ):
+                        flag = False
+                        break
+                    else:
+                        total_metaexons.clear()
             self.logger.debug(f"num_of_hops:{len(total_metaexons) - 1}")
             self.logger.debug(f"{_del_num=}")
         repr_metaexons = [repr(i) for i in total_metaexons]

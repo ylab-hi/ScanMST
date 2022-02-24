@@ -56,6 +56,10 @@ class SimVCFWriter:
         "SVLEN": "Integer",
         "CHR2": "String",
         "END": "Integer",
+        "TRANSCRIPT_ID": "String",
+        "GENE": "String",
+        "GENE1": "String",
+        "GENE2": "String",
     }
     reserved_format = {"GT": "String"}
     reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA"]
@@ -64,9 +68,6 @@ class SimVCFWriter:
         "CANONICAL": "Canonical splice site",
         "NONCANONICAL": "Noncanonical splice site",
         "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
-        "DP": "Total read depth at the breakpoint for insertion",
-        "DP1": "Total read depth at the breakpoint1",
-        "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
         "AO": "Alternate allele observations, "
         "with partial observations recorded fractionally",

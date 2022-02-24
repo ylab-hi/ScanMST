@@ -173,7 +173,6 @@ class Blat:
 
         if os.path.exists(self.log_file_path):
             os.remove(self.log_file_path)
-
         cmd = (
             f"gfServer -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
