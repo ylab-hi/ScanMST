@@ -27,10 +27,8 @@ HTSeq = "^0.13.5"
 pyfaidx = "^0.6.4"
 psutil = "^5.9.0"
 loguru = "^0.6.0"
-rich = "^11.2.0"
 tqdm = "^4.62.3"
 networkx = "^2.6.3"
-parasail = "^1.2.4"
 pybind11 = "^2.9.1"
 
 [tool.poetry.dev-dependencies]
