@@ -183,7 +183,6 @@ class Rescuer:
     def __repr__(self) -> str: ...
 
     @staticmethod
-    @typing.overload
     def calculate_sr(chrom, start, end, mode, current_names, names_in_graph) -> int: ...
 
     @staticmethod
