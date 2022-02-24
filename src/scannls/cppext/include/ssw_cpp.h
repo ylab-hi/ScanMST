@@ -105,7 +105,7 @@ namespace StripedSmithWaterman {
     //                    and replaced.
     // @param    seq    The reference bases;
     //                  [NOTICE] It is not necessary null terminated.
-    // @param    length The length of bases will be be built.
+    // @param    length The length of bases will be  built.
     // @return   The length of the built bases.
     // =========
     int SetReferenceSequence(const char* seq, const int& length);
@@ -220,8 +220,7 @@ namespace StripedSmithWaterman {
 
     reference_length_ = 0;
   }
-  void print_alignment(std::string_view t_q, std::string_view t_r,
-                       const Alignment& t_alignment) noexcept;
+  void print_alignment(std::string_view t_q, std::string_view t_r, Alignment& t_alignment) noexcept;
 }  // namespace StripedSmithWaterman
 
 #endif  // COMPLETE_STRIPED_SMITH_WATERMAN_CPP_H_

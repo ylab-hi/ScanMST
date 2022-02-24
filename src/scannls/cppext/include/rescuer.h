@@ -18,6 +18,7 @@ namespace rescuer {
 
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
+  constexpr int max_seq_len = 150;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -25,6 +26,9 @@ namespace rescuer {
     long pos{-1};
     int mode{0};
   };
+
+
+  int get_read_max_length(std::string_view t_seq);
 
   get_softclip_result_t get_softclip(const std::string &t_read_seq, const bam1_t *t_alignment,
                                      int t_mode, const uint32_t *t_cigar_str, size_t t_cigar_len);
@@ -70,35 +74,24 @@ namespace rescuer {
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
                       const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      const std::vector<std::string> &t_current_names,
-                      const std::vector<std::string> &t_name_list);
-  /**
-   * @brief calculate number of sr according to alignment between srlist and
-   * svlist
-   * @param t_sr sr list
-   * @param t_sv sv list
-   * @param t_min_frac min fraction of alignment
-   * @param t_mode mode
-   * @param t_min_mismatch min mismatch of alignment
-   * @return number of sr
-   */
-  int determine_num_increment_sr(const std::vector<std::string> &t_sr,
-                                 const std::vector<std::string> &t_sv, double t_min_frac,
-                                 int t_min_mismatch);
+                      std::vector<std::string> &t_current_names,
+                      std::vector<std::string> &t_name_list);
 
   class Rescuer {
   private:
-    const char * m_file_path{};
+    const char *m_file_path{};
     bam_handler m_bam_handler{};
     int min_mapq{};
     int min_soft_len{};
     int min_mismatch{};
     double min_identity{};
+    StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 2, 10, 1}};
+    StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
+    StripedSmithWaterman::Alignment m_alignment{};
+    int m_pre_check_min_mis{5};
 
   public:
-    Rescuer();
     Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity);
-    ~Rescuer();
 
     /**
      * @brief calculate number of sr for every node
@@ -112,7 +105,19 @@ namespace rescuer {
      */
     int calculate_sr(const std::string &t_chrom, long t_start, long t_end, int t_mode,
                      std::vector<std::string> &t_current_query_name,
-                     std::vector<std::string> &t_query_name_list) const;
+                     std::vector<std::string> &t_query_name_list);
+    /**
+     * @brief calculate number of sr according to alignment between srlist and
+     * svlist
+     * @param t_sr sr list
+     * @param t_sv sv list
+     * @return number of sr
+     */
+    int determine_num_increment_sr(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv);
+
+    int count_reads(const std::string &t_chrom, long t_start, long t_end) const;
+
+    bool check_if_align(const std::string& t_query, const std::string& t_target);
   };
 
 }  // namespace rescuer

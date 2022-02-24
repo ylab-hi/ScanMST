@@ -52,10 +52,11 @@ namespace bam_parser {
     bam1_t *sam_record{bam_init1()};
 
     bam_handler() = default;
-    bam_handler(const char *bamFile);
+    explicit bam_handler(const char *bamFile);
     ~bam_handler();
 
     [[maybe_unused]] std::vector<read_t> fetch(const char *t_chrom, long t_start, long t_end);
+    int count(const char *t_chrom, long t_start, long t_end) const;
   };
 
 }  // namespace bam_parser

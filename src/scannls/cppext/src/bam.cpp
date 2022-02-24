@@ -114,7 +114,6 @@ namespace bam_parser {
     return result;
   }
 
-
   bam_handler::bam_handler(const char *file_path) {
     sam_file = sam_open(file_path, "r");
     if (sam_file == nullptr) {
@@ -163,7 +162,20 @@ namespace bam_parser {
                          bam_endpos(sam_record), sam_record->core.qual, cigar,
                          sam_record->core.n_cigar, read_seq, bam_is_rev(sam_record));
     }
+    sam_itr_destroy(iter);
     return reads;
+  }
+
+  int bam_handler::count(const char *t_chrom, long start_t, long end_t) const {
+    const int tid = bam_name2id(sam_header, t_chrom);
+    hts_itr_t *iter = sam_itr_queryi(sam_index, tid, start_t, end_t);
+    int num_reads{0};
+
+    while (sam_itr_next(sam_file, iter, sam_record) >= 0) {
+      ++num_reads;
+    }
+    sam_itr_destroy(iter);
+    return num_reads;
   }
 
 }  // namespace bam_parser
