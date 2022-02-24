@@ -7,10 +7,10 @@
 @license:     MIT Licence
 @Time:        1/9/22 12:13 PM
 """
-import re
 from typing import Any
 from typing import List
-from typing import Tuple
+
+from scannls import cppext
 
 
 class Read:
@@ -29,7 +29,7 @@ class Read:
     :param read_match_size: M+I
     :param reference_match_size: M+D+N
     :param indel_size: D+N-I
-    :param cigartuples: cigarstring tuple version: [ (operation code, length) ];
+    :param cigar_tuples: cigarstring tuple version: [ (operation code, length) ];
         operation code: {'M':0,'I':1,'D':2,'N':3,'S':4,'H':5}
     :param cigartuples_without_soft: cigarstring tuple verion [exclude softclipping]:
         [(operation code, length)]; operation code: {'M':0,'I':1,'D':2,'N':3}
@@ -89,9 +89,8 @@ class Read:
         read_match_size: int,
         reference_match_size: int,
         indel_size: int,
-        cigartuples_without_soft: List[Tuple[str, int]],
+        cigartuples_without_soft: List[int],
         query_length: int,
-        cigartuples: Any,
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name
@@ -109,7 +108,6 @@ class Read:
         self.indel_size = indel_size
         self.cigartuples_without_soft = cigartuples_without_soft
         self.query_length = query_length
-        self.cigartuples = cigartuples
         self.ref_end = self.ref_start + self.reference_match_size
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
@@ -141,65 +139,6 @@ class Read:
             f"{self.strand}, {self.mapq}, {self.nm})"
         )
 
-    @staticmethod
-    def _calculate_features(cigar_str: str) -> Any:
-        """Calculate the features of the read.
-
-        :param cigar_str: cigar string of the read
-        """
-        cigar_char_dict = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5}
-        # 'length', 'operation char'
-        len_type_tuple = re.findall(r"(\d+)(\w)", cigar_str)
-        # (operation code, length)
-        cigartuples = [(cigar_char_dict[j], int(i)) for i, j in len_type_tuple]
-
-        query_length = 0
-        indel_size = 0
-        reference_match_size = 0
-        read_match_size = 0
-        cigartuples_without_soft = []
-
-        for op_code, _len_ in cigartuples:
-            if op_code == 0:  # M
-                reference_match_size += _len_
-                read_match_size += _len_
-                query_length += _len_
-                cigartuples_without_soft.append([0, _len_])
-            elif op_code == 1:  # I
-                indel_size += -_len_
-                read_match_size += _len_
-                query_length += _len_
-                cigartuples_without_soft.append([1, _len_])
-            elif op_code == 2:  # D
-                indel_size += _len_
-                reference_match_size += _len_
-                cigartuples_without_soft.append([2, _len_])
-            elif op_code == 3:  # N
-                indel_size += _len_
-                reference_match_size += _len_
-                cigartuples_without_soft.append([3, _len_])
-            elif op_code == 4:  # S
-                query_length += _len_
-
-        lt_soft_len = 0
-        rt_soft_len = 0
-        lt_op, lt_len = cigartuples[0]
-        rt_op, rt_len = cigartuples[-1]
-        if lt_op == 4:
-            lt_soft_len = lt_len
-        if rt_op == 4:
-            rt_soft_len = rt_len
-        return (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        )
-
     @classmethod
     def init(
         cls,
@@ -213,16 +152,7 @@ class Read:
         query_seq: str,
     ) -> "Read":
         """Calculate the features of the read and initialize the read."""
-        (
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
-        ) = Read._calculate_features(cigar_str)
+        parse_cigar_result = cppext.parseCigar(cigar_str)
 
         return cls(
             query_name,
@@ -233,14 +163,13 @@ class Read:
             mapq,
             nm,
             query_seq,
-            lt_soft_len,
-            rt_soft_len,
-            read_match_size,
-            reference_match_size,
-            indel_size,
-            cigartuples_without_soft,
-            query_length,
-            cigartuples,
+            parse_cigar_result.lt_soft_len,
+            parse_cigar_result.rt_soft_len,
+            parse_cigar_result.read_match,
+            parse_cigar_result.ref_match,
+            parse_cigar_result.indel_len,
+            parse_cigar_result.cigartuples_without_soft,
+            parse_cigar_result.query_len,
         )
 
     def get_exons_and_introns(self) -> Any:
@@ -249,18 +178,19 @@ class Read:
         :return: exons coordinates and introns coordinates
         :rtype: tuple
         """
-        cigartuples_without_soft = self.cigartuples_without_soft
         exons = []
         current_pos = self.ref_start
         start_pos = self.ref_start
 
-        for op_code, _len_ in cigartuples_without_soft:
+        for ind in range(0, len(self.cigartuples_without_soft), 2):
+            op_code = self.cigartuples_without_soft[ind]
+            _len = self.cigartuples_without_soft[ind + 1]
 
             if op_code in {0, 2}:  # M, D
-                current_pos = current_pos + _len_
+                current_pos = current_pos + _len
             elif op_code == 3:  # N
                 exons.append([start_pos, current_pos])
-                current_pos = current_pos + _len_
+                current_pos = current_pos + _len
                 start_pos = current_pos
 
         exons.append([start_pos, current_pos])

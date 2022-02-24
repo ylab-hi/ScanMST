@@ -24,6 +24,5 @@ per-file-ignores =
 rst-roles = class,const,func,meth,mod,ref
 rst-directives = deprecated,seealso,note
 exclude =
-    src/scannls/call/*,
-    src/scannls/isoform/*,
     noxfile.py,
+    src/scannls/cppext/*,

@@ -29,6 +29,7 @@ from ._class.writer import VCFWriter
 from ._class.writer import Writers
 from ._class.type import Options, LoggerType
 from . import core
+from . import cppext
 
 __all__ = [
     "Read",
@@ -61,4 +62,5 @@ __all__ = [
     "MicroHomology",
     "Insertion",
     "core",
+    "cppext",
 ]

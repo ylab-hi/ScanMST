@@ -43,19 +43,22 @@ class SpliceGraph:
     dict_factory = dict
     list_factory = list
 
-    def __init__(self, logger: LoggerType, prune_threshold: int = 10) -> None:
+    def __init__(
+        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 10
+    ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.prune_threshold = prune_threshold
         self.dict_factory = SpliceGraph.dict_factory  # type: ignore
         self.list_factory = SpliceGraph.list_factory  # type: ignore
+        self.rescuer = rescuer
 
     def __call__(
         self,
         series_list: Iterable[Series],
-        rescuer: Any,
         clique_ind: int,
         is_plot: bool = False,
+        is_check_circle: bool = False,
     ) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
@@ -75,7 +78,7 @@ class SpliceGraph:
         # construct splice graph
         self.construct()
         # sr rescuer
-        rescuer(self)
+        self.rescuer(self)
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
         self.prune()
@@ -85,8 +88,18 @@ class SpliceGraph:
             # viz graph by js
             plot_graph(self, f"clique_{clique_ind}", False)
         # trace path
+        current_nodes_keys: Set[str] = set()
         for node_list in self.trace():
-            yield Series.create_series_from_node_list(node_list, self.logger)
+            yield Series.create_series_from_node_list(
+                node_list, self.logger, current_nodes_keys, is_add_key=False
+            )
+
+        if is_check_circle:
+            # check circle in graph
+            for node_list in self.check_circle_in_graph(current_nodes_keys):
+                yield Series.create_series_from_node_list(
+                    node_list, self.logger, set(), is_add_key=False
+                )
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in graph.
@@ -112,7 +125,7 @@ class SpliceGraph:
     def print_path(self) -> None:
         """Print path based on splice graph."""
         for node_list in self.trace():
-            print(Series.create_series_from_node_list(node_list, self.logger))
+            print(Series.create_series_from_node_list(node_list, self.logger, set()))
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
@@ -145,6 +158,17 @@ class SpliceGraph:
         """Reset trace id for all nodes."""
         for node in self:
             node.reset_trace_id()
+
+    def get_node_with_unique_key(self, unique_key: str) -> Optional[Node]:
+        """Get node with unique key.
+
+        :param unique_key: unique key
+        :return: node with unique key
+        """
+        for node in self:
+            if node.unique_key == unique_key:
+                return node
+        return None
 
     def get_nodes_with_similar_key(self, similar_key: str) -> List[Node]:
         """Get nodes in graph with similar key."""
@@ -698,3 +722,63 @@ class SpliceGraph:
         self._prune(SpliceType.forward)
         self.reset_trace_id()
         self._prune(SpliceType.backward)
+
+    def check_circle_in_graph(self, nodes_keys: Set[str]):
+        """Check if there is circle in graph."""
+        all_nodes_keys: Set[str] = set()
+        result_paths: List[List[Node]] = []
+
+        for node in self:
+            if (key := node.unique_key) is not None:
+                all_nodes_keys.add(key)
+
+        self.check_circle_in_graph_helper(all_nodes_keys - nodes_keys, result_paths)
+        return result_paths
+
+    def check_circle_in_graph_helper(
+        self, nodes_keys: Set[str], result_paths: List[List[Node]]
+    ) -> None:
+        """Check if there is circle in graph."""
+        if (
+            len(nodes_keys) != 0
+            and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
+            is not None
+        ):
+            current_nodes_keys: Set[str] = set()
+            self._trace_forward_record_node_unique_keys(
+                start_node, [], result_paths, current_nodes_keys
+            )
+            self.check_circle_in_graph_helper(
+                nodes_keys - current_nodes_keys, result_paths
+            )
+
+    def _trace_forward_record_node_unique_keys(
+        self,
+        start_node: Node,
+        path: List[Node],
+        group_paths: List[List[Node]],
+        nodes_keys: Set[str],
+    ) -> None:
+        """Helper function to trace through graph and find all paths.
+
+        .. seealso::
+            :func:`SpliceGraph.trace`
+        """
+        if not start_node or start_node in path:
+            group_paths.append(path)
+        else:
+            if successors := start_node.successors:
+                for successor in successors:
+                    if (key := successor.unique_key) is not None:
+                        nodes_keys.add(key)
+                    self._trace_forward_record_node_unique_keys(
+                        successor, path + [start_node], group_paths, nodes_keys
+                    )
+            else:
+                # successor be [] or None
+                self._trace_forward_record_node_unique_keys(
+                    successors,  # type: ignore
+                    path + [start_node],
+                    group_paths,
+                    nodes_keys,
+                )
