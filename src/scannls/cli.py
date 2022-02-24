@@ -6,7 +6,6 @@
 @Time:        1/11/22 4:28 PM
 """
 import argparse
-import secrets
 import sys
 import textwrap
 import time
@@ -27,6 +26,7 @@ from . import VCFWriter
 from ._class.writer import Writers
 from .core.main import scanbam_run
 from .utils import external_tool_checking
+from .utils import sleep
 
 
 def parse_args() -> argparse.ArgumentParser:
@@ -241,7 +241,7 @@ def cli(options: Union[argparse.Namespace, Options]):
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, str(tmp_dir.resolve()))
     # delay random seconds to preventing from starting multiple servers simultaneously
-    time.sleep(secrets.choice(range(30)))
+    sleep(options.input)
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag

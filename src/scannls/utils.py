@@ -1,5 +1,7 @@
 # !/usr/bin/env python
 """Useful functions for scannls."""
+import os
+import secrets
 import shutil
 import time
 from functools import wraps
@@ -25,6 +27,13 @@ def external_tool_checking(log_handler: LoggerType) -> None:
         if not output:
             raise ToolNotFoundError(tool)
         log_handler.success(f"Checking for {tool} found ")
+
+
+def sleep(input_file: str, max_time: int = 30) -> None:
+    """Sleep random time."""
+    file_size = os.stat(input_file).st_size
+    secrets.SystemRandom().seed(file_size)
+    time.sleep(secrets.randbelow(max_time))
 
 
 def get_softclip_length(
