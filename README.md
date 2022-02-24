@@ -23,6 +23,10 @@
 <summary> Blat </summary>
 </details>
 
+_htslib >= 1.12
+_g++ >= 9.4.0
+_gcc >= 9.4.0
+
 ## Installation
 
 You can install _ScanNLS_ via pip* from PyPI*:
