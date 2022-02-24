@@ -16,7 +16,7 @@ from . import ToolNotFoundError
 from ._class.type import LoggerType
 from scannls import cppext
 
-__all__ = ["external_tool_checking", "get_softclip_length", "timeit"]
+__all__ = ["external_tool_checking", "get_softclip_length", "timeit", "sleep"]
 
 
 def external_tool_checking(log_handler: LoggerType) -> None:
