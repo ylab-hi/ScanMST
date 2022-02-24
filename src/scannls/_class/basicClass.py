@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import secrets
 from typing import Any
 from typing import Iterable
 from typing import Iterator
@@ -581,6 +582,7 @@ class Series:
         self.is_in_graph = False
         self.blat = blat
         self.logger = logger
+        self.id = secrets.randbelow(100000)
 
     def add_node(self, node: Node) -> None:
         """Add a node to the series."""

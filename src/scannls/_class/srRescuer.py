@@ -106,7 +106,7 @@ class SRRescuer:
         mode1, mode2 = current_node.modes
 
         chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
-        current_node.next_breakpoint_depth = self.in_bam.count(
+        current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
             chrom_n, pos_n, pos_n + 1
         )
 
@@ -135,7 +135,7 @@ class SRRescuer:
 
         for next_node in current_node.successors:
             chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
-            next_node.prev_breakpoint_depth = self.in_bam.count(
+            next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
                 chrom_p, pos_p, pos_p + 1
             )
 
