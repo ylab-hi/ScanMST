@@ -10,9 +10,9 @@ from typing import Tuple
 import pysam  # type: ignore
 from loguru import logger
 
-from . import Read
 from . import ToolNotFoundError
 from ._class.type import LoggerType
+from scannls import cppext
 
 __all__ = ["external_tool_checking", "get_softclip_length", "timeit"]
 
@@ -39,32 +39,24 @@ def get_softclip_length(
      the connection point of soft-clipped part (left/right),
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
     """
-    _strand = "-" if read.is_reverse else "+"
-
-    read_obj = Read.init(
-        read.query_name,
-        read.reference_name,
-        read.reference_start,
-        _strand,
-        read.cigarstring,
-        read.mapping_quality,
-        read.get_tag("NM"),
-        read.query_sequence,
-    )
+    parse_result = cppext.parseCigar(read.cigarstring)
+    ref_end = read.reference_start + parse_result.ref_match
 
     if mode == 0:
-        if read_obj.lt_soft_len > read_obj.rt_soft_len:
+        if parse_result.lt_soft_len > parse_result.rt_soft_len:
             return (
-                read_obj.lt_soft_len,
-                read_obj.query_sequence[: read_obj.lt_soft_len],
-                read_obj.ref_start,
+                parse_result.lt_soft_len,
+                read.query_sequence[: parse_result.lt_soft_len],
+                read.reference_start,
                 2,
             )
-        elif read_obj.lt_soft_len < read_obj.rt_soft_len:
+        elif parse_result.lt_soft_len < parse_result.rt_soft_len:
             return (
-                read_obj.rt_soft_len,
-                read_obj.query_sequence[read_obj.query_length - read_obj.rt_soft_len :],
-                read_obj.ref_end,
+                parse_result.rt_soft_len,
+                read.query_sequence[
+                    parse_result.query_len - parse_result.rt_soft_len :
+                ],
+                ref_end,
                 1,
             )
         else:
@@ -72,16 +64,16 @@ def get_softclip_length(
 
     if mode == 1:
         return (
-            read_obj.rt_soft_len,
-            read_obj.query_sequence[read_obj.query_length - read_obj.rt_soft_len :],
-            read_obj.ref_end,
+            parse_result.rt_soft_len,
+            read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
+            ref_end,
             1,
         )
     elif mode == 2:
         return (
-            read_obj.lt_soft_len,
-            read_obj.query_sequence[: read_obj.lt_soft_len],
-            read_obj.ref_start,
+            parse_result.lt_soft_len,
+            read.query_sequence[: parse_result.lt_soft_len],
+            read.reference_start,
             2,
         )
     else:

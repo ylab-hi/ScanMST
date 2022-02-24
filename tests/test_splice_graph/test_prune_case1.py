@@ -288,7 +288,7 @@ def graph_for_prun():
     add_edge_according_order(nodes, 11, 12)  # n11 -> n12
     add_edge_according_order(nodes, 12, 13)  # n12 -> n13
 
-    graph = SpliceGraph(logger)
+    graph = SpliceGraph(logger, None)
     graph.nodes = graph.dict_factory()
     for node in nodes:
         graph.add_node_with_similar_key(node)

@@ -118,6 +118,7 @@ def safety(session: Session) -> None:
 def mypy(session: Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["src", "tests", "docs/conf.py"]
+    session.install("pybind11")
     session.install(".")
     session.install("mypy", "pytest")
     session.run("mypy", *args)
@@ -128,6 +129,7 @@ def mypy(session: Session) -> None:
 @session(python=python_versions)
 def tests(session: Session) -> None:
     """Run the test suite."""
+    session.install("pybind11")
     session.install(".")
     session.install("coverage[toml]", "pytest", "pygments", "pytest-mock")
     try:
@@ -153,6 +155,7 @@ def coverage(session: Session) -> None:
 @session(python=python_versions)
 def typeguard(session: Session) -> None:
     """Runtime type checking using Typeguard."""
+    session.install("pybind11")
     session.install(".")
     session.install("pytest", "typeguard", "pygments", "pytest-mock")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
@@ -162,6 +165,7 @@ def typeguard(session: Session) -> None:
 def xdoctest(session: Session) -> None:
     """Run examples with xdoctest."""
     args = session.posargs or ["all"]
+    session.install("pybind11")
     session.install(".")
     session.install("xdoctest[colors]")
     session.run("python", "-m", "xdoctest", package, *args)
@@ -171,6 +175,7 @@ def xdoctest(session: Session) -> None:
 def docs_build(session: Session) -> None:
     """Build the documentation."""
     args = session.posargs or ["docs", "docs/_build"]
+    session.install("pybind11")
     session.install(".")
     session.install("sphinx", "sphinx-click", "sphinx-rtd-theme")
 
@@ -185,6 +190,7 @@ def docs_build(session: Session) -> None:
 def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
+    session.install("pybind11")
     session.install(".")
     session.install("sphinx", "sphinx-autobuild", "sphinx-click", "sphinx-rtd-theme")
 

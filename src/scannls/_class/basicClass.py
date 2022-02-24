@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
+import secrets
 from typing import Any
 from typing import Iterable
 from typing import Iterator
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import Tuple
 from typing import Union
 
-import pysam  # type: ignore
 from Bio.Seq import Seq  # type: ignore
 
 from .. import Read
@@ -16,6 +17,7 @@ from ..core.nls_inference import infer_nls_from_connected_reads
 from .exception import ReadNotFoundError
 from .type import EventType
 from .type import LoggerType
+from scannls import cppext
 
 
 class NovelInsertion:
@@ -128,6 +130,7 @@ class Insertion(Read):
         query_sequence: str,
     ):
         """Initialize Insertion."""
+        parse_cigar_result = cppext.parseCigar(cigarstring)
         super().__init__(
             "",  # query_name
             chrom,
@@ -137,8 +140,14 @@ class Insertion(Read):
             mapq,
             nm,
             query_sequence,
-            *Read._calculate_features(cigarstring),
-        )
+            parse_cigar_result.lt_soft_len,
+            parse_cigar_result.rt_soft_len,
+            parse_cigar_result.read_match,
+            parse_cigar_result.ref_match,
+            parse_cigar_result.indel_len,
+            parse_cigar_result.cigartuples_without_soft,
+            parse_cigar_result.query_len,
+        ),
 
         self.hit_num = hit_num
 
@@ -480,31 +489,17 @@ class Node(BasicNode):
         """Update the sr of a node."""
         self.sr += key
 
-    def update_next_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
-        """Update next breakpoint depth.
-
-        :param bam: bam AlignmentFile object
-        :param mode: if 'MS', pos = pos - 1
-        """
-        if self.next_breakpoint is not None:
-            chrom, pos = self.next_breakpoint.split(":")
+    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, Any]:
+        """Get update breakpoint depth and position of a node."""
+        break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
+        if break_point is not None:
+            chrom, pos = break_point.split(":")
             pos = int(pos)  # type: ignore
             if mode == 1:
                 pos = pos - 1  # type: ignore
-            self.next_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
 
-    def update_prev_breakpoint_depth(self, bam: pysam.AlignmentFile, mode: int) -> None:
-        """Update prev breakpoint depth.
-
-        :param bam: bam AlignmentFile object
-        :param mode: if 'MS', pos = pos - 1
-        """
-        if self.prev_breakpoint is not None:
-            chrom, pos = self.prev_breakpoint.split(":")
-            pos = int(pos)  # type: ignore
-            if mode == 1:
-                pos = pos - 1  # type: ignore
-            self.prev_breakpoint_depth = bam.count(chrom, pos, pos + 1)  # type: ignore
+            return chrom, pos
+        return " ", 1
 
 
 class Series:
@@ -587,6 +582,7 @@ class Series:
         self.is_in_graph = False
         self.blat = blat
         self.logger = logger
+        self.id = secrets.randbelow(100000)
 
     def add_node(self, node: Node) -> None:
         """Add a node to the series."""
@@ -608,11 +604,17 @@ class Series:
 
     @classmethod
     def create_series_from_node_list(
-        cls, node_list: List[Node], logger: LoggerType
+        cls,
+        node_list: List[Node],
+        logger: LoggerType,
+        nodes_keys: Set[str],
+        is_add_key: bool = True,
     ) -> "Series":
         """Create a series from a list of nodes."""
         series_instance = cls(None, logger)
         for node in node_list:
+            if is_add_key and (key := node.unique_key) is not None:
+                nodes_keys.add(key)
             series_instance.add_node(node)
         return series_instance
 

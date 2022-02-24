@@ -5,24 +5,21 @@
 @license:     MIT Licence
 @Time:        12/30/21 15:00 PM
 """
-import re
 from typing import Any
-from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Optional
-from typing import Set
+from typing import Tuple
 from typing import Union
 
-import parasail  # type: ignore
 from pysam import AlignmentFile  # type: ignore
 
-from ..utils import get_softclip_length
 from .basicClass import Node
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 from .spliceGraph import SpliceGraph
 from .type import LoggerType
+from scannls import cppext
 
 
 class SRRescuer:
@@ -31,6 +28,7 @@ class SRRescuer:
     def __init__(
         self,
         input_bam: AlignmentFile,
+        input_bam_file: str,
         mapq_cutoff: int,
         soft_len_cutoff: int,
         mismatch_cutoff: int,
@@ -41,19 +39,15 @@ class SRRescuer:
 
         :param logger: logger
         """
-        self.in_bam = input_bam
-        self.mapq_cutoff = mapq_cutoff
-        self.soft_len_cutoff = soft_len_cutoff
-        self.mismatch_cutoff = mismatch_cutoff
-        self.alignment_frac = alignment_frac
-        self.logger = logger
-
-    def __repr__(self) -> str:
-        """Represent Rescuer."""
-        return (
-            f"{self.__class__.__name__}({self.in_bam.filename}, "
-            f"{self.soft_len_cutoff}, {self.mismatch_cutoff}, {self.alignment_frac})"
+        self.cppext_rescuer = cppext.Rescuer(
+            input_bam_file,
+            mapq_cutoff,
+            soft_len_cutoff,
+            mismatch_cutoff,
+            alignment_frac,
         )
+        self.logger = logger
+        self.in_bam = input_bam
 
     def __call__(self, nodes_in_graph: Union[Iterable[Node], SpliceGraph]) -> None:
         """Rescue SR from softclipped non-chimeric reads.
@@ -63,167 +57,14 @@ class SRRescuer:
         :param nodes_in_graph: Series
         """
         query_names_in_graph = set()
+
         for node in nodes_in_graph:
             query_names_in_graph.update(node.query_name.split(","))
 
         for node in nodes_in_graph:
-            self.update_sr(node, query_names_in_graph)
+            self.update_sr(node, list(query_names_in_graph))
 
         del query_names_in_graph
-
-    @staticmethod
-    def check_if_sr_rescued_depended_on_alignment(
-        query_origin_len: int,
-        align_result: parasail.bindings_v2.Result,
-        alignment_frac: float,
-        mismatch_threshold: int,
-    ) -> bool:
-        """Check if SR is rescued depended on alignment result.
-
-        index style: [ )
-
-        :param mismatch_threshold:
-        :param query_origin_len:
-        :param align_result:
-        :param alignment_frac:
-        :return:
-        """
-        flag = False
-        cigar = align_result.cigar.decode.decode()
-        pattern = re.compile(r"((?P<length>\d+)(?P<op>\D))")
-        if not cigar or re.match(r"^\d+=", cigar) is None:
-            return flag
-        query_len, mismatch_count = 0, 0
-        for match in re.finditer(pattern, cigar):
-            length = int(match.group("length"))
-            if match.group("op") == "=":
-                query_len += length
-            else:
-                mismatch_count += length
-        query_end = align_result.end_query + 1
-        query_start = query_end - query_len
-        target_end = align_result.end_ref + 1
-        target_start = target_end - query_len
-
-        if (
-            query_len / query_origin_len >= alignment_frac
-            and query_start + target_start == 0
-            and mismatch_count <= mismatch_threshold
-        ):
-            flag = True
-        return flag
-
-    @staticmethod
-    def determined_num_increment_sr(
-        seq: str, seqs: list, alignment_frac: float, mode: int, mismatch_threshold: int
-    ) -> int:
-        """Local alignment."""
-        gap_open_penalty = 11
-        gap_extension_penalty = 1
-        increment_sr = 0
-        if not seq:
-            return increment_sr
-        seq = seq[::-1] if mode == 2 else seq
-        for each_seq in [each_seq for each_seq in seqs if each_seq]:
-            each_seq = each_seq[::-1] if mode == 2 else each_seq
-
-            align_result = parasail.sw_trace_striped_sat(
-                seq, each_seq, gap_open_penalty, gap_extension_penalty, parasail.dnafull
-            )
-            if SRRescuer.check_if_sr_rescued_depended_on_alignment(
-                len(seq), align_result, alignment_frac, mismatch_threshold
-            ):
-                increment_sr += 1
-        return increment_sr
-
-    def _calculate_sr_for_reads(
-        self, region, query_names, query_names_in_graph, sr_list, sv_list, mode
-    ):
-        """Calculate SR for reads.
-
-        :param query_names:
-        :param query_names_in_graph:
-        :param sr_list:
-        :param sv_list:
-        :param mode:
-        :return:
-        """
-        for read in self.in_bam.fetch(region=region):
-            # read is an instance of pysam.AlignedSegment
-            strand = "-" if read.is_reverse else "+"
-            if read.mapping_quality >= self.mapq_cutoff and "S" in read.cigarstring:
-                (
-                    _len,
-                    _seq,
-                    _pos,
-                    _mode,
-                ) = get_softclip_length(read, mode)
-                self.logger.trace(
-                    f"qn: {read.query_name} seq: {_seq} len: {_len} pos: {_pos} mode: {_mode}"
-                )
-                _reference_pos = (
-                    read.reference_start if mode == 2 else read.reference_end
-                )
-                if read.query_name in query_names:
-                    if _pos == _reference_pos:
-                        sv_list[strand].append(_seq)
-                elif (
-                    (read.query_name not in query_names_in_graph)
-                    and _pos == _reference_pos
-                    and _len >= self.soft_len_cutoff
-                ):
-                    # the pileup position is equal to the soft-clipped connection point
-                    # xxxxxxxxSyyyyyyyyMzzzzzS
-                    #         ^      ^
-                    sr_list[strand].append(_seq)
-
-        self.logger.trace(f"sr: {len(sr_list['+'])} sv: {len(sv_list['+'])}")
-
-    def calculate_sr(
-        self, region: str, mode: int, query_name: str, query_names_in_graph: Set
-    ) -> int:
-        """Calculate SR from softclipped reads without SV tag, provided target region.
-
-        region = 'chrm:start-end'
-        .. note.
-            rescued reads strand should be the same as the anchor ones
-            For 'MS' mode, softclipped position should subtract by one
-        """
-        sr_list: Dict[str, List[str]] = {"+": [], "-": []}
-        sv_list: Dict[str, List[str]] = {"+": [], "-": []}
-
-        query_names = set(query_name.split(","))
-
-        self.logger.trace(f"{region=}")
-
-        # read is an instance of pysam.PileupRead
-        self._calculate_sr_for_reads(
-            region, query_names, query_names_in_graph, sr_list, sv_list, mode
-        )
-
-        rescued_sr = 0
-
-        if sv_list["+"] and sr_list["+"]:
-            for _soft_seq in sr_list["+"]:
-                rescued_sr += SRRescuer.determined_num_increment_sr(
-                    _soft_seq,
-                    sv_list["+"],
-                    self.alignment_frac,
-                    mode,
-                    self.mismatch_cutoff,
-                )
-
-        if sv_list["-"] and sr_list["-"]:
-            for _soft_seq in sr_list["-"]:
-                rescued_sr += SRRescuer.determined_num_increment_sr(
-                    _soft_seq,
-                    sv_list["-"],
-                    self.alignment_frac,
-                    mode,
-                    self.mismatch_cutoff,
-                )
-
-        return rescued_sr
 
     @staticmethod
     def obtain_region_for_rescue_sr(
@@ -232,7 +73,7 @@ class SRRescuer:
         exons: Any,
         tgt_name: str,
         mode: int,
-    ) -> str:
+    ) -> Tuple[str, int]:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
@@ -248,14 +89,13 @@ class SRRescuer:
             pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
 
         if mode == 2:
-            region = f"{chrom}:{pos + 1}-{pos + 1}"
+            pos += 1
         else:
             pos = pos + 1 if pos == 0 else pos
-            region = f"{chrom}:{pos}-{pos}"
 
-        return region
+        return chrom, pos
 
-    def update_sr(self, current_node: Node, query_names_in_graph: Set) -> None:
+    def update_sr(self, current_node: Node, query_names_in_graph: List[str]) -> None:
         """Update SR for input node."""
         if current_node.is_end_node():
             return
@@ -264,33 +104,64 @@ class SRRescuer:
             raise ModesNotFoundError(f"{current_node.query_name}")
 
         mode1, mode2 = current_node.modes
-        current_node.update_next_breakpoint_depth(self.in_bam, mode1)
 
-        query_name_current = current_node.query_name
-        _region_current = SRRescuer.obtain_region_for_rescue_sr(
+        chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
+        current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
+            chrom_n, pos_n, pos_n + 1
+        )
+
+        query_name_current = current_node.query_name.split(",")
+        chrom, start = SRRescuer.obtain_region_for_rescue_sr(
             current_node.strand,
             current_node.chrom,
             current_node.exons,
             "next_breakpoint",
             mode1,
         )
-        rescued_sr = self.calculate_sr(
-            _region_current, mode1, query_name_current, query_names_in_graph
+
+        self.logger.trace(
+            f"{chrom=} {start=} {mode1=} {query_name_current=}"
+            f" {query_names_in_graph=}"
         )
+        rescued_sr = self.cppext_rescuer.calculate_sr(
+            chrom,
+            start,
+            start,
+            mode1,
+            query_name_current,
+            query_names_in_graph,
+        )
+        self.logger.trace(f"current {rescued_sr=}")
+
         for next_node in current_node.successors:
-            next_node.update_prev_breakpoint_depth(self.in_bam, mode2)
-            query_name_next = next_node.query_name
-            _region_next = SRRescuer.obtain_region_for_rescue_sr(
+            chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
+            next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
+                chrom_p, pos_p, pos_p + 1
+            )
+
+            query_name_next = next_node.query_name.split(",")
+            chrom, start = SRRescuer.obtain_region_for_rescue_sr(
                 next_node.strand,
                 next_node.chrom,
                 next_node.exons,
                 "prev_breakpoint",
                 mode2,
             )
-            rescued_sr_next = self.calculate_sr(
-                _region_next, mode2, query_name_next, query_names_in_graph
+            self.logger.trace(
+                f"{chrom=} {start=} {mode2=} {query_name_next=}"
+                f" {query_names_in_graph=}"
             )
-            rescued_sr += rescued_sr_next
-        self.logger.trace(f"{rescued_sr=}")
+
+            rescued_sr += self.cppext_rescuer.calculate_sr(
+                chrom,
+                start,
+                start,
+                mode2,
+                query_name_next,
+                query_names_in_graph,
+            )
+            self.logger.trace(f"successors {rescued_sr=}")
+
+        self.logger.trace(f"final {rescued_sr=}")
         if rescued_sr > 0:
             current_node.update_sr(rescued_sr)
