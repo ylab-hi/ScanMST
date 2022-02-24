@@ -265,6 +265,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
         )
+
         intact_series_list_len = len(intact_series_list)
 
         if intact_series_list_len == 0:

@@ -308,7 +308,11 @@ class SpliceGraph:
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
-            return node1.prev_breakpoint == node2.prev_breakpoint
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1.exons[0][0] == node2.exons[0][0]  # type: ignore
+                and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
+            )
 
         elif (
             node1.prev_breakpoint is None and node2.prev_breakpoint is not None
