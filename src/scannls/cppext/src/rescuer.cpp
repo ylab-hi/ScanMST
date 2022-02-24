@@ -50,11 +50,11 @@ namespace rescuer {
 #ifdef DEBUG
 //        StripedSmithWaterman::print_alignment(r, v, m_alignment);
 #endif
+        double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
+                        / static_cast<double>(r.length())};
 
         if ((m_alignment.query_begin + m_alignment.ref_begin) <= 2
-            && m_alignment.mismatches <= min_mismatch
-            && (m_alignment.query_end - m_alignment.query_begin + 1) / (int)r.length()
-                   >= min_identity) {
+            && m_alignment.mismatches <= min_mismatch && identity >= min_identity) {
           ++num_increment_sr;
           break;
         }
@@ -70,7 +70,14 @@ namespace rescuer {
     bool return_value{m_aligner.Align(t_query.c_str(), t_target.c_str(),
                                       static_cast<int>(t_target.length()), m_filter, &m_alignment,
                                       15)};
-    if (!return_value || m_alignment.mismatches >= m_pre_check_min_mis) return false;
+//    StripedSmithWaterman::print_alignment(t_query, t_target, m_alignment);
+    double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
+                    / static_cast<double>(t_query.length())};
+    if (!return_value || m_alignment.query_begin + m_alignment.ref_begin >= m_pre_check_min_mis
+        || identity < 0.65) {
+      return false;  // do not align
+    }
+
     return true;
   }
 

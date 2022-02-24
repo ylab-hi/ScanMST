@@ -20,6 +20,7 @@ int main(int argc, char* argv[]) {
   long start{190670461};
   int sr = p_rescuer.calculate_sr("chr2", start, start, 1, current_names,
                                   names_list);  // chr17:7708250-7708250
+  p_rescuer.check_if_align("ATAATTGGCC", "TTCCGACGTT");
 
   std::cout << "sr: " << sr << "\n";
 

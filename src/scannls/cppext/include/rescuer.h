@@ -88,7 +88,7 @@ namespace rescuer {
     StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 2, 10, 1}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     StripedSmithWaterman::Alignment m_alignment{};
-    int m_pre_check_min_mis{5};
+    int m_pre_check_min_mis{4};
 
   public:
     Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity);
