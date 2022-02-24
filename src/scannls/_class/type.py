@@ -71,6 +71,7 @@ class Options:
     mapq: int = 15
     noncanonical: bool = False
     closed: bool = True
+    nsleep: bool = False
     log: str = "info"
     parallel: int = 1
     port: int = 88888

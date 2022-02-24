@@ -133,12 +133,18 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-c",
-        "--closed",
+        "--nclosed",
         action="store_false",
         dest="closed",
         default=True,
         help="close BLAT server when job has done (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--nsleep",
+        action="store_false",
+        dest="nsleep",
+        default=True,
+        help="If sleep randomly before starting BLAT server (default: %(default)s)",
     )
     parser.add_argument(
         "-p",
@@ -241,7 +247,8 @@ def cli(options: Union[argparse.Namespace, Options]):
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, str(tmp_dir.resolve()))
     # delay random seconds to preventing from starting multiple servers simultaneously
-    sleep(options.input)
+    if options.nsleep:
+        sleep(options.input)
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement or add SV tag
