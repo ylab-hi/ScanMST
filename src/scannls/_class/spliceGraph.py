@@ -58,6 +58,7 @@ class SpliceGraph:
         series_list: Iterable[Series],
         clique_ind: int,
         is_plot: bool = False,
+        is_check_circle: bool = False,
     ) -> Iterable[Series]:
         """Find specific path based on splice graph.
 
@@ -93,11 +94,12 @@ class SpliceGraph:
                 node_list, self.logger, current_nodes_keys
             )
 
-        # check circle in graph
-        for node_list in self.check_circle_in_graph(current_nodes_keys):
-            yield Series.create_series_from_node_list(
-                node_list, self.logger, set(), is_add_key=False
-            )
+        if is_check_circle:
+            # check circle in graph
+            for node_list in self.check_circle_in_graph(current_nodes_keys):
+                yield Series.create_series_from_node_list(
+                    node_list, self.logger, set(), is_add_key=False
+                )
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in graph.
