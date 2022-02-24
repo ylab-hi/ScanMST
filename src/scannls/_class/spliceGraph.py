@@ -91,7 +91,7 @@ class SpliceGraph:
         current_nodes_keys: Set[str] = set()
         for node_list in self.trace():
             yield Series.create_series_from_node_list(
-                node_list, self.logger, current_nodes_keys
+                node_list, self.logger, current_nodes_keys, is_add_key=False
             )
 
         if is_check_circle:
