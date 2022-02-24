@@ -20,7 +20,7 @@ __all__ = [
     "obtain_bp_region_seq",
 ]
 
-from typing import Tuple, List, Dict, Any
+from typing import Tuple, List, Dict, Any, Union
 
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
@@ -511,8 +511,8 @@ def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> b
 
 
 def annotation_splice_site_checker(
-    chrom: str, strand: str, introns: List[[int, int]], cvg: HTSeq.GenomicArrayOfSets
-) -> bool:
+    chrom: str, strand: str, introns: List[Any], cvg: HTSeq.GenomicArrayOfSets
+) -> Union[bool, None]:
     """Check whether the splice site used in introns.
 
     inferred from the read is consistent with overlapped transcript.
