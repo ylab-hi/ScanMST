@@ -292,7 +292,7 @@ class ReadsConnector:
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
         read_query_sequence = read.query_sequence
 
-        same_strand = bool(start_read.adhocseq == read.query_sequence)
+        same_strand = start_read.adhocseq == read.query_sequence
 
         # first case
         self.logger.debug("testing first case M vs LS")
@@ -386,14 +386,14 @@ class ReadsConnector:
 
     @staticmethod
     def _double_check_for_start_end_read_determine_new_read_mode(
-        read: Read, new_read: Read
-    ) -> None:
+        read: Read, new_read_strand: str
+    ) -> int:
         """Double check for start and end read determine new read mode."""
         read.mode = 1 if read.mode == 2 else 2
-        if new_read.strand == read.strand:
-            new_read.mode = 1 if read.mode == 2 else 2
+        if new_read_strand == read.strand:
+            return 1 if read.mode == 2 else 2
         else:
-            new_read.mode = 1 if read.mode == 1 else 2
+            return 1 if read.mode == 1 else 2
 
     def _double_check_create_new_read_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read
@@ -405,9 +405,14 @@ class ReadsConnector:
         )
 
         lt_s_len = hsp.query_start
-        rt_s_len = len(query_seq) - hsp.query_end - 1
+        rt_s_len = len(query_seq) - hsp.query_end
+        new_read_mode = (
+            ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
+                read, strand
+            )
+        )
 
-        if read.mode == 1:
+        if new_read_mode == 1:
             cigar_str = (
                 f"{lt_s_len}S"
                 + cigar_str
@@ -434,6 +439,7 @@ class ReadsConnector:
             num_of_mismatch,
             read.query_sequence,
         )
+        new_read.mode = new_read_mode
 
         return new_read
 
@@ -481,9 +487,7 @@ class ReadsConnector:
             new_read = self._double_check_create_new_read_calculate_sms(
                 hsp, query_sequence, read
             )
-            self._double_check_for_start_end_read_determine_new_read_mode(
-                read, new_read
-            )
+
             if read_type == "start":
                 self.reads_chain.insert(0, new_read)
                 self.read_pair_mode_dict[(new_read, read)] = (new_read.mode, read.mode)
