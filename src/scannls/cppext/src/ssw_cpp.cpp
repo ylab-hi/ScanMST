@@ -429,7 +429,7 @@ namespace StripedSmithWaterman {
   }
 
   void print_alignment(std::string_view t_q, std::string_view t_r,
-                       Alignment &t_alignment) noexcept {
+                       const Alignment &t_alignment) noexcept {
     const int Print_Max_Length = 25;
 
     std::cout << std::left << std::setw(Print_Max_Length) << "Query: " << t_q << '\n';

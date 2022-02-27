@@ -220,7 +220,8 @@ namespace StripedSmithWaterman {
 
     reference_length_ = 0;
   }
-  void print_alignment(std::string_view t_q, std::string_view t_r, Alignment& t_alignment) noexcept;
+  void print_alignment(std::string_view t_q, std::string_view t_r,
+                       const Alignment& t_alignment) noexcept;
 }  // namespace StripedSmithWaterman
 
 #endif  // COMPLETE_STRIPED_SMITH_WATERMAN_CPP_H_

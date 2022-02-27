@@ -34,7 +34,8 @@ namespace rescuer {
     int num_increment_sr{0};
     for (const auto &r : t_sr) {
       for (const auto &v : t_sv) {
-        if (!check_if_align(r.substr(0, 10), v.substr(0, 10))) continue;
+        if (!check_if_align(r.substr(0, min_seq_align_len), v.substr(0, min_seq_align_len)))
+          continue;
         // reference length
         int v_len{static_cast<int>(v.length())};
         int mask_len = v_len >= 30 ? v_len / 2 : 15;
@@ -53,8 +54,8 @@ namespace rescuer {
         double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
                         / static_cast<double>(r.length())};
 
-        if ((m_alignment.query_begin + m_alignment.ref_begin) <= 2
-            && m_alignment.mismatches <= min_mismatch && identity >= min_identity) {
+        if (identity >= min_identity && (m_alignment.query_begin + m_alignment.ref_begin) <= 2
+            && m_alignment.mismatches <= min_mismatch) {
           ++num_increment_sr;
           break;
         }
@@ -70,14 +71,14 @@ namespace rescuer {
     bool return_value{m_aligner.Align(t_query.c_str(), t_target.c_str(),
                                       static_cast<int>(t_target.length()), m_filter, &m_alignment,
                                       15)};
-//    StripedSmithWaterman::print_alignment(t_query, t_target, m_alignment);
-    double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
-                    / static_cast<double>(t_query.length())};
-    if (!return_value || m_alignment.query_begin + m_alignment.ref_begin >= m_pre_check_min_mis
-        || identity < 0.65) {
+
+    StripedSmithWaterman::print_alignment(t_query, t_target, m_alignment);
+
+    if (double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
+                        / static_cast<double>(t_query.length())};
+        !return_value || identity < 0.8) {
       return false;  // do not align
     }
-
     return true;
   }
 
@@ -108,6 +109,7 @@ namespace rescuer {
             = (tt_mode == 2) ? t_bam.sam_record->core.pos : bam_endpos(t_bam.sam_record);
 
         int seq_len{get_read_max_length(softclip_result.read_seq)};
+        if (seq_len < min_seq_align_len) continue;  // read length is too short
 
         if (reference_pos == softclip_result.pos
             && find(t_current_names.begin(), t_current_names.end(), bam_get_qname(t_bam.sam_record))

@@ -25,6 +25,12 @@ namespace bam_parser {
 
   [[maybe_unused]] void printChrome(const bam_hdr_t *har);
   [[maybe_unused]] void readBam(const char *bamFile);
+
+  /**
+   * @brief parse cigar string
+   * @param cigar string of cigar
+   * @return  parseCigarResult_t
+   */
   parseCigarResult_t parseCigar(const char *cigar);
 
   struct read_t {
@@ -53,9 +59,28 @@ namespace bam_parser {
 
     bam_handler() = default;
     explicit bam_handler(const char *bamFile);
+
+    /**
+     * @breif: release memory of bam_handler
+     */
     ~bam_handler();
 
+    /**
+     * @breif fetch reads from bam file in terms of chromosome and start and end
+     * @param t_chrom  chromosome name
+     * @param t_start  start position
+     * @param t_end  end position
+     * @return  vector of read_t
+     */
     [[maybe_unused]] std::vector<read_t> fetch(const char *t_chrom, long t_start, long t_end);
+
+    /**
+     * @brief count reads from bam file in terms of the position
+     * @param t_chrom  chromosome name
+     * @param t_start  start position
+     * @param t_end  end position
+     * @return  number of reads
+     */
     int count(const char *t_chrom, long t_start, long t_end) const;
   };
 
