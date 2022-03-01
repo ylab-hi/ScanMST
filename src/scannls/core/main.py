@@ -73,11 +73,12 @@ class BamScanner:
         self.total_length = 0
 
         self.representative_alignments_new_cigar = {}
+        self.supplementary_alignments_md_tag = {}
 
     def _check_bam_sort(self, header) -> bool:
         """Check if the bam file is sorted."""
         try:
-            return bool(header["HD"]["SO"] == "coordinate")
+            return header["HD"]["SO"] == "coordinate"
         except KeyError:
             raise RuntimeError(f"Bam file {self.in_bam} is not sorted") from None
 
@@ -123,10 +124,17 @@ class BamScanner:
                     self.representative_alignments_new_cigar[
                         f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     ] = sup_aln_cigar
+
+                    self.supplementary_alignments_md_tag[
+                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
+                    ] = read.get_tag("MD")
         except ValueError:
             raise SystemExit("BAM index file is not found!") from None
         else:
-            return self.representative_alignments_new_cigar
+            return (
+                self.representative_alignments_new_cigar,
+                self.supplementary_alignments_md_tag,
+            )
 
 
 def _get_genome_fasta(ref_genome):
@@ -457,7 +465,10 @@ def scanbam_run(
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
     )
     # iterate over all read of the bam file
-    representative_alignments_new_cigar = bam_scanner.iter_bam()
+    (
+        representative_alignments_new_cigar,
+        supplementary_alignments_md_tag,
+    ) = bam_scanner.iter_bam()
     avg_cov = bam_scanner.total_length / 150000000
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(

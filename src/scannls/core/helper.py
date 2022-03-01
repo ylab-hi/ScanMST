@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 
 from .._class.exception import ModesNotEqualError
+from scannls import cppext
 
 __all__ = [
     "extract_splice_sites",
@@ -18,6 +19,7 @@ __all__ = [
     "diff_chrom_diff_strand_handler",
     "softclipped_length_and_event_size_checker",
     "obtain_bp_region_seq",
+    "obtain_variants_stats",
 ]
 
 from typing import Tuple, List, Dict, Any
@@ -1199,3 +1201,50 @@ def diff_chrom_diff_strand_handler(
         )
     else:
         return noreturn
+
+
+def obtain_variants_stats(
+    cigar_str: str, md_tag: str, indel_len_cutoff: int = 4
+) -> Tuple[int, float, float]:
+    """Obtain variants stats from read matched part.
+
+    :param cigar_str: CIGAR string
+    :param md_tag: MD tag
+    :param indel_len_cutoff: INDEL length threshold
+    :type cigar_str: str
+    :type md_tag: str
+    :type indel_len_cutoff: int
+    :return: number of SNVs, fraction of long insertions and fraction of long deletions.
+    :rtype: tuple
+
+    ..note.
+        'A': 65
+        'Z': 90
+        '^': 94
+        '0': 48
+    """
+    parsed_cigar_result = cppext.parseCigar(cigar_str)
+    del_num = 0
+    ins_num = 0
+    del_outlier_num = 0
+    ins_outlier_num = 0
+    dels_len_total = 0
+    for _op, _len in parsed_cigar_result.cigartuples_without_soft:
+        if _op == 2:  # DEL
+            del_num += 1
+            dels_len_total += _len
+            if _len >= indel_len_cutoff:
+                del_outlier_num += 1
+        elif _op == 1:  # INS
+            ins_num += 1
+            if _len >= indel_len_cutoff:
+                ins_outlier_num = 0
+
+    sum_of_snv_dels = 0
+    for _letter in md_tag:
+        if ord(_letter) >= 65 and ord(_letter) <= 90:
+            sum_of_snv_dels += 1
+
+    num_of_snvs = sum_of_snv_dels - dels_len_total
+
+    return num_of_snvs, ins_outlier_num / ins_num, del_outlier_num / del_num
