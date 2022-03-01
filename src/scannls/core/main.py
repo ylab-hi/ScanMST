@@ -3,6 +3,7 @@
 import copy
 import inspect
 import re
+from itertools import chain
 from pathlib import Path
 from typing import Any
 from typing import List
@@ -77,7 +78,7 @@ class BamScanner:
     def _check_bam_sort(self, header) -> bool:
         """Check if the bam file is sorted."""
         try:
-            return bool(header["HD"]["SO"] == "coordinate")
+            return header["HD"]["SO"] == "coordinate"
         except KeyError:
             raise RuntimeError(f"Bam file {self.in_bam} is not sorted") from None
 
@@ -254,15 +255,20 @@ def _scan_bam_helper(
     """Scan BAM file and write output to file."""
     from loguru import logger
 
-    if running_mode == "parallel":
-        logger = MyLogger(identified_key, logger)
-
-    logger.trace(f"{identified_key=} start")
-
     genome_fasta = _get_genome_fasta(ref_genome)
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
-    chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
+
+    if running_mode == "parallel":
+        logger = MyLogger(identified_key, logger)
+        chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
+    else:
+
+        chrom_bam_io_object = chain.from_iterable(
+            [in_bam_io_object.fetch(contig=key) for key in identified_key]
+        )
+
+    logger.trace(f"{identified_key=} start")
 
     blat_log_file, blat_is_start_server = blat_info
     blat = Blat(two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server)
@@ -467,6 +473,7 @@ def scanbam_run(
     filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
     filter_chrom_list.extend(["chrX", "chrY"])
 
+    print(bam_scanner.bam_chrom_info)
     contigs = [
         contig
         for contig in bam_scanner.bam_chrom_info.keys()
@@ -489,7 +496,7 @@ def scanbam_run(
 
     if parallel == 1:
 
-        intact_series_list = _scan_bam_helper(None, **keyword_parameters_dict)
+        intact_series_list = _scan_bam_helper(contigs, **keyword_parameters_dict)
 
     else:
 

@@ -18,6 +18,7 @@ __all__ = [
     "diff_chrom_diff_strand_handler",
     "softclipped_length_and_event_size_checker",
     "obtain_bp_region_seq",
+    "strand_mode_checker",
 ]
 
 from typing import Tuple, List, Dict, Any
