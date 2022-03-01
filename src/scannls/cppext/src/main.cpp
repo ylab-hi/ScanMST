@@ -5,8 +5,6 @@ int main(int argc, char* argv[]) {
 
   std::string file{"/panfs/home/yang4414/li002252/project/scan_data/resue2.bam"};
 
-  //  bam_parser::bam_handler bam{file.c_str()};
-  //  int res = bam.count("chr17", 7708248, 7708249);
   int mapq_threshold = 15;
   int min_softclip_length = 5;
   int min_mismatch_count = 3;

@@ -20,6 +20,7 @@ __all__ = [
     "softclipped_length_and_event_size_checker",
     "obtain_bp_region_seq",
     "obtain_variants_stats",
+    "strand_mode_checker",
 ]
 
 from typing import Tuple, List, Dict, Any

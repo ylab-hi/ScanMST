@@ -19,6 +19,7 @@ namespace rescuer {
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
   constexpr int max_seq_len = 150;
+  constexpr int min_seq_align_len = 10;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -26,7 +27,6 @@ namespace rescuer {
     long pos{-1};
     int mode{0};
   };
-
 
   int get_read_max_length(std::string_view t_seq);
 
@@ -88,7 +88,6 @@ namespace rescuer {
     StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 2, 10, 1}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     StripedSmithWaterman::Alignment m_alignment{};
-    int m_pre_check_min_mis{4};
 
   public:
     Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity);
@@ -115,9 +114,23 @@ namespace rescuer {
      */
     int determine_num_increment_sr(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv);
 
-    int count_reads(const std::string &t_chrom, long t_start, long t_end) const;
+    /**
+     * @brief calculate number of read for a position
+     * @param t_chrom chromosome
+     * @param t_start start position 0-based
+     * @param t_end  end position
+     * @return number of read
+     */
 
-    bool check_if_align(const std::string& t_query, const std::string& t_target);
+    [[nodiscard]] int count_reads(const std::string &t_chrom, long t_start, long t_end) const;
+
+    /**
+     * @brief check if two read sequence need to be aligned or not
+     * @param t_query query sequence
+     * @param t_target target sequence
+     * @return true if need to be aligned
+     */
+    bool check_if_align(const std::string &t_query, const std::string &t_target);
   };
 
 }  // namespace rescuer

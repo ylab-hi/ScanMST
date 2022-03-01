@@ -467,8 +467,6 @@ class SpliceGraph:
             # iterate all nodes in series
             for index, current_node in enumerate(series):
                 self.logger.trace(f"{current_node=}")
-                self.logger.trace(f"{self.nodes=}")
-                self.logger.trace(f"{merged_nodes_pool=}")
                 # add information about  next and previous node in series to current node
                 current_node.update_next_and_previous_node_in_series(index, series)
                 # initialize and get unique key of current node and set node.unique_key
