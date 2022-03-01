@@ -1224,18 +1224,23 @@ def obtain_variants_stats(
         '0': 48
     """
     parsed_cigar_result = cppext.parseCigar(cigar_str)
+    cigartuples_without_soft: List[int] = parsed_cigar_result.cigartuples_without_soft
+
     del_num = 0
     ins_num = 0
     del_outlier_num = 0
     ins_outlier_num = 0
     dels_len_total = 0
-    for _op, _len in parsed_cigar_result.cigartuples_without_soft:
-        if _op == 2:  # DEL
+
+    for ind in range(0, len(cigartuples_without_soft), 2):
+        op_code = cigartuples_without_soft[ind]
+        _len = cigartuples_without_soft[ind + 1]
+        if op_code == 2:  # DEL
             del_num += 1
             dels_len_total += _len
             if _len >= indel_len_cutoff:
                 del_outlier_num += 1
-        elif _op == 1:  # INS
+        elif op_code == 1:  # INS
             ins_num += 1
             if _len >= indel_len_cutoff:
                 ins_outlier_num = 0
