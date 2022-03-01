@@ -473,7 +473,6 @@ def scanbam_run(
     filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
     filter_chrom_list.extend(["chrX", "chrY"])
 
-    print(bam_scanner.bam_chrom_info)
     contigs = [
         contig
         for contig in bam_scanner.bam_chrom_info.keys()

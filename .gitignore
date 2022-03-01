@@ -30,3 +30,8 @@ profile/
 
 # profile file
 *.pstat
+
+
+# c++
+*.o
+*.so
