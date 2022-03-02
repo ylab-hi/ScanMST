@@ -243,7 +243,7 @@ class parseCigarResult:
     pass
 
 
-def parseCigar(*args, **kwargs) -> parseCigarResult:
+def parseCigar(cigar: str) -> parseCigarResult:
     """
     parse cigar string
     """
