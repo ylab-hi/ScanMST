@@ -296,6 +296,9 @@ def cli(options: Union[argparse.Namespace, Options]):
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
+            long_indel_length=options.long_indel_length,
+            substitutions_fraction=options.substitutions_fraction,
+            indels_fraction=options.indels_fraction,
         )
 
         intact_series_list_len = len(intact_series_list)
