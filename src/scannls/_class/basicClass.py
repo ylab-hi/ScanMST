@@ -1006,7 +1006,7 @@ class Event:
 
     def is_type_na(self) -> bool:
         """Return True if the event is NA."""
-        return bool(self.sv_type == "NA")
+        return self.sv_type == "NA"
 
     def has_insertion(self) -> bool:
         """Return True if the event has insertion."""
@@ -1018,7 +1018,7 @@ class Event:
 
     def is_same_strand(self) -> bool:
         """Return True if the event is same strand."""
-        return bool(self.strand1 == self.strand2)
+        return self.strand1 == self.strand2
 
     def read1(self, read_chains: List[Read]) -> Read:
         """Return the read1 of the event."""
