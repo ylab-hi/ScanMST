@@ -903,6 +903,11 @@ def same_chrom_diff_strand_handler(
     logger.trace(f"{bp_region_seq_len=}")
 
     if ra_bp == sa_bp:  # inverted duplication (IDUP)
+        # allow one read with noncanonical splice site for IDUP
+        if not read_lt.splice_site_checker(
+            genome_fasta
+        ) and not read_rt.splice_site_checker(genome_fasta):
+            return noreturn
         chrm_start = lt_chrm
         junc_start = ra_bp
         chrm_end = lt_chrm
@@ -946,6 +951,11 @@ def same_chrom_diff_strand_handler(
         else:
             return noreturn
     else:  # conventional INV
+        # If using noncanonical splice site, return NA
+        if not read_lt.splice_site_checker(
+            genome_fasta
+        ) or not read_rt.splice_site_checker(genome_fasta):
+            return noreturn
         chrm_start = lt_chrm
         junc_start = min(ra_bp, sa_bp)
         chrm_end = lt_chrm
