@@ -14,7 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
 ]
-exclude= ["src/scannls/cppext/cmake-*"]
+exclude = ["src/scannls/cppext/cmake-*"]
 
 [tool.poetry.urls]
 Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
@@ -33,11 +33,11 @@ pybind11 = "^2.9.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"
-coverage = {extras = ["toml"], version = "^6.3"}
+coverage = { extras = ["toml"], version = "^6.3" }
 safety = "^1.10.3"
 mypy = "^0.931"
 typeguard = "^2.12.1"
-xdoctest = {extras = ["colors"], version = "^0.15.5"}
+xdoctest = { extras = ["colors"], version = "^0.15.5" }
 sphinx = "^4.4.0"
 sphinx-autobuild = "^2021.3.14"
 pre-commit = "^2.17.0"
@@ -78,8 +78,9 @@ show_error_context = true
 exclude = "cppext"
 allow_untyped_calls = true
 
-[tool.pytest]
+[tool.pytest.ini_options]
 norecursedirs = ["cppext"]
+
 
 [build-system]
 requires = ["pybind11>2.9.1", "poetry-core>=1.0.0"]
