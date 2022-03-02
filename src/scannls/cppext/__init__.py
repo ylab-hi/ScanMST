@@ -7,4 +7,4 @@
 @license:     MIT Licence
 @Time:        2/21/22 9:07 PM
 """
-from scannls.cppext import *  # type: ignore
+from scannls._cppext import *  # type: ignore
