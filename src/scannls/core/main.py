@@ -25,6 +25,7 @@ from .. import Series
 from .._class.type import LoggerType
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
+from .helper import obtain_variants_stats
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads
 
@@ -45,6 +46,9 @@ class BamScanner:
         max_allowed_nm,
         min_soft_seg_len,
         blat_ident_pct_cutoff,
+        long_indel_length,
+        substitutions_fraction,
+        indels_fraction,
     ):
         """Initialize the class."""
         self.in_bam_path = input_bam
@@ -73,8 +77,10 @@ class BamScanner:
         self.header = self._get_bam_header()
         self.total_length = 0
 
+        self.long_indel_length = long_indel_length
+        self.substitutions_fraction = substitutions_fraction
+        self.indels_fraction = indels_fraction
         self.representative_alignments_new_cigar = {}
-        self.supplementary_alignments_md_tag = {}
 
     def _check_bam_sort(self, header) -> bool:
         """Check if the bam file is sorted."""
@@ -105,6 +111,7 @@ class BamScanner:
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
+        # "--MD" need to be used, MD tag store information about SNVs and DELs
         self.logger.info("Iter bam file and Extracting supplementary alignments")
         try:
             for read in self.in_bam.fetch():
@@ -122,20 +129,25 @@ class BamScanner:
                         r_s_len = right_mat.group(1)
                     else:
                         r_s_len = ""
-                    self.representative_alignments_new_cigar[
-                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
-                    ] = sup_aln_cigar
 
-                    self.supplementary_alignments_md_tag[
-                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
-                    ] = read.get_tag("MD")
+                    nm = read.get_tag("NM")
+                    md_tag = read.get_tag("MD")
+                    num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                        sup_aln_cigar, md_tag, self.long_indel_length
+                    )
+                    if (
+                        num_of_subs / nm <= self.substitutions_fraction
+                        and ins_fraction <= self.indels_fraction
+                        and del_fraction <= self.indels_fraction
+                    ):
+                        self.representative_alignments_new_cigar[
+                            f"{read.qname}\t{l_s_len}\t{r_s_len}"
+                        ] = sup_aln_cigar
+
         except ValueError:
             raise SystemExit("BAM index file is not found!") from None
         else:
-            return (
-                self.representative_alignments_new_cigar,
-                self.supplementary_alignments_md_tag,
-            )
+            return self.representative_alignments_new_cigar
 
 
 def _get_genome_fasta(ref_genome):
@@ -259,6 +271,9 @@ def _scan_bam_helper(
     blat_ident_pct_cutoff,
     splice_bin,
     motif_required,
+    long_indel_length,
+    substitutions_fraction,
+    indels_fraction,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
@@ -392,45 +407,55 @@ def _scan_bam_helper(
                 read.has_tag("SA")
                 and chimeric_alns_num == after_set_sa_chimeric_alns_num
             ):
-
                 logger.trace(
                     f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}"
                 )
-                event_lists, read_chains, num_added_reads = detect_sv_from_cigar(
-                    read=read,
-                    mapq_cutoff=mapq_cutoff,
-                    max_allowed_nm=max_allowed_nm,
-                    splice_bin=splice_bin,
-                    genome_fasta=genome_fasta,
-                    cvg=cvg,
-                    gene_iv=gene_iv,
-                    motif_required=motif_required,
-                    blat=blat,
-                    logger=logger,
+                nm = read.get_tag("NM")
+                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                    read.cigarstring, read.get_tag("MD"), long_indel_length
                 )
-                logger.trace(f"{read_chains=}")
-                nls_event_list = []
-                for event in event_lists:
-                    if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
-                        nls_event_list.append(event)
-
-                chimeric_alns_num += num_added_reads
-                if nls_event_list and (len(nls_event_list) + 1 == chimeric_alns_num):
-                    series = Series(blat=blat, logger=logger)
-                    logger.debug(f"{nls_event_list=}")
-                    series.init(
-                        nls_event_list,
-                        read_chains,
-                        splice_bin,
-                        genome_fasta,
-                        cvg,
-                        gene_iv,
-                        motif_required,
+                if (
+                    num_of_subs / nm <= substitutions_fraction
+                    and ins_fraction <= indels_fraction
+                    and del_fraction <= indels_fraction
+                ):
+                    event_lists, read_chains, num_added_reads = detect_sv_from_cigar(
+                        read=read,
+                        mapq_cutoff=mapq_cutoff,
+                        max_allowed_nm=max_allowed_nm,
+                        splice_bin=splice_bin,
+                        genome_fasta=genome_fasta,
+                        cvg=cvg,
+                        gene_iv=gene_iv,
+                        motif_required=motif_required,
+                        blat=blat,
+                        logger=logger,
                     )
-                    series.disable_blat_logger()
-                    if not series.is_all_type_del():
-                        nls_src_forms_list.append(series)
-                        logger.trace(f"{series=}")
+                    logger.trace(f"{read_chains=}")
+                    nls_event_list = []
+                    for event in event_lists:
+                        if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
+                            nls_event_list.append(event)
+
+                    chimeric_alns_num += num_added_reads
+                    if nls_event_list and (
+                        len(nls_event_list) + 1 == chimeric_alns_num
+                    ):
+                        series = Series(blat=blat, logger=logger)
+                        logger.debug(f"{nls_event_list=}")
+                        series.init(
+                            nls_event_list,
+                            read_chains,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            gene_iv,
+                            motif_required,
+                        )
+                        series.disable_blat_logger()
+                        if not series.is_all_type_del():
+                            nls_src_forms_list.append(series)
+                            logger.trace(f"{series=}")
 
     logger.debug(f"Total Series: {nls_src_forms_list}")
     logger.complete()
@@ -455,6 +480,9 @@ def scanbam_run(
     max_allowed_nm,
     min_soft_seg_len,
     blat_ident_pct_cutoff,
+    long_indel_length,
+    substitutions_fraction,
+    indels_fraction,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(
@@ -469,12 +497,12 @@ def scanbam_run(
         max_allowed_nm=max_allowed_nm,
         min_soft_seg_len=min_soft_seg_len,
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
+        long_indel_length=long_indel_length,
+        substitutions_fraction=substitutions_fraction,
+        indels_fraction=indels_fraction,
     )
     # iterate over all read of the bam file
-    (
-        representative_alignments_new_cigar,
-        supplementary_alignments_md_tag,
-    ) = bam_scanner.iter_bam()
+    representative_alignments_new_cigar = bam_scanner.iter_bam()
     avg_cov = bam_scanner.total_length / 150000000
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(

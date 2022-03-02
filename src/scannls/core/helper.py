@@ -1215,7 +1215,7 @@ def obtain_variants_stats(
     :type cigar_str: str
     :type md_tag: str
     :type indel_len_cutoff: int
-    :return: number of SNVs, fraction of long insertions and fraction of long deletions.
+    :return: number of substitutions, fraction of long insertions and fraction of long deletions.
     :rtype: tuple
 
     ..note.
@@ -1223,6 +1223,7 @@ def obtain_variants_stats(
         'Z': 90
         '^': 94
         '0': 48
+        https://lh3.github.io/2018/03/27/the-history-the-cigar-x-operator-and-the-md-tag
     """
     parsed_cigar_result = cppext.parseCigar(cigar_str)
     cigartuples_without_soft: List[int] = parsed_cigar_result.cigartuples_without_soft
@@ -1233,9 +1234,9 @@ def obtain_variants_stats(
     ins_outlier_num = 0
     dels_len_total = 0
 
-    for ind in range(0, len(cigartuples_without_soft), 2):
-        op_code = cigartuples_without_soft[ind]
-        _len = cigartuples_without_soft[ind + 1]
+    for idx in range(0, len(cigartuples_without_soft), 2):
+        op_code = cigartuples_without_soft[idx]
+        _len = cigartuples_without_soft[idx + 1]
         if op_code == 2:  # DEL
             del_num += 1
             dels_len_total += _len
@@ -1246,11 +1247,11 @@ def obtain_variants_stats(
             if _len >= indel_len_cutoff:
                 ins_outlier_num = 0
 
-    sum_of_snv_dels = 0
+    sum_of_subs_dels = 0
     for _letter in md_tag:
         if ord(_letter) >= 65 and ord(_letter) <= 90:
-            sum_of_snv_dels += 1
+            sum_of_subs_dels += 1
 
-    num_of_snvs = sum_of_snv_dels - dels_len_total
+    num_of_subs = sum_of_subs_dels - dels_len_total
 
-    return num_of_snvs, ins_outlier_num / ins_num, del_outlier_num / del_num
+    return num_of_subs, ins_outlier_num / ins_num, del_outlier_num / del_num

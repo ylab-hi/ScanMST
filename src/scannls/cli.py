@@ -187,6 +187,31 @@ def parse_args() -> argparse.ArgumentParser:
         help="BLAT temporary directory (default: %(default)s)",
         default="/tmp",
     )
+    # Reads filter parameters
+    parser.add_argument(
+        "--long_indel_length",
+        action="store",
+        dest="long_indel_length",
+        type=int,
+        default=5,
+        help="The length cutoff of defining long indels in the reads (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--substitutions_fraction",
+        action="store",
+        dest="substitutions_fraction",
+        type=float,
+        default=0.2,
+        help="The allowed maximum substitution fraction in the reads (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--indels_fraction",
+        action="store",
+        dest="indels_fraction",
+        type=float,
+        default=0.2,
+        help="The allowed maximum long indels fraction in the reads (default: %(default)s)",
+    )
     # SR Rescuer parameters
     parser.add_argument(
         "--soft_len",

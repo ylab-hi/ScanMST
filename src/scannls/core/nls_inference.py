@@ -60,6 +60,12 @@ def infer_nls_from_connected_reads(
 
     if lt_mode == 3 or rt_mode == 3:
         return noreturn
+    # if using noncanonical splice site, return "NA"
+    if not read_lt.splice_site_checker(genome_fasta) or not read_rt.splice_site_checker(
+        genome_fasta
+    ):
+        return noreturn
+
     lt_chrm, lt_strand = (
         read_lt.chrom,
         read_lt.strand,
