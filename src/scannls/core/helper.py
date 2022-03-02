@@ -1,3 +1,4 @@
+# !/usr/bin/env python
 """Helper functions."""
 import re
 from collections import defaultdict
@@ -907,6 +908,10 @@ def same_chrom_diff_strand_handler(
         if not read_lt.splice_site_checker(
             genome_fasta
         ) and not read_rt.splice_site_checker(genome_fasta):
+            logger.debug(
+                f"Splice site checking[IDUP]: {read_lt.query_name=}, "
+                f"{read_lt.cigarstring=}, {read_rt.cigarstring=}"
+            )
             return noreturn
         chrm_start = lt_chrm
         junc_start = ra_bp
@@ -955,6 +960,9 @@ def same_chrom_diff_strand_handler(
         if not read_lt.splice_site_checker(
             genome_fasta
         ) or not read_rt.splice_site_checker(genome_fasta):
+            logger.debug(
+                f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
+            )
             return noreturn
         chrm_start = lt_chrm
         junc_start = min(ra_bp, sa_bp)

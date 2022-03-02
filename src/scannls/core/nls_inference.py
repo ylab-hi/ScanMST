@@ -80,6 +80,10 @@ def infer_nls_from_connected_reads(
             if not read_lt.splice_site_checker(
                 genome_fasta
             ) or not read_rt.splice_site_checker(genome_fasta):
+                logger.debug(
+                    f"Splice site checking[Same chroms, same strands]: "
+                    f"{read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
+                )
                 return noreturn
             return same_chrom_same_strand_handler(
                 read_lt,
@@ -112,6 +116,10 @@ def infer_nls_from_connected_reads(
         if not read_lt.splice_site_checker(
             genome_fasta
         ) or not read_rt.splice_site_checker(genome_fasta):
+            logger.debug(
+                f"Splice site checking[different chroms]: "
+                f"{read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
+            )
             return noreturn
         if lt_strand == rt_strand:
             return diff_chrom_same_strand_handler(
