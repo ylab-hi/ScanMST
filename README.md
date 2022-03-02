@@ -23,11 +23,11 @@
 <summary> Blat </summary>
 </details>
 
-__htslib >= 1.12__
+**htslib >= 1.12**
 
-__g++ >= 9.4.0__
+**g++ >= 9.4.0**
 
-__gcc >= 9.4.0__
+**gcc >= 9.4.0**
 
 ## Installation
 
