@@ -1245,7 +1245,7 @@ def obtain_variants_stats(
         elif op_code == 1:  # INS
             ins_num += 1
             if _len >= indel_len_cutoff:
-                ins_outlier_num = 0
+                ins_outlier_num += 1
 
     sum_of_subs_dels = 0
     for _letter in md_tag:
@@ -1253,5 +1253,7 @@ def obtain_variants_stats(
             sum_of_subs_dels += 1
 
     num_of_subs = sum_of_subs_dels - dels_len_total
+    ins_fraction = 0 if ins_num == 0 else ins_outlier_num / ins_num
+    del_fraction = 0 if del_num == 0 else del_outlier_num / del_num
 
-    return num_of_subs, ins_outlier_num / ins_num, del_outlier_num / del_num
+    return num_of_subs, ins_fraction, del_fraction
