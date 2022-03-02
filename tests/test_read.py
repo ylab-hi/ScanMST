@@ -204,6 +204,7 @@ class TestReadsConnector:
     def test__double_check_create_new_read_calculate_sms(self, reads_connector):
         """Test double check create new read calculate sms."""
         read1, _ = reads_connector.aln_list
+        read1.mode = 2
         fake_hsp = FakeHsp(query_start=1, query_end=3, query_seq="ATC")
         reads_connector.blat.psl2sam_return = ("chr1", 1, "+", "2S1M1S", 2)
 
@@ -211,7 +212,9 @@ class TestReadsConnector:
             fake_hsp, "ATCGC", read1
         )
 
-        assert new_read.cigarstring == "1448S1M2S"
+        assert read1.mode == 1
+        assert new_read.mode == 2
+        assert new_read.cigarstring == "1448S1M3S"
         assert new_read.query_sequence == read1.query_sequence
         assert new_read.chrom == "chr1"
 
