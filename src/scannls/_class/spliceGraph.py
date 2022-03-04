@@ -276,7 +276,12 @@ class SpliceGraph:
 
     @staticmethod
     def _compare_is_merged_helper(node1: Node, node2: Node) -> bool:
-        """Check if node1 and node2 can be merged."""
+        """Check if node1 and node2 can be merged.
+
+        .. note::
+            End note will not merge with start/middle node,
+            since every end node has polyA tail in library preparation.
+        """
         if node1.strand != node2.strand:
             return False
         condition = (
@@ -284,22 +289,13 @@ class SpliceGraph:
             and SpliceGraph._check_insertion_conditions_for_compare(node1, node2)
         )
         if not condition:
-            if (
-                node1.next_breakpoint is None and node2.prev_breakpoint is None
-            ):  # node1 is end node, node2 is start node
-                return SpliceGraph._compare_is_merged_helper_check_condition_for_head_tail_node_mode(
-                    node1, node2
-                )
-            elif (
+            # node1 is end node, node2 is start/middle node
+            if (node1.next_breakpoint is None and node2.prev_breakpoint is None) or (
                 node1.next_breakpoint is None and node2.next_breakpoint is not None
-            ):  # node1 is end node, node2 is middle node
-                return (
-                    node1.exons[0][0] == node2.exons[0][0]  # type: ignore
-                    and node1.exons[-1][1] <= node2.exons[-1][1]  # type: ignore
-                )
+            ):
+                return False
 
             return condition
-
         if (
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
         ):  # both are start nodel check last exon end
