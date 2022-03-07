@@ -7,13 +7,14 @@ namespace rescuer {
 
   // Constructor for rescuer
   Rescuer::Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch,
-                   double t_identity)
+                   double t_identity, int t_min_seq_align_len)
       : m_file_path{t_file},
         m_bam_handler{t_file},
         min_mapq{t_mapq},
         min_soft_len{t_soft_len},
         min_mismatch{t_mismatch},
-        min_identity{t_identity} {}
+        min_identity{t_identity},
+        min_seq_align_len{t_min_seq_align_len} {}
 
   int Rescuer::calculate_sr(const std::string &t_chrom, long t_start, long t_end, int t_mode,
                             std::vector<std::string> &t_current_query_name,
@@ -22,7 +23,7 @@ namespace rescuer {
     std::vector<std::string> sv_list{};
 
     add_sr_sv_list(sr_list, sv_list, m_bam_handler, t_chrom, t_start, t_end, t_mode, min_mapq,
-                   min_soft_len, t_current_query_name, t_query_name_list);
+                   min_soft_len, min_seq_align_len, t_current_query_name, t_query_name_list);
 
     if (sr_list.empty() || sv_list.empty()) return 0;
 
@@ -86,7 +87,7 @@ namespace rescuer {
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
                       const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      std::vector<std::string> &t_current_names,
+                      int t_min_seq_align_len, std::vector<std::string> &t_current_names,
                       std::vector<std::string> &t_name_list) {
     --tt_start;
     const int tid = bam_name2id(t_bam.sam_header, tt_chrom.c_str());
@@ -109,7 +110,7 @@ namespace rescuer {
             = (tt_mode == 2) ? t_bam.sam_record->core.pos : bam_endpos(t_bam.sam_record);
 
         int seq_len{get_read_max_length(softclip_result.read_seq)};
-        if (seq_len < min_seq_align_len) continue;  // read length is too short
+        if (seq_len < t_min_seq_align_len) continue;  // read length is too short
 
         if (reference_pos == softclip_result.pos
             && find(t_current_names.begin(), t_current_names.end(), bam_get_qname(t_bam.sam_record))

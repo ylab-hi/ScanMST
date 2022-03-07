@@ -45,6 +45,7 @@ class SRRescuer:
             soft_len_cutoff,
             mismatch_cutoff,
             alignment_frac,
+            10,
         )
         self.logger = logger
         self.in_bam = input_bam

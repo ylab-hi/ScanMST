@@ -19,7 +19,6 @@ namespace rescuer {
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
   constexpr int max_seq_len = 150;
-  constexpr int min_seq_align_len = 10;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -74,7 +73,7 @@ namespace rescuer {
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
                       const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      std::vector<std::string> &t_current_names,
+                      int t_min_seq_align_len, std::vector<std::string> &t_current_names,
                       std::vector<std::string> &t_name_list);
 
   class Rescuer {
@@ -85,12 +84,14 @@ namespace rescuer {
     int min_soft_len{};
     int min_mismatch{};
     double min_identity{};
+    int min_seq_align_len{10};
     StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 2, 10, 1}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     StripedSmithWaterman::Alignment m_alignment{};
 
   public:
-    Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity);
+    Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity,
+            int t_min_seq_align_len);
 
     /**
      * @brief calculate number of sr for every node

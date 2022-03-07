@@ -31,7 +31,7 @@ namespace bam_parser {
    * @param cigar string of cigar
    * @return  parseCigarResult_t
    */
-  parseCigarResult_t parseCigar(const char *cigar);
+  [[maybe_unused]] parseCigarResult_t parseCigar(const char *cigar);
 
   struct read_t {
     std::string query_name{};
