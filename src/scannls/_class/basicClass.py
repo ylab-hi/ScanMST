@@ -1127,15 +1127,17 @@ def reverse_complement(in_str: str) -> str:
 def check_end_node_is_ploya(
     node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.8, length: int = 20
 ) -> None:
-    """Check whether the node is polyA."""
+    """Check whether the node is bona fide polyA or internal priming events."""
     if node.ref_end is None or node.ref_start is None:
         raise SystemExit(f"{node} has no start or end position")
 
-    node_seq_length = node.ref_end - node.ref_start
+    if node.strand == "+":
+        seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
+    else:
+        seq = genome_fasta[node.chrom][
+            node.ref_start - length : node.ref_start
+        ].reverse.complement.seq
 
-    length = node_seq_length if node_seq_length < length else length
-
-    seq = genome_fasta[node.chrom][-length:].seq
     counter: Dict[str, int] = Counter(seq)
-    if counter["A"] < ratio * len(seq):
+    if counter["A"] <= ratio * len(seq):
         node.is_polya = True

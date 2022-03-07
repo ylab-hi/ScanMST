@@ -228,6 +228,81 @@ class SpliceGraph:
         return False
 
     @staticmethod
+    def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
+        node1: Node,
+        node2: Node,
+    ) -> bool:
+        """Check if two end nodes can be merged or not.
+
+        node1 is tail node, node2 is tail node
+        check if they can be merged.
+
+        :param node1:  node1
+        :param node2:  node2
+        :return:  True if two nodes are merged, otherwise False
+
+        .. note::
+
+            -> [node1]
+            -> [node2]
+        """
+        if node1.exons is None or node2.exons is None:
+            raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+
+        node1_first_exon_start = node1.exons[0][0]
+        node1_last_exon_end = node1.exons[-1][1]
+        node2_first_exon_start = node2.exons[0][0]
+        node2_last_exon_end = node2.exons[-1][1]
+
+        if node1.is_polya and node2.is_polya:
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_first_exon_start == node2_first_exon_start
+                and node1_last_exon_end == node2_last_exon_end
+            )
+
+        elif node1.is_polya and not node2.is_polya:
+            if node1.strand == "+":
+                return (
+                    node1.prev_breakpoint == node2.prev_breakpoint
+                    and node1_first_exon_start == node2_first_exon_start
+                    and node1_last_exon_end >= node2_last_exon_end
+                )
+            else:
+                return (
+                    node1.prev_breakpoint == node2.prev_breakpoint
+                    and node1_last_exon_end == node2_last_exon_end
+                    and node1_first_exon_start <= node2_first_exon_start
+                )
+        elif not node1.is_polya and node2.is_polya:
+            if node1.strand == "+":
+                return (
+                    node1.prev_breakpoint == node2.prev_breakpoint
+                    and node1_first_exon_start == node2_first_exon_start
+                    and node1_last_exon_end <= node2_last_exon_end
+                )
+            else:
+                return (
+                    node1.prev_breakpoint == node2.prev_breakpoint
+                    and node1_last_exon_end == node2_last_exon_end
+                    and node1_first_exon_start >= node2_first_exon_start
+                )
+
+        elif not node1.is_polya and not node2.is_polya:
+            if node1.strand == "+":
+                return (
+                    node1.prev_breakpoint == node2.prev_breakpoint
+                    and node1_first_exon_start == node2_first_exon_start
+                )
+            else:
+                return (
+                    node1.prev_breakpoint == node2.prev_breakpoint
+                    and node1_last_exon_end == node2_last_exon_end
+                )
+
+        return False
+
+    @staticmethod
     def _compare_is_merged_helper_check_condition_for_head_tail_node_mode(
         node1: Node,
         node2: Node,
@@ -314,10 +389,8 @@ class SpliceGraph:
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1.exons[0][0] == node2.exons[0][0]  # type: ignore
-                and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
+            return SpliceGraph._compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
+                node1, node2
             )
 
         elif (
