@@ -17,13 +17,15 @@ namespace rescuer {
         min_seq_align_len{t_min_seq_align_len} {}
 
   int Rescuer::calculate_sr(const std::string &t_chrom, long t_start, long t_end, int t_mode,
+                            const std::string &t_strand,
                             std::vector<std::string> &t_current_query_name,
                             std::vector<std::string> &t_query_name_list) {
     std::vector<std::string> sr_list{};
     std::vector<std::string> sv_list{};
 
     add_sr_sv_list(sr_list, sv_list, m_bam_handler, t_chrom, t_start, t_end, t_mode, min_mapq,
-                   min_soft_len, min_seq_align_len, t_current_query_name, t_query_name_list);
+                   min_soft_len, min_seq_align_len, t_strand, t_current_query_name,
+                   t_query_name_list);
 
     if (sr_list.empty() || sv_list.empty()) return 0;
 
@@ -87,7 +89,8 @@ namespace rescuer {
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
                       const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      int t_min_seq_align_len, std::vector<std::string> &t_current_names,
+                      int t_min_seq_align_len, const std::string &tt_strand,
+                      std::vector<std::string> &t_current_names,
                       std::vector<std::string> &t_name_list) {
     --tt_start;
     const int tid = bam_name2id(t_bam.sam_header, tt_chrom.c_str());
@@ -95,6 +98,12 @@ namespace rescuer {
     hts_itr_t *iter = sam_itr_queryi(t_bam.sam_index, tid, tt_start, tt_end);
 
     while (sam_itr_next(t_bam.sam_file, iter, t_bam.sam_record) >= 0) {
+      if (t_bam.sam_record->core.flag & BAM_FREVERSE) {
+        if (tt_strand == "+") continue;
+      } else {
+        if (tt_strand == "-") continue;
+      }
+
       const uint32_t *cigar{bam_get_cigar(t_bam.sam_record)};
       const uint8_t *seq{bam_get_seq(t_bam.sam_record)};
 

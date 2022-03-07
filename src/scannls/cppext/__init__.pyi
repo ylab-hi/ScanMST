@@ -181,7 +181,7 @@ class Rescuer:
     def __repr__(self) -> str: ...
 
     @staticmethod
-    def calculate_sr(chrom: str, start: int, end: int, mode: int,
+    def calculate_sr(chrom: str, start: int, end: int, mode: int, strand: typing.Optional[str],
                      current_names: typing.List[str], names_in_graph: typing.List[str]) -> int: ...
 
     @staticmethod

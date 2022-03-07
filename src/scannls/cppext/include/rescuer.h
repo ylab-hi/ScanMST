@@ -73,7 +73,8 @@ namespace rescuer {
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
                       const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      int t_min_seq_align_len, std::vector<std::string> &t_current_names,
+                      int t_min_seq_align_len, const std::string &tt_strand,
+                      std::vector<std::string> &t_current_names,
                       std::vector<std::string> &t_name_list);
 
   class Rescuer {
@@ -104,8 +105,9 @@ namespace rescuer {
      * @return number of sr
      */
     int calculate_sr(const std::string &t_chrom, long t_start, long t_end, int t_mode,
-                     std::vector<std::string> &t_current_query_name,
+                     const std::string &t_strand, std::vector<std::string> &t_current_query_name,
                      std::vector<std::string> &t_query_name_list);
+
     /**
      * @brief calculate number of sr according to alignment between srlist and
      * svlist
