@@ -276,7 +276,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         sleep(options.input)
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
-    # CIGAR string refinement or add SV tag
+    # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
         intact_series_list, in_bam_io_object = scanbam_run(

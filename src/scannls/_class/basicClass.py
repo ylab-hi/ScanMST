@@ -328,7 +328,7 @@ class Node(BasicNode):
     :param ref_start: reference start position
     :param ref_end: reference end position
     :param exons: CIGAR inferred exons in the read. e.g., [(100, 200), (300, 500)]
-    :param sv_type: one of the SV types (TDUP/INV/TRA)
+    :param sv_type: one of the NLS types (TDUP/INV/TRA)
     :param annot: gene annotation code
     :param canonical: canonical splice site code {1: canonical, 0: noncanonical}
     :param modes: read modes of connected breakpoints

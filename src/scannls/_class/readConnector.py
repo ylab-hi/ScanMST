@@ -657,7 +657,7 @@ def detect_read_read_connections_from_cigar(
         )
 
     noreturn = [], {}, 0  # type: ignore
-    if read.has_tag("SV") or read.is_supplementary:
+    if read.is_supplementary:
         return noreturn
 
     # if no 'SA' tag was found, read-to-read chain will be empty
