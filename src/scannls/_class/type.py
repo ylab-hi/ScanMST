@@ -82,3 +82,6 @@ class Options:
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8
+    long_indel_length: int = 5
+    substitutions_fraction: float = 0.2
+    indels_fraction: float = 0.2

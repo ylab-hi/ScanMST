@@ -206,3 +206,39 @@ class Read:
             _positions.pop(-1)
             introns = [[x, y] for x, y in zip(_positions[::2], _positions[1::2])]
         return exons, introns
+
+    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.8) -> bool:
+        """Check whether the fraction of canonical splice site usage.
+
+        in the read is bigger than 'fraction_cutoff' or not.
+        :param genome_fasta: pyfaidx.Fasta object of reference genome (FASTA file)
+        :param fraction_cutoff: fraction of canonical splice sites used in the putative
+            introns inferred from the CIGAR
+        :type genome_fasta: pyfaidx.Fasta
+        :type fraction_cutoff: float
+        :return: using canonical splice sites OR not
+        :rtype: bool
+        """
+        exons, introns = self.get_exons_and_introns()
+
+        if len(introns) == 0:
+            return True
+
+        intron_count = len(introns)
+        can_count = 0
+        can_sites = {"GT-AG", "GC-AG", "AT-AC"}
+        for start, end in introns:
+            donor_site = (
+                genome_fasta[self.chrom][end - 2 : end].reverse.complement.seq
+                if self.strand == "-"
+                else genome_fasta[self.chrom][start : start + 2].seq
+            )
+            acceptor_site = (
+                genome_fasta[self.chrom][start : start + 2].reverse.complement.seq
+                if self.strand == "-"
+                else genome_fasta[self.chrom][end - 2 : end].seq
+            )
+
+            if f"{donor_site}-{acceptor_site}" in can_sites:
+                can_count += 1
+        return can_count / intron_count >= fraction_cutoff

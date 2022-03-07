@@ -1,5 +1,10 @@
-chr17	ScanNLS	exon	1400047	1400222	.	-	.	transcript_id "1"; part "1";
-chr17	ScanNLS	exon	1364859	1365058	.	-	.	transcript_id "1"; part "1";
-chr17	ScanNLS	exon	1423350	1423650	.	-	.	transcript_id "1"; part "2";
-chr20	ScanNLS	exon	391287	391579	.	+	.	transcript_id "1"; part "3";
-chr20	ScanNLS	exon	396198	397559	.	+	.	transcript_id "1"; part "3";
+chr17	exon	scannls	1400047	1400222	.	-	.	transcript_id "000001"; mega_exon_id "001"; exon_id "001";
+chr17	exon	scannls	1364857	1365058	.	-	.	transcript_id "000001"; mega_exon_id "001"; exon_id "002";
+chr17	exon	scannls	1423350	1423651	.	-	.	transcript_id "000001"; mega_exon_id "002"; exon_id "001";
+chr20	exon	scannls	391287	391579	.	+	.	transcript_id "000001"; mega_exon_id "003"; exon_id "001";
+chr20	exon	scannls	396198	397544	.	+	.	transcript_id "000001"; mega_exon_id "003"; exon_id "002";
+chr17	exon	scannls	1400047	1400222	.	-	.	transcript_id "000002"; mega_exon_id "001"; exon_id "001";
+chr17	exon	scannls	1364857	1365058	.	-	.	transcript_id "000002"; mega_exon_id "001"; exon_id "002";
+chr17	exon	scannls	1423350	1423651	.	-	.	transcript_id "000002"; mega_exon_id "002"; exon_id "001";
+chr20	exon	scannls	391287	391579	.	+	.	transcript_id "000002"; mega_exon_id "003"; exon_id "001";
+chr20	exon	scannls	396198	397559	.	+	.	transcript_id "000002"; mega_exon_id "003"; exon_id "002";

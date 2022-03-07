@@ -60,6 +60,7 @@ def infer_nls_from_connected_reads(
 
     if lt_mode == 3 or rt_mode == 3:
         return noreturn
+
     lt_chrm, lt_strand = (
         read_lt.chrom,
         read_lt.strand,
@@ -75,6 +76,15 @@ def infer_nls_from_connected_reads(
 
     if lt_chrm == rt_chrm:
         if lt_strand == rt_strand:  # deletion, insertion, duplication
+            # If using noncanonical splice site, return NA
+            if not read_lt.splice_site_checker(
+                genome_fasta
+            ) or not read_rt.splice_site_checker(genome_fasta):
+                logger.debug(
+                    f"Splice site checking[Same chroms, same strands]: "
+                    f"{read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
+                )
+                return noreturn
             return same_chrom_same_strand_handler(
                 read_lt,
                 read_rt,
@@ -88,6 +98,7 @@ def infer_nls_from_connected_reads(
                 logger,
             )
         else:  # lt_strand != rt_strand
+            # IDUP and INV detection in this category
             return same_chrom_diff_strand_handler(
                 read_lt,
                 read_rt,
@@ -101,6 +112,15 @@ def infer_nls_from_connected_reads(
                 logger,
             )
     else:  # lt_chrm != rt_chrm
+        # If using noncanonical splice site, return NA
+        if not read_lt.splice_site_checker(
+            genome_fasta
+        ) or not read_rt.splice_site_checker(genome_fasta):
+            logger.debug(
+                f"Splice site checking[different chroms]: "
+                f"{read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
+            )
+            return noreturn
         if lt_strand == rt_strand:
             return diff_chrom_same_strand_handler(
                 read_lt,

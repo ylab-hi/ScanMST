@@ -1,8 +1,10 @@
+# !/usr/bin/env python
 """Helper functions."""
 import re
 from collections import defaultdict
 
 from .._class.exception import ModesNotEqualError
+from scannls import cppext
 
 __all__ = [
     "extract_splice_sites",
@@ -18,6 +20,7 @@ __all__ = [
     "diff_chrom_diff_strand_handler",
     "softclipped_length_and_event_size_checker",
     "obtain_bp_region_seq",
+    "obtain_variants_stats",
     "strand_mode_checker",
 ]
 
@@ -901,6 +904,15 @@ def same_chrom_diff_strand_handler(
     logger.trace(f"{bp_region_seq_len=}")
 
     if ra_bp == sa_bp:  # inverted duplication (IDUP)
+        # allow one read with noncanonical splice site for IDUP
+        if not read_lt.splice_site_checker(
+            genome_fasta
+        ) and not read_rt.splice_site_checker(genome_fasta):
+            logger.debug(
+                f"Splice site checking[IDUP]: {read_lt.query_name=}, "
+                f"{read_lt.cigarstring=}, {read_rt.cigarstring=}"
+            )
+            return noreturn
         chrm_start = lt_chrm
         junc_start = ra_bp
         chrm_end = lt_chrm
@@ -944,6 +956,14 @@ def same_chrom_diff_strand_handler(
         else:
             return noreturn
     else:  # conventional INV
+        # If using noncanonical splice site, return NA
+        if not read_lt.splice_site_checker(
+            genome_fasta
+        ) or not read_rt.splice_site_checker(genome_fasta):
+            logger.debug(
+                f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
+            )
+            return noreturn
         chrm_start = lt_chrm
         junc_start = min(ra_bp, sa_bp)
         chrm_end = lt_chrm
@@ -1200,3 +1220,58 @@ def diff_chrom_diff_strand_handler(
         )
     else:
         return noreturn
+
+
+def obtain_variants_stats(
+    cigar_str: str, md_tag: str, indel_len_cutoff: int = 4
+) -> Tuple[int, float, float]:
+    """Obtain variants stats from read matched part.
+
+    :param cigar_str: CIGAR string
+    :param md_tag: MD tag
+    :param indel_len_cutoff: INDEL length threshold
+    :type cigar_str: str
+    :type md_tag: str
+    :type indel_len_cutoff: int
+    :return: number of substitutions, fraction of long insertions and fraction of long deletions.
+    :rtype: tuple
+
+    ..note.
+        'A': 65
+        'Z': 90
+        '^': 94
+        '0': 48
+        https://lh3.github.io/2018/03/27/the-history-the-cigar-x-operator-and-the-md-tag
+    """
+    parsed_cigar_result = cppext.parseCigar(cigar_str)
+    cigartuples_without_soft: List[int] = parsed_cigar_result.cigartuples_without_soft
+
+    del_num = 0
+    ins_num = 0
+    del_outlier_num = 0
+    ins_outlier_num = 0
+    dels_len_total = 0
+
+    for idx in range(0, len(cigartuples_without_soft), 2):
+        op_code = cigartuples_without_soft[idx]
+        _len = cigartuples_without_soft[idx + 1]
+        if op_code == 2:  # DEL
+            del_num += 1
+            dels_len_total += _len
+            if _len >= indel_len_cutoff:
+                del_outlier_num += 1
+        elif op_code == 1:  # INS
+            ins_num += 1
+            if _len >= indel_len_cutoff:
+                ins_outlier_num += 1
+
+    sum_of_subs_dels = 0
+    for _letter in md_tag:
+        if ord(_letter) >= 65 and ord(_letter) <= 90:
+            sum_of_subs_dels += 1
+
+    num_of_subs = sum_of_subs_dels - dels_len_total
+    ins_fraction = 0 if ins_num == 0 else ins_outlier_num / ins_num
+    del_fraction = 0 if del_num == 0 else del_outlier_num / del_num
+
+    return num_of_subs, ins_fraction, del_fraction
