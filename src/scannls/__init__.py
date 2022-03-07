@@ -13,6 +13,7 @@ from ._class.basicClass import Series, Node
 from ._class.basicClass import NovelInsertion
 from ._class.basicClass import MicroHomology
 from ._class.basicClass import Insertion
+from ._class.basicClass import check_end_node_is_ploya
 from ._class.blat import Blat
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
@@ -63,4 +64,5 @@ __all__ = [
     "Insertion",
     "core",
     "cppext",
+    "check_end_node_is_ploya",
 ]

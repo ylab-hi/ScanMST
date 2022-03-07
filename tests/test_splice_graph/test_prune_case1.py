@@ -16,7 +16,7 @@ from scannls import SpliceType
 
 
 @pytest.fixture(scope="function", autouse=True)
-def graph_for_prun() -> SpliceGraph:
+def graph_for_prun():
     """Create a splice graph for testing pruning.
 
     .. note::
@@ -271,7 +271,7 @@ def graph_for_prun() -> SpliceGraph:
     num_nodes = 13
     nodes = [Node() for _ in range(num_nodes)]
     for ind, node in enumerate(nodes):
-        assign_value_for_instance(node, **param_dict[ind])
+        assign_value_for_instance(node, **param_dict[ind])  # type: ignore
         node.get_unique_key()
 
     # add successors and predecessors  12 edges

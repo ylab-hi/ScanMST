@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import secrets
+from collections import Counter
 from typing import Any
+from typing import Dict
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -9,6 +11,7 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
+import pyfaidx  # type: ignore
 from Bio.Seq import Seq  # type: ignore
 
 from .. import Read
@@ -375,6 +378,7 @@ class Node(BasicNode):
         "sr",
         "insertion_info",
         "unique_key",
+        "is_polya",
     ) + BasicNode.__slots__
 
     def __init__(
@@ -415,6 +419,7 @@ class Node(BasicNode):
         self.sr = 1
         self.insertion_info = None
         self.unique_key = None
+        self.is_polya = False
 
     def __hash__(self) -> int:
         """Hash a node."""
@@ -896,6 +901,8 @@ class Series:
                 final_node.query_name = read2.query_name
                 final_node.prev_sv_type = prev_sv_type
 
+                check_end_node_is_ploya(final_node, genome_fasta)
+
                 self.add_node(final_node)
 
 
@@ -1115,3 +1122,20 @@ def reverse_complement(in_str: str) -> str:
     """Obtain reverse complement sequence."""
     my_dna = Seq(in_str)
     return str(my_dna.reverse_complement())
+
+
+def check_end_node_is_ploya(
+    node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.8, length: int = 20
+) -> None:
+    """Check whether the node is polyA."""
+    if node.ref_end is None:
+        raise SystemExit(f"{node} has no end position")
+
+    node_seq_length = node.ref_end - node.ref_start
+
+    length = node_seq_length if node_seq_length < length else length
+
+    seq = genome_fasta[node.chrom][-length:].seq
+    counter: Dict[str, int] = Counter(seq)
+    if counter["A"] < ratio * len(seq):
+        node.is_polya = True
