@@ -129,9 +129,11 @@ class SRRescuer:
             start,
             start,
             mode1,
+            current_node.strand,
             query_name_current,
             query_names_in_graph,
         )
+
         self.logger.trace(f"current {rescued_sr=}")
 
         for next_node in current_node.successors:
@@ -158,6 +160,7 @@ class SRRescuer:
                 start,
                 start,
                 mode2,
+                next_node.strand,
                 query_name_next,
                 query_names_in_graph,
             )
