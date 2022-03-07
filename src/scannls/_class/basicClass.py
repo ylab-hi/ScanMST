@@ -1128,8 +1128,8 @@ def check_end_node_is_ploya(
     node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.8, length: int = 20
 ) -> None:
     """Check whether the node is polyA."""
-    if node.ref_end is None:
-        raise SystemExit(f"{node} has no end position")
+    if node.ref_end is None or node.ref_start is None:
+        raise SystemExit(f"{node} has no start or end position")
 
     node_seq_length = node.ref_end - node.ref_start
 
