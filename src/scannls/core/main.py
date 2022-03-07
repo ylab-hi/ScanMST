@@ -511,13 +511,11 @@ def scanbam_run(
         f"Reads coverage: {avg_cov:.4f}, Number of chimeric reads: {num_chimeric_reads}"
     )
     # get the chromosome name we want to scan
-    filter_chrom_list = [f"chr{i}" for i in range(1, 23)]
-    filter_chrom_list.extend(["chrX", "chrY"])
 
     contigs = [
         contig
         for contig in bam_scanner.bam_chrom_info.keys()
-        if contig in filter_chrom_list
+        if "_" not in contig and "M" not in contig
     ]
 
     logger.info(f" Processing {contigs=}")
