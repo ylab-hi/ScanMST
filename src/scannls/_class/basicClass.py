@@ -199,8 +199,8 @@ class BasicNode:
         "is_merged",
         "is_in_graph",
         "is_traced",
-        "original_sr",
         "trace_id",
+        "harmonic_mean_sr",
     )
 
     def __init__(self):
@@ -215,15 +215,21 @@ class BasicNode:
         self.previous_node_in_series: Optional[Node] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
-        self.original_sr: int = 1
+        self.harmonic_mean_sr: float = 1
 
     def __eq__(self, other) -> bool:
         """Compare two nodes in strict mode same memory address."""
         return id(self) == id(other)
 
-    def set_original_sr(self, sr: int) -> None:
-        """Set original_sr."""
-        self.original_sr = sr
+    def set_harmoic_mean_sr(self, sr: int) -> None:
+        """Get harmonic mean of current sr and predecessor.sr."""
+        harmoic_mean_sr = 1 / sr
+        _node_numbers = 1
+
+        for _node_numbers, node in enumerate(self.predecessors, 2):
+            harmoic_mean_sr += 1 / node.sr
+
+        self.harmonic_mean_sr = _node_numbers / harmoic_mean_sr
 
     def set_trace_id(self, trace_id: int) -> None:
         """Set trace_id."""

@@ -55,13 +55,6 @@ class TestNode:
         node1.update_sr(node2.sr)
         assert node1.sr == node2.sr + node1_original_sr
 
-    @pytest.mark.parametrize("sr", [1, 4, 5])
-    def test_set_original_sr(self, nodes, sr):
-        """Test set original sr."""
-        node1, _ = nodes
-        node1.set_original_sr(sr)
-        assert node1.original_sr == sr
-
     @pytest.mark.parametrize("trace_id", [1, 4, 5])
     def test_set_trace_id(self, nodes, trace_id):
         """Test Set trace id."""

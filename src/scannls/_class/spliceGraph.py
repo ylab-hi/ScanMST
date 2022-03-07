@@ -497,7 +497,7 @@ class SpliceGraph:
             if successors := start_node.successors:
                 for successor in successors:
                     successor.set_trace_id(trace_id)
-                    successor.set_original_sr(successor.sr)
+                    successor.set_harmoic_mean_sr(successor.sr)
                     self._trace_forward(
                         successor, trace_id + 1, path + [start_node], group_paths
                     )
@@ -528,7 +528,7 @@ class SpliceGraph:
             if predecessors := end_node.predecessors:
                 for predecessor in predecessors:
                     predecessor.set_trace_id(trace_id)
-                    predecessor.set_original_sr(predecessor.sr)
+                    predecessor.set_harmoic_mean_sr(predecessor.sr)
                     self._trace_backward(
                         predecessor, trace_id + 1, path + [end_node], group_paths
                     )
@@ -553,13 +553,13 @@ class SpliceGraph:
         if direction == SpliceType.forward:
             for start_node in self.get_start_nodes():
                 start_node.set_trace_id(1)
-                start_node.set_original_sr(start_node.sr)
+                start_node.set_harmoic_mean_sr(start_node.sr)
                 self._trace_forward(start_node, 2, [], [])
             return
         elif direction == SpliceType.backward:
             for end_node in self.get_end_nodes():
                 end_node.set_trace_id(1)
-                end_node.set_original_sr(end_node.sr)
+                end_node.set_harmoic_mean_sr(end_node.sr)
                 self._trace_backward(end_node, 2, [], [])
             return
 
@@ -662,12 +662,14 @@ class SpliceGraph:
                 value1: True if node_a and node_b can battle.
                 value2: if node_a is winner, return True, else return False
         """
-        if node_a.original_sr == node_b.original_sr or not self.check_can_battle(
-            node_a, node_b
+        self.logger.trace(f"{node_a.harmonic_mean_sr=}\n{node_b.harmonic_mean_sr=}")
+        if (
+            node_a.harmonic_mean_sr == node_b.harmonic_mean_sr
+            or not self.check_can_battle(node_a, node_b)
         ):
             return False, False
 
-        if node_a.original_sr > node_b.original_sr:
+        if node_a.harmonic_mean_sr > node_b.harmonic_mean_sr:
             self._rule_out(node_a, node_b)
             return True, True
 

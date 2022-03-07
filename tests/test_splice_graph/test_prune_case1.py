@@ -15,8 +15,8 @@ from scannls import SpliceGraph
 from scannls import SpliceType
 
 
-@pytest.fixture(scope="module", autouse=True)
-def graph_for_prun():
+@pytest.fixture(scope="function", autouse=True)
+def graph_for_prun() -> SpliceGraph:
     """Create a splice graph for testing pruning.
 
     .. note::
@@ -386,3 +386,17 @@ def test_rule_out(graph_for_prun, can_battle_nodes_onetwo_and_three):
     graph_for_prun._rule_out(node_one_two, node_three)
     assert node_one_two.sr == 3
     assert node_three not in graph_for_prun
+
+
+def test_set_harmoic_mean_sr(graph_for_prun):
+    """Test set harmonic mean sr."""
+    for start_node in graph_for_prun.get_start_nodes():
+        start_node.set_harmoic_mean_sr(start_node.sr)
+        graph_for_prun._trace_forward(start_node, 2, [], [])
+
+    for start_node in graph_for_prun.get_start_nodes():
+        if start_node.query_name == "one,two":
+            assert start_node.harmonic_mean_sr == 2
+            assert start_node.successors[0].harmonic_mean_sr == (18 / 11)
+        else:
+            assert start_node.sr == 1
