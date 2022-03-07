@@ -309,7 +309,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         with writers.open() as _:
             for ind, clique in enumerate(cliques, 1):
                 logger.debug(f"processing clique {ind}")
-                for series in splice_graph(clique, ind):
+                for series in splice_graph(clique, ind, is_plot=False):
                     logger.debug(f"Output Clique{ind}: {series}")
                     if len(series) == 1:
                         logger.warning(
