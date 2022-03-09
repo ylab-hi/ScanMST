@@ -197,6 +197,14 @@ def parse_args() -> argparse.ArgumentParser:
         help="The length cutoff of defining long indels in the reads (default: %(default)s)",
     )
     parser.add_argument(
+        "--substitutions_num",
+        action="store",
+        dest="substitutions_num",
+        type=int,
+        default=5,
+        help="The allowed maximum substitution number in the reads (default: %(default)s)",
+    )
+    parser.add_argument(
         "--substitutions_fraction",
         action="store",
         dest="substitutions_fraction",
@@ -297,6 +305,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
             long_indel_length=options.long_indel_length,
+            substitutions_num=options.substitutions_num,
             substitutions_fraction=options.substitutions_fraction,
             indels_fraction=options.indels_fraction,
         )
