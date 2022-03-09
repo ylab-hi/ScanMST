@@ -144,7 +144,11 @@ class BamScanner:
                         self.representative_alignments_new_cigar[
                             f"{read.qname}\t{l_s_len}\t{r_s_len}"
                         ] = sup_aln_cigar
-
+                    else:
+                        self.logger.trace(
+                            f"{read.query_name=} does not pass the substitutions/indel cutoff. "
+                            f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction}"
+                        )
         except ValueError:
             raise SystemExit("BAM index file is not found!") from None
         else:
@@ -458,7 +462,11 @@ def _scan_bam_helper(
                         if not series.is_all_type_del():
                             nls_src_forms_list.append(series)
                             logger.trace(f"{series=}")
-
+                else:
+                    logger.trace(
+                        f"{read.query_name= } does not pass the substitutions/indel cutoff. "
+                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction}"
+                    )
     logger.debug(f"Total Series: {nls_src_forms_list}")
     logger.complete()
     in_bam_io_object.close()
