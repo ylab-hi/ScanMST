@@ -185,275 +185,6 @@ class SpliceGraph:
             self.nodes[node.similar_key] = [node]
 
     @staticmethod
-    def update_node_with_other_node(
-        node: Node, other_node: Node, features: Iterable[str]
-    ) -> None:
-        """Update node with other node.
-
-        if current feature of node is None, then use other node's feature.
-        """
-        for feature in features:
-            if getattr(node, feature) is None:
-                setattr(node, feature, getattr(other_node, feature))
-
-    @staticmethod
-    def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
-        """Check if node1 and node2 can be merged based on insertion info."""
-        flag = True
-        insertion_info1 = node1.insertion_info
-        insertion_info2 = node2.insertion_info
-        if insertion_info1 is None and insertion_info2 is None:
-            # When None = None
-            return flag
-        elif insertion_info1 is not None and insertion_info2 is not None:
-            if insertion_info1[0] and insertion_info2[0]:
-                # 1 hit insertion that is added in the series
-                return flag
-
-            if not insertion_info1[0] and not insertion_info2[0]:
-                if (
-                    isinstance(insertion_info1[1], NovelInsertion)
-                    and isinstance(insertion_info2[1], NovelInsertion)
-                    and (
-                        insertion_info1[1].query_sequence
-                        == insertion_info2[1].query_sequence
-                    )
-                ):
-                    return flag
-                elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
-                    insertion_info2[1], MicroHomology
-                ):
-                    return True
-
-        return False
-
-    @staticmethod
-    def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-        node1: Node,
-        node2: Node,
-    ) -> bool:
-        """Check if end node can be merged with a middle node or not.
-
-        node1 is tail node, node2 is middle node
-        check if they can be merged.
-
-        :param node1:  node1
-        :param node2:  node2
-        :return:  True if two nodes are merged, otherwise False
-
-        .. note::
-
-            -> [ node1 ]
-            -> [  node2  ] ->
-        """
-        if node1.exons is None or node2.exons is None:
-            raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
-
-        node1_first_exon_start = node1.exons[0][0]
-        node1_last_exon_end = node1.exons[-1][1]
-        node2_first_exon_start = node2.exons[0][0]
-        node2_last_exon_end = node2.exons[-1][1]
-
-        if node1.is_polya:
-            return False
-
-        if node1.strand == "+":
-            return (
-                node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end <= node2_last_exon_end
-            )
-        else:
-            return (
-                node1_last_exon_end == node2_last_exon_end
-                and node1_first_exon_start >= node2_first_exon_start
-            )
-        return False
-
-    @staticmethod
-    def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-        node1: Node,
-        node2: Node,
-    ) -> bool:
-        """Check if start node can be merged with a middle node or not.
-
-        node1 is start node, node2 is middle node
-        check if they can be merged.
-
-        :param node1:  node1
-        :param node2:  node2
-        :return:  True if two nodes are merged, otherwise False
-
-        .. note::
-
-                 [ node1 ] ->
-            -> [  node2  ] ->
-        """
-        if node1.exons is None or node2.exons is None:
-            raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
-
-        node1_first_exon_start = node1.exons[0][0]
-        node1_last_exon_end = node1.exons[-1][1]
-        node2_first_exon_start = node2.exons[0][0]
-        node2_last_exon_end = node2.exons[-1][1]
-
-        if node1.strand == "+":
-            return (
-                node1_last_exon_end == node2_last_exon_end
-                and node1_first_exon_start >= node2_first_exon_start
-            )
-        else:
-            return (
-                node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end <= node2_last_exon_end
-            )
-        return False
-
-    @staticmethod
-    def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-        node1: Node,
-        node2: Node,
-    ) -> bool:
-        """Check if two end nodes can be merged or not.
-
-        node1 is tail node, node2 is tail node
-        check if they can be merged.
-
-        :param node1:  node1
-        :param node2:  node2
-        :return:  True if two nodes are merged, otherwise False
-
-        .. note::
-
-            -> [node1]
-            -> [node2]
-        """
-        if node1.exons is None or node2.exons is None:
-            raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
-
-        node1_first_exon_start = node1.exons[0][0]
-        node1_last_exon_end = node1.exons[-1][1]
-        node2_first_exon_start = node2.exons[0][0]
-        node2_last_exon_end = node2.exons[-1][1]
-
-        if node1.is_polya and node2.is_polya:
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end == node2_last_exon_end
-            )
-
-        elif node1.is_polya and not node2.is_polya:
-            if node1.strand == "+":
-                return (
-                    node1.prev_breakpoint == node2.prev_breakpoint
-                    and node1_first_exon_start == node2_first_exon_start
-                    and node1_last_exon_end >= node2_last_exon_end
-                )
-            else:
-                return (
-                    node1.prev_breakpoint == node2.prev_breakpoint
-                    and node1_last_exon_end == node2_last_exon_end
-                    and node1_first_exon_start <= node2_first_exon_start
-                )
-        elif not node1.is_polya and node2.is_polya:
-            if node1.strand == "+":
-                return (
-                    node1.prev_breakpoint == node2.prev_breakpoint
-                    and node1_first_exon_start == node2_first_exon_start
-                    and node1_last_exon_end <= node2_last_exon_end
-                )
-            else:
-                return (
-                    node1.prev_breakpoint == node2.prev_breakpoint
-                    and node1_last_exon_end == node2_last_exon_end
-                    and node1_first_exon_start >= node2_first_exon_start
-                )
-
-        elif not node1.is_polya and not node2.is_polya:
-            if node1.strand == "+":
-                return (
-                    node1.prev_breakpoint == node2.prev_breakpoint
-                    and node1_first_exon_start == node2_first_exon_start
-                )
-            else:
-                return (
-                    node1.prev_breakpoint == node2.prev_breakpoint
-                    and node1_last_exon_end == node2_last_exon_end
-                )
-
-        return False
-
-    @staticmethod
-    def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-        node1: Node,
-        node2: Node,
-        threshold: float = 0.8,
-    ) -> bool:
-        """Check if node1 and node2 can be merged based on overlap info.
-
-        node1 is tail node, node2 is head node Using mean overlap ratio to
-        check if they can be merged.
-
-        :param node1:  node1
-        :param node2:  node2
-        :param threshold:  threshold for checking if two nodes are merged
-        :return:  True if two nodes are merged, otherwise False
-
-        .. note::
-
-            -> [node1]               [node1] <-
-                [node2] ->      <- [node2]
-        """
-        if node1.exons is None or node2.exons is None:
-            raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
-
-        node1_first_exon_start = node1.exons[0][0]
-        node1_last_exon_end = node1.exons[-1][1]
-        node2_first_exon_start = node2.exons[0][0]
-        node2_last_exon_end = node2.exons[-1][1]
-
-        if node1.is_polya:
-            return False
-
-        if node1.strand == "+":
-            condition = (
-                node1_last_exon_end > node2_first_exon_start
-                and node1_first_exon_start <= node2_first_exon_start
-                and node1_last_exon_end <= node2_last_exon_end
-            )
-            if condition:
-                overlap_len = node1_last_exon_end - node2_first_exon_start
-                node1_mean_overlap_ratio = overlap_len / (
-                    node1_last_exon_end - node1_first_exon_start
-                )
-                node2_mean_overlap_ratio = overlap_len / (
-                    node2_last_exon_end - node2_first_exon_start
-                )
-                return (
-                    0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio)
-                    >= threshold
-                )
-        else:
-            condition = (
-                node1_first_exon_start < node2_last_exon_end
-                and node1_first_exon_start >= node2_first_exon_start
-                and node1_last_exon_end >= node2_last_exon_end
-            )
-            if condition:
-                overlap_len = node2_last_exon_end - node1_first_exon_start
-                node1_mean_overlap_ratio = overlap_len / (
-                    node1_last_exon_end - node1_first_exon_start
-                )
-                node2_mean_overlap_ratio = overlap_len / (
-                    node2_last_exon_end - node2_first_exon_start
-                )
-                return (
-                    0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio)
-                    >= threshold
-                )
-        return False
-
-    @staticmethod
     def _compare_is_merged_helper(node1: Node, node2: Node) -> bool:
         """Check if node1 and node2 can be merged.
 
@@ -466,19 +197,19 @@ class SpliceGraph:
 
         condition = (
             node1.sv_type == node2.sv_type
-            and SpliceGraph._check_insertion_conditions_for_compare(node1, node2)
+            and _check_insertion_conditions_for_compare(node1, node2)
         )
         if not condition:
             if (
                 node1.next_breakpoint is None and node2.prev_breakpoint is None
             ):  # node1 is end node, node2 is start node
-                return SpliceGraph._compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+                return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
                     node1, node2
                 )
             elif (
                 node1.next_breakpoint is None and node2.next_breakpoint is not None
             ):  # node1 is end node, node2 is middle node
-                return SpliceGraph._compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+                return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
                     node1, node2
                 )
         # condition is TRUE
@@ -490,14 +221,14 @@ class SpliceGraph:
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
-            return SpliceGraph._compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
+            return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
                 node1, node2
             )
 
         elif (
             node1.prev_breakpoint is None and node2.prev_breakpoint is not None
         ):  # node1 is start node, node2 is middle node
-            return SpliceGraph._compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
+            return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
                 node1, node2
             )
 
@@ -557,7 +288,7 @@ class SpliceGraph:
         ):
             updated_node.insertion_info[1].increment_ao()
 
-        SpliceGraph.update_node_with_other_node(
+        update_node_with_other_node(
             updated_node,
             current_node,
             (
@@ -780,7 +511,7 @@ class SpliceGraph:
         winner.update_sr(loser.sr)
         winner.add_successor_from_list(loser.successors)
         winner.add_predecessor_from_list(loser.predecessors)
-        SpliceGraph.update_node_with_other_node(
+        update_node_with_other_node(
             winner,
             loser,
             (
@@ -966,3 +697,271 @@ class SpliceGraph:
                     group_paths,
                     nodes_keys,
                 )
+
+
+def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+    node1: Node,
+    node2: Node,
+    threshold: float = 0.8,
+) -> bool:
+    """Check if node1 and node2 can be merged based on overlap info.
+
+    node1 is tail node, node2 is head node Using mean overlap ratio to
+    check if they can be merged.
+
+    :param node1:  node1
+    :param node2:  node2
+    :param threshold:  threshold for checking if two nodes are merged
+    :return:  True if two nodes are merged, otherwise False
+
+    .. note::
+
+        -> [node1]               [node1] <-
+            [node2] ->      <- [node2]
+    """
+    if node1.exons is None or node2.exons is None:
+        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+
+    node1_first_exon_start = node1.exons[0][0]
+    node1_last_exon_end = node1.exons[-1][1]
+    node2_first_exon_start = node2.exons[0][0]
+    node2_last_exon_end = node2.exons[-1][1]
+
+    if node1.is_polya:
+        return False
+
+    if node1.strand == "+":
+        condition = (
+            node1_first_exon_start
+            <= node2_first_exon_start
+            < node1_last_exon_end
+            <= node2_last_exon_end
+        )
+        if condition:
+            overlap_len = node1_last_exon_end - node2_first_exon_start
+            node1_mean_overlap_ratio = overlap_len / (
+                node1_last_exon_end - node1_first_exon_start
+            )
+            node2_mean_overlap_ratio = overlap_len / (
+                node2_last_exon_end - node2_first_exon_start
+            )
+            return (
+                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
+            )
+    else:
+        condition = (
+            node2_first_exon_start
+            <= node1_first_exon_start
+            < node2_last_exon_end
+            <= node1_last_exon_end
+        )
+        if condition:
+            overlap_len = node2_last_exon_end - node1_first_exon_start
+            node1_mean_overlap_ratio = overlap_len / (
+                node1_last_exon_end - node1_first_exon_start
+            )
+            node2_mean_overlap_ratio = overlap_len / (
+                node2_last_exon_end - node2_first_exon_start
+            )
+            return (
+                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
+            )
+
+    return False
+
+
+def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
+    node1: Node,
+    node2: Node,
+) -> bool:
+    """Check if two end nodes can be merged or not.
+
+    node1 is tail node, node2 is tail node
+    check if they can be merged.
+
+    :param node1:  node1
+    :param node2:  node2
+    :return:  True if two nodes are merged, otherwise False
+
+    .. note::
+
+        -> [node1]
+        -> [node2]
+    """
+    if node1.exons is None or node2.exons is None:
+        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+
+    node1_first_exon_start = node1.exons[0][0]
+    node1_last_exon_end = node1.exons[-1][1]
+    node2_first_exon_start = node2.exons[0][0]
+    node2_last_exon_end = node2.exons[-1][1]
+
+    if node1.is_polya and node2.is_polya:
+        return (
+            node1.prev_breakpoint == node2.prev_breakpoint
+            and node1_first_exon_start == node2_first_exon_start
+            and node1_last_exon_end == node2_last_exon_end
+        )
+
+    elif node1.is_polya and not node2.is_polya:
+        if node1.strand == "+":
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_first_exon_start == node2_first_exon_start
+                and node1_last_exon_end >= node2_last_exon_end
+            )
+        else:
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_last_exon_end == node2_last_exon_end
+                and node1_first_exon_start <= node2_first_exon_start
+            )
+    elif not node1.is_polya and node2.is_polya:
+        if node1.strand == "+":
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_first_exon_start == node2_first_exon_start
+                and node1_last_exon_end <= node2_last_exon_end
+            )
+        else:
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_last_exon_end == node2_last_exon_end
+                and node1_first_exon_start >= node2_first_exon_start
+            )
+
+    elif not node1.is_polya and not node2.is_polya:
+        if node1.strand == "+":
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_first_exon_start == node2_first_exon_start
+            )
+        else:
+            return (
+                node1.prev_breakpoint == node2.prev_breakpoint
+                and node1_last_exon_end == node2_last_exon_end
+            )
+
+    return False
+
+
+def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
+    node1: Node,
+    node2: Node,
+) -> bool:
+    """Check if start node can be merged with a middle node or not.
+
+    node1 is start node, node2 is middle node
+    check if they can be merged.
+
+    :param node1:  node1
+    :param node2:  node2
+    :return:  True if two nodes are merged, otherwise False
+
+    .. note::
+
+             [ node1 ] ->
+        -> [  node2  ] ->
+    """
+    if node1.exons is None or node2.exons is None:
+        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+
+    node1_first_exon_start = node1.exons[0][0]
+    node1_last_exon_end = node1.exons[-1][1]
+    node2_first_exon_start = node2.exons[0][0]
+    node2_last_exon_end = node2.exons[-1][1]
+
+    if node1.strand == "+":
+        return (
+            node1_last_exon_end == node2_last_exon_end
+            and node1_first_exon_start >= node2_first_exon_start
+        )
+    else:
+        return (
+            node1_first_exon_start == node2_first_exon_start
+            and node1_last_exon_end <= node2_last_exon_end
+        )
+
+
+def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+    node1: Node,
+    node2: Node,
+) -> bool:
+    """Check if end node can be merged with a middle node or not.
+
+    node1 is tail node, node2 is middle node
+    check if they can be merged.
+
+    :param node1:  node1
+    :param node2:  node2
+    :return:  True if two nodes are merged, otherwise False
+
+    .. note::
+
+        -> [ node1 ]
+        -> [  node2  ] ->
+    """
+    if node1.exons is None or node2.exons is None:
+        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+
+    node1_first_exon_start = node1.exons[0][0]
+    node1_last_exon_end = node1.exons[-1][1]
+    node2_first_exon_start = node2.exons[0][0]
+    node2_last_exon_end = node2.exons[-1][1]
+
+    if node1.is_polya:
+        return False
+
+    if node1.strand == "+":
+        return (
+            node1_first_exon_start == node2_first_exon_start
+            and node1_last_exon_end <= node2_last_exon_end
+        )
+    else:
+        return (
+            node1_last_exon_end == node2_last_exon_end
+            and node1_first_exon_start >= node2_first_exon_start
+        )
+
+
+def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
+    """Check if node1 and node2 can be merged based on insertion info."""
+    flag = True
+    insertion_info1 = node1.insertion_info
+    insertion_info2 = node2.insertion_info
+    if insertion_info1 is None and insertion_info2 is None:
+        # When None = None
+        return flag
+    elif insertion_info1 is not None and insertion_info2 is not None:
+        if insertion_info1[0] and insertion_info2[0]:
+            # 1 hit insertion that is added in the series
+            return flag
+
+        if not insertion_info1[0] and not insertion_info2[0]:
+            if (
+                isinstance(insertion_info1[1], NovelInsertion)
+                and isinstance(insertion_info2[1], NovelInsertion)
+                and (
+                    insertion_info1[1].query_sequence
+                    == insertion_info2[1].query_sequence
+                )
+            ):
+                return flag
+            elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
+                insertion_info2[1], MicroHomology
+            ):
+                return True
+
+    return False
+
+
+def update_node_with_other_node(
+    node: Node, other_node: Node, features: Iterable[str]
+) -> None:
+    """Update node with other node.
+
+    if current feature of node is None, then use other node's feature.
+    """
+    for feature in features:
+        if getattr(node, feature) is None:
+            setattr(node, feature, getattr(other_node, feature))
