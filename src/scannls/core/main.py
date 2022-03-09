@@ -47,6 +47,7 @@ class BamScanner:
         min_soft_seg_len,
         blat_ident_pct_cutoff,
         long_indel_length,
+        substitutions_num,
         substitutions_fraction,
         indels_fraction,
     ):
@@ -78,6 +79,7 @@ class BamScanner:
         self.total_length = 0
 
         self.long_indel_length = long_indel_length
+        self.substitutions_num = substitutions_num
         self.substitutions_fraction = substitutions_fraction
         self.indels_fraction = indels_fraction
         self.representative_alignments_new_cigar = {}
@@ -137,7 +139,10 @@ class BamScanner:
                     )
                     subs_fraction = 0 if nm == 0 else num_of_subs / nm
                     if (
-                        subs_fraction <= self.substitutions_fraction
+                        not (
+                            num_of_subs > self.substitutions_num
+                            and subs_fraction > self.substitutions_fraction
+                        )
                         and ins_fraction <= self.indels_fraction
                         and del_fraction <= self.indels_fraction
                     ):
@@ -147,7 +152,7 @@ class BamScanner:
                     else:
                         self.logger.trace(
                             f"{read.query_name=} does not pass the substitutions/indel cutoff. "
-                            f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction}"
+                            f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}"
                         )
         except ValueError:
             raise SystemExit("BAM index file is not found!") from None
@@ -277,6 +282,7 @@ def _scan_bam_helper(
     splice_bin,
     motif_required,
     long_indel_length,
+    substitutions_num,
     substitutions_fraction,
     indels_fraction,
 ):
@@ -421,7 +427,10 @@ def _scan_bam_helper(
                 )
                 subs_fraction = 0 if nm == 0 else num_of_subs / nm
                 if (
-                    subs_fraction <= substitutions_fraction
+                    not (
+                        num_of_subs > substitutions_num
+                        and subs_fraction > substitutions_fraction
+                    )
                     and ins_fraction <= indels_fraction
                     and del_fraction <= indels_fraction
                 ):
@@ -465,7 +474,7 @@ def _scan_bam_helper(
                 else:
                     logger.trace(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "
-                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction}"
+                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}"
                     )
     logger.debug(f"Total Series: {nls_src_forms_list}")
     logger.complete()
@@ -491,6 +500,7 @@ def scanbam_run(
     min_soft_seg_len,
     blat_ident_pct_cutoff,
     long_indel_length,
+    substitutions_num,
     substitutions_fraction,
     indels_fraction,
 ):
@@ -508,6 +518,7 @@ def scanbam_run(
         min_soft_seg_len=min_soft_seg_len,
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
         long_indel_length=long_indel_length,
+        substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,
         indels_fraction=indels_fraction,
     )
