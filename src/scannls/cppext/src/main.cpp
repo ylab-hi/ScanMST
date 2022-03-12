@@ -16,7 +16,8 @@ int main(int argc, char* argv[]) {
   rescuer::Rescuer p_rescuer{file.c_str(),       mapq_threshold,  min_softclip_length,
                              min_mismatch_count, min_align_ratio, 10};
   long start{190670461};
-  int sr = p_rescuer.calculate_sr("chr2", start, start, 1, <#initializer #>, current_names,
+  std::string strand{"+"};
+  int sr = p_rescuer.calculate_sr("chr2", start, start, 1, strand, current_names,
                                   names_list);  // chr17:7708250-7708250
   p_rescuer.check_if_align("ATAATTGGCC", "TTCCGACGTT");
 

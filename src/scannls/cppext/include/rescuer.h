@@ -27,7 +27,7 @@ namespace rescuer {
     int mode{0};
   };
 
-  int get_read_max_length(std::string_view t_seq);
+  inline int get_read_max_length(std::string_view t_seq);
 
   get_softclip_result_t get_softclip(const std::string &t_read_seq, const bam1_t *t_alignment,
                                      int t_mode, const uint32_t *t_cigar_str, size_t t_cigar_len);

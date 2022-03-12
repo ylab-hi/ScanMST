@@ -52,7 +52,7 @@ namespace rescuer {
           continue;
         }
 #ifdef DEBUG
-//        StripedSmithWaterman::print_alignment(r, v, m_alignment);
+        StripedSmithWaterman::print_alignment(r, v, m_alignment);
 #endif
         double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
                         / static_cast<double>(r.length())};
@@ -74,8 +74,9 @@ namespace rescuer {
     bool return_value{m_aligner.Align(t_query.c_str(), t_target.c_str(),
                                       static_cast<int>(t_target.length()), m_filter, &m_alignment,
                                       15)};
-
+#ifdef DEBUG
     StripedSmithWaterman::print_alignment(t_query, t_target, m_alignment);
+#endif
 
     if (double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
                         / static_cast<double>(t_query.length())};
@@ -235,7 +236,7 @@ namespace rescuer {
     return {};
   }
 
-  int get_read_max_length(std::string_view t_seq) {
+  inline int get_read_max_length(std::string_view t_seq) {
     if (auto seq_len = static_cast<int>(t_seq.size()); seq_len < max_seq_len) return seq_len;
     return max_seq_len;
   }
