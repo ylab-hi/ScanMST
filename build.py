@@ -6,6 +6,8 @@
 @Time:        1/7/22 3:00 PM
 """
 import os
+from contextlib import contextmanager
+from functools import wraps
 
 from pybind11.setup_helpers import build_ext
 from pybind11.setup_helpers import Pybind11Extension
@@ -28,6 +30,34 @@ htslib_include_dirs = [HTSLIB_INCLUDE_DIR]
 external_htslib_libraries = ["z", "hts"]
 
 
+@contextmanager
+def change_dir(path: str):
+    """Change directory."""
+    save_dir = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(save_dir)
+
+
+def change_env(key: str, value: str):
+    """Change environment variable."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            old_env = os.environ.get(key, None)
+            os.environ[key] = old_env + " " + value if old_env else value
+            func(*args, **kwargs)
+            os.environ[key] = old_env if old_env else " "
+
+        return wrapper
+
+    return decorator
+
+
+@change_env("CPPFLAGS", "-g")
 def build(setup_kwargs):
     """Build cpp extension."""
     ext_modules = [
