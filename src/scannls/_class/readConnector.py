@@ -702,7 +702,7 @@ def detect_read_read_connections_from_cigar(
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
 
         # filter reads in  uncommon chromosome
-        if "_" in chrm_ra:
+        if "_" in chrm_sa:
             return noreturn
 
         if mapq_sa >= mapq_cutoff and nm_sa < max_allowed_nm:
