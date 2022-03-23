@@ -872,9 +872,10 @@ def same_chrom_diff_strand_handler(
     logger.trace("same_chrom_diff_strand_handler takes over the task.")
     # lt_mode must be equal to rt_mode
     if lt_mode != rt_mode:
-        raise ModesNotEqualError(
-            f"read_lt:{read_lt.query_name} read_rt:{read_rt.query_name}"
+        logger.warning(
+            f"ModesNotEqualError: {read_lt.query_name}, read_lt:{read_lt} read_rt:{read_rt}"
         )
+        return noreturn
 
     lt_chrm = read_lt.chrom
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
