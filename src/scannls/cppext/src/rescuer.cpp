@@ -71,9 +71,10 @@ namespace rescuer {
   }
 
   bool Rescuer::check_if_align(const std::string &t_query, const std::string &t_target) {
-    bool return_value{m_aligner.Align(t_query.c_str(), t_target.c_str(),
-                                      static_cast<int>(t_target.length()), m_filter, &m_alignment,
-                                      15)};
+    int target_len{static_cast<int>(t_target.length())};
+    int masklen = target_len / 2 > 15 ? target_len / 2 : 15;
+    bool return_value{m_aligner.Align(t_query.c_str(), t_target.c_str(), target_len, m_filter,
+                                      &m_alignment, masklen)};
 #ifdef DEBUG
     StripedSmithWaterman::print_alignment(t_query, t_target, m_alignment);
 #endif
