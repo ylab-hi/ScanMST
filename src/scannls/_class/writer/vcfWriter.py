@@ -362,11 +362,19 @@ def get_vcf_features_from_series(
         sv_distance = (
             abs(int(_pos1) - int(_pos2)) if current_node.sv_type != "TRA" else 0
         )
-        _dp1 = current_node.next_breakpoint_depth
-        _dp2 = next_node.prev_breakpoint_depth
+        _dp1 = (
+            0
+            if current_node.next_breakpoint_depth is None
+            else current_node.next_breakpoint_depth
+        )
+        _dp2 = (
+            0
+            if next_node.prev_breakpoint_depth is None
+            else next_node.prev_breakpoint_depth
+        )
         _pso = (
             0
-            if _dp1 is None or _dp2 is None
+            if _dp1 == 0 or _dp2 == 0
             else current_node.sr / (current_node.sr + (_dp1 + _dp2) / 2)
         )
 
