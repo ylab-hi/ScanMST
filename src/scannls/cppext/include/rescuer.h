@@ -4,6 +4,7 @@
 
 #ifndef SCANNLSEXT_RESCUER_H
 #define SCANNLSEXT_RESCUER_H
+
 #include <algorithm>
 #include <iostream>
 #include <set>
@@ -86,7 +87,7 @@ namespace rescuer {
     int min_mismatch{};
     double min_identity{};
     int min_seq_align_len{10};
-    StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 2, 10, 1}};
+    StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 5, 8, 6}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     StripedSmithWaterman::Alignment m_alignment{};
 

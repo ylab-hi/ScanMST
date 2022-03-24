@@ -292,7 +292,7 @@ flake8 = ">=3.5,<5"
 
 [[package]]
 name = "flake8-bugbear"
-version = "22.3.20"
+version = "22.3.23"
 description = "A plugin for flake8 finding likely bugs and design problems in your program. Contains warnings that don't belong in pyflakes and pycodestyle."
 category = "dev"
 optional = false
@@ -412,7 +412,7 @@ docs = ["sphinx"]
 
 [[package]]
 name = "htseq"
-version = "0.13.5"
+version = "2.0.0"
 description = "A framework to process and analyze data from high-throughput sequencing (HTS) assays"
 category = "main"
 optional = false
@@ -424,6 +424,7 @@ pysam = "*"
 
 [package.extras]
 htseq-qa = ["matplotlib (>=1.4)"]
+test = ["scipy (>=1.5.0)", "pytest (>=6.2.5)", "pandas (>=1.1.0)", "matplotlib (>=1.4)"]
 
 [[package]]
 name = "identify"
@@ -1157,7 +1158,7 @@ python-versions = ">= 3.5"
 
 [[package]]
 name = "tqdm"
-version = "4.63.0"
+version = "4.63.1"
 description = "Fast, Extensible Progress Meter"
 category = "main"
 optional = false
@@ -1268,7 +1269,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "8ef5964b8fa5b0364f2f2f0d959e74bc7c78f657e39e014b1f9853c7d6c7a6e4"
+content-hash = "8ca9c8e6250dde8ecb852759dd2fb8b245a425bb589133091b87844ca8a6f0d2"
 
 [metadata.files]
 alabaster = [
@@ -1458,8 +1459,8 @@ flake8-broken-line = [
     {file = "flake8_broken_line-0.4.0-py3-none-any.whl", hash = "sha256:e9c522856862239a2c7ef2c1de0276fa598572aa864bd4e9c7efc2a827538515"},
 ]
 flake8-bugbear = [
-    {file = "flake8-bugbear-22.3.20.tar.gz", hash = "sha256:152e64a86f6bff6e295d630ccc993f62434c1fd2b20d2fae47547cb1c1b868e0"},
-    {file = "flake8_bugbear-22.3.20-py3-none-any.whl", hash = "sha256:19fe179ee3286e16198603c438788e2949e79f31d653f0bdb56d53fb69217bd0"},
+    {file = "flake8-bugbear-22.3.23.tar.gz", hash = "sha256:e0dc2a36474490d5b1a2d57f9e4ef570abc09f07cbb712b29802e28a2367ff19"},
+    {file = "flake8_bugbear-22.3.23-py3-none-any.whl", hash = "sha256:ec5ec92195720cee1589315416b844ffa5e82f73a78e65329e8055322df1e939"},
 ]
 flake8-comprehensions = [
     {file = "flake8-comprehensions-3.8.0.tar.gz", hash = "sha256:8e108707637b1d13734f38e03435984f6b7854fa6b5a4e34f93e69534be8e521"},
@@ -1551,15 +1552,13 @@ greenlet = [
     {file = "greenlet-1.1.2.tar.gz", hash = "sha256:e30f5ea4ae2346e62cedde8794a56858a67b878dd79f7df76a0767e356b1744a"},
 ]
 htseq = [
-    {file = "HTSeq-0.13.5-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:f8fb5b8b5d16e28ef6c82c85fada33ad52ef2d218e9ed165ec3b5aa83841d85e"},
-    {file = "HTSeq-0.13.5-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:76ea1f31ff05107694a581d025009228b9af1bf789b2ee8d92c7b6fdbe247952"},
-    {file = "HTSeq-0.13.5-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:0a7632a4dc80d96bbd963fd1fb476aab378bb3f8bf4ebce91c82308ea5cec01a"},
-    {file = "HTSeq-0.13.5-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:f3b20fb799cffd2116b7a0c72e072569e204cc9f476c4a274def4f338ae18e79"},
-    {file = "HTSeq-0.13.5-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:1e966c417722f46beebad09b0ecf450969b86ac42fa9c57b4fd463d7d63c7338"},
-    {file = "HTSeq-0.13.5-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:1f7118560f01c8301053a73764ef4e5ee463d6416b39285cc8e7d6b65d855b41"},
-    {file = "HTSeq-0.13.5-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:20fa15f9dbaad0e846343cde5afce594f939ec9dacad0667de57a4a3ea624b1c"},
-    {file = "HTSeq-0.13.5-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:b5bc44bbcff99c57ac5a31ef392137b81bf47242574aaa64bc55d7b8d96a64cc"},
-    {file = "HTSeq-0.13.5.tar.gz", hash = "sha256:2015aea9b682785e26bf8f2ec61be352843760b677c3f8c1c20022c58adac648"},
+    {file = "HTSeq-2.0.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:396c11717444b5054c8923227a9b387679aa65fe5cd2101fdb5eb0fcfa362a0f"},
+    {file = "HTSeq-2.0.0-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:eb55e0d20d88c2f77301e17a6d2a8a68f2345f940f185e8a14395499c070c597"},
+    {file = "HTSeq-2.0.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:51e0d73e8896c010f3ff5a2bbeec0ca3792f5143dc54c262e072dbb4654b14ed"},
+    {file = "HTSeq-2.0.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:6c938c6c900d0c922188a5049fb5615ab0d873da9f42b49b681d2f5d5a3fd91e"},
+    {file = "HTSeq-2.0.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:73342af85cb13fa484044bdcbe0f622c39ac447969c9d3265415a6faaac6e674"},
+    {file = "HTSeq-2.0.0-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:6e7ce7b26937159f771ce83b912814bd14fbff3be10b8f6e2409af9070a68f66"},
+    {file = "HTSeq-2.0.0.tar.gz", hash = "sha256:cb569862b35303c1a65939f129670a86b2ed266e2056c1f63476b1ff761693b3"},
 ]
 identify = [
     {file = "identify-2.4.11-py2.py3-none-any.whl", hash = "sha256:fd906823ed1db23c7a48f9b176a1d71cb8abede1e21ebe614bac7bdd688d9213"},
@@ -2055,8 +2054,8 @@ tornado = [
     {file = "tornado-6.1.tar.gz", hash = "sha256:33c6e81d7bd55b468d2e793517c909b139960b6c790a60b7991b9b6b76fb9791"},
 ]
 tqdm = [
-    {file = "tqdm-4.63.0-py2.py3-none-any.whl", hash = "sha256:e643e071046f17139dea55b880dc9b33822ce21613b4a4f5ea57f202833dbc29"},
-    {file = "tqdm-4.63.0.tar.gz", hash = "sha256:1d9835ede8e394bb8c9dcbffbca02d717217113adc679236873eeaac5bc0b3cd"},
+    {file = "tqdm-4.63.1-py2.py3-none-any.whl", hash = "sha256:6461b009d6792008d0000e1b0c7ca50195ec78c0e808a3a6b668a56a3236c3a5"},
+    {file = "tqdm-4.63.1.tar.gz", hash = "sha256:4230a49119a416c88cc47d0d2d32d5d90f1a282d5e497d49801950704e49863d"},
 ]
 typeguard = [
     {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},
