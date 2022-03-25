@@ -9,6 +9,8 @@
 """
 import argparse
 import textwrap
+from typing import Any
+from typing import Optional
 
 from scannls import __version__
 
@@ -16,10 +18,26 @@ from scannls import __version__
 # https://github.com/plasma-umass/scalene/blob/master/scalene/scalene_parseargs.py#L11:7
 
 
+class RichArgParser(argparse.ArgumentParser):
+    """RichArgParser."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """RichArgParser."""
+        from rich.console import Console
+
+        self.console = Console()
+        super().__init__(*args, **kwargs)
+
+    def _print_message(self, message: Optional[str], file: Any = None) -> None:
+        if message:
+            self.console.print(message)
+
+
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic"
+    parser = RichArgParser(
+        description="[red]ScanNLS[/red]: Nonlinear splicing "
+        "(NLS) events identification using transcriptomic"
         " long-reads data",
         epilog=textwrap.dedent(
             """Authors: Ting-You Wang and Yangyang Li, Hormel Institute,
@@ -31,7 +49,6 @@ def parse_args() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "-i",
         "--input",
         action="store",
         dest="input",
@@ -39,7 +56,6 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-r",
         "--ref",
         action="store",
         dest="ref",
@@ -47,7 +63,6 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-g",
         "--gtf",
         action="store",
         dest="gtf",
@@ -55,7 +70,6 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-o",
         "--output",
         action="store",
         dest="output",
@@ -71,7 +85,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=1,
     )
     parser.add_argument(
-        "-s",
         "--splice-bin",
         action="store",
         dest="splice_bin",
@@ -80,7 +93,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=5,
     )
     parser.add_argument(
-        "-m",
         "--mapq",
         action="store",
         dest="mapq",
@@ -89,7 +101,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=15,
     )
     parser.add_argument(
-        "-n",
         "--noncanonical",
         action="store_true",
         dest="noncanonical",
@@ -134,7 +145,6 @@ def parse_args() -> argparse.ArgumentParser:
         help="If sleep randomly before starting BLAT server (default: %(default)s)",
     )
     parser.add_argument(
-        "-p",
         "--port",
         action="store",
         dest="port",
