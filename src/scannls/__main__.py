@@ -2,8 +2,8 @@
 """Main function for scannls."""
 import sys
 
+from .arg import parse_args
 from .cli import cli
-from .cli import parse_args
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
     try:
         cli(options)
     except Exception as e:
-        raise e
+        raise SystemExit("Encounter Error when parsing parameters") from e
 
 
 if __name__ == "__main__":
