@@ -2,6 +2,9 @@
 """Init file for scannls package."""
 __version__ = "0.0.1"
 
+from rich.traceback import install
+
+
 from ._class.basicRead import Read
 from ._class.exception import ReadNotFoundError
 from ._class.exception import ToolNotFoundError
@@ -66,3 +69,6 @@ __all__ = [
     "cppext",
     "check_end_node_is_ploya",
 ]
+
+
+install(show_locals=True)
