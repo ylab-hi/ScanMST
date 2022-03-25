@@ -13,6 +13,9 @@ import textwrap
 from scannls import __version__
 
 
+# https://github.com/plasma-umass/scalene/blob/master/scalene/scalene_parseargs.py#L11:7
+
+
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -24,7 +27,7 @@ def parse_args() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
 
     parser.add_argument(
@@ -69,7 +72,7 @@ def parse_args() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-s",
-        "--splice_bin",
+        "--splice-bin",
         action="store",
         dest="splice_bin",
         type=int,
@@ -94,7 +97,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="Considering Non-canonical spliced sites",
     )
     parser.add_argument(
-        "--log_level",
+        "--log-level",
         action="store",
         dest="log",
         choices=["info", "debug", "trace", "warning", "error", "critical"],
@@ -140,7 +143,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=88888,
     )
     parser.add_argument(
-        "--min_soft_seg_len",
+        "--min-soft-seg-len",
         action="store",
         dest="min_soft_seg_len",
         type=int,
@@ -148,7 +151,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=200,
     )
     parser.add_argument(
-        "--max_allowed_nm",
+        "--max-allowed-nm",
         action="store",
         dest="max_allowed_nm",
         type=int,
@@ -173,7 +176,7 @@ def parse_args() -> argparse.ArgumentParser:
     )
     # Reads filter parameters
     parser.add_argument(
-        "--long_indel_length",
+        "--long-indel-length",
         action="store",
         dest="long_indel_length",
         type=int,
@@ -181,7 +184,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="The length cutoff of defining long indels in the reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--substitutions_num",
+        "--substitutions-num",
         action="store",
         dest="substitutions_num",
         type=int,
@@ -189,7 +192,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="The allowed maximum substitution number in the reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--substitutions_fraction",
+        "--substitutions-fraction",
         action="store",
         dest="substitutions_fraction",
         type=float,
@@ -197,16 +200,16 @@ def parse_args() -> argparse.ArgumentParser:
         help="The allowed maximum substitution fraction in the reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--indels_fraction",
+        "--indel-fraction",
         action="store",
-        dest="indels_fraction",
+        dest="indel_fraction",
         type=float,
         default=0.2,
-        help="The allowed maximum long indels fraction in the reads (default: %(default)s)",
+        help="The allowed maximum long indel fraction in the reads (default: %(default)s)",
     )
     # SR Rescuer parameters
     parser.add_argument(
-        "--soft_len",
+        "--soft-len",
         action="store",
         dest="soft_len",
         type=int,
@@ -222,8 +225,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=3,
     )
     parser.add_argument(
-        "-a",
-        "--alignment_fraction",
+        "--alignment-fraction",
         action="store",
         dest="alignment_fraction",
         type=float,
