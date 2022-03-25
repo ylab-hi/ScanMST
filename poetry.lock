@@ -412,7 +412,7 @@ docs = ["sphinx"]
 
 [[package]]
 name = "htseq"
-version = "2.0.0"
+version = "2.0.1"
 description = "A framework to process and analyze data from high-throughput sequencing (HTS) assays"
 category = "main"
 optional = false
@@ -1269,7 +1269,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "207a5b6b5c4823ee6d664b0c35c1607796edfdabe661dbe50ea15856a7a443fe"
+content-hash = "662747fd54bd98235c64ff4f2e4a7bf6434528c8f08f7b1a57e485eaffd9b693"
 
 [metadata.files]
 alabaster = [
@@ -1552,13 +1552,15 @@ greenlet = [
     {file = "greenlet-1.1.2.tar.gz", hash = "sha256:e30f5ea4ae2346e62cedde8794a56858a67b878dd79f7df76a0767e356b1744a"},
 ]
 htseq = [
-    {file = "HTSeq-2.0.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:396c11717444b5054c8923227a9b387679aa65fe5cd2101fdb5eb0fcfa362a0f"},
-    {file = "HTSeq-2.0.0-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:eb55e0d20d88c2f77301e17a6d2a8a68f2345f940f185e8a14395499c070c597"},
-    {file = "HTSeq-2.0.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:51e0d73e8896c010f3ff5a2bbeec0ca3792f5143dc54c262e072dbb4654b14ed"},
-    {file = "HTSeq-2.0.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:6c938c6c900d0c922188a5049fb5615ab0d873da9f42b49b681d2f5d5a3fd91e"},
-    {file = "HTSeq-2.0.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:73342af85cb13fa484044bdcbe0f622c39ac447969c9d3265415a6faaac6e674"},
-    {file = "HTSeq-2.0.0-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:6e7ce7b26937159f771ce83b912814bd14fbff3be10b8f6e2409af9070a68f66"},
-    {file = "HTSeq-2.0.0.tar.gz", hash = "sha256:cb569862b35303c1a65939f129670a86b2ed266e2056c1f63476b1ff761693b3"},
+    {file = "HTSeq-2.0.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d889b4413f966a4edb38f0c69c94e382a7d1fac97ede20d71f75dc572053fa76"},
+    {file = "HTSeq-2.0.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:83c823e16f5c845c943e6b185e70df2eba0e622a0f2ea827cd5fc0b8429e039a"},
+    {file = "HTSeq-2.0.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:7127800d48e99a4a0310a500a0146323320a16eace543ed38fd4be357c039312"},
+    {file = "HTSeq-2.0.1-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:88826d3c91d5f950a14b44672479259409677c933683d4353296fa00897c3a7a"},
+    {file = "HTSeq-2.0.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:1de17d4eb1549ca85c0801417c0d4f79a474b736db754814f007e34410cbcab6"},
+    {file = "HTSeq-2.0.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:293be747a654d48b03c670e5cba5042cd3e508f06d4eafe60d5f268da0b01fec"},
+    {file = "HTSeq-2.0.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:1bd103e2f15b073e970a9520d799e4485d9316b895065a119f15b60788b14702"},
+    {file = "HTSeq-2.0.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:85f2a038e978df79ad990929c75b3a9c6dba5c121f8144511772e3454c6415fb"},
+    {file = "HTSeq-2.0.1.tar.gz", hash = "sha256:0945e285da04fec2b196ff0855816b4abb4c297d0c8a1258982c3cd2bacdee6a"},
 ]
 identify = [
     {file = "identify-2.4.12-py2.py3-none-any.whl", hash = "sha256:5f06b14366bd1facb88b00540a1de05b69b310cbc2654db3c7e07fa3a4339323"},
