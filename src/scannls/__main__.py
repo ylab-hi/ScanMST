@@ -9,7 +9,7 @@ from .cli import cli
 def main():
     """Main function for scannls."""
     if sys.version_info < (3, 8):
-        sys.exit(
+        raise SystemExit(
             "Sorry, this code need Python 3.8 or higher. Please update. Aborting..."
         )
     parser = parse_args()
@@ -17,13 +17,10 @@ def main():
     if len(sys.argv[1:]) < 1:
         parser.print_help()
         raise SystemExit
-    else:
-        options = parser.parse_args()
 
-    try:
-        cli(options)
-    except Exception as e:
-        raise SystemExit("Encounter Error when parsing parameters") from e
+    options = parser.parse_args()
+
+    cli(options)
 
 
 if __name__ == "__main__":
