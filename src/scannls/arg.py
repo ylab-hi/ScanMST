@@ -101,7 +101,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=15,
     )
     parser.add_argument(
-        "--noncanonical",
+        "--non-can",
         action="store_true",
         dest="noncanonical",
         default=False,
@@ -194,7 +194,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="The length cutoff of defining long indels in the reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--substitutions-num",
+        "--substitution-num",
         action="store",
         dest="substitutions_num",
         type=int,
@@ -202,7 +202,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="The allowed maximum substitution number in the reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--substitutions-fraction",
+        "--substitution-fraction",
         action="store",
         dest="substitutions_fraction",
         type=float,
