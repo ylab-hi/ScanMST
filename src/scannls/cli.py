@@ -86,7 +86,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             long_indel_length=options.long_indel_length,
             substitutions_num=options.substitutions_num,
             substitutions_fraction=options.substitutions_fraction,
-            indels_fraction=options.indels_fraction,
+            indels_fraction=options.indel_fraction,
         )
 
         intact_series_list_len = len(intact_series_list)

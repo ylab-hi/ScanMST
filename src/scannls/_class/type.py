@@ -85,4 +85,4 @@ class Options:
     long_indel_length: int = 5
     substitutions_num: int = 3
     substitutions_fraction: float = 0.2
-    indels_fraction: float = 0.2
+    indel_fraction: float = 0.2
