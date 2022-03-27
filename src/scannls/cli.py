@@ -50,10 +50,12 @@ def cli(options: Union[argparse.Namespace, Options]):
 
     logger.info(f"{options.input=} {options.closed=}")
 
+    # TODO: Remove this
     tmp_dir = Path(options.tmp_dir)
     if not tmp_dir.exists():
         tmp_dir.mkdir()
         logger.info(f"Created temporary directory: {tmp_dir.resolve()}")
+
     start = time.time()
     blat = Blat(options.two_bit, logger, options.port, str(tmp_dir.resolve()))
     # delay random seconds to preventing from starting multiple servers simultaneously
