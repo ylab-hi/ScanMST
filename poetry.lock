@@ -816,7 +816,7 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pysam"
-version = "0.18.0"
+version = "0.19.0"
 description = "pysam"
 category = "main"
 optional = false
@@ -1269,7 +1269,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "b6053f628ffd5977e05a52d7e2931a99821f49e4fad40fbd46589ef16d1bb10e"
+content-hash = "f1614932f8e778c356dde530b4738bf79801de11a96b14cd5ff6471714774b4f"
 
 [metadata.files]
 alabaster = [
@@ -1839,22 +1839,27 @@ pyparsing = [
     {file = "pyparsing-3.0.7.tar.gz", hash = "sha256:18ee9022775d270c55187733956460083db60b37d0d0fb357445f3094eed3eea"},
 ]
 pysam = [
-    {file = "pysam-0.18.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ef5d8ad01cac8974cd09832c226cbb63a3f7c5bd63727d8e59447021ee16a186"},
-    {file = "pysam-0.18.0-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:ca0c9289dfdc5e1a81bccdb8305192cd14cf9730bd21320ceca949fde071a572"},
-    {file = "pysam-0.18.0-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:e13e496da3a432db24f424439834b0ab5f40700a3db6e610d06f8bd639d9fd2d"},
-    {file = "pysam-0.18.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:c90341434e7a99439174aa64ca5406f63528be4217d4401fb30ec4ea4629c559"},
-    {file = "pysam-0.18.0-cp36-cp36m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:a88f875114bd3d8efb7fade80e0640094383ec5043861aa575175fa9a56edf90"},
-    {file = "pysam-0.18.0-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:7ea2e019294e4bf25e4892b5de69c43f54fb6ac42b681265268aa322e1f36f5b"},
-    {file = "pysam-0.18.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:cfb162358c5284b31b2b88b10947e0f1013da2d85ba0fd0b5723dd142c15329e"},
-    {file = "pysam-0.18.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:9422c2d0b581c3d24f247c15bb8981569e636003c4d6cad39ccd1bf205a79f2c"},
-    {file = "pysam-0.18.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:cfffad99cf3968cf85aadb70a8a02303f9172ea21abe02d587c44f808c504f52"},
-    {file = "pysam-0.18.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:7a8a25fceaaa96e5b4c8b0a7fd6bb0b20b6c262dc4cc867c6d1467ac990f1d77"},
-    {file = "pysam-0.18.0-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:493988420db16e6ee03393518e4d272df05f0a35780248c08c61da7411e520e7"},
-    {file = "pysam-0.18.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:7f6a4ec58ad7995b791a71bf35f673ea794e734c587ea7329fca5cce9c53a7af"},
-    {file = "pysam-0.18.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:0cfa16f76ed3c3119c7b3c8dfdcba9e010fbcdcf87eaa165351bb369da5a6bf1"},
-    {file = "pysam-0.18.0-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:2717509556fecddf7c73966fa62066c6a59a7d39b755d8972afa8d143a1d5aa5"},
-    {file = "pysam-0.18.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:f5a23a5dcf32f01c66d44e89113fa8f7522997ea43fbc0f98e5250a907911a5f"},
-    {file = "pysam-0.18.0.tar.gz", hash = "sha256:1d6d49a0b3c626fae410a93d4c80583a8b5ddaacc9b46a080b250dbcebd30a59"},
+    {file = "pysam-0.19.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:44de1a3af7c7eb5f404d6337f0c9c4ee88c34c2d2fee1a7896ccd8e7d2aa475a"},
+    {file = "pysam-0.19.0-cp310-cp310-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:0ceb07c6253598ec70fef6ac0c0f7ab0d299562c1a91e737adb07239afba22d6"},
+    {file = "pysam-0.19.0-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2057f3b8cc20562fd010e7971e83ab78978f17975563a711c94bca583ce8a2d3"},
+    {file = "pysam-0.19.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:5a1a9ee6cd6dfa50973dcb51cd2245ea7d4d64d4e962d60e5e1a088f7b790e3e"},
+    {file = "pysam-0.19.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:b831170ff810bfd1242dbce4ddf8e693e95e39a4332d5903d416233d3d1be50a"},
+    {file = "pysam-0.19.0-cp36-cp36m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:fa4a5d334986d0696522246820f295cbf6c18dc1b78798f800a2d57d56207789"},
+    {file = "pysam-0.19.0-cp36-cp36m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:ab58d7d9b140e2e8a4918fc00661aa901ba461d9bccd4b499102b0828f2d897e"},
+    {file = "pysam-0.19.0-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b1d964c29fedf55d2a5d095227d19d915c2e0e5e42b1e0bdf7fab30cd1d2a850"},
+    {file = "pysam-0.19.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:8c78f9b84f7fe69530eaccf5b7f08636b3419f0017b5050aa7013f1c59d3d654"},
+    {file = "pysam-0.19.0-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:ada92b376717ac4c9c9924a096af9186035115d29a113eaa997d1c020ce421b9"},
+    {file = "pysam-0.19.0-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:80b8f5b929c7f660b6e1497790a13c61f386b310a31ca54ad6ba110674d11c55"},
+    {file = "pysam-0.19.0-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:30017bed8d002d41f83fa7e10569525c811a8e3860d73a880ee653ef29fd4fbc"},
+    {file = "pysam-0.19.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:5e2e465522ba2c34cb96c013a28f9c9db303f8ab1350b4c11cca73677f1e9594"},
+    {file = "pysam-0.19.0-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:2103b4b6d9b0cc0b4aaccf64e87a92bfdabb7dc92810cf84be35ffe78fafa002"},
+    {file = "pysam-0.19.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:eaf342b9c71ed83a63237df2000e3bc1f0236165d48fd7240c4c78b66f28d63b"},
+    {file = "pysam-0.19.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:bc0021b154206edfbaa13515cb67523c76c576b7a670e72a793f2da4f03139f4"},
+    {file = "pysam-0.19.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:3101e0fcd2f6accbfa72a554a71baf83f1c096bb0f9045059b3ead35901ce128"},
+    {file = "pysam-0.19.0-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:5118dcabac574638df43739941f0ee20cc4e9197aee4a8f10f195542a13f18e3"},
+    {file = "pysam-0.19.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:4fe1f1fae0e559d3412625dc7d4d08b477e80211b3fe5b267ba341a84f78b8be"},
+    {file = "pysam-0.19.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2911e3760dd2b709c686f075146787b8bda35629093352c28a7e52ac00ddaffc"},
+    {file = "pysam-0.19.0.tar.gz", hash = "sha256:dcc052566f9509fd93b2a2664f094a13f016fd60cdd189e05fb4eafa0c89505b"},
 ]
 pytest = [
     {file = "pytest-7.1.1-py3-none-any.whl", hash = "sha256:92f723789a8fdd7180b6b06483874feca4c48a5c76968e03bb3e7f806a1869ea"},
