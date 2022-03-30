@@ -679,8 +679,8 @@ def detect_read_read_connections_from_cigar(
     nm_ra = read.get_tag("NM")
     seq_ra = read.query_sequence
 
-    # filter reads in  uncommon chromosome
-    if "_" in chrm_ra:
+    # filter reads in uncommon chromosome and mitochondrion
+    if "_" in chrm_ra or chrm_ra in {"chrM", "MT"}:
         return noreturn
 
     if mapq_ra >= mapq_cutoff and nm_ra < max_allowed_nm:
@@ -701,8 +701,8 @@ def detect_read_read_connections_from_cigar(
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
 
-        # filter reads in  uncommon chromosome
-        if "_" in chrm_sa:
+        # filter reads in uncommon chromosome and mitochondrion
+        if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
             return noreturn
 
         if mapq_sa >= mapq_cutoff and nm_sa < max_allowed_nm:
