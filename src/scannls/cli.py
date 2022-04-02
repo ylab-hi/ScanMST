@@ -122,7 +122,6 @@ def cli(options: Union[argparse.Namespace, Options]):
             for ind, clique in enumerate(cliques, 1):
                 logger.debug(f"processing clique {ind}")
                 for series in splice_graph(clique, ind, is_plot=False):
-                    logger.debug(f"Output Clique{ind}: {series}")
                     if len(series) == 1:
                         logger.warning(
                             f"Single Series {ind}: {series}{series[0].query_name}"
@@ -130,6 +129,7 @@ def cli(options: Union[argparse.Namespace, Options]):
                     if series.is_all_node_sr_higher_than_threshold(
                         options.support_reads
                     ):
+                        logger.debug(f"Output Clique{ind}: {series}")
                         writers.write_series(series, ind)
 
         in_bam_io_object.close()

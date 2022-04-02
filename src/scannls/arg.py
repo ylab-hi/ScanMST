@@ -111,7 +111,7 @@ def parse_args() -> argparse.ArgumentParser:
         "--log-level",
         action="store",
         dest="log",
-        choices=["info", "debug", "trace", "warning", "error", "critical"],
+        choices=["info", "debug", "trace"],  # "warning", "error", "critical"
         default="info",
         help="set log level (default: %(default)s)",
     )

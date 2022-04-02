@@ -77,7 +77,6 @@ class SpliceGraph:
         self.nodes: Dict[str, List[Node]] = self.dict_factory()
         # construct splice graph
         self.construct()
-        self.print_path()
         # sr rescuer
         self.rescuer(self)
 
