@@ -152,7 +152,7 @@ class BamScanner:
                     else:
                         self.logger.trace(
                             f"{read.query_name=} does not pass the substitutions/indel cutoff. "
-                            f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}"
+                            f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}"
                         )
         except ValueError:
             raise SystemExit("BAM index file is not found!") from None
