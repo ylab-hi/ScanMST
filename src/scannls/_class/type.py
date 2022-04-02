@@ -86,3 +86,4 @@ class Options:
     substitutions_num: int = 3
     substitutions_fraction: float = 0.2
     indels_fraction: float = 0.2
+    prune_threshold: int = 10

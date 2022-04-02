@@ -230,5 +230,12 @@ def parse_args() -> argparse.ArgumentParser:
         help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
         default=0.8,
     )
-
+    parser.add_argument(
+        "--prune_threshold",
+        action="store",
+        dest="prune_threshold",
+        type=int,
+        help="splice graph pruning length threshold (default: %(default)s)",
+        default=10,
+    )
     return parser
