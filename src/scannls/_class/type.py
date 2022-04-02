@@ -78,7 +78,6 @@ class Options:
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 60
     ident_cutoff: float = 0.99
-    tmp_dir: str = "/tmp"
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8

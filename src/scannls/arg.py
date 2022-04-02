@@ -176,14 +176,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="blat_ident_pct_cutoff (default: %(default)s)",
         default=0.99,
     )
-    parser.add_argument(
-        "--tmp",
-        action="store",
-        dest="tmp_dir",
-        type=str,
-        help="BLAT temporary directory (default: %(default)s)",
-        default="/tmp",
-    )
+
     # Reads filter parameters
     parser.add_argument(
         "--long-indel-length",

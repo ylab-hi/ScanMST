@@ -203,7 +203,9 @@ class BasicNode:
         "is_in_graph",
         "is_traced",
         "trace_id",
+        "sr",
         "harmonic_mean_sr",
+        "original_sr",
     )
 
     def __init__(self):
@@ -218,11 +220,17 @@ class BasicNode:
         self.previous_node_in_series: Optional[Node] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
+        self.sr: int = 1
+        self.original_sr: int = -1
         self.harmonic_mean_sr: float = 1
 
     def __eq__(self, other) -> bool:
         """Compare two nodes in strict mode same memory address."""
         return id(self) == id(other)
+
+    def update_sr(self, key=1) -> None:
+        """Update the sr of a node."""
+        self.sr += key
 
     def set_harmoic_mean_sr(self, sr: int) -> None:
         """Get harmonic mean of current sr and predecessor.sr."""
@@ -375,7 +383,6 @@ class Node(BasicNode):
         "query_name",
         "annotation_code",
         "splicing_code",
-        "sr",
         "insertion_info",
         "unique_key",
         "is_polya",
@@ -416,7 +423,6 @@ class Node(BasicNode):
         self.genes = genes
         self.annotation_code = annot
         self.splicing_code = canonical
-        self.sr = 1
         self.insertion_info = None
         self.unique_key = None
         self.is_polya = False
@@ -495,10 +501,6 @@ class Node(BasicNode):
 
         self.unique_key = key
         return key
-
-    def update_sr(self, key=1) -> None:
-        """Update the sr of a node."""
-        self.sr += key
 
     def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, Any]:
         """Get update breakpoint depth and position of a node."""

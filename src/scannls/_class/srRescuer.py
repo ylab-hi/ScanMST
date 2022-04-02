@@ -63,6 +63,7 @@ class SRRescuer:
             query_names_in_graph.update(node.query_name.split(","))
 
         for node in nodes_in_graph:
+            node.original_sr = node.sr
             self.update_sr(node, list(query_names_in_graph))
 
         del query_names_in_graph

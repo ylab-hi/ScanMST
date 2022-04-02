@@ -68,6 +68,7 @@ class VCFWriter(Writer):
         "DP1": "Integer",
         "DP2": "Integer",
         "SR": "Integer",
+        "OSR": "Integer",
         "PSO": "Float",
         "AF": "Float",
         "SVMETHOD": "String",
@@ -96,6 +97,7 @@ class VCFWriter(Writer):
         "DP1": "Total read depth at the breakpoint1",
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
+        "OSR": "The number of support reads for the breakpoints before rescuer",
         "AF": "Estimated allele frequency in the range (0,1], "
         "representing the ratio of reads showing the alternative allele to all reads",
         "PSO": "Estimated Percent splice-out in the range (0,1], "
@@ -293,7 +295,7 @@ class VCFWriter(Writer):
 
 def obtain_reference_from_bam_header(bam_header: Dict[str, Any]) -> str:
     """Obtain reference info from BAM header."""
-    _aligners = {
+    aligners = {
         "CLC",
         "ContextMap2",
         "CRAC",
@@ -314,7 +316,7 @@ def obtain_reference_from_bam_header(bam_header: Dict[str, Any]) -> str:
         "bowtie2",
         "minimap2",
     }
-    avail_aligners = {x.upper() for x in _aligners}
+    avail_aligners = {x.upper() for x in aligners}
     for item in bam_header.get("PG", {}):
         if item["ID"].upper() in avail_aligners:
             return item["CL"]
@@ -388,6 +390,7 @@ def get_vcf_features_from_series(
                     "ALT": f"<{current_node.sv_type}>",
                     "SVTYPE": current_node.sv_type,
                     "SR": current_node.sr,
+                    "OSR": current_node.original_sr,
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,
@@ -428,6 +431,7 @@ def get_vcf_features_from_series(
                         "ALT": f"{alt_allele}",
                         "SVTYPE": _sv_type,
                         "SR": insertion.ao,
+                        "OSR": insertion.ao,
                         "CAN": can_field,
                         "BOUNDARY": anno_field,
                         "CHR2": _chrom1,
@@ -450,7 +454,7 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
     if feature_dict["SVTYPE"] == "INS":
         info_field = (
             f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
-            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};'
+            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
             f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};DP={feature_dict["DP"]};'
             f'AF={feature_dict["AF"]};SVLEN={feature_dict["SVLEN"]};'
             f'GENE={feature_dict["GENE"]};'
@@ -460,7 +464,7 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
     else:
         info_field = (
             f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
-            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};'
+            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
             f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};DP1={feature_dict["DP1"]};'
             f'DP2={feature_dict["DP2"]};PSO={feature_dict["PSO"]};SVLEN={feature_dict["SVLEN"]};'
             f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
