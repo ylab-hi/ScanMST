@@ -609,7 +609,7 @@ class Series:
 
     def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
         """Check if all nodes in the series have sr > threshold."""
-        return all(node.sr >= threshold for node in self.nodes)
+        return all(node.sr >= threshold for node in self.nodes[:-1])
 
     def get_sr_sum_for_all_node(self) -> int:
         """Get sum of sr for all nodes in the series."""
