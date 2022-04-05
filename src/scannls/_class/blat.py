@@ -15,8 +15,8 @@ from typing import Any
 from typing import List
 from typing import Tuple
 
-import psutil  # type: ignore
-from Bio import SearchIO  # type: ignore
+import psutil
+from Bio import SearchIO
 from loguru import logger
 
 from .basicClass import Insertion

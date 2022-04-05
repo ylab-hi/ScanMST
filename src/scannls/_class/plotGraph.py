@@ -9,7 +9,7 @@
 from typing import Any
 from typing import Dict
 
-import networkx as nx  # type: ignore
+import networkx as nx
 
 from .basicClass import Node
 

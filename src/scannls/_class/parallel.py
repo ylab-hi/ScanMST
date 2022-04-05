@@ -11,7 +11,7 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 
-from tqdm import tqdm  # type: ignore
+from tqdm import tqdm
 
 from .type import LoggerType
 

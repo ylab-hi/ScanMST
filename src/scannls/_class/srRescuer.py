@@ -12,7 +12,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-from pysam import AlignmentFile  # type: ignore
+from pysam import AlignmentFile
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError

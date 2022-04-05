@@ -10,9 +10,9 @@ from typing import Any
 from typing import List
 from typing import Tuple
 
-from Bio import SearchIO  # type: ignore
+from Bio import SearchIO
 from loguru import logger
-from pysam import AlignedSegment  # type: ignore
+from pysam import AlignedSegment
 
 from ..core.helper import cigar_validity
 from .basicClass import reverse_complement

@@ -12,6 +12,7 @@ import textwrap
 from typing import Any
 from typing import Optional
 
+from ._class.type import Options as DefaultOptions
 from scannls import __version__
 
 
@@ -82,7 +83,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="support_reads",
         type=int,
         help="minimum number of support reads for reporting NLS (default: %(default)s)",
-        default=1,
+        default=DefaultOptions.support_reads,
     )
     parser.add_argument(
         "--splice-bin",
@@ -90,7 +91,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="splice_bin",
         type=int,
         help="splice site bin size (default: %(default)s)",
-        default=5,
+        default=DefaultOptions.splice_bin,
     )
     parser.add_argument(
         "--mapq",
@@ -98,13 +99,13 @@ def parse_args() -> argparse.ArgumentParser:
         dest="mapq",
         type=int,
         help="minimum MAPQ of reads for calling NLS (default: %(default)s)",
-        default=15,
+        default=DefaultOptions.mapq,
     )
     parser.add_argument(
         "--non-can",
         action="store_true",
         dest="noncanonical",
-        default=False,
+        default=DefaultOptions.noncanonical,
         help="Considering Non-canonical spliced sites",
     )
     parser.add_argument(
@@ -112,7 +113,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="log",
         choices=["info", "debug", "trace"],  # "warning", "error", "critical"
-        default="info",
+        default=DefaultOptions.log,
         help="set log level (default: %(default)s)",
     )
     parser.add_argument(
@@ -120,7 +121,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="parallel",
         type=int,
-        default=1,
+        default=DefaultOptions.parallel,
         help="set working mode in processor (default: %(default)s)",
     )
     parser.add_argument(
@@ -134,14 +135,14 @@ def parse_args() -> argparse.ArgumentParser:
         "--nclosed",
         action="store_false",
         dest="closed",
-        default=True,
+        default=DefaultOptions.closed,
         help="close BLAT server when job has done (default: %(default)s)",
     )
     parser.add_argument(
         "--nsleep",
         action="store_false",
         dest="nsleep",
-        default=True,
+        default=DefaultOptions.nsleep,
         help="If sleep randomly before starting BLAT server (default: %(default)s)",
     )
     parser.add_argument(
@@ -150,7 +151,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="port",
         type=int,
         help="port for BLAT server (default: %(default)s)",
-        default=88888,
+        default=DefaultOptions.port,
     )
     parser.add_argument(
         "--min-soft-seg-len",
@@ -158,7 +159,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="min_soft_seg_len",
         type=int,
         help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
-        default=200,
+        default=DefaultOptions.min_soft_seg_len,
     )
     parser.add_argument(
         "--max-allowed-nm",
@@ -166,7 +167,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="max_allowed_nm",
         type=int,
         help="Maximum allowed NM to keep AS tag (default: %(default)s)",
-        default=60,
+        default=DefaultOptions.max_allowed_nm,
     )
     parser.add_argument(
         "--identity",
@@ -174,7 +175,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="ident_cutoff",
         type=float,
         help="blat_ident_pct_cutoff (default: %(default)s)",
-        default=0.99,
+        default=DefaultOptions.ident_cutoff,
     )
 
     # Reads filter parameters
@@ -183,15 +184,15 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="long_indel_length",
         type=int,
-        default=5,
-        help="The length cutoff of defining long indels in the reads (default: %(default)s)",
+        default=DefaultOptions.long_indel_length,
+        help="The length cutoff of defining long indel in the reads (default: %(default)s)",
     )
     parser.add_argument(
         "--substitution-num",
         action="store",
         dest="substitutions_num",
         type=int,
-        default=5,
+        default=DefaultOptions.substitutions_num,
         help="The allowed maximum substitution number in the reads (default: %(default)s)",
     )
     parser.add_argument(
@@ -199,7 +200,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="substitutions_fraction",
         type=float,
-        default=0.2,
+        default=DefaultOptions.substitutions_fraction,
         help="The allowed maximum substitution fraction in the reads (default: %(default)s)",
     )
     parser.add_argument(
@@ -207,7 +208,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="indel_fraction",
         type=float,
-        default=0.2,
+        default=DefaultOptions.indel_fraction,
         help="The allowed maximum long indel fraction in the reads (default: %(default)s)",
     )
     # SR Rescuer parameters
@@ -217,7 +218,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="soft_len",
         type=int,
         help="minimum softclipped segment length to be rescued (default: %(default)s)",
-        default=5,
+        default=DefaultOptions.soft_len,
     )
     parser.add_argument(
         "--mismatch",
@@ -225,7 +226,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="mismatch",
         type=int,
         help="maximum allowed mismatch bases of rescued segment (default: %(default)s)",
-        default=3,
+        default=DefaultOptions.mismatch,
     )
     parser.add_argument(
         "--alignment-fraction",
@@ -233,7 +234,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="alignment_fraction",
         type=float,
         help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
-        default=0.8,
+        default=DefaultOptions.alignment_fraction,
     )
 
     return parser

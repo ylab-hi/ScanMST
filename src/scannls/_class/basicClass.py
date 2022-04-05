@@ -11,8 +11,8 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-import pyfaidx  # type: ignore
-from Bio.Seq import Seq  # type: ignore
+import pyfaidx
+from Bio.Seq import Seq
 
 from .. import Read
 from ..core.helper import cigar_validity

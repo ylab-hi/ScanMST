@@ -9,7 +9,7 @@ from typing import Any
 from typing import Callable
 from typing import Tuple
 
-import pysam  # type: ignore
+import pysam
 from loguru import logger
 
 from . import ToolNotFoundError

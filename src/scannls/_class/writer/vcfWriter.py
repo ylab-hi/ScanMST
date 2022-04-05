@@ -14,8 +14,8 @@ from typing import IO
 from typing import List
 from typing import Tuple
 
-from pyfaidx import Fasta  # type: ignore
-from pyfaidx import FastaNotFoundError  # type: ignore
+from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
 from .. import __version__
 from ..basicClass import Node

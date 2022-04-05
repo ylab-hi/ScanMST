@@ -13,8 +13,8 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-import networkx as nx  # type: ignore
-from networkx import find_cliques  # type: ignore
+import networkx as nx
+from networkx import find_cliques
 
 from ..utils import timeit
 from .basicClass import Node

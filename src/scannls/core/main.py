@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 from typing import List
 
-import HTSeq  # type: ignore
-import pyfaidx  # type: ignore
-import pysam  # type: ignore
+import HTSeq
+import pyfaidx
+import pysam
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 

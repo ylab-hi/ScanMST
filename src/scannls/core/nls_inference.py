@@ -2,8 +2,8 @@
 """Module for nls inference."""
 from typing import Any
 
-import HTSeq  # type: ignore
-import pyfaidx  # type: ignore
+import HTSeq
+import pyfaidx
 
 from .._class.type import LoggerType
 from .helper import diff_chrom_diff_strand_handler
