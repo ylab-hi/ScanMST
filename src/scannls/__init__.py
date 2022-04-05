@@ -31,7 +31,8 @@ from ._class.writer import FastaWriter
 from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
 from ._class.writer import Writers
-from ._class.type import Options, LoggerType
+from ._class.type import LoggerType
+from .arg import DefaultOptions
 from . import core
 from . import cppext
 
@@ -59,7 +60,6 @@ __all__ = [
     "BreakpointNotFoundError",
     "ModesNotEqualError",
     "cli",
-    "Options",
     "LoggerType",
     "external_tool_checking",
     "NovelInsertion",
@@ -68,6 +68,7 @@ __all__ = [
     "core",
     "cppext",
     "check_end_node_is_ploya",
+    "DefaultOptions",
 ]
 
 

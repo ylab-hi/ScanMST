@@ -9,14 +9,44 @@
 """
 import argparse
 import textwrap
+from dataclasses import dataclass
 from typing import Any
 from typing import Optional
 
-from ._class.type import Options as DefaultOptions
 from scannls import __version__
 
 
 # https://github.com/plasma-umass/scalene/blob/master/scalene/scalene_parseargs.py#L11:7
+
+
+@dataclass
+class DefaultOptions:
+    """Cli options for testing."""
+
+    input: str
+    ref: str
+    gtf: str
+    output: str
+    two_bit: str
+    support_reads: int = 1
+    splice_bin: int = 5
+    mapq: int = 15
+    noncanonical: bool = False
+    closed: bool = True
+    nsleep: bool = False
+    log: str = "info"
+    parallel: int = 1
+    port: int = 88888
+    min_soft_seg_len: int = 200
+    max_allowed_nm: int = 60
+    ident_cutoff: float = 0.99
+    soft_len: int = 5
+    mismatch: int = 3
+    alignment_fraction: float = 0.8
+    long_indel_length: int = 5
+    substitutions_num: int = 3
+    substitutions_fraction: float = 0.2
+    indel_fraction: float = 0.2
 
 
 class RichArgParser(argparse.ArgumentParser):

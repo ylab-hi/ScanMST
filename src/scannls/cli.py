@@ -15,9 +15,9 @@ from loguru import logger
 
 from . import Blat
 from . import CliqueFinder
+from . import DefaultOptions
 from . import FastaWriter
 from . import GTFWriter
-from . import Options
 from . import SpliceGraph
 from . import SRRescuer
 from . import VCFWriter
@@ -27,7 +27,7 @@ from .utils import external_tool_checking
 from .utils import sleep
 
 
-def cli(options: Union[argparse.Namespace, Options]):
+def cli(options: Union[argparse.Namespace, DefaultOptions]):
     """Cli function."""
     # add logger
     logger.remove()
