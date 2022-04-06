@@ -21,7 +21,7 @@ from scannls import __version__
 
 @dataclass
 class DefaultOptions:
-    """Cli options for testing."""
+    """Cli default options."""
 
     input: str
     ref: str
