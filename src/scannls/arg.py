@@ -69,16 +69,25 @@ class RichArgParser(argparse.ArgumentParser):
             self.console.print(self._color_message(message))
 
 
+class RichHelpFormatter(argparse.HelpFormatter):
+    """RichHelpFormatter."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """RichHelpFormatter."""
+        super().__init__(*args, max_help_position=42, **kwargs)
+
+
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]ScanNLS[/red]: Nonlinear splicing "
+        description="[red]scannls[/] :rocket: Nonlinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
         epilog=textwrap.dedent(
             """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
             University of Minnesota, 2022"""
         ),
+        formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
@@ -136,13 +145,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="minimum MAPQ of reads for calling NLS (default: %(default)s)",
         default=DefaultOptions.mapq,
     )
-    parser.add_argument(
-        "--non-can",
-        action="store_true",
-        dest="noncanonical",
-        default=DefaultOptions.noncanonical,
-        help="Considering Non canonical spliced sites",
-    )
+
     parser.add_argument(
         "--log-level",
         action="store",
@@ -165,6 +168,13 @@ def parse_args() -> argparse.ArgumentParser:
         dest="two_bit",
         help="reference genome in 2bit format",
         required=True,
+    )
+    parser.add_argument(
+        "--non-can",
+        action="store_true",
+        dest="noncanonical",
+        default=DefaultOptions.noncanonical,
+        help="Considering Non canonical spliced sites  (default: %(default)s)",
     )
     parser.add_argument(
         "--nclosed",
