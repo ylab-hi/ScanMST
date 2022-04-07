@@ -1,6 +1,7 @@
 # !/usr/bin/env python
 """End-to-end tests for the CLI.
 
+@Author:      YangyangLi
 @Filename:    test_cli.py
 @license:     MIT Licence
 @Time:        2/6/22 11:43 AM

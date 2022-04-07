@@ -2,6 +2,7 @@
 """GTF writer class.
 
 @Filename:    gtfWriter.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        1/30/22 6:18 PM
 """

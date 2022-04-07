@@ -1,6 +1,7 @@
 # !/usr/bin/env python
 """Splice Graph.
 
+@Author:      YangyangLi
 @Filename:    spliceGraph.py
 @license:     MIT Licence
 @Time:        12/15/21 10:42 AM

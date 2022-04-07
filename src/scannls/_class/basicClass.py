@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Type of the scannls.
+
+@Author:      YangyangLi
+@license:     MIT Licence
+@Time:        12/30/21 2:20 PM
+"""
 import secrets
 from collections import Counter
 from typing import Any

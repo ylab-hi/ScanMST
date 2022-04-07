@@ -2,6 +2,7 @@
 """Module for BLAT.
 
 @Filename:    blat.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/15/21 2:00 PM
 """

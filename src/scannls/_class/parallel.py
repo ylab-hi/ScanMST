@@ -2,6 +2,7 @@
 """Module for parallel worker.
 
 @Filename:    parallel.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/15/21 1:58 PM
 """

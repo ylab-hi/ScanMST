@@ -2,6 +2,7 @@
 """Wrapper for loguru.logger.
 
 @Filename:    mylogger.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/15/21 2:08 PM
 """
