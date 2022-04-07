@@ -97,7 +97,7 @@ def parse_args() -> argparse.ArgumentParser:
         "--input",
         action="store",
         dest="input",
-        help="Input BAM file",
+        help="input BAM file",
         required=True,
     )
     parser.add_argument(
@@ -174,7 +174,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store_true",
         dest="noncanonical",
         default=DefaultOptions.noncanonical,
-        help="Considering Non canonical spliced sites  (default: %(default)s)",
+        help="considering Non canonical spliced sites  (default: %(default)s)",
     )
     parser.add_argument(
         "--nclosed",
@@ -188,7 +188,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store_false",
         dest="nsleep",
         default=DefaultOptions.nsleep,
-        help="If sleep randomly before starting BLAT server (default: %(default)s)",
+        help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
     parser.add_argument(
         "--port",
@@ -211,7 +211,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="max_allowed_nm",
         type=int,
-        help="Maximum allowed NM to keep AS tag (default: %(default)s)",
+        help="maximum allowed NM to keep AS tag (default: %(default)s)",
         default=DefaultOptions.max_allowed_nm,
     )
     parser.add_argument(
@@ -230,7 +230,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="long_indel_length",
         type=int,
         default=DefaultOptions.long_indel_length,
-        help="The length cutoff of defining long indel in the reads (default: %(default)s)",
+        help="the length cutoff of defining long indel in the reads (default: %(default)s)",
     )
     parser.add_argument(
         "--substitution-num",
@@ -238,23 +238,16 @@ def parse_args() -> argparse.ArgumentParser:
         dest="substitutions_num",
         type=int,
         default=DefaultOptions.substitutions_num,
-        help="The allowed maximum substitution number in the reads (default: %(default)s)",
+        help="the allowed maximum substitution number in the reads (default: %(default)s)",
     )
-    parser.add_argument(
-        "--substitution-fraction",
-        action="store",
-        dest="substitutions_fraction",
-        type=float,
-        default=DefaultOptions.substitutions_fraction,
-        help="The allowed maximum substitution fraction in the reads (default: %(default)s)",
-    )
+
     parser.add_argument(
         "--indel-fraction",
         action="store",
         dest="indel_fraction",
         type=float,
         default=DefaultOptions.indel_fraction,
-        help="The allowed maximum long indel fraction in the reads (default: %(default)s)",
+        help="the allowed maximum long indel fraction in the reads (default: %(default)s)",
     )
     # SR Rescuer parameters
     parser.add_argument(
@@ -280,6 +273,14 @@ def parse_args() -> argparse.ArgumentParser:
         type=float,
         help="minimal fraction of aligned part for smith waterman local alignment (default: %(default)s)",
         default=DefaultOptions.alignment_fraction,
+    )
+    parser.add_argument(
+        "--substitution-fraction",
+        action="store",
+        dest="substitutions_fraction",
+        type=float,
+        default=DefaultOptions.substitutions_fraction,
+        help="the allowed maximum substitution fraction in the reads (default: %(default)s)",
     )
 
     return parser
