@@ -23,7 +23,7 @@ def infer_nls_from_connected_reads(
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
     logger: LoggerType,
-    microinsertion_cutoff: int = 20,
+    microinsertion_cutoff: int = 60,
 ) -> Any:
     """Infer NLS event from connected reads.
 
@@ -40,7 +40,7 @@ def infer_nls_from_connected_reads(
         (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical
         and noncanonical splice sites
-    :param microinsertion_cutoff: threshold of dicarding NLS event with long microinsertion (>20bp)
+    :param microinsertion_cutoff: threshold of dicarding NLS event with long microinsertion (>60bp)
     :return: putative event from reads-pair
 
     .. note:: putative event
