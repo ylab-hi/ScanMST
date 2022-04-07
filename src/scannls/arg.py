@@ -16,9 +16,6 @@ from typing import Optional
 from scannls import __version__
 
 
-# https://github.com/plasma-umass/scalene/blob/master/scalene/scalene_parseargs.py#L11:7
-
-
 @dataclass
 class DefaultOptions:
     """Cli default options."""
@@ -59,9 +56,17 @@ class RichArgParser(argparse.ArgumentParser):
         self.console = Console()
         super().__init__(*args, **kwargs)
 
+    @staticmethod
+    def _color_message(message: str, color: str = "green") -> str:
+        """Color message."""
+        import re
+
+        pattern = re.compile(r"(?P<arg>-{1,2}[-|\w]+)")
+        return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
+
     def _print_message(self, message: Optional[str], file: Any = None) -> None:
         if message:
-            self.console.print(message)
+            self.console.print(self._color_message(message))
 
 
 def parse_args() -> argparse.ArgumentParser:
@@ -69,9 +74,9 @@ def parse_args() -> argparse.ArgumentParser:
     parser = RichArgParser(
         description="[red]ScanNLS[/red]: Nonlinear splicing "
         "(NLS) events identification using transcriptomic"
-        " long-reads data",
+        " long reads data",
         epilog=textwrap.dedent(
-            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute,
+            """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
             University of Minnesota, 2022"""
         ),
     )
@@ -136,7 +141,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store_true",
         dest="noncanonical",
         default=DefaultOptions.noncanonical,
-        help="Considering Non-canonical spliced sites",
+        help="Considering Non canonical spliced sites",
     )
     parser.add_argument(
         "--log-level",
@@ -263,7 +268,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="alignment_fraction",
         type=float,
-        help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
+        help="minimal fraction of aligned part for smith waterman local alignment (default: %(default)s)",
         default=DefaultOptions.alignment_fraction,
     )
 
