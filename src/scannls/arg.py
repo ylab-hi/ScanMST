@@ -199,14 +199,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.port,
     )
     parser.add_argument(
-        "--min-soft-seg-len",
-        action="store",
-        dest="min_soft_seg_len",
-        type=int,
-        help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
-        default=DefaultOptions.min_soft_seg_len,
-    )
-    parser.add_argument(
         "--max-allowed-nm",
         action="store",
         dest="max_allowed_nm",
@@ -265,6 +257,14 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         help="maximum allowed mismatch bases of rescued segment (default: %(default)s)",
         default=DefaultOptions.mismatch,
+    )
+    parser.add_argument(
+        "--min-soft-seg-len",
+        action="store",
+        dest="min_soft_seg_len",
+        type=int,
+        help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
+        default=DefaultOptions.min_soft_seg_len,
     )
     parser.add_argument(
         "--alignment-fraction",

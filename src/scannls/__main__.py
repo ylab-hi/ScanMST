@@ -12,12 +12,8 @@ def main():
         raise SystemExit(
             "Sorry, this code need Python 3.8 or higher. Please update. Aborting..."
         )
+
     parser = parse_args()
-
-    if len(sys.argv[1:]) < 1:
-        parser.print_help()
-        raise SystemExit
-
     options = parser.parse_args()
 
     cli(options)
