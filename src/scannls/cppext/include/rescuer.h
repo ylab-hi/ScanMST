@@ -4,7 +4,6 @@
 
 #ifndef SCANNLSEXT_RESCUER_H
 #define SCANNLSEXT_RESCUER_H
-
 #include <algorithm>
 #include <iostream>
 #include <set>
