@@ -63,7 +63,10 @@ PYBIND11_MODULE(_cppext, m) {
       "Rescuer(bam_file, min_mapq, min_soft_len, min_mis, min_frac, min_seq_align_len)")
       .def(py::init<const char *, int, int, int, double, int>())
       .def("calculate_sr", &Rescuer::calculate_sr,
-           "calculate_sr(chrom, start, end, mode, strand, current_names, names_in_graph) -> int")
+           "calculate_sr(chrom, start, end, mode, strand, current_names) -> int")
       .def("count_reads", &Rescuer::count_reads, "count_reads(chrom, start, end) -> int")
-      .def("__repr__", [](const Rescuer &r) { return "Rescuer()"; });
+      .def("__repr__", [](const Rescuer &r) { return "Rescuer()"; })
+      .def("reset_names_list", &Rescuer::reset_names_list, "reset_names_list(names_list) -> None");
+
+
 }

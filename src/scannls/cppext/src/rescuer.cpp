@@ -18,24 +18,28 @@ namespace rescuer {
 
   int Rescuer::calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
                             std::string_view t_strand,
-                            std::vector<std::string> &t_current_query_name,
-                            std::vector<std::string> &t_query_name_list) const {
+                            std::vector<std::string> &t_current_query_name) const {
+
     std::vector<std::string> sr_list{};
     std::vector<std::string> sv_list{};
 
-    add_sr_sv_list(sr_list, sv_list, m_bam_handler, t_chrom, t_start, t_end, t_mode, min_mapq,
-                   min_soft_len, min_seq_align_len, t_strand, t_current_query_name,
-                   t_query_name_list);
+    auto sr_list_names = add_sr_sv_list(sr_list, sv_list, t_chrom, t_start, t_end, t_mode, t_strand, t_current_query_name);
 
     if (sr_list.empty() || sv_list.empty()) return 0;
 
-    return determine_num_increment_sr(sr_list, sv_list);
+    return determine_num_increment_sr(sr_list, sv_list, sr_list_names);
   }
 
   int Rescuer::determine_num_increment_sr(std::vector<std::string> &t_sr,
-                                          std::vector<std::string> &t_sv) const {
+                                          std::vector<std::string> &t_sv,
+                                          std::vector<std::string> &t_sr_list_names) const {
     int num_increment_sr{0};
+    int sr_index{-1};
+
     for (const auto &r : t_sr) {
+      ++sr_index;
+      bool is_sr_increment{false};
+
       for (const auto &v : t_sv) {
         if (!check_if_align(r.substr(0, min_seq_align_len), v.substr(0, min_seq_align_len)))
           continue;
@@ -57,9 +61,16 @@ namespace rescuer {
         if (identity >= min_identity && (m_alignment.query_begin + m_alignment.ref_begin) <= 2
             && m_alignment.mismatches <= min_mismatch) {
           ++num_increment_sr;
+          is_sr_increment = true;
           break;
         }
       }
+//       add query name of sr to all names list if the query name of sr update successfully
+//       to ensure that the query name of sr  do not update repeatedly
+      if (is_sr_increment) {
+        m_names_list.push_back(t_sr_list_names[sr_index]);
+      }
+
     }
     return num_increment_sr;
   }
@@ -82,45 +93,53 @@ namespace rescuer {
     return true;
   }
 
-  // non-member function
-  void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
-                      const bam_handler &t_bam, std::string_view tt_chrom, long tt_start,
-                      long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      int t_min_seq_align_len, std::string_view tt_strand,
-                      std::vector<std::string> &t_current_names,
-                      std::vector<std::string> &t_name_list) {
+  void Rescuer::reset_names_list(std::vector<std::string> &t_names_list) const {
+    m_names_list.swap(t_names_list);
+  }
+
+  std::vector<std::string> Rescuer::add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
+                               std::string_view tt_chrom, long tt_start,
+                      long tt_end, int tt_mode, std::string_view tt_strand,
+                      std::vector<std::string> &t_current_names) const {
+
+    std::vector<std::string> sr_list_names;
+
     --tt_start;
-    const int tid = bam_name2id(t_bam.sam_header, std::string(tt_chrom).c_str());
+    const int tid = bam_name2id(m_bam_handler.sam_header, std::string(tt_chrom).c_str());
 
-    hts_itr_t *iter = sam_itr_queryi(t_bam.sam_index, tid, tt_start, tt_end);
+    hts_itr_t *iter = sam_itr_queryi(m_bam_handler.sam_index, tid, tt_start, tt_end);
 
-    while (sam_itr_next(t_bam.sam_file, iter, t_bam.sam_record) >= 0) {
-      if (t_bam.sam_record->core.flag & BAM_FREVERSE) {
+    while (sam_itr_next(m_bam_handler.sam_file, iter, m_bam_handler.sam_record) >= 0) {
+      if (m_bam_handler.sam_record->core.flag & BAM_FREVERSE) {
         if (tt_strand == "+") continue;
       } else {
         if (tt_strand == "-") continue;
       }
 
-      const uint32_t *cigar{bam_get_cigar(t_bam.sam_record)};
-      const uint8_t *seq{bam_get_seq(t_bam.sam_record)};
+      const uint32_t *cigar{bam_get_cigar(m_bam_handler.sam_record)};
+      const uint8_t *seq{bam_get_seq(m_bam_handler.sam_record)};
 
       //    get read seq
-      if (t_bam.sam_record->core.qual >= t_min_mapq
-          && is_soft_clipped(cigar, t_bam.sam_record->core.n_cigar)) {
-        std::string read_seq{get_read_seq(seq, t_bam.sam_record->core.l_qseq)};
+      if (m_bam_handler.sam_record->core.qual >= min_mapq
+          && is_soft_clipped(cigar, m_bam_handler.sam_record->core.n_cigar)) {
+        std::string read_seq{get_read_seq(seq, m_bam_handler.sam_record->core.l_qseq)};
 
-        auto softclip_result{get_softclip(read_seq, t_bam.sam_record, tt_mode, cigar,
-                                          t_bam.sam_record->core.n_cigar)};
+        auto softclip_result{get_softclip(read_seq, m_bam_handler.sam_record, tt_mode, cigar,
+                                          m_bam_handler.sam_record->core.n_cigar)};
 
         long reference_pos
-            = (tt_mode == 2) ? t_bam.sam_record->core.pos : bam_endpos(t_bam.sam_record);
+            = (tt_mode == 2) ? m_bam_handler.sam_record->core.pos : bam_endpos(m_bam_handler.sam_record);
 
         int seq_len{get_read_max_length(softclip_result.read_seq)};
-        if (seq_len < t_min_seq_align_len) continue;  // read length is too short
+        if (seq_len < min_seq_align_len) continue;  // read length is too short
+
+        auto read_name{bam_get_qname(m_bam_handler.sam_record)};
 
         if (reference_pos == softclip_result.pos
-            && find(t_current_names.begin(), t_current_names.end(), bam_get_qname(t_bam.sam_record))
+            && find(t_current_names.begin(), t_current_names.end(), read_name)
                    != t_current_names.end()) {
+
+
           if (tt_mode == 2)
             t_sv.emplace_back(softclip_result.read_seq.rbegin(),
                               softclip_result.read_seq.rbegin() + seq_len);
@@ -128,9 +147,13 @@ namespace rescuer {
             t_sv.emplace_back(softclip_result.read_seq.begin(),
                               softclip_result.read_seq.begin() + seq_len);
 
-        } else if (reference_pos == softclip_result.pos && softclip_result.soft_len >= t_min_soft
-                   && find(t_name_list.begin(), t_name_list.end(), bam_get_qname(t_bam.sam_record))
-                          == t_name_list.end()) {
+        } else if (reference_pos == softclip_result.pos && softclip_result.soft_len >= min_soft_len
+                   && find(m_names_list.begin(), m_names_list.end(),read_name )
+                          == m_names_list.end()) {
+
+
+          sr_list_names.emplace_back(read_name);
+
           if (tt_mode == 2)
             t_sr.emplace_back(softclip_result.read_seq.rbegin(),
                               softclip_result.read_seq.rbegin() + seq_len);
@@ -141,7 +164,10 @@ namespace rescuer {
       }
     }
     sam_itr_destroy(iter);
+
+    return sr_list_names;
   }
+
 
   bool is_soft_clipped(const uint32_t *t_cigar, size_t t_cigar_len) {
     for (size_t i{0}; i < t_cigar_len; i++) {

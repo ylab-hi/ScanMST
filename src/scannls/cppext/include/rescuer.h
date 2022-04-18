@@ -13,6 +13,7 @@
 #include "bam.h"
 #include "htslib/sam.h"
 #include "ssw_cpp.h"
+#include "output_container.h"
 
 namespace rescuer {
 
@@ -56,26 +57,7 @@ namespace rescuer {
    */
   parseCigarResult_t parser_cigar(const uint32_t *t_cigar_str, size_t t_cigar_len);
 
-  /**
-   * @brief Add seqs for sr and sv list
-   * @param t_sr seq list of sr
-   * @param t_sv  seq list of sv
-   * @param t_bam  bam handler
-   * @param tt_chrom  chrom name
-   * @param tt_start  start position 0-based
-   * @param tt_end  end position 0-based
-   * @param tt_mode  mode
-   * @param t_min_mapq  min mapq
-   * @param t_min_soft  min soft clip length
-   * @param t_current_names  current names list
-   * @param t_name_list  names in graph
-   */
-  void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
-                      const bam_handler &t_bam, std::string_view tt_chrom, long tt_start,
-                      long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      int t_min_seq_align_len, std::string_view tt_strand,
-                      std::vector<std::string> &t_current_names,
-                      std::vector<std::string> &t_name_list);
+
 
   class Rescuer {
   private:
@@ -89,6 +71,7 @@ namespace rescuer {
     StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 5, 8, 6}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     mutable StripedSmithWaterman::Alignment m_alignment{};
+    mutable std::vector<std::string> m_names_list{};
 
   public:
     Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity,
@@ -105,8 +88,8 @@ namespace rescuer {
      * @return number of sr
      */
     int calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
-                     std::string_view t_strand, std::vector<std::string> &t_current_query_name,
-                     std::vector<std::string> &t_query_name_list) const;
+                     std::string_view t_strand,
+                     std::vector<std::string> &t_current_query_name) const;
 
     /**
      * @brief calculate number of sr according to alignment between srlist and
@@ -115,8 +98,8 @@ namespace rescuer {
      * @param t_sv sv list
      * @return number of sr
      */
-    int determine_num_increment_sr(std::vector<std::string> &t_sr,
-                                   std::vector<std::string> &t_sv) const;
+    int determine_num_increment_sr(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
+                                   std::vector<std::string> &t_sr_list_names) const;
 
     /**
      * @brief calculate number of read for a position
@@ -135,7 +118,30 @@ namespace rescuer {
      * @return true if need to be aligned
      */
     bool check_if_align(std::string_view t_query, std::string_view t_target) const;
+
+    void reset_names_list(std::vector<std::string> &t_names_list) const;
+
+    /**
+   * @brief Add seqs for sr and sv list
+   * @param t_sr seq list of sr
+   * @param t_sv  seq list of sv
+   * @param t_bam  bam handler
+   * @param tt_chrom  chrom name
+   * @param tt_start  start position 0-based
+   * @param tt_end  end position 0-based
+   * @param tt_mode  mode
+   * @param t_min_mapq  min mapq
+   * @param t_min_soft  min soft clip length
+   * @param t_current_names  current names list
+   * @param t_name_list  names in graph
+     */
+    std::vector<std::string> add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
+                         std::string_view tt_chrom, long tt_start,
+                        long tt_end, int tt_mode, std::string_view tt_strand,
+                        std::vector<std::string> &t_current_names) const;
+
   };
+
 
 }  // namespace rescuer
 
