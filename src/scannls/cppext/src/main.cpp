@@ -1,6 +1,4 @@
 #include "rescuer.h"
-// solution for segfault in future
-// https://github.com/corwinjoy/Complete-Striped-Smith-Waterman-Library/pull/1/commits/10de7dbb01d04f9859571d79f3ecc633ebeff99e
 
 void test_1() {
   std::string file{"/panfs/home/yang4414/li002252/project/scan_data/ONT_PC3_chr1_10.bam"};
@@ -94,7 +92,6 @@ int main(int argc, char* argv[]) {
   rescuer::Rescuer p_rescuer{file.c_str(),       mapq_threshold,  min_softclip_length,
                              min_mismatch_count, min_align_ratio, 10};
 
-  //  std::vector<std::string > current_names{"1e14e451-c6aa-4db2-8b74-5f8001b3d55d"};
   std::vector<std::string> current_names{
       "b990700c-7629-4bf0-85c9-075546168524", "60f17c34-56e7-4138-a759-02b7523053a7",
       "d7b3fbf5-f049-455c-b672-a94cc2e15a24", "1fd943b5-a58a-48af-b56f-588ec642efa7",
@@ -337,7 +334,6 @@ int main(int argc, char* argv[]) {
 
   std::cout << "sr: " << sr << "\n";
 
-  test_1();
 
   return 0;
 }

@@ -48,7 +48,7 @@ namespace bam_parser {
            bool t_is_reverse);
   };
 
-  void print_reads(const std::vector<read_t> &reads);
+  [[maybe_unused]] void print_reads(const std::vector<read_t> &reads);
 
   class bam_handler {
   public:
@@ -64,6 +64,39 @@ namespace bam_parser {
      * @breif: release memory of bam_handler
      */
     ~bam_handler();
+
+    /** rule of 5
+     * @brief: copy constructor and copy assignment
+     * @return: this
+     */
+    bam_handler(const bam_handler &) = delete;
+    bam_handler &operator=(const bam_handler &) = delete;
+
+    /** rule of 5
+     * @brief: move constructor and move assignment
+     * @return: this
+     */
+    bam_handler(bam_handler &&src) noexcept
+        : sam_file{src.sam_file},
+          sam_header{src.sam_header},
+          sam_index{src.sam_index},
+          sam_record{src.sam_record} {
+      src.sam_file = nullptr;
+      src.sam_header = nullptr;
+      src.sam_index = nullptr;
+      src.sam_record = nullptr;
+    }
+    bam_handler &operator=(bam_handler &&src) noexcept {
+      sam_file = src.sam_file;
+      sam_header = src.sam_header;
+      sam_index = src.sam_index;
+      sam_record = src.sam_record;
+      src.sam_file = nullptr;
+      src.sam_header = nullptr;
+      src.sam_index = nullptr;
+      src.sam_record = nullptr;
+      return *this;
+    }
 
     /**
      * @breif fetch reads from bam file in terms of chromosome and start and end

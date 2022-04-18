@@ -474,14 +474,13 @@ class Node(BasicNode):
             if len(self.exons) <= 1:
                 return []
 
-            _positions = []
+            positions = []
             for i, j in self.exons:
-                _positions.extend([i, j])
-            _positions.pop(0)
-            _positions.pop(-1)
-            _introns = list(zip(_positions[::2], _positions[1::2]))
-            self._introns = _introns
-            return _introns
+                positions.extend([i, j])
+            positions.pop(0)
+            positions.pop(-1)
+            self._introns = list(zip(positions[::2], positions[1::2]))
+            return self._introns
 
     @property
     def similar_key(self) -> str:

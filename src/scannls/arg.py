@@ -74,7 +74,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 
     def __init__(self, *args: Any, **kwargs: Any):
         """RichHelpFormatter."""
-        super().__init__(*args, max_help_position=42, **kwargs)
+        super().__init__(*args, max_help_position=42, **kwargs)  # type: ignore
 
 
 def parse_args() -> argparse.ArgumentParser:

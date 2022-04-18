@@ -71,9 +71,9 @@ namespace rescuer {
    * @param t_name_list  names in graph
    */
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
-                      const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
+                      const bam_handler &t_bam, std::string_view tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      int t_min_seq_align_len, const std::string &tt_strand,
+                      int t_min_seq_align_len, std::string_view tt_strand,
                       std::vector<std::string> &t_current_names,
                       std::vector<std::string> &t_name_list);
 
@@ -88,7 +88,7 @@ namespace rescuer {
     int min_seq_align_len{10};
     StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 5, 8, 6}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
-    StripedSmithWaterman::Alignment m_alignment{};
+    mutable StripedSmithWaterman::Alignment m_alignment{};
 
   public:
     Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity,
@@ -104,9 +104,9 @@ namespace rescuer {
      * @param t_query_name_list query names list
      * @return number of sr
      */
-    int calculate_sr(const std::string &t_chrom, long t_start, long t_end, int t_mode,
-                     const std::string &t_strand, std::vector<std::string> &t_current_query_name,
-                     std::vector<std::string> &t_query_name_list);
+    int calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
+                     std::string_view t_strand, std::vector<std::string> &t_current_query_name,
+                     std::vector<std::string> &t_query_name_list) const;
 
     /**
      * @brief calculate number of sr according to alignment between srlist and
@@ -115,7 +115,8 @@ namespace rescuer {
      * @param t_sv sv list
      * @return number of sr
      */
-    int determine_num_increment_sr(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv);
+    int determine_num_increment_sr(std::vector<std::string> &t_sr,
+                                   std::vector<std::string> &t_sv) const;
 
     /**
      * @brief calculate number of read for a position
@@ -125,7 +126,7 @@ namespace rescuer {
      * @return number of read
      */
 
-    [[nodiscard]] int count_reads(const std::string &t_chrom, long t_start, long t_end) const;
+    [[maybe_unused]] int count_reads(const std::string &t_chrom, long t_start, long t_end) const;
 
     /**
      * @brief check if two read sequence need to be aligned or not
@@ -133,7 +134,7 @@ namespace rescuer {
      * @param t_target target sequence
      * @return true if need to be aligned
      */
-    bool check_if_align(const std::string &t_query, const std::string &t_target);
+    bool check_if_align(std::string_view t_query, std::string_view t_target) const;
   };
 
 }  // namespace rescuer

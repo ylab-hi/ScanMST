@@ -578,7 +578,9 @@ class SpliceGraph:
                 value1: True if node_a and node_b can battle.
                 value2: if node_a is winner, return True, else return False
         """
-        self.logger.trace(f"{node_a.harmonic_mean_sr=}\t{node_b.harmonic_mean_sr=}")
+        self.logger.trace(
+            f"{node_a.harmonic_mean_sr=:.2f}\t{node_b.harmonic_mean_sr=:.2f}"
+        )
         if (
             node_a.harmonic_mean_sr == node_b.harmonic_mean_sr
             or not self.check_can_battle(node_a, node_b)

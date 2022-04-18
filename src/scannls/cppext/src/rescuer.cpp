@@ -16,10 +16,10 @@ namespace rescuer {
         min_identity{t_identity},
         min_seq_align_len{t_min_seq_align_len} {}
 
-  int Rescuer::calculate_sr(const std::string &t_chrom, long t_start, long t_end, int t_mode,
-                            const std::string &t_strand,
+  int Rescuer::calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
+                            std::string_view t_strand,
                             std::vector<std::string> &t_current_query_name,
-                            std::vector<std::string> &t_query_name_list) {
+                            std::vector<std::string> &t_query_name_list) const {
     std::vector<std::string> sr_list{};
     std::vector<std::string> sv_list{};
 
@@ -33,7 +33,7 @@ namespace rescuer {
   }
 
   int Rescuer::determine_num_increment_sr(std::vector<std::string> &t_sr,
-                                          std::vector<std::string> &t_sv) {
+                                          std::vector<std::string> &t_sv) const {
     int num_increment_sr{0};
     for (const auto &r : t_sr) {
       for (const auto &v : t_sv) {
@@ -51,7 +51,6 @@ namespace rescuer {
                     << "\n";
           continue;
         }
-        //        StripedSmithWaterman::print_alignment(r, v, m_alignment);
         double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
                         / static_cast<double>(r.length())};
 
@@ -64,16 +63,16 @@ namespace rescuer {
     }
     return num_increment_sr;
   }
-  int Rescuer::count_reads(const std::string &t_chrom, long t_start, long t_end) const {
+  [[maybe_unused]] int Rescuer::count_reads(const std::string &t_chrom, long t_start,
+                                            long t_end) const {
     return m_bam_handler.count(t_chrom.c_str(), t_start, t_end);
   }
 
-  bool Rescuer::check_if_align(const std::string &t_query, const std::string &t_target) {
+  bool Rescuer::check_if_align(std::string_view t_query, std::string_view t_target) const {
     int target_len{static_cast<int>(t_target.length())};
-    int masklen = target_len / 2 > 15 ? target_len / 2 : 15;
-    bool return_value{m_aligner.Align(t_query.c_str(), t_target.c_str(), target_len, m_filter,
-                                      &m_alignment, masklen)};
-    //    StripedSmithWaterman::print_alignment(t_query, t_target, m_alignment);
+    int masklen{target_len / 2 > 15 ? target_len / 2 : 15};
+    bool return_value{m_aligner.Align(std::string(t_query).c_str(), std::string(t_target).c_str(),
+                                      target_len, m_filter, &m_alignment, masklen)};
 
     if (double identity{static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
                         / static_cast<double>(t_query.length())};
@@ -85,13 +84,13 @@ namespace rescuer {
 
   // non-member function
   void add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
-                      const bam_handler &t_bam, const std::string &tt_chrom, long tt_start,
+                      const bam_handler &t_bam, std::string_view tt_chrom, long tt_start,
                       long tt_end, int tt_mode, int t_min_mapq, int t_min_soft,
-                      int t_min_seq_align_len, const std::string &tt_strand,
+                      int t_min_seq_align_len, std::string_view tt_strand,
                       std::vector<std::string> &t_current_names,
                       std::vector<std::string> &t_name_list) {
     --tt_start;
-    const int tid = bam_name2id(t_bam.sam_header, tt_chrom.c_str());
+    const int tid = bam_name2id(t_bam.sam_header, std::string(tt_chrom).c_str());
 
     hts_itr_t *iter = sam_itr_queryi(t_bam.sam_index, tid, tt_start, tt_end);
 
@@ -179,14 +178,14 @@ namespace rescuer {
           result.cigartuples_without_soft.insert(result.cigartuples_without_soft.end(), {op, len});
           break;
         case BAM_CINS:
-          result.indel_len -= len;
+          result.indel_len -= static_cast<int>(len);
           result.read_match += len;
           result.query_len += len;
           result.cigartuples_without_soft.insert(result.cigartuples_without_soft.end(), {op, len});
           break;
         case BAM_CDEL:
         case BAM_CREF_SKIP:
-          result.indel_len += len;
+          result.indel_len += static_cast<int>(len);
           result.ref_match += len;
           result.cigartuples_without_soft.insert(result.cigartuples_without_soft.end(), {op, len});
           break;
