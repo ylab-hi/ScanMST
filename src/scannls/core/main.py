@@ -115,49 +115,37 @@ class BamScanner:
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
         # "--MD" need to be used, MD tag store information about SNVs and DELs
         self.logger.info("Iter bam file and Extracting supplementary alignments")
-        try:
-            for read in self.in_bam.fetch():
-                self._count_chrom_info(read)
-                self.total_length += read.query_length
-                if read.is_supplementary:
-                    sup_aln_cigar = read.cigarstring
-                    left_mat = self.pat_left_s.search(sup_aln_cigar)
-                    right_mat = self.pat_right_s.search(sup_aln_cigar)
-                    if left_mat:
-                        l_s_len = left_mat.group(1)
-                    else:
-                        l_s_len = ""
-                    if right_mat:
-                        r_s_len = right_mat.group(1)
-                    else:
-                        r_s_len = ""
 
-                    nm = read.get_tag("NM")
-                    md_tag = read.get_tag("MD")
-                    num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
-                        sup_aln_cigar, md_tag, self.long_indel_length
+        for read in self.in_bam.fetch():
+            self._count_chrom_info(read)
+            self.total_length += read.query_length
+            if read.is_supplementary:
+                sup_aln_cigar = read.cigarstring
+                left_mat = self.pat_left_s.search(sup_aln_cigar)
+                right_mat = self.pat_right_s.search(sup_aln_cigar)
+
+                l_s_len = left_mat.group(1) if left_mat else ""
+                r_s_len = right_mat.group(1) if right_mat else ""
+
+                nm = read.get_tag("NM")
+                md_tag = read.get_tag("MD")
+                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                    sup_aln_cigar, md_tag, self.long_indel_length
+                )
+                subs_fraction = 0 if nm == 0 else num_of_subs / nm
+                if (
+                    not (
+                        num_of_subs > self.substitutions_num
+                        and subs_fraction > self.substitutions_fraction
                     )
-                    subs_fraction = 0 if nm == 0 else num_of_subs / nm
-                    if (
-                        not (
-                            num_of_subs > self.substitutions_num
-                            and subs_fraction > self.substitutions_fraction
-                        )
-                        and ins_fraction <= self.indels_fraction
-                        and del_fraction <= self.indels_fraction
-                    ):
-                        self.representative_alignments_new_cigar[
-                            f"{read.qname}\t{l_s_len}\t{r_s_len}"
-                        ] = sup_aln_cigar
-                    else:
-                        self.logger.trace(
-                            f"{read.query_name=} does not pass the substitutions/indel cutoff. "
-                            f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}"
-                        )
-        except ValueError:
-            raise SystemExit("BAM index file is not found!") from None
-        else:
-            return self.representative_alignments_new_cigar
+                    and ins_fraction <= self.indels_fraction
+                    and del_fraction <= self.indels_fraction
+                ):
+                    self.representative_alignments_new_cigar[
+                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
+                    ] = sup_aln_cigar
+
+        return self.representative_alignments_new_cigar
 
 
 def _get_genome_fasta(ref_genome):

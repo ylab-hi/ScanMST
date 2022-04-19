@@ -392,6 +392,7 @@ class Node(BasicNode):
         "insertion_info",
         "unique_key",
         "is_polya",
+        "_exon_repr",
     ) + BasicNode.__slots__
 
     def __init__(
@@ -423,6 +424,7 @@ class Node(BasicNode):
         self.ref_start = ref_start
         self.ref_end = ref_end
         self.exons = exons
+        self._exon_repr = ""
         self.sv_type = sv_type
         self.prev_sv_type = None
         self.modes = modes
@@ -447,10 +449,9 @@ class Node(BasicNode):
 
     def __repr__(self) -> str:
         """Get a string representation of a node."""
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
+            f"{self.exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
             f"{self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
@@ -464,6 +465,13 @@ class Node(BasicNode):
         :return: list of nodes
         """
         return [cls() for _ in range(number)]
+
+    @property
+    def exons_repr(self) -> str:
+        """Get a string representation of exons."""
+        if self._exon_repr == "":
+            self._exon_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
+        return self._exon_repr
 
     @property
     def introns(self):
@@ -486,8 +494,8 @@ class Node(BasicNode):
     def similar_key(self) -> str:
         """Get similar key of a node."""
         introns = self.introns
-        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
-        key = f"{self.chrom}-{key}"
+        key = f"{introns[-1][0]}-{introns[-1][1]}" if introns else "None"
+        key = f"{self.chrom}_{key}"
 
         return key
 

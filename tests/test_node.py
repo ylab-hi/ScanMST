@@ -2,7 +2,7 @@
 """Test Node class.
 
 @Filename:    test_node.py
-@Author:      YangyangLi
+@Author:      Yangyang Li
 @contact:     li002252@umn.edu
 @license:     MIT Licence
 @Time:        2/1/22 9:50 PM
@@ -45,8 +45,8 @@ class TestNode:
     def test_similar_key(self, nodes):
         """Test similar key."""
         node1, node2 = nodes
-        assert node1.similar_key == "chr2-190659995-190670325"
-        assert node2.similar_key == "chr17-None"
+        assert node1.similar_key == "chr2_190659995-190670325"
+        assert node2.similar_key == "chr17_None"
 
     def test_update_sr(self, nodes):
         """Test Update sr."""
