@@ -62,9 +62,12 @@ class SRRescuer:
         for node in nodes_in_graph:
             query_names_in_graph.update(node.query_name.split(","))
 
+        query_names_in_graph_list = list(query_names_in_graph)
+
         for node in nodes_in_graph:
             node.original_sr = node.sr
-            self.update_sr(node, list(query_names_in_graph))
+            self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
+            self.update_sr(node, query_names_in_graph_list)
 
         del query_names_in_graph
 
@@ -127,7 +130,6 @@ class SRRescuer:
         )
 
         # reset query_names in graph
-        self.cppext_rescuer.reset_names_list(query_names_in_graph)
 
         rescued_sr = self.cppext_rescuer.calculate_sr(
             chrom,
