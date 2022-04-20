@@ -31,8 +31,14 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     if not node1.introns and not node2.introns:
         return True
 
+    introns_group = (
+        zip_longest(node1.introns, node2.introns)
+        if node1.strand == "-"
+        else zip_longest(node1.introns[::-1], node2.introns[::-1])
+    )
+
     # have introns and breakpoints are same
-    for node1_intron, node2_intron in zip_longest(node1.introns, node2.introns):
+    for node1_intron, node2_intron in introns_group:
         if node1_intron != node2_intron:
             return node1_intron is None or node2_intron is None
 

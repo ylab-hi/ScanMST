@@ -494,9 +494,15 @@ class Node(BasicNode):
     def similar_key(self) -> str:
         """Get similar key of a node."""
         introns = self.introns
-        key = f"{introns[-1][0]}-{introns[-1][1]}" if introns else "None"
-        key = f"{self.chrom}_{key}"
+        choosen_intron = None
+        if introns:
+            choosen_intron = introns[-1] if self.strand == "+" else introns[0]
 
+        key = (
+            f"{self.chrom}_{choosen_intron[0]}-{choosen_intron[1]}"
+            if introns
+            else "None"
+        )
         return key
 
     def get_unique_key(self):
