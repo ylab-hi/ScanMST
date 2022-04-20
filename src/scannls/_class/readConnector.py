@@ -662,7 +662,7 @@ def detect_read_read_connections_from_cigar(
 
     # if no 'SA' tag was found, read-to-read chain will be empty
     try:
-        chimeric_aln = read.get_tag("SA")[:-1].split(";")
+        chimeric_aln = read.get_tag("SA")[:-1].split(";")  # type: ignore
     except KeyError:
         return noreturn
 
@@ -679,11 +679,20 @@ def detect_read_read_connections_from_cigar(
     nm_ra = read.get_tag("NM")
     seq_ra = read.query_sequence
 
+    if (
+        chrm_ra is None
+        or read.query_name is None
+        or seq_ra is None
+        or nm_ra is None
+        or cigar_ra is None
+    ):
+        raise ValueError("None value found in read")
+
     # filter reads in uncommon chromosome and mitochondrion
     if "_" in chrm_ra or chrm_ra in {"chrM", "MT"}:
         return noreturn
 
-    if mapq_ra >= mapq_cutoff and nm_ra < max_allowed_nm:
+    if mapq_ra >= mapq_cutoff and nm_ra < max_allowed_nm:  # type: ignore
         chimeric_aln_list.append(
             Read.init(
                 read.query_name,
@@ -692,7 +701,7 @@ def detect_read_read_connections_from_cigar(
                 strand_ra,
                 cigar_ra,
                 mapq_ra,
-                nm_ra,
+                nm_ra,  # type: ignore
                 seq_ra,
             )
         )
