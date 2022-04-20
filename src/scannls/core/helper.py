@@ -598,7 +598,7 @@ def same_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
     is_reverse=False,
 ):
     """Same chrom same strand mode 21 handler."""
@@ -829,7 +829,7 @@ def same_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
 ):
     """Handler for same chrom and same strand."""
     logger.trace("same_chrom_same_strand_handler takes over the task.")
@@ -875,7 +875,7 @@ def same_chrom_diff_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
 ):
     """Handler for same chrom and different strand."""
     logger.trace("same_chrom_diff_strand_handler takes over the task.")
@@ -1039,7 +1039,7 @@ def diff_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
     is_reverse=False,
 ):
     """Different chrom same stand mode 21 handler."""
@@ -1125,7 +1125,7 @@ def diff_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")
@@ -1171,7 +1171,7 @@ def diff_chrom_diff_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
 ):
     """Diff chrom different strand handler."""
     logger.trace("diff_chrom_diff_strand_handler takes over the task.")

@@ -729,6 +729,10 @@ def detect_read_read_connections_from_cigar(
             )
 
     if len(chimeric_aln_list) < 1 + len(chimeric_aln):
+        logger.debug(
+            f"MAPQ or NM is not satisfied for read: {read.query_name}, "
+            f"len(chimeric_aln_list): {len(chimeric_aln_list)} < 1 + len(chimeric_aln): {1 + len(chimeric_aln)}"
+        )
         return noreturn
     else:
 
