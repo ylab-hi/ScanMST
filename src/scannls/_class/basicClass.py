@@ -498,12 +498,8 @@ class Node(BasicNode):
         if introns:
             choosen_intron = introns[-1] if self.strand == "+" else introns[0]
 
-        key = (
-            f"{self.chrom}_{choosen_intron[0]}-{choosen_intron[1]}"
-            if introns
-            else "None"
-        )
-        return key
+        key = f"{choosen_intron[0]}-{choosen_intron[1]}" if choosen_intron else "None"
+        return f"{self.chrom}_{key}"
 
     def get_unique_key(self):
         """Get unique key of a node."""
