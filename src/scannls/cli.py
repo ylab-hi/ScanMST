@@ -2,22 +2,23 @@
 """CLi for scannls.
 
 @Filename:    cli.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        1/11/22 4:28 PM
 """
 import argparse
 import sys
+import tempfile
 import time
-from pathlib import Path
 from typing import Union
 
 from loguru import logger
 
 from . import Blat
 from . import CliqueFinder
+from . import DefaultOptions
 from . import FastaWriter
 from . import GTFWriter
-from . import Options
 from . import SpliceGraph
 from . import SRRescuer
 from . import VCFWriter
@@ -27,7 +28,7 @@ from .utils import external_tool_checking
 from .utils import sleep
 
 
-def cli(options: Union[argparse.Namespace, Options]):
+def cli(options: Union[argparse.Namespace, DefaultOptions]):
     """Cli function."""
     # add logger
     logger.remove()
@@ -50,12 +51,10 @@ def cli(options: Union[argparse.Namespace, Options]):
 
     logger.info(f"{options.input=} {options.closed=}")
 
-    tmp_dir = Path(options.tmp_dir)
-    if not tmp_dir.exists():
-        tmp_dir.mkdir()
-        logger.info(f"Created temporary directory: {tmp_dir.resolve()}")
+    tmp_dir = tempfile.TemporaryDirectory()
+
     start = time.time()
-    blat = Blat(options.two_bit, logger, options.port, str(tmp_dir.resolve()))
+    blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
     if options.nsleep:
         sleep(options.input)
@@ -67,7 +66,7 @@ def cli(options: Union[argparse.Namespace, Options]):
         intact_series_list, in_bam_io_object = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
-            tmp_dir=str(tmp_dir.resolve()),
+            tmp_dir=tmp_dir.name,
             blat_info=blat_info,
             in_bam_path=options.input,
             mapq_cutoff=options.mapq,
@@ -84,7 +83,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             long_indel_length=options.long_indel_length,
             substitutions_num=options.substitutions_num,
             substitutions_fraction=options.substitutions_fraction,
-            indels_fraction=options.indels_fraction,
+            indels_fraction=options.indel_fraction,
         )
 
         intact_series_list_len = len(intact_series_list)
@@ -103,7 +102,7 @@ def cli(options: Union[argparse.Namespace, Options]):
             options.alignment_fraction,
             logger,
         )
-        splice_graph = SpliceGraph(logger, rescuer, options.prune_threshold)
+        splice_graph = SpliceGraph(logger, rescuer)
         clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
         # cliques is generator
 
@@ -144,8 +143,10 @@ def cli(options: Union[argparse.Namespace, Options]):
         if options.closed and not blat.is_stop_server:
             logger.info("KeyboardInterrupt")
             blat.stop_server()
+            tmp_dir.cleanup()
         raise
     finally:
         if options.closed and not blat.is_stop_server:
             logger.info("Program ends")
             blat.stop_server()
+            tmp_dir.cleanup()

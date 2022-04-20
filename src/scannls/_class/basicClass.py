@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Type of the scannls.
+
+@Author:      YangyangLi
+@license:     MIT Licence
+@Time:        12/30/21 2:20 PM
+"""
 import secrets
 from collections import Counter
 from typing import Any
@@ -11,8 +17,8 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-import pyfaidx  # type: ignore
-from Bio.Seq import Seq  # type: ignore
+import pyfaidx
+from Bio.Seq import Seq
 
 from .. import Read
 from ..core.helper import cigar_validity
@@ -206,7 +212,9 @@ class BasicNode:
         "is_in_graph",
         "is_traced",
         "trace_id",
+        "sr",
         "harmonic_mean_sr",
+        "original_sr",
     )
 
     def __init__(self):
@@ -221,11 +229,17 @@ class BasicNode:
         self.previous_node_in_series: Optional[Node] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
+        self.sr: int = 1
+        self.original_sr: int = -1
         self.harmonic_mean_sr: float = 1
 
     def __eq__(self, other) -> bool:
         """Compare two nodes in strict mode same memory address."""
         return id(self) == id(other)
+
+    def update_sr(self, key=1) -> None:
+        """Update the sr of a node."""
+        self.sr += key
 
     def set_harmoic_mean_sr(self, sr: int) -> None:
         """Get harmonic mean of current sr and predecessor.sr."""
@@ -378,10 +392,10 @@ class Node(BasicNode):
         "query_name",
         "annotation_code",
         "splicing_code",
-        "sr",
         "insertion_info",
         "unique_key",
         "is_polya",
+        "_exon_repr",
     ) + BasicNode.__slots__
 
     def __init__(
@@ -413,13 +427,13 @@ class Node(BasicNode):
         self.ref_start = ref_start
         self.ref_end = ref_end
         self.exons = exons
+        self._exon_repr = ""
         self.sv_type = sv_type
         self.prev_sv_type = None
         self.modes = modes
         self.genes = genes
         self.annotation_code = annot
         self.splicing_code = canonical
-        self.sr = 1
         self.insertion_info = None
         self.unique_key = None
         self.is_polya = False
@@ -438,10 +452,9 @@ class Node(BasicNode):
 
     def __repr__(self) -> str:
         """Get a string representation of a node."""
-        exons_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
+            f"{self.exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
             f"{self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
@@ -457,6 +470,13 @@ class Node(BasicNode):
         return [cls() for _ in range(number)]
 
     @property
+    def exons_repr(self) -> str:
+        """Get a string representation of exons."""
+        if self._exon_repr == "":
+            self._exon_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
+        return self._exon_repr
+
+    @property
     def introns(self):
         """Get introns of a node."""
         if self._introns is not None:
@@ -465,23 +485,24 @@ class Node(BasicNode):
             if len(self.exons) <= 1:
                 return []
 
-            _positions = []
+            positions = []
             for i, j in self.exons:
-                _positions.extend([i, j])
-            _positions.pop(0)
-            _positions.pop(-1)
-            _introns = list(zip(_positions[::2], _positions[1::2]))
-            self._introns = _introns
-            return _introns
+                positions.extend([i, j])
+            positions.pop(0)
+            positions.pop(-1)
+            self._introns = list(zip(positions[::2], positions[1::2]))
+            return self._introns
 
     @property
     def similar_key(self) -> str:
         """Get similar key of a node."""
         introns = self.introns
-        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
-        key = f"{self.chrom}-{key}"
+        choosen_intron = None
+        if introns:
+            choosen_intron = introns[-1] if self.strand == "+" else introns[0]
 
-        return key
+        key = f"{choosen_intron[0]}-{choosen_intron[1]}" if choosen_intron else "None"
+        return f"{self.chrom}_{key}"
 
     def get_unique_key(self):
         """Get unique key of a node."""
@@ -498,10 +519,6 @@ class Node(BasicNode):
 
         self.unique_key = key
         return key
-
-    def update_sr(self, key=1) -> None:
-        """Update the sr of a node."""
-        self.sr += key
 
     def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, Any]:
         """Get update breakpoint depth and position of a node."""

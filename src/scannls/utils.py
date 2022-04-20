@@ -9,7 +9,7 @@ from typing import Any
 from typing import Callable
 from typing import Tuple
 
-import pysam  # type: ignore
+import pysam
 from loguru import logger
 
 from . import ToolNotFoundError
@@ -48,6 +48,9 @@ def get_softclip_length(
      the connection point of soft-clipped part (left/right),
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
     """
+    if read.query_sequence is None or read.cigarstring is None:
+        raise ValueError(f"{read.query_name}'s query sequence or cigar is None")
+
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_end = read.reference_start + parse_result.ref_match
 

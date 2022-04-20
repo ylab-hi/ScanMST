@@ -2,10 +2,10 @@
 """Type of the scannls.
 
 @Filename:    type.py
+@Author:      Yangyang Li
 @license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
-from dataclasses import dataclass
 from typing import Any
 from typing import List
 from typing import NewType
@@ -55,35 +55,3 @@ class LoggerType(Protocol):
 
     def complete(self) -> Any:
         """Complete."""
-
-
-@dataclass
-class Options:
-    """Cli options for testing."""
-
-    input: str
-    ref: str
-    gtf: str
-    output: str
-    two_bit: str
-    support_reads: int = 1
-    splice_bin: int = 5
-    mapq: int = 15
-    noncanonical: bool = False
-    closed: bool = True
-    nsleep: bool = False
-    log: str = "info"
-    parallel: int = 1
-    port: int = 88888
-    min_soft_seg_len: int = 200
-    max_allowed_nm: int = 60
-    ident_cutoff: float = 0.99
-    tmp_dir: str = "/tmp"
-    soft_len: int = 5
-    mismatch: int = 3
-    alignment_fraction: float = 0.8
-    long_indel_length: int = 5
-    substitutions_num: int = 3
-    substitutions_fraction: float = 0.2
-    indels_fraction: float = 0.2
-    prune_threshold: int = 10

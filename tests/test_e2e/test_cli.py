@@ -1,6 +1,7 @@
 # !/usr/bin/env python
 """End-to-end tests for the CLI.
 
+@Author:      YangyangLi
 @Filename:    test_cli.py
 @license:     MIT Licence
 @Time:        2/6/22 11:43 AM
@@ -12,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from scannls import cli
-from scannls import Options
+from scannls import DefaultOptions
 from scannls import ToolNotFoundError
 
 
@@ -24,7 +25,7 @@ def test_cli(tmpdir, data_name, monkeypatch):
 
     data_dir = Path("../data/")
     out_dir = tmpdir.mkdir("out")
-    op = Options(
+    op = DefaultOptions(
         input=f"{data_dir}/{data_name}.bam",
         output=f"{out_dir}/{data_name}",
         ref=f"{data_dir}/dummy.fasta",

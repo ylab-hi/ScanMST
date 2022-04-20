@@ -12,7 +12,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-from pysam import AlignmentFile  # type: ignore
+from pysam import AlignmentFile
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError
@@ -23,7 +23,7 @@ from scannls import cppext
 
 
 class SRRescuer:
-    """Rescue SR from softclipped non-chimeric reads."""
+    """Rescue SR from soft-clipped non-chimeric reads."""
 
     def __init__(
         self,
@@ -51,7 +51,7 @@ class SRRescuer:
         self.in_bam = input_bam
 
     def __call__(self, nodes_in_graph: Union[Iterable[Node], SpliceGraph]) -> None:
-        """Rescue SR from softclipped non-chimeric reads.
+        """Rescue SR from soft-clipped non-chimeric reads.
 
         changed in place
 
@@ -62,8 +62,12 @@ class SRRescuer:
         for node in nodes_in_graph:
             query_names_in_graph.update(node.query_name.split(","))
 
+        query_names_in_graph_list = list(query_names_in_graph)
+
         for node in nodes_in_graph:
-            self.update_sr(node, list(query_names_in_graph))
+            node.original_sr = node.sr
+            self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
+            self.update_sr(node, query_names_in_graph_list)
 
         del query_names_in_graph
 
@@ -78,7 +82,7 @@ class SRRescuer:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
-              Due to microhomology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
+              Due to micro homology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
         if exons is None or strand is None or chrom is None:
@@ -124,6 +128,9 @@ class SRRescuer:
             f"{chrom=} {start=} {mode1=} {query_name_current=}"
             f" {query_names_in_graph=}"
         )
+
+        # reset query_names in graph
+
         rescued_sr = self.cppext_rescuer.calculate_sr(
             chrom,
             start,
@@ -131,7 +138,6 @@ class SRRescuer:
             mode1,
             current_node.strand,
             query_name_current,
-            query_names_in_graph,
         )
 
         self.logger.trace(f"current {rescued_sr=}")
@@ -162,8 +168,8 @@ class SRRescuer:
                 mode2,
                 next_node.strand,
                 query_name_next,
-                query_names_in_graph,
             )
+
             self.logger.trace(f"successors {rescued_sr=}")
 
         self.logger.trace(f"final {rescued_sr=}")

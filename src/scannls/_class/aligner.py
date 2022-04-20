@@ -2,6 +2,7 @@
 """Note Used: Aligner class based on Gapmis.
 
 @Filename:    aligner.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/27/21 6:01 PM
 """

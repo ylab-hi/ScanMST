@@ -2,6 +2,7 @@
 """FastaWriter class.
 
 @Filename:    fastaWriter.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        1/30/22 6:18 PM
 """
@@ -11,8 +12,8 @@ from typing import Any
 from typing import IO
 from typing import Tuple
 
-from pyfaidx import Fasta  # type: ignore
-from pyfaidx import FastaNotFoundError  # type: ignore
+from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
 from ..basicClass import MicroHomology
 from ..basicClass import Node

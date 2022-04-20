@@ -1,6 +1,7 @@
 # !/usr/bin/env python
 """Splice Graph.
 
+@Author:      YangyangLi
 @Filename:    spliceGraph.py
 @license:     MIT Licence
 @Time:        12/15/21 10:42 AM
@@ -23,7 +24,21 @@ from .basicClass import MicroHomology
 from .basicClass import Node
 from .basicClass import NovelInsertion
 from .basicClass import Series
-from .exception import ExonsNotFoundError
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
+)
 from .type import LoggerType
 
 
@@ -215,8 +230,10 @@ class SpliceGraph:
         # condition is TRUE
         if (
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
-        ):  # both are start node check last exon end
-            return node1.next_breakpoint == node2.next_breakpoint
+        ):  # both are start nodes
+            return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
+                node1, node2
+            )
 
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
@@ -263,48 +280,6 @@ class SpliceGraph:
             return flag2
         return False
 
-    @staticmethod
-    def update_exon_coord_sr_svtype_breakpoints_name_mode(
-        updated_node: Node, current_node: Node
-    ) -> None:
-        """Update exon coordinates of the updated node based on current node.
-
-        :param updated_node:  node has been inserted into graph
-        :param current_node: node has not been inserted into graph
-        :return: None
-        """
-        # update exon coordinates
-        updated_node.exons[0][0] = updated_node.ref_start = min(  # type: ignore
-            updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
-        )
-        updated_node.exons[-1][1] = updated_node.ref_end = max(  # type: ignore
-            updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
-        )
-        # update sr
-        updated_node.update_sr(current_node.sr)
-        # update novel insertion ao
-        if updated_node.insertion_info and isinstance(
-            updated_node.insertion_info[1], NovelInsertion
-        ):
-            updated_node.insertion_info[1].increment_ao()
-
-        update_node_with_other_node(
-            updated_node,
-            current_node,
-            (
-                "sv_type",
-                "prev_sv_type",
-                "splicing_code",
-                "annotation_code",
-                "genes",
-                "prev_breakpoint",
-                "next_breakpoint",
-                "modes",
-            ),
-        )
-        # update query name
-        updated_node.query_name += "," + current_node.query_name
-
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
         current_node: Node,
@@ -321,7 +296,7 @@ class SpliceGraph:
             if SpliceGraph._compare_is_merged(similar_node_in_graph, current_node):
                 current_node.is_merged = True
 
-                SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name_mode(
+                update_exon_coord_sr_svtype_breakpoints_name_mode(
                     similar_node_in_graph, current_node
                 )
 
@@ -360,7 +335,7 @@ class SpliceGraph:
                 if merge_node.similar_key == similar_key
             ]:
                 if SpliceGraph._compare_is_merged(merge_node, current_node):
-                    SpliceGraph.update_exon_coord_sr_svtype_breakpoints_name_mode(
+                    update_exon_coord_sr_svtype_breakpoints_name_mode(
                         current_node, merge_node
                     )
                     merge_node.merged_parent_nodes.append(current_node)
@@ -577,7 +552,9 @@ class SpliceGraph:
                 value1: True if node_a and node_b can battle.
                 value2: if node_a is winner, return True, else return False
         """
-        self.logger.trace(f"{node_a.harmonic_mean_sr=}\t{node_b.harmonic_mean_sr=}")
+        self.logger.trace(
+            f"{node_a.harmonic_mean_sr=:.2f}\t{node_b.harmonic_mean_sr=:.2f}"
+        )
         if (
             node_a.harmonic_mean_sr == node_b.harmonic_mean_sr
             or not self.check_can_battle(node_a, node_b)
@@ -699,229 +676,93 @@ class SpliceGraph:
                 )
 
 
-def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-    node1: Node,
-    node2: Node,
-    threshold: float = 0.8,
-) -> bool:
-    """Check if node1 and node2 can be merged based on overlap info.
+def update_exon_coord_sr_svtype_breakpoints_name_mode(
+    updated_node: Node, current_node: Node
+) -> None:
+    """Update exon coordinates of the updated node based on current node.
 
-    node1 is tail node, node2 is head node Using mean overlap ratio to
-    check if they can be merged.
-
-    :param node1:  node1
-    :param node2:  node2
-    :param threshold:  threshold for checking if two nodes are merged
-    :return:  True if two nodes are merged, otherwise False
-
-    .. note::
-
-        -> [node1]               [node1] <-
-            [node2] ->      <- [node2]
+    :param updated_node:  node has been inserted into graph
+    :param current_node: node has not been inserted into graph
+    :return: None
     """
-    if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+    if updated_node.exons is None or current_node.exons is None:
+        raise ValueError(f"{updated_node} or {current_node} has no exons")
 
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
-    if node1.is_polya:
-        return False
-
-    if node1.strand == "+":
-        condition = (
-            node1_first_exon_start
-            <= node2_first_exon_start
-            < node1_last_exon_end
-            <= node2_last_exon_end
-        )
-        if condition:
-            overlap_len = node1_last_exon_end - node2_first_exon_start
-            node1_mean_overlap_ratio = overlap_len / (
-                node1_last_exon_end - node1_first_exon_start
-            )
-            node2_mean_overlap_ratio = overlap_len / (
-                node2_last_exon_end - node2_first_exon_start
-            )
-            return (
-                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
-            )
-    else:
-        condition = (
-            node2_first_exon_start
-            <= node1_first_exon_start
-            < node2_last_exon_end
-            <= node1_last_exon_end
-        )
-        if condition:
-            overlap_len = node2_last_exon_end - node1_first_exon_start
-            node1_mean_overlap_ratio = overlap_len / (
-                node1_last_exon_end - node1_first_exon_start
-            )
-            node2_mean_overlap_ratio = overlap_len / (
-                node2_last_exon_end - node2_first_exon_start
-            )
-            return (
-                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
-            )
-
-    return False
-
-
-def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-    node1: Node,
-    node2: Node,
-) -> bool:
-    """Check if two end nodes can be merged or not.
-
-    node1 is tail node, node2 is tail node
-    check if they can be merged.
-
-    :param node1:  node1
-    :param node2:  node2
-    :return:  True if two nodes are merged, otherwise False
-
-    .. note::
-
-        -> [node1]
-        -> [node2]
-    """
-    if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
-
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
-    if node1.is_polya and node2.is_polya:
-        return (
-            node1.prev_breakpoint == node2.prev_breakpoint
-            and node1_first_exon_start == node2_first_exon_start
-            and node1_last_exon_end == node2_last_exon_end
-        )
-
-    elif node1.is_polya and not node2.is_polya:
-        if node1.strand == "+":
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end >= node2_last_exon_end
-            )
-        else:
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_last_exon_end == node2_last_exon_end
-                and node1_first_exon_start <= node2_first_exon_start
-            )
-    elif not node1.is_polya and node2.is_polya:
-        if node1.strand == "+":
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end <= node2_last_exon_end
-            )
-        else:
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_last_exon_end == node2_last_exon_end
-                and node1_first_exon_start >= node2_first_exon_start
-            )
-
-    elif not node1.is_polya and not node2.is_polya:
-        if node1.strand == "+":
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
-            )
-        else:
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_last_exon_end == node2_last_exon_end
-            )
-
-    return False
-
-
-def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-    node1: Node,
-    node2: Node,
-) -> bool:
-    """Check if start node can be merged with a middle node or not.
-
-    node1 is start node, node2 is middle node
-    check if they can be merged.
-
-    :param node1:  node1
-    :param node2:  node2
-    :return:  True if two nodes are merged, otherwise False
-
-    .. note::
-
-             [ node1 ] ->
-        -> [  node2  ] ->
-    """
-    if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
-
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
-    if node1.strand == "+":
-        return (
-            node1_last_exon_end == node2_last_exon_end
-            and node1_first_exon_start >= node2_first_exon_start
+    # merge condition is true with same number of exons
+    if len(updated_node.exons) < len(current_node.exons):
+        _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
+            updated_node, current_node
         )
     else:
-        return (
-            node1_first_exon_start == node2_first_exon_start
-            and node1_last_exon_end <= node2_last_exon_end
+        _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
+            updated_node, current_node
         )
 
 
-def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-    node1: Node,
-    node2: Node,
-) -> bool:
-    """Check if end node can be merged with a middle node or not.
+def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
+    updated_node: Node, current_node: Node
+) -> None:
+    """Update exon coordinates of the updated node based on current node.
 
-    node1 is tail node, node2 is middle node
-    check if they can be merged.
+    Two nodes with different number of exons
 
-    :param node1:  node1
-    :param node2:  node2
-    :return:  True if two nodes are merged, otherwise False
-
-    .. note::
-
-        -> [ node1 ]
-        -> [  node2  ] ->
+    :param updated_node: node has been inserted into graph
+    :param current_node: node has not been inserted into graph
+    :return: None
     """
-    if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+    updated_node.exons, current_node.exons = current_node.exons, updated_node.exons
+    updated_node._introns, current_node.exons = (
+        current_node._introns,
+        updated_node._introns,
+    )
 
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
+    _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
+        updated_node, current_node
+    )
 
-    if node1.is_polya:
-        return False
 
-    if node1.strand == "+":
-        return (
-            node1_first_exon_start == node2_first_exon_start
-            and node1_last_exon_end <= node2_last_exon_end
-        )
-    else:
-        return (
-            node1_last_exon_end == node2_last_exon_end
-            and node1_first_exon_start >= node2_first_exon_start
-        )
+def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
+    updated_node: Node, current_node: Node
+) -> None:
+    """Update exon coordinates of the updated node based on current node.
+
+    Two nodes with same number of exons
+
+    :param updated_node:  node has been inserted into graph
+    :param current_node: node has not been inserted into graph
+    :return: None
+    """
+    # update exon coordinates
+    updated_node.exons[0][0] = updated_node.ref_start = min(  # type: ignore
+        updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
+    )
+    updated_node.exons[-1][1] = updated_node.ref_end = max(  # type: ignore
+        updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
+    )
+    # update sr
+    updated_node.update_sr(current_node.sr)
+    # update novel insertion ao
+    if updated_node.insertion_info and isinstance(
+        updated_node.insertion_info[1], NovelInsertion
+    ):
+        updated_node.insertion_info[1].increment_ao()
+
+    update_node_with_other_node(
+        updated_node,
+        current_node,
+        (
+            "sv_type",
+            "prev_sv_type",
+            "splicing_code",
+            "annotation_code",
+            "genes",
+            "prev_breakpoint",
+            "next_breakpoint",
+            "modes",
+        ),
+    )
+    # update query name
+    updated_node.query_name += "," + current_node.query_name
 
 
 def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:

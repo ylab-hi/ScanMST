@@ -2,6 +2,7 @@
 """Module for BLAT.
 
 @Filename:    blat.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/15/21 2:00 PM
 """
@@ -15,8 +16,8 @@ from typing import Any
 from typing import List
 from typing import Tuple
 
-import psutil  # type: ignore
-from Bio import SearchIO  # type: ignore
+import psutil
+from Bio import SearchIO
 from loguru import logger
 
 from .basicClass import Insertion

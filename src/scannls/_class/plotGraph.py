@@ -2,6 +2,7 @@
 """Plot Graphs.
 
 @Filename:    plotGraph.py
+@Author:      YangyangLi
 @contact:     li002252@umn.edu
 @license:     MIT Licence
 @Time:        1/28/22 8:46 PM
@@ -9,7 +10,7 @@
 from typing import Any
 from typing import Dict
 
-import networkx as nx  # type: ignore
+import networkx as nx
 
 from .basicClass import Node
 

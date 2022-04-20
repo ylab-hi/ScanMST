@@ -1,6 +1,7 @@
 """Writer for Fasta files and GTF files for Series object.
 
 @Filename:    writer.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """

@@ -9,34 +9,98 @@
 """
 import argparse
 import textwrap
+from dataclasses import dataclass
+from typing import Any
+from typing import Optional
 
 from scannls import __version__
 
 
+@dataclass
+class DefaultOptions:
+    """Cli default options."""
+
+    input: str
+    ref: str
+    gtf: str
+    output: str
+    two_bit: str
+    support_reads: int = 1
+    splice_bin: int = 5
+    mapq: int = 15
+    noncanonical: bool = False
+    closed: bool = True
+    nsleep: bool = False
+    log: str = "info"
+    parallel: int = 1
+    port: int = 88888
+    min_soft_seg_len: int = 200
+    max_allowed_nm: int = 60
+    ident_cutoff: float = 0.99
+    soft_len: int = 5
+    mismatch: int = 3
+    alignment_fraction: float = 0.8
+    long_indel_length: int = 5
+    substitutions_num: int = 3
+    substitutions_fraction: float = 0.2
+    indel_fraction: float = 0.2
+
+
+class RichArgParser(argparse.ArgumentParser):
+    """RichArgParser."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """RichArgParser."""
+        from rich.console import Console
+
+        self.console = Console()
+        super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def _color_message(message: str, color: str = "green") -> str:
+        """Color message."""
+        import re
+
+        pattern = re.compile(r"(?P<arg>-{1,2}[-|\w]+)")
+        return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
+
+    def _print_message(self, message: Optional[str], file: Any = None) -> None:
+        if message:
+            self.console.print(self._color_message(message))
+
+
+class RichHelpFormatter(argparse.HelpFormatter):
+    """RichHelpFormatter."""
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        """RichHelpFormatter."""
+        super().__init__(*args, max_help_position=42, **kwargs)  # type: ignore
+
+
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="ScanNLS: Nonlinear splicing (NLS) events identification using transcriptomic"
-        " long-reads data",
+    parser = RichArgParser(
+        description="[red]scannls[/] :rocket: Nonlinear splicing "
+        "(NLS) events identification using transcriptomic"
+        " long reads data",
         epilog=textwrap.dedent(
-            """Authors: Ting-You Wang and Yangyang Li, Hormel Institute,
+            """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
             University of Minnesota, 2022"""
         ),
+        formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
-        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
 
     parser.add_argument(
-        "-i",
         "--input",
         action="store",
         dest="input",
-        help="Input BAM file",
+        help="input BAM file",
         required=True,
     )
     parser.add_argument(
-        "-r",
         "--ref",
         action="store",
         dest="ref",
@@ -44,7 +108,6 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-g",
         "--gtf",
         action="store",
         dest="gtf",
@@ -52,7 +115,6 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-o",
         "--output",
         action="store",
         dest="output",
@@ -65,40 +127,31 @@ def parse_args() -> argparse.ArgumentParser:
         dest="support_reads",
         type=int,
         help="minimum number of support reads for reporting NLS (default: %(default)s)",
-        default=1,
+        default=DefaultOptions.support_reads,
     )
     parser.add_argument(
-        "-s",
-        "--splice_bin",
+        "--splice-bin",
         action="store",
         dest="splice_bin",
         type=int,
         help="splice site bin size (default: %(default)s)",
-        default=5,
+        default=DefaultOptions.splice_bin,
     )
     parser.add_argument(
-        "-m",
         "--mapq",
         action="store",
         dest="mapq",
         type=int,
         help="minimum MAPQ of reads for calling NLS (default: %(default)s)",
-        default=15,
+        default=DefaultOptions.mapq,
     )
+
     parser.add_argument(
-        "-n",
-        "--noncanonical",
-        action="store_true",
-        dest="noncanonical",
-        default=False,
-        help="Considering Non-canonical spliced sites",
-    )
-    parser.add_argument(
-        "--log_level",
+        "--log-level",
         action="store",
         dest="log",
-        choices=["info", "debug", "trace", "warning", "error", "critical"],
-        default="info",
+        choices=["info", "debug", "trace"],  # "warning", "error", "critical"
+        default=DefaultOptions.log,
         help="set log level (default: %(default)s)",
     )
     parser.add_argument(
@@ -106,7 +159,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="parallel",
         type=int,
-        default=1,
+        default=DefaultOptions.parallel,
         help="set working mode in processor (default: %(default)s)",
     )
     parser.add_argument(
@@ -117,43 +170,41 @@ def parse_args() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
+        "--non-can",
+        action="store_true",
+        dest="noncanonical",
+        default=DefaultOptions.noncanonical,
+        help="considering Non canonical spliced sites  (default: %(default)s)",
+    )
+    parser.add_argument(
         "--nclosed",
         action="store_false",
         dest="closed",
-        default=True,
+        default=DefaultOptions.closed,
         help="close BLAT server when job has done (default: %(default)s)",
     )
     parser.add_argument(
         "--nsleep",
         action="store_false",
         dest="nsleep",
-        default=True,
-        help="If sleep randomly before starting BLAT server (default: %(default)s)",
+        default=DefaultOptions.nsleep,
+        help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
     parser.add_argument(
-        "-p",
         "--port",
         action="store",
         dest="port",
         type=int,
         help="port for BLAT server (default: %(default)s)",
-        default=88888,
+        default=DefaultOptions.port,
     )
     parser.add_argument(
-        "--min_soft_seg_len",
-        action="store",
-        dest="min_soft_seg_len",
-        type=int,
-        help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
-        default=200,
-    )
-    parser.add_argument(
-        "--max_allowed_nm",
+        "--max-allowed-nm",
         action="store",
         dest="max_allowed_nm",
         type=int,
-        help="Maximum allowed NM to keep AS tag (default: %(default)s)",
-        default=60,
+        help="maximum allowed NM to keep AS tag (default: %(default)s)",
+        default=DefaultOptions.max_allowed_nm,
     )
     parser.add_argument(
         "--identity",
@@ -161,57 +212,43 @@ def parse_args() -> argparse.ArgumentParser:
         dest="ident_cutoff",
         type=float,
         help="blat_ident_pct_cutoff (default: %(default)s)",
-        default=0.99,
+        default=DefaultOptions.ident_cutoff,
     )
-    parser.add_argument(
-        "--tmp",
-        action="store",
-        dest="tmp_dir",
-        type=str,
-        help="BLAT temporary directory (default: %(default)s)",
-        default="/tmp",
-    )
+
     # Reads filter parameters
     parser.add_argument(
-        "--long_indel_length",
+        "--long-indel-length",
         action="store",
         dest="long_indel_length",
         type=int,
-        default=5,
-        help="The length cutoff of defining long indels in the reads (default: %(default)s)",
+        default=DefaultOptions.long_indel_length,
+        help="the length cutoff of defining long indel in the reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--substitutions_num",
+        "--substitution-num",
         action="store",
         dest="substitutions_num",
         type=int,
-        default=5,
-        help="The allowed maximum substitution number in the reads (default: %(default)s)",
+        default=DefaultOptions.substitutions_num,
+        help="the allowed maximum substitution number in the reads (default: %(default)s)",
     )
+
     parser.add_argument(
-        "--substitutions_fraction",
+        "--indel-fraction",
         action="store",
-        dest="substitutions_fraction",
+        dest="indel_fraction",
         type=float,
-        default=0.2,
-        help="The allowed maximum substitution fraction in the reads (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--indels_fraction",
-        action="store",
-        dest="indels_fraction",
-        type=float,
-        default=0.2,
-        help="The allowed maximum long indels fraction in the reads (default: %(default)s)",
+        default=DefaultOptions.indel_fraction,
+        help="the allowed maximum long indel fraction in the reads (default: %(default)s)",
     )
     # SR Rescuer parameters
     parser.add_argument(
-        "--soft_len",
+        "--soft-len",
         action="store",
         dest="soft_len",
         type=int,
         help="minimum softclipped segment length to be rescued (default: %(default)s)",
-        default=5,
+        default=DefaultOptions.soft_len,
     )
     parser.add_argument(
         "--mismatch",
@@ -219,23 +256,31 @@ def parse_args() -> argparse.ArgumentParser:
         dest="mismatch",
         type=int,
         help="maximum allowed mismatch bases of rescued segment (default: %(default)s)",
-        default=3,
+        default=DefaultOptions.mismatch,
     )
     parser.add_argument(
-        "-a",
-        "--alignment_fraction",
+        "--min-soft-seg-len",
+        action="store",
+        dest="min_soft_seg_len",
+        type=int,
+        help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
+        default=DefaultOptions.min_soft_seg_len,
+    )
+    parser.add_argument(
+        "--alignment-fraction",
         action="store",
         dest="alignment_fraction",
         type=float,
-        help="minimal fraction of aligned part for smith-waterman local alignment (default: %(default)s)",
-        default=0.8,
+        help="minimal fraction of aligned part for smith waterman local alignment (default: %(default)s)",
+        default=DefaultOptions.alignment_fraction,
     )
     parser.add_argument(
-        "--prune_threshold",
+        "--substitution-fraction",
         action="store",
-        dest="prune_threshold",
-        type=int,
-        help="splice graph pruning length threshold (default: %(default)s)",
-        default=10,
+        dest="substitutions_fraction",
+        type=float,
+        default=DefaultOptions.substitutions_fraction,
+        help="the allowed maximum substitution fraction in the reads (default: %(default)s)",
     )
+
     return parser

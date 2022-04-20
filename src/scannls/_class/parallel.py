@@ -2,6 +2,7 @@
 """Module for parallel worker.
 
 @Filename:    parallel.py
+@Author:      YangyangLi
 @license:     MIT Licence
 @Time:        12/15/21 1:58 PM
 """
@@ -11,7 +12,7 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 
-from tqdm import tqdm  # type: ignore
+from tqdm import tqdm
 
 from .type import LoggerType
 

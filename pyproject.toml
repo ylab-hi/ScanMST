@@ -27,6 +27,7 @@ HTSeq = "^2.0.1"
 pyfaidx = "^0.6.4"
 psutil = "^5.9.0"
 loguru = "^0.6.0"
+rich = "^12.2.0"
 tqdm = "^4.64.0"
 networkx = "^2.8"
 pybind11 = "^2.9.2"
@@ -78,6 +79,7 @@ show_error_codes = true
 show_error_context = true
 exclude = "cppext"
 allow_untyped_calls = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 norecursedirs = ["cppext"]
