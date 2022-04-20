@@ -23,6 +23,7 @@ def infer_nls_from_connected_reads(
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
     logger: LoggerType,
+    microinsertion_cutoff: int = 20,
 ) -> Any:
     """Infer NLS event from connected reads.
 
@@ -39,6 +40,7 @@ def infer_nls_from_connected_reads(
         (GTF file)
     :param motif_required: considering canonical splice sites only OR considering both canonical
         and noncanonical splice sites
+    :param microinsertion_cutoff: threshold of dicarding NLS event with long microinsertion (>20bp)
     :return: putative event from reads-pair
 
     .. note:: putative event
@@ -96,6 +98,7 @@ def infer_nls_from_connected_reads(
                 gene_iv,
                 motif_required,
                 logger,
+                microinsertion_cutoff,
             )
         else:  # lt_strand != rt_strand
             # IDUP and INV detection in this category
@@ -110,6 +113,7 @@ def infer_nls_from_connected_reads(
                 gene_iv,
                 motif_required,
                 logger,
+                microinsertion_cutoff,
             )
     else:  # lt_chrm != rt_chrm
         # If using noncanonical splice site, return NA
@@ -133,6 +137,7 @@ def infer_nls_from_connected_reads(
                 gene_iv,
                 motif_required,
                 logger,
+                microinsertion_cutoff,
             )
         else:  # lt_strand != rt_strand
             return diff_chrom_diff_strand_handler(
@@ -146,4 +151,5 @@ def infer_nls_from_connected_reads(
                 gene_iv,
                 motif_required,
                 logger,
+                microinsertion_cutoff,
             )

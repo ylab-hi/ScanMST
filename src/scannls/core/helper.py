@@ -598,6 +598,7 @@ def same_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
+    microinsertion_cutoff=20,
     is_reverse=False,
 ):
     """Same chrom same strand mode 21 handler."""
@@ -619,6 +620,10 @@ def same_chrom_same_strand_mode21_handler(
         )
 
         logger.trace(f"{bp_region_seq_len=}")
+
+        if bp_region_seq_len > microinsertion_cutoff:
+            logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
+            return noreturn
 
         if bp_region_seq_len > 0:
             query_offset = read_lt.reference_match_size + read_rt.reference_match_size
@@ -824,6 +829,7 @@ def same_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
+    microinsertion_cutoff=20,
 ):
     """Handler for same chrom and same strand."""
     logger.trace("same_chrom_same_strand_handler takes over the task.")
@@ -839,6 +845,7 @@ def same_chrom_same_strand_handler(
             gene_iv,
             motif_required,
             logger,
+            microinsertion_cutoff,
         )
     elif lt_mode == 1 and rt_mode == 2:
         return same_chrom_same_strand_mode21_handler(
@@ -852,6 +859,7 @@ def same_chrom_same_strand_handler(
             gene_iv,
             motif_required,
             logger,
+            microinsertion_cutoff,
             is_reverse=True,
         )
 
@@ -867,6 +875,7 @@ def same_chrom_diff_strand_handler(
     gene_iv,
     motif_required,
     logger,
+    microinsertion_cutoff=20,
 ):
     """Handler for same chrom and different strand."""
     logger.trace("same_chrom_diff_strand_handler takes over the task.")
@@ -903,6 +912,10 @@ def same_chrom_diff_strand_handler(
             - read_rt.read_match_size
         )
     logger.trace(f"{bp_region_seq_len=}")
+
+    if bp_region_seq_len > microinsertion_cutoff:
+        logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
+        return noreturn
 
     if ra_bp == sa_bp:  # inverted duplication (IDUP)
         # allow one read with noncanonical splice site for IDUP
@@ -1026,6 +1039,7 @@ def diff_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
+    microinsertion_cutoff=20,
     is_reverse=False,
 ):
     """Different chrom same stand mode 21 handler."""
@@ -1045,6 +1059,11 @@ def diff_chrom_same_strand_mode21_handler(
         - read_rt.read_match_size
     )
     logger.trace(f"{bp_region_seq_len=}")
+
+    if bp_region_seq_len > microinsertion_cutoff:
+        logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
+        return noreturn
+
     lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
     rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
     _nls, _anno, _can = splicing_confirmation(
@@ -1106,6 +1125,7 @@ def diff_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
+    microinsertion_cutoff=20,
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")
@@ -1121,6 +1141,7 @@ def diff_chrom_same_strand_handler(
             gene_iv,
             motif_required,
             logger,
+            microinsertion_cutoff,
         )
     elif lt_mode == 1 and rt_mode == 2:
         return diff_chrom_same_strand_mode21_handler(
@@ -1134,6 +1155,7 @@ def diff_chrom_same_strand_handler(
             gene_iv,
             motif_required,
             logger,
+            microinsertion_cutoff,
             is_reverse=True,
         )
 
@@ -1149,6 +1171,7 @@ def diff_chrom_diff_strand_handler(
     gene_iv,
     motif_required,
     logger,
+    microinsertion_cutoff=20,
 ):
     """Diff chrom different strand handler."""
     logger.trace("diff_chrom_diff_strand_handler takes over the task.")
@@ -1188,6 +1211,11 @@ def diff_chrom_diff_strand_handler(
         )
 
     logger.trace(f"{bp_region_seq_len=}")
+
+    if bp_region_seq_len > microinsertion_cutoff:
+        logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
+        return noreturn
+
     lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
     rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
     _nls, _anno, _can = splicing_confirmation(

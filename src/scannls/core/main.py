@@ -132,6 +132,7 @@ class BamScanner:
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
                     sup_aln_cigar, md_tag, self.long_indel_length
                 )
+
                 subs_fraction = 0 if nm == 0 else num_of_subs / nm
                 if (
                     not (
@@ -144,7 +145,11 @@ class BamScanner:
                     self.representative_alignments_new_cigar[
                         f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     ] = sup_aln_cigar
-
+                else:
+                    self.logger.trace(
+                        f"{read.query_name=} does not pass the substitutions/indel cutoff. "
+                        f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}"
+                    )
         return self.representative_alignments_new_cigar
 
 

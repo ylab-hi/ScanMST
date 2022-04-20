@@ -2,7 +2,7 @@
 """Type of the scannls.
 
 @Filename:    type.py
-@Author:      YangyangLi
+@Author:      Yangyang Li
 @license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
