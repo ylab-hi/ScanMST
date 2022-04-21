@@ -37,6 +37,7 @@ class DefaultOptions:
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 60
     ident_cutoff: float = 0.99
+    prune_threshold: int = 10
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8
@@ -241,6 +242,15 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.indel_fraction,
         help="the allowed maximum long indel fraction in the reads (default: %(default)s)",
     )
+    parser.add_argument(
+        "--prune-threshold",
+        action="store",
+        dest="prune_threshold",
+        type=int,
+        default=DefaultOptions.prune_threshold,
+        help="splice graph pruning length threshold (default: %(default)s)",
+    )
+
     # SR Rescuer parameters
     parser.add_argument(
         "--soft-len",

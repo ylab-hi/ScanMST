@@ -102,7 +102,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             options.alignment_fraction,
             logger,
         )
-        splice_graph = SpliceGraph(logger, rescuer)
+        splice_graph = SpliceGraph(logger, rescuer, options.prune_threshold)
         clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
         # cliques is generator
 
