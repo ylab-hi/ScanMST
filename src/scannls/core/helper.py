@@ -494,7 +494,7 @@ def blat2chimeric_alignment(
                     read_length - in_seq_len, __cigar_sa_partial
                 )  # SM
         valid_cigar_sa = cigar_validity(__cigar_sa)
-        if __mapq < mapq_cutoff and int(__nm_sa) < max_allowed_nm:
+        if __mapq >= mapq_cutoff and int(__nm_sa) < max_allowed_nm:
             chimeric_aln_str = "{},{},{},{},{},{};".format(
                 __chrm_sa, __pos_sa, __strand_sa, valid_cigar_sa, __mapq, __nm_sa
             )
