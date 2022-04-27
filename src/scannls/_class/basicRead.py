@@ -207,7 +207,7 @@ class Read:
             introns = [[x, y] for x, y in zip(_positions[::2], _positions[1::2])]
         return exons, introns
 
-    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.8) -> bool:
+    def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
         """Check whether the fraction of canonical splice site usage.
 
         in the read is bigger than 'fraction_cutoff' or not.
