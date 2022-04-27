@@ -307,6 +307,8 @@ def _scan_bam_helper(
 
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
+        is_set_tag = 0
+
         if (
             read.mapq >= mapq_cutoff
             and not read.is_secondary
@@ -328,12 +330,12 @@ def _scan_bam_helper(
                 # supplementary alignments
                 for _aln in chimeric_alns:
                     (
-                        __chr_sa,
-                        __pos_sa,
-                        __strand_sa,
+                        chr_sa,
+                        pos_sa,
+                        strand_sa,
                         __cigar_sa,
-                        __mapq_sa,
-                        __nm_sa,
+                        mapq_sa,
+                        nm_sa,
                     ) = _aln.split(",")
                     left_mat = pat_left_s.search(__cigar_sa)
                     right_mat = pat_right_s.search(__cigar_sa)
@@ -343,21 +345,13 @@ def _scan_bam_helper(
 
                     tgt_key = f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     if tgt_key in representative_alignments_new_cigar:
-                        __updated_cigar = representative_alignments_new_cigar[tgt_key]
+                        updated_cigar = representative_alignments_new_cigar[tgt_key]
                         # discard supplementary alignments with too many mismatches or lower MAPQ
                         if not (
-                            int(__nm_sa) > max_allowed_nm
-                            or int(__mapq_sa) < mapq_cutoff
+                            int(nm_sa) > max_allowed_nm or int(mapq_sa) < mapq_cutoff
                         ):
                             updated_chimeric_alns.append(
-                                "{},{},{},{},{},{}".format(
-                                    __chr_sa,
-                                    __pos_sa,
-                                    __strand_sa,
-                                    __updated_cigar,
-                                    __mapq_sa,
-                                    __nm_sa,
-                                )
+                                f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}"
                             )
                 if len(updated_chimeric_alns) == 0:
                     read.set_tag("SA", None)
@@ -402,6 +396,7 @@ def _scan_bam_helper(
                             f"does not has SA, after BLAT it has one SA tag"
                         )
                         read.set_tag("SA", chimeric_aln_str)
+                        is_set_tag = 1
                         after_set_sa_chimeric_alns_num = 1
 
                         # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
@@ -445,7 +440,7 @@ def _scan_bam_helper(
                         if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
                             nls_event_list.append(event)
 
-                    chimeric_alns_num += num_added_reads
+                    chimeric_alns_num += num_added_reads + is_set_tag
                     if nls_event_list and (
                         len(nls_event_list) + 1 == chimeric_alns_num
                     ):
