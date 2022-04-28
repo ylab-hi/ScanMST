@@ -162,7 +162,10 @@ class Insertion(Read):
 
     def __repr__(self):
         """Represent Insertion object."""
-        return f"{self.__class__.__name__}({self.hit_num=})"
+        return (
+            f"{self.__class__.__name__}({self.hit_num=},"
+            f"{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand})"
+        )
 
     def update_cigarstring_sms(
         self, sms: Iterable[int], source_s: str, source_strand: str
@@ -1056,6 +1059,7 @@ class Event:
             if (
                 read.ref_start == self.read1_ref_start
                 and read.ref_end == self.read1_ref_end
+                and read.strand == self.strand1
             ):
                 return read
         raise ReadNotFoundError
@@ -1066,6 +1070,7 @@ class Event:
             if (
                 read.ref_start == self.read2_ref_start
                 and read.ref_end == self.read2_ref_end
+                and read.strand == self.strand2
             ):
                 return read
         raise ReadNotFoundError
