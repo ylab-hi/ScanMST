@@ -65,6 +65,7 @@ pynvim = "^0.4.3"
 flake8-2020 = "^1.6.1"
 flake8-alfred = "^1.1.1"
 cohesion = "^1.0.0"
+tqdm = "^4.64.0"
 
 [tool.poetry.build]
 script = "build.py"
