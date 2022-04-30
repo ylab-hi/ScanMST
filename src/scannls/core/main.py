@@ -552,4 +552,5 @@ def scanbam_run(
             contig_series_list = result[contig]
             intact_series_list.extend(contig_series_list)
 
-    return intact_series_list, bam_scanner.in_bam
+    bam_scanner.in_bam.close()
+    return intact_series_list, bam_scanner.header
