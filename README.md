@@ -23,15 +23,9 @@
 <summary> Blat </summary>
 </details>
 
-**htslib >= 1.12**
-
-**g++ >= 9.4.0**
-
-**gcc >= 9.4.0**
-
 ## Installation
 
-You can install _ScanNLS_ via pip* from PyPI*:
+You can install _ScanNLS_ via **pip** from **PyPI**:
 
 ```console
 $ pip install scannls
@@ -61,8 +55,5 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
 [file an issue]: https://github.com/{{cookiecutter.github_user}}/{{cookiecutter.project_name}}/issues
 [pip]: https://pip.pypa.io/
-
-% github-only
-
 [contributor guide]: CONTRIBUTING.md
 [command-line reference]: https://{{cookiecutter.project_name}}.readthedocs.io/en/latest/usage.html
