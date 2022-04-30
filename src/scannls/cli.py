@@ -125,7 +125,9 @@ def parse_splice_graph_for_cliques_par(
         options.parallel,
     )
     cliques = [[list(clique)] for clique in cliques]
-    result = parallel_workers.map(cliques)
+    result = parallel_workers.map(
+        cliques, chunksize=len(cliques) // parallel_workers.n_jobs
+    )
 
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
@@ -207,11 +209,12 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         cliques = clique_finder.find_clique()
 
         writers = get_writers(options.output, options.ref, in_bam_header, logger)
-
-        if options.parallel == 1:
-            parse_splice_graph_for_cliques_seq(cliques, writers, options, logger)
-        else:
-            parse_splice_graph_for_cliques_par(cliques, writers, options, logger)
+        parse_splice_graph_for_cliques = (
+            parse_splice_graph_for_cliques_seq
+            if options.parallel == 1
+            else parse_splice_graph_for_cliques_par
+        )
+        parse_splice_graph_for_cliques(cliques, writers, options, logger)
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
