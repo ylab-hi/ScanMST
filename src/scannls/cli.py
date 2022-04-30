@@ -40,7 +40,7 @@ def get_writers(
     logger: LoggerType,
 ) -> Writers:
     """Get writers."""
-    fasta_writer = FastaWriter(f"{output_prefix}.fa", ref_path, logger)
+    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, logger)
     gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
@@ -149,7 +149,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         level=options.log.upper(),
         enqueue=True,
         colorize=True,
-        backtrace=True,
+        backtrace=False,
         diagnose=True,
     )
 
