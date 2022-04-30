@@ -28,7 +28,6 @@ pyfaidx = "^0.6.4"
 psutil = "^5.9.0"
 loguru = "^0.6.0"
 rich = "^12.3.0"
-tqdm = "^4.64.0"
 networkx = "^2.8"
 pybind11 = "^2.9.2"
 
@@ -63,6 +62,10 @@ flake8-comprehensions = "^3.7.0"
 flake8-eradicate = "^1.2.1"
 flake8-simplify = "^0.19.2"
 pynvim = "^0.4.3"
+flake8-2020 = "^1.6.1"
+flake8-alfred = "^1.1.1"
+cohesion = "^1.0.0"
+tqdm = "^4.64.0"
 
 [tool.poetry.build]
 script = "build.py"

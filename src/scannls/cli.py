@@ -7,9 +7,12 @@
 @Time:        1/11/22 4:28 PM
 """
 import argparse
+import os
 import sys
 import tempfile
 import time
+from functools import partial
+from typing import Any
 from typing import Union
 
 from loguru import logger
@@ -19,17 +22,126 @@ from . import CliqueFinder
 from . import DefaultOptions
 from . import FastaWriter
 from . import GTFWriter
+from . import LoggerType
+from . import ParallelWorker
 from . import SpliceGraph
-from . import SRRescuer
 from . import VCFWriter
+from ._class.myLogger import MyLogger
 from ._class.writer import Writers
 from .core.main import scanbam_run
 from .utils import external_tool_checking
 from .utils import sleep
 
 
+def get_writers(
+    output_prefix: str,
+    ref_path: str,
+    bam_header: Any,
+    logger: LoggerType,
+) -> Writers:
+    """Get writers."""
+    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, logger)
+    gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
+    vcf_writer = VCFWriter(
+        f"{output_prefix}.vcf",
+        ref_path,
+        bam_header,
+        logger,
+    )
+
+    return Writers((fasta_writer, gtf_writer, vcf_writer))
+
+
+def parse_splice_graph_for_cliques_seq(
+    cliques: Any,
+    writers: Writers,
+    options: Union[DefaultOptions, argparse.Namespace],
+    logger: LoggerType,
+) -> None:
+    """Parse splice graph for cliques."""
+    splice_graph = SpliceGraph.create_splice_graph(
+        options.input,
+        options.mapq,
+        options.soft_len,
+        options.mismatch,
+        options.alignment_fraction,
+        logger,
+        options.prune_threshold,
+    )
+
+    with writers.open() as _:
+        for ind, clique in enumerate(cliques, 1):
+            logger.debug(f"processing clique {ind}")
+            for series in splice_graph(clique, ind, is_plot=False):
+                if len(series) == 1:
+                    logger.warning(
+                        f"Single Series {ind}: {series}{series[0].query_name}"
+                    )
+                if series.is_all_node_sr_higher_than_threshold(options.support_reads):
+                    logger.debug(f"Output Clique{ind}: {series}")
+                    writers.write_series(series, ind)
+
+
+def _parse_splice_graph_for_cliques_par(
+    cliques: Any, options: Union[DefaultOptions, argparse.Namespace]
+):
+    """Parse splice graph for cliques."""
+    from loguru import logger
+
+    logger = MyLogger(f"PID-{os.getpid()}", logger)  # type: ignore
+
+    splice_graph = SpliceGraph.create_splice_graph(
+        options.input,
+        options.mapq,
+        options.soft_len,
+        options.mismatch,
+        options.alignment_fraction,
+        logger,
+        options.prune_threshold,
+    )
+
+    result_series = []
+    for ind, clique in enumerate(cliques, 1):
+        series_list = []
+        for series in splice_graph(clique, ind, is_plot=False):
+            series_list.append(series)
+        result_series.append(series_list)
+    return result_series
+
+
+def parse_splice_graph_for_cliques_par(
+    cliques: Any,
+    writers: Writers,
+    options: Union[DefaultOptions, argparse.Namespace],
+    logger: LoggerType,
+) -> None:
+    """Parse splice graph for cliques."""
+    parallel_workers = ParallelWorker(
+        partial(
+            _parse_splice_graph_for_cliques_par,
+            options=options,
+        ),
+        logger,
+        options.parallel,
+    )
+    cliques = [[list(clique)] for clique in cliques]
+    result = parallel_workers.map(cliques)
+
+    with writers.open() as _:
+        for ind, clique in enumerate(result, 1):
+            for series in clique[0]:  # reduce list depth
+                if len(series) == 1:
+                    logger.warning(
+                        f"Single Series {ind}: {series}{series[0].query_name}"
+                    )
+                if series.is_all_node_sr_higher_than_threshold(options.support_reads):
+                    logger.debug(f"Output Clique{ind}: {series}")
+                    writers.write_series(series, ind)
+
+
 def cli(options: Union[argparse.Namespace, DefaultOptions]):
     """Cli function."""
+    start = time.perf_counter()
     # add logger
     logger.remove()
     logger.add(
@@ -37,23 +149,19 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         level=options.log.upper(),
         enqueue=True,
         colorize=True,
-        backtrace=True,
+        backtrace=False,
         diagnose=True,
     )
 
     # check external tools used
     external_tool_checking(logger)
 
-    if options.parallel > 1:
-        logger.info("scannls starts running in parallel mode")
-    else:
-        logger.info("scannls starts running in normal mode")
-
+    running_mode = "parallel" if options.parallel > 1 else "normal"
+    logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.closed=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
 
-    start = time.time()
     blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
     if options.nsleep:
@@ -63,7 +171,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_series_list, in_bam_io_object = scanbam_run(
+        intact_series_list, in_bam_header = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
@@ -93,55 +201,23 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             raise SystemExit
 
         logger.info(f"Total Series: {intact_series_list_len}")
-        rescuer = SRRescuer(
-            in_bam_io_object,
-            options.input,
-            options.mapq,
-            options.soft_len,
-            options.mismatch,
-            options.alignment_fraction,
-            logger,
-        )
-        splice_graph = SpliceGraph(logger, rescuer, options.prune_threshold)
+
         clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
         # cliques is generator
-
-        fasta_writer = FastaWriter(f"{options.output}.fasta", options.ref, logger)
-        gtf_writer = GTFWriter(f"{options.output}.gtf", logger)
-        vcf_writer = VCFWriter(
-            f"{options.output}.vcf",
-            options.ref,
-            in_bam_io_object.header.as_dict(),
-            logger,
-        )
-
-        writers = Writers((fasta_writer, gtf_writer, vcf_writer))
-
         cliques = clique_finder.find_clique()
 
-        with writers.open() as _:
-            for ind, clique in enumerate(cliques, 1):
-                logger.debug(f"processing clique {ind}")
-                for series in splice_graph(clique, ind, is_plot=False):
-                    if len(series) == 1:
-                        logger.warning(
-                            f"Single Series {ind}: {series}{series[0].query_name}"
-                        )
-                    if series.is_all_node_sr_higher_than_threshold(
-                        options.support_reads
-                    ):
-                        logger.debug(f"Output Clique{ind}: {series}")
-                        writers.write_series(series, ind)
+        writers = get_writers(options.output, options.ref, in_bam_header, logger)
 
-        in_bam_io_object.close()
+        if options.parallel == 1:
+            parse_splice_graph_for_cliques_seq(cliques, writers, options, logger)
+        else:
+            parse_splice_graph_for_cliques_par(cliques, writers, options, logger)
 
-        logger.info("ScanNLS build running done")
-        end = time.time()
-        logger.info(f"ScanNLS build takes {end - start} seconds.")
+        logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
     except KeyboardInterrupt:
         if options.closed and not blat.is_stop_server:
-            logger.info("KeyboardInterrupt")
+            logger.warning("KeyboardInterrupt")
             blat.stop_server()
             tmp_dir.cleanup()
         raise

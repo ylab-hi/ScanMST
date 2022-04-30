@@ -10,14 +10,10 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Union
-
-from pysam import AlignmentFile
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
-from .spliceGraph import SpliceGraph
 from .type import LoggerType
 from scannls import cppext
 
@@ -27,7 +23,6 @@ class SRRescuer:
 
     def __init__(
         self,
-        input_bam: AlignmentFile,
         input_bam_file: str,
         mapq_cutoff: int,
         soft_len_cutoff: int,
@@ -48,9 +43,8 @@ class SRRescuer:
             10,
         )
         self.logger = logger
-        self.in_bam = input_bam
 
-    def __call__(self, nodes_in_graph: Union[Iterable[Node], SpliceGraph]) -> None:
+    def __call__(self, nodes_in_graph: Iterable[Node]) -> None:
         """Rescue SR from soft-clipped non-chimeric reads.
 
         changed in place

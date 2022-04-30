@@ -6,7 +6,6 @@
 @license:     MIT Licence
 @Time:        2/6/22 11:43 AM
 """
-import contextlib
 import os
 from pathlib import Path
 
@@ -17,8 +16,11 @@ from scannls import DefaultOptions
 from scannls import ToolNotFoundError
 
 
-@pytest.mark.parametrize("data_name", ["INV_TDUP", "TDUP_TRA"])
-def test_cli(tmpdir, data_name, monkeypatch):
+@pytest.mark.parametrize(
+    "data_name, parallel",
+    [("INV_TDUP", 1), ("TDUP_TRA", 1), ("TDUP_TRA", 2), ("INV_TDUP", 2)],
+)
+def test_cli(tmpdir, data_name, parallel):
     """Test the CLI."""
     path = os.path.dirname(__file__)
     os.chdir(path)
@@ -33,6 +35,7 @@ def test_cli(tmpdir, data_name, monkeypatch):
         two_bit=f"{data_dir}/dummy.2bit",
         noncanonical=True,
         log="WARNING",
+        parallel=parallel,
     )
     # Test data do not use blat
     with pytest.raises(ToolNotFoundError):
@@ -46,9 +49,6 @@ def test_cli(tmpdir, data_name, monkeypatch):
             out_gtf = og.readlines()
             expect_fasta = ef.readlines()
             expect_gtf = eg.readlines()
-
-        with contextlib.suppress(OSError):
-            os.remove(f"{data_dir}/dummy.fasta.fai")
 
         assert expect_fasta[1].strip() == out_fasta[1].strip()
         assert len(expect_gtf) == len(out_gtf)
