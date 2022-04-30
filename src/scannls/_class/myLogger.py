@@ -8,8 +8,10 @@
 """
 from loguru._logger import Logger
 
+from .type import LoggerType
 
-class MyLogger:
+
+class MyLogger(LoggerType):
     """Wrapper for logger in order to use in multiprocessing.
 
     to show contig name in logging information before message.

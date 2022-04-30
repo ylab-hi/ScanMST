@@ -54,7 +54,7 @@ def get_writers(
 def parse_splice_graph_for_cliques_seq(
     cliques: Any,
     writers: Writers,
-    options: DefaultOptions,
+    options: Union[DefaultOptions, argparse.Namespace],
     logger: LoggerType,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -95,12 +95,12 @@ def _parse_splice_graph_for_cliques_par(cliques: Any, splice_graph: SpliceGraph)
 def parse_splice_graph_for_cliques_par(
     cliques: Any,
     writers: Writers,
-    options: DefaultOptions,
+    options: Union[DefaultOptions, argparse.Namespace],
 ) -> None:
     """Parse splice graph for cliques."""
     from loguru import logger
 
-    logger = MyLogger("splice", logger)
+    logger = MyLogger("splice", logger)  # type: ignore
 
     splice_graph = SpliceGraph.create_splice_graph(
         options.input,

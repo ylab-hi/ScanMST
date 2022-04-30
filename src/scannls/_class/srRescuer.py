@@ -10,12 +10,10 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Union
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
-from .spliceGraph import SpliceGraph
 from .type import LoggerType
 from scannls import cppext
 
@@ -46,7 +44,7 @@ class SRRescuer:
         )
         self.logger = logger
 
-    def __call__(self, nodes_in_graph: Union[Iterable[Node], SpliceGraph]) -> None:
+    def __call__(self, nodes_in_graph: Iterable[Node]) -> None:
         """Rescue SR from soft-clipped non-chimeric reads.
 
         changed in place
