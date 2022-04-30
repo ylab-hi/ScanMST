@@ -7,6 +7,7 @@
 @Time:        1/11/22 4:28 PM
 """
 import argparse
+import os
 import sys
 import tempfile
 import time
@@ -39,7 +40,7 @@ def get_writers(
     logger: LoggerType,
 ) -> Writers:
     """Get writers."""
-    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, logger)
+    fasta_writer = FastaWriter(f"{output_prefix}.fa", ref_path, logger)
     gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
@@ -81,8 +82,24 @@ def parse_splice_graph_for_cliques_seq(
                     writers.write_series(series, ind)
 
 
-def _parse_splice_graph_for_cliques_par(cliques: Any, splice_graph: SpliceGraph):
+def _parse_splice_graph_for_cliques_par(
+    cliques: Any, options: Union[DefaultOptions, argparse.Namespace]
+):
     """Parse splice graph for cliques."""
+    from loguru import logger
+
+    logger = MyLogger(f"PID-{os.getpid()}", logger)  # type: ignore
+
+    splice_graph = SpliceGraph.create_splice_graph(
+        options.input,
+        options.mapq,
+        options.soft_len,
+        options.mismatch,
+        options.alignment_fraction,
+        logger,
+        options.prune_threshold,
+    )
+
     result_series = []
     for ind, clique in enumerate(cliques, 1):
         series_list = []
@@ -96,37 +113,23 @@ def parse_splice_graph_for_cliques_par(
     cliques: Any,
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
+    logger: LoggerType,
 ) -> None:
     """Parse splice graph for cliques."""
-    from loguru import logger
-
-    logger = MyLogger("splice", logger)  # type: ignore
-
-    splice_graph = SpliceGraph.create_splice_graph(
-        options.input,
-        options.mapq,
-        options.soft_len,
-        options.mismatch,
-        options.alignment_fraction,
-        logger,
-        options.prune_threshold,
-    )
-
     parallel_workers = ParallelWorker(
         partial(
             _parse_splice_graph_for_cliques_par,
-            splice_graph=splice_graph,
-            support_reads=options.support_reads,
+            options=options,
         ),
         logger,
         options.parallel,
     )
-    cliques = [list(clique) for clique in cliques]
+    cliques = [[list(clique)] for clique in cliques]
     result = parallel_workers.map(cliques)
 
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
-            for series in clique:
+            for series in clique[0]:  # reduce list depth
                 if len(series) == 1:
                     logger.warning(
                         f"Single Series {ind}: {series}{series[0].query_name}"
@@ -154,7 +157,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     external_tool_checking(logger)
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
-    logger.info(f"scannls starts running in {running_mode} mode")
+    logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.closed=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
@@ -208,7 +211,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         if options.parallel == 1:
             parse_splice_graph_for_cliques_seq(cliques, writers, options, logger)
         else:
-            parse_splice_graph_for_cliques_par(cliques, writers, options)
+            parse_splice_graph_for_cliques_par(cliques, writers, options, logger)
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 

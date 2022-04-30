@@ -647,6 +647,7 @@ class Series:
             if is_add_key and (key := node.unique_key) is not None:
                 nodes_keys.add(key)
             series_instance.add_node(node)
+        series_instance.disable_blat_logger()  # support parallel processing
         return series_instance
 
     def __getitem__(self, index: int) -> Node:
