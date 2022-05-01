@@ -468,50 +468,43 @@ def blat2chimeric_alignment(
         top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff
         and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff
     ):
-        __chrm_sa, __pos_sa, __strand_sa, __cigar_sa_partial, __nm_sa = blat.psl2sam(
+        chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = blat.psl2sam(
             top_hsp, in_seq_len
         )
-        if read_strand == __strand_sa:
+        if read_strand == strand_sa:
             # same strand: different reads mode
             # MS(1) ~ SM(2) or SM(2) ~ MS(1)
-            if read_mode == 1:
-                __cigar_sa = "{}S{}".format(
-                    read_length - in_seq_len, __cigar_sa_partial
-                )  # SM
-            else:
-                __cigar_sa = "{1}{0}S".format(
-                    read_length - in_seq_len, __cigar_sa_partial
-                )  # MS
+            # SM
+            cigar_sa = (
+                f"{read_length - in_seq_len}S{cigar_sa_partial}"
+                if read_mode == 1
+                else f"{cigar_sa_partial}{read_length - in_seq_len}S"
+            )  # MS
         else:
             # opposite strand: same reads mode
             # MS(1) ~ MS(1) or SM(2) ~ SM(2)
-            if read_mode == 1:
-                __cigar_sa = "{1}{0}S".format(
-                    read_length - in_seq_len, __cigar_sa_partial
-                )  # MS
-            else:
-                __cigar_sa = "{}S{}".format(
-                    read_length - in_seq_len, __cigar_sa_partial
-                )  # SM
-        valid_cigar_sa = cigar_validity(__cigar_sa)
-        if __mapq >= mapq_cutoff and int(__nm_sa) < max_allowed_nm:
-            chimeric_aln_str = "{},{},{},{},{},{};".format(
-                __chrm_sa, __pos_sa, __strand_sa, valid_cigar_sa, __mapq, __nm_sa
+            # MS
+            cigar_sa = (
+                f"{cigar_sa_partial}{read_length - in_seq_len}S"
+                if read_mode == 1
+                else f"{read_length - in_seq_len}S{cigar_sa_partial}"
+            )  # SM
+
+        valid_cigar_sa = cigar_validity(cigar_sa)
+
+        if __mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
+            return "{},{},{},{},{},{};".format(
+                chrom_sa, pos_sa, strand_sa, valid_cigar_sa, __mapq, nm_sa
             )
-        else:
-            chimeric_aln_str = ""
 
     return chimeric_aln_str
 
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
     """Check if the two strands are compatible with the two modes."""
-    flag = False
-    if (strand1 == strand2 and mode1 != mode2) or (
+    return (strand1 == strand2 and mode1 != mode2) or (
         strand1 != strand2 and mode1 == mode2
-    ):
-        flag = True
-    return flag
+    )
 
 
 def softclipped_length_and_event_size_checker(
@@ -531,14 +524,11 @@ def softclipped_length_and_event_size_checker(
     :return: whether event_size > softclipped_length (If it is True, it will be a TDUP event)
     :rtype: bool
     """
-    flag = False
-    if mode == 2:
-        if read.lt_soft_len < event_size + bp_region_seq_len:
-            flag = True
-    else:
-        if read.rt_soft_len < event_size + bp_region_seq_len:
-            flag = True
-    return flag
+    return (
+        read.lt_soft_len < event_size + bp_region_seq_len
+        if mode == 2
+        else read.rt_soft_len < event_size + bp_region_seq_len
+    )
 
 
 def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
@@ -579,8 +569,7 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
                 bp_region_seq_len - read.rt_soft_len : -read.rt_soft_len
             ]
         bp_region_seq = "-" + bp_region_seq
-    else:
-        bp_region_seq = ""
+
     return bp_region_seq
 
 
@@ -598,7 +587,7 @@ def same_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff,
+    microinsertion_cutoff=20,
     is_reverse=False,
 ):
     """Same chrom same strand mode 21 handler."""
@@ -829,7 +818,7 @@ def same_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff,
+    microinsertion_cutoff=20,
 ):
     """Handler for same chrom and same strand."""
     logger.trace("same_chrom_same_strand_handler takes over the task.")
@@ -875,7 +864,7 @@ def same_chrom_diff_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff,
+    microinsertion_cutoff=20,
 ):
     """Handler for same chrom and different strand."""
     logger.trace("same_chrom_diff_strand_handler takes over the task.")
@@ -1039,7 +1028,7 @@ def diff_chrom_same_strand_mode21_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff,
+    microinsertion_cutoff=20,
     is_reverse=False,
 ):
     """Different chrom same stand mode 21 handler."""
@@ -1125,7 +1114,7 @@ def diff_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff,
+    microinsertion_cutoff=20,
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")
@@ -1171,7 +1160,7 @@ def diff_chrom_diff_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff,
+    microinsertion_cutoff=20,
 ):
     """Diff chrom different strand handler."""
     logger.trace("diff_chrom_diff_strand_handler takes over the task.")

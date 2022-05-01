@@ -89,7 +89,7 @@ class BamScanner:
         try:
             return header["HD"]["SO"] == "coordinate"
         except KeyError:
-            raise RuntimeError(f"Bam file {self.in_bam} is not sorted") from None
+            raise RuntimeError(f"Bam file {self.in_bam} is not sorted") from KeyError
 
     def _count_chrom_info(self, read):
         """Count the chrom and the chrom start and the chrom end."""
@@ -552,4 +552,5 @@ def scanbam_run(
             contig_series_list = result[contig]
             intact_series_list.extend(contig_series_list)
 
-    return intact_series_list, bam_scanner.in_bam
+    bam_scanner.in_bam.close()
+    return intact_series_list, bam_scanner.header

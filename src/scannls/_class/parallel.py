@@ -12,8 +12,6 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 
-from tqdm import tqdm
-
 from .type import LoggerType
 
 
@@ -58,28 +56,30 @@ class ParallelWorker:
             self.logger.warning(
                 f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
             )
-            return n_jobs  # the max processor is decided by ProcessPoolExecutor
-        else:
-            return n_jobs
+            n_jobs = current_max_processor
+        return n_jobs  # the max processor is decided by ProcessPoolExecutor
 
     def run(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """Using concurrent.future to parallel process."""
         tasks = {}
         result = {}
         self.logger.info(f"ParallelWorker: {self.n_jobs} jobs")
-        with tqdm(
-            total=len(args), desc=f"ParallelWorker[{self.func.__name__}]", unit="contig"
-        ) as pbar:
-            with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-                for key in args:
-                    self.logger.debug(f"ParallelWorker: {key} submitted")
-                    future = executor.submit(self.func, key, **kwargs)
-                    tasks[future] = key
 
-                for future in futures.as_completed(tasks):
-                    self.logger.trace(f"ParallelWorker: {tasks[future]} done")
-                    key = tasks[future]
-                    result[key] = future.result()
-                    pbar.update(1)
+        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
+            for key in args:
+                self.logger.debug(f"ParallelWorker: {key} submitted")
+                future = executor.submit(self.func, key, **kwargs)
+                tasks[future] = key
 
+            for future in futures.as_completed(tasks):
+                self.logger.trace(f"ParallelWorker: {tasks[future]} done")
+                key = tasks[future]
+                result[key] = future.result()
         return result
+
+    def map(self, *iterables, timeout=None, chunksize=1) -> Any:
+        """Using concurrent.futures to parallel process."""
+        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
+            return executor.map(
+                self.func, *iterables, timeout=timeout, chunksize=chunksize
+            )

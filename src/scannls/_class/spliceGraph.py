@@ -39,6 +39,7 @@ from .mergeCondition import (
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
+from .srRescuer import SRRescuer
 from .type import LoggerType
 
 
@@ -115,6 +116,24 @@ class SpliceGraph:
                 yield Series.create_series_from_node_list(
                     node_list, self.logger, set(), is_add_key=False
                 )
+
+    @classmethod
+    def create_splice_graph(
+        cls,
+        input_bam: str,
+        mapq: int,
+        soft_len: int,
+        mismatch: int,
+        alignment_fraction: float,
+        logger: LoggerType,
+        prune_threshold: int,
+    ) -> "SpliceGraph":
+        """Create splice graph."""
+        rescuer = SRRescuer(
+            input_bam, mapq, soft_len, mismatch, alignment_fraction, logger
+        )
+
+        return cls(logger, rescuer, prune_threshold)
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in graph.
