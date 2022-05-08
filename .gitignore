@@ -15,8 +15,6 @@ __pycache__/
 profile/
 .idea/
 .run/
-#profile
-profile/
 
 #cmake
 /cmake-build*/
@@ -35,3 +33,4 @@ profile/
 # c++
 *.o
 *.so
+main.cpp

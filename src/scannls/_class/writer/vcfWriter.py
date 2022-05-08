@@ -186,7 +186,7 @@ class VCFWriter(Writer):
         self.write_line(self.header)
 
     @singledispatchmethod
-    def write_data(self, data_object: Any, object_id: int) -> None:
+    def write_data(self, data_object: Any, object_id: int) -> None:  # type: ignore
         """Write data to file.
 
         :param: data_object: Data to write to file.

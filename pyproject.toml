@@ -27,7 +27,7 @@ HTSeq = "^2.0.1"
 pyfaidx = "^0.6.4"
 psutil = "^5.9.0"
 loguru = "^0.6.0"
-rich = "^12.3.0"
+rich = "^12.4.1"
 networkx = "^2.8"
 pybind11 = "^2.9.2"
 
@@ -40,7 +40,7 @@ typeguard = "^2.12.1"
 xdoctest = { extras = ["colors"], version = "^1.0.0" }
 sphinx = "^4.5.0"
 sphinx-autobuild = "^2021.3.14"
-pre-commit = "^2.18.1"
+pre-commit = "^2.19.0"
 flake8 = "^3.9.2"
 black = "^22.3"
 flake8-bandit = "^2.1.2"
@@ -72,7 +72,6 @@ script = "build.py"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
-scannls-simulator = "scannls.simulator.__main__:main"
 
 [tool.mypy]
 strict = false
