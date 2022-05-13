@@ -50,10 +50,10 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 
 ## Credits
 
-[mit license]: https://opensource.org/licenses/{{cookiecutter.license}}
+[mit license]: https://opensource.org/licenses/mit
 [pypi]: https://pypi.org/
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
-[file an issue]: https://github.com/{{cookiecutter.github_user}}/{{cookiecutter.project_name}}/issues
+[file an issue]: https://github.com/ylab-hi/ScanNLS/issues
 [pip]: https://pip.pypa.io/
 [contributor guide]: CONTRIBUTING.md
-[command-line reference]: https://{{cookiecutter.project_name}}.readthedocs.io/en/latest/usage.html
+[command-line reference]: https://ScanNLS.readthedocs.io/en/latest/usage.html

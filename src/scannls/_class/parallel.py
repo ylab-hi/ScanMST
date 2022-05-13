@@ -52,7 +52,11 @@ class ParallelWorker:
     def setter_n_jobs(self, n_jobs: int) -> int:
         """Set the number of jobs to run in parallel in terms of cpu cores."""
         current_max_processor = os.cpu_count()
-        if n_jobs > current_max_processor:  # type: ignore
+
+        if current_max_processor is None:
+            current_max_processor = n_jobs
+
+        if n_jobs > current_max_processor:
             self.logger.warning(
                 f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
             )

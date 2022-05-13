@@ -74,7 +74,7 @@ class FastaWriter(Writer):
             self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
-    def write_data(self, data_object: Any, object_id: int):
+    def write_data(self, data_object: Any, object_id: int):  # type: ignore
         """Write data to file.
 
         :param: data_object: Data to write to file.
