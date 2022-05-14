@@ -271,6 +271,8 @@ class VCFWriter(Writer):
 
         for _id in VCFWriter.reserved_info:
             _number = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
+            if _id == "TRANSCRIPT_ID":
+                _number = "."
             header_lines.append(
                 f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},"
                 f'Description="{VCFWriter.description[_id]}">'
