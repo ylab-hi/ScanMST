@@ -128,7 +128,6 @@ def parse_splice_graph_for_cliques_par(
     result = parallel_workers.map(
         cliques, chunksize=max(1, len(cliques) // parallel_workers.n_jobs)
     )
-
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
             for series in clique[0]:  # reduce list depth
