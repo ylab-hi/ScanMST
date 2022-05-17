@@ -15,6 +15,9 @@ from typing import Dict
 from .type import LoggerType
 
 
+# TODO: add asyncio support
+
+
 class ParallelWorker:
     """ParallelWorker class is used to run function in parallel.
 
