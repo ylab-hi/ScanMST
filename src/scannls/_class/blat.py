@@ -18,7 +18,6 @@ from typing import Tuple
 
 import psutil
 from Bio import SearchIO
-from loguru import logger
 
 from .basicClass import Insertion
 from .basicClass import NovelInsertion
@@ -165,12 +164,12 @@ class Blat:
         self.is_start_server = True
         self.logger.debug(f"start server service{self.is_start_server=}")
         cwd = os.path.abspath(os.getcwd())
-        logger.debug(os.getcwd())
+        self.logger.debug(os.getcwd())
 
         # change to use_blat directory
         os.chdir(self.ref_dir)
-        logger.trace(f"{self.ref_dir=}")
-        logger.trace(f"{os.getcwd()}")
+        self.logger.trace(f"{self.ref_dir=}")
+        self.logger.trace(f"{os.getcwd()}")
 
         if os.path.exists(self.log_file_path):
             os.remove(self.log_file_path)
@@ -178,14 +177,14 @@ class Blat:
             f"gfServer -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
         )
-        logger.trace(f"{cmd=}")
+        self.logger.trace(f"{cmd=}")
         self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
         if self.handle_process is None:
             raise ValueError("handle process is None")
         self.handle_process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
-        logger.trace(f"{os.getcwd()}")
+        self.logger.trace(f"{os.getcwd()}")
 
     def start_server(self) -> None:
         """Function for starting the server service, if the server is not running.
@@ -230,18 +229,18 @@ class Blat:
         out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
 
         cwd = os.path.abspath(os.getcwd())
-        logger.trace(os.getcwd())
+        self.logger.trace(os.getcwd())
 
         os.chdir(self.ref_dir)
-        logger.trace(f"{self.ref_dir=}")
-        logger.trace(os.getcwd())
+        self.logger.trace(f"{self.ref_dir=}")
+        self.logger.trace(os.getcwd())
         cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} &> /dev/null".format(
             mini_identity, self.port, in_fasta, out_psl
         )
-        logger.trace(f"{cmd=}")
+        self.logger.trace(f"{cmd=}")
         subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
         os.chdir(cwd)
-        logger.trace(os.getcwd())
+        self.logger.trace(os.getcwd())
         self._remove(in_fasta)
 
         return out_psl

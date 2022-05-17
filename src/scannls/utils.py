@@ -92,13 +92,6 @@ def get_softclip_length(
         return 0, "", -1, 0
 
 
-def write_series_to_file(file_name: str, series: Any) -> None:
-    """Write series to file."""
-    with open(file_name, "w") as f:
-        for item in series:
-            f.write(str(item) + "\n")
-
-
 def timeit(func: Callable[..., Any]) -> Callable[..., Any]:
     """Time the function execution.
 

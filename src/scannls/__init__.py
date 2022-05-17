@@ -32,7 +32,7 @@ from ._class.writer import GTFWriter
 from ._class.writer import VCFWriter
 from ._class.writer import Writers
 from ._class.type import LoggerType
-from .arg import DefaultOptions
+from .cli.arg import DefaultOptions
 from . import core
 from . import cppext
 

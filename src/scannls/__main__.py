@@ -2,8 +2,8 @@
 """Main function for scannls."""
 import sys
 
-from .arg import parse_args
-from .cli import cli
+from .cli.arg import parse_args
+from .cli.cli import cli
 
 
 def main():

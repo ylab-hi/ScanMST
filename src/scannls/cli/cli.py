@@ -17,20 +17,20 @@ from typing import Union
 
 from loguru import logger
 
-from . import Blat
-from . import CliqueFinder
-from . import DefaultOptions
-from . import FastaWriter
-from . import GTFWriter
-from . import LoggerType
-from . import ParallelWorker
-from . import SpliceGraph
-from . import VCFWriter
-from ._class.myLogger import MyLogger
-from ._class.writer import Writers
-from .core.main import scanbam_run
-from .utils import external_tool_checking
-from .utils import sleep
+from .. import Blat
+from .. import CliqueFinder
+from .. import FastaWriter
+from .. import GTFWriter
+from .. import LoggerType
+from .. import MyLogger
+from .. import ParallelWorker
+from .. import SpliceGraph
+from .. import VCFWriter
+from .. import Writers
+from ..core.main import scanbam_run
+from ..utils import external_tool_checking
+from ..utils import sleep
+from .arg import DefaultOptions
 
 
 def get_writers(
