@@ -172,7 +172,7 @@ def _get_cvg_gene_iv(gtf, splice_bin):
     try:
         return extract_splice_sites(str(gtf), splice_bin)
     except OSError:
-        raise SystemExit(f"Reading GTF file {gtf} error!") from None
+        raise SystemExit(f"Reading GTF file {gtf} error!") from OSError
 
 
 def detect_sv_from_cigar(
