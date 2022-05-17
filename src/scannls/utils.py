@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Useful functions for scannls."""
 import os
 import secrets
