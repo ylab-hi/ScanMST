@@ -13,6 +13,7 @@ from typing import Dict
 from typing import IO
 from typing import List
 from typing import Tuple
+from typing import Union
 
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
@@ -270,7 +271,9 @@ class VCFWriter(Writer):
         ]
 
         for _id in VCFWriter.reserved_info:
-            _number = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
+            _number: Union[str, int] = (
+                0 if VCFWriter.reserved_info[_id] == "Flag" else 1
+            )
             if _id == "TRANSCRIPT_ID":
                 _number = "."
             header_lines.append(

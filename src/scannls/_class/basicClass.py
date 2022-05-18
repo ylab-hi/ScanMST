@@ -5,7 +5,6 @@
 @license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
-import secrets
 from collections import Counter
 from typing import Any
 from typing import Dict
@@ -613,7 +612,7 @@ class Series:
         self.is_in_graph = False
         self.blat = blat
         self.logger = logger
-        self.id = secrets.randbelow(100000)
+        self.id = -1
 
     def add_node(self, node: Node) -> None:
         """Add a node to the series."""

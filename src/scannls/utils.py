@@ -4,9 +4,11 @@ import os
 import secrets
 import shutil
 import time
+from contextlib import contextmanager
 from functools import wraps
 from typing import Any
 from typing import Callable
+from typing import Generator
 from typing import Tuple
 
 import pysam
@@ -92,13 +94,6 @@ def get_softclip_length(
         return 0, "", -1, 0
 
 
-def write_series_to_file(file_name: str, series: Any) -> None:
-    """Write series to file."""
-    with open(file_name, "w") as f:
-        for item in series:
-            f.write(str(item) + "\n")
-
-
 def timeit(func: Callable[..., Any]) -> Callable[..., Any]:
     """Time the function execution.
 
@@ -114,3 +109,34 @@ def timeit(func: Callable[..., Any]) -> Callable[..., Any]:
         return result
 
     return wrapped
+
+
+@contextmanager
+def change_dir(path: str) -> Generator:
+    """Change current working directory.
+
+    :param path: the path to be changed
+    """
+    old_dir = os.getcwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(old_dir)
+
+
+def change_dir_decorator(path: str):
+    """Change current working directory.
+
+    :param path: the path to be changed
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapped(*args, **kwargs):  # type: ignore
+            with change_dir(path):
+                return func(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
