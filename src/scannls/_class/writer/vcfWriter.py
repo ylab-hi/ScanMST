@@ -243,9 +243,9 @@ class VCFWriter(Writer):
                             type_position_key
                         ]["PSO"]
 
-                    out_vcf_dict[type_position_key][
-                        "TRANSCRIPT_ID"
-                    ] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
+                out_vcf_dict[type_position_key][
+                    "TRANSCRIPT_ID"
+                ] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
