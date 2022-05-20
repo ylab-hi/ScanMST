@@ -192,35 +192,39 @@ class Ruler:
         :param right_subject_node: right subject node
         :return: flag
         """
-        flag = False
-
         if left_subject_node is None and right_subject_node is None:
             return True
 
-        if left_subject_node:
-            if (
+        condtion1 = lambda: (  # noqa: E731
+            (
                 left_query_node.strand == left_subject_node.strand == "+"
                 and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
-            ) or (
+            )
+            or (
                 left_query_node.strand == left_subject_node.strand == "-"
-                and left_query_node.exons[-1][1] >= left_subject_node.exons[-1][1]  # type: ignore
-            ):
-                flag = True
-            else:
-                flag = False
+                and left_query_node.exons[-1][1] <= left_subject_node.exons[-1][1]  # type: ignore
+            )
+        )
 
-        if right_subject_node:
-            if (
+        condtion2 = lambda: (  # noqa: E731
+            (
                 right_query_node.strand == right_subject_node.strand == "+"
                 and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
-            ) or (
+            )
+            or (
                 right_query_node.strand == right_subject_node.strand == "-"
-                and right_query_node.exons[0][0] <= right_subject_node.exons[0][0]  # type: ignore
-            ):
-                flag = True
-            else:
-                flag = False
-        return flag
+                and right_query_node.exons[0][0] >= right_subject_node.exons[0][0]  # type: ignore
+            )
+        )
+
+        if left_subject_node is not None and right_subject_node is not None:
+            return condtion1() and condtion2()
+
+        if left_subject_node is None:
+            return condtion2()
+
+        if right_subject_node is None:
+            return condtion1()
 
     def __call__(self, series_a: Series, series_b: Series) -> float:
         """Call Ruler to calculate the distance between two series.
