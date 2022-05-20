@@ -19,7 +19,7 @@ namespace rescuer {
 
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
-  constexpr int max_seq_len = 150;
+  constexpr int max_seq_len = 100;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -119,6 +119,10 @@ namespace rescuer {
      */
     bool check_if_align(std::string_view t_query, std::string_view t_target) const;
 
+    /**
+     * @brief reset name list
+     * @param t_names_list
+     */
     void reset_names_list(std::vector<std::string> &t_names_list) const;
 
     /**
