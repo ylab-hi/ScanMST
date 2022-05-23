@@ -17,12 +17,6 @@
 
 - TODO
 
-## Requirements
-
-<details>
-<summary> Blat </summary>
-</details>
-
 ## Installation
 
 You can install _ScanNLS_ via **pip** from **PyPI**:
