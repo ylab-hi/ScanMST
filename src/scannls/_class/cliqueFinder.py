@@ -183,7 +183,7 @@ class Ruler:
         right_query_node: Node,
         left_subject_node: Optional[Node],
         right_subject_node: Optional[Node],
-    ) -> bool:
+    ) -> Any:
         """Decide the flag.
 
         :param left_query_node: left query node
