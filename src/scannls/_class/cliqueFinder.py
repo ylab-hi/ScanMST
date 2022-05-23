@@ -197,22 +197,22 @@ class Ruler:
 
         condtion1 = lambda: (  # noqa: E731
             (
-                left_query_node.strand == left_subject_node.strand == "+"
+                left_query_node.strand == left_subject_node.strand == "+"  # type: ignore
                 and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
             )
             or (
-                left_query_node.strand == left_subject_node.strand == "-"
+                left_query_node.strand == left_subject_node.strand == "-"  # type: ignore
                 and left_query_node.exons[-1][1] <= left_subject_node.exons[-1][1]  # type: ignore
             )
         )
 
         condtion2 = lambda: (  # noqa: E731
             (
-                right_query_node.strand == right_subject_node.strand == "+"
+                right_query_node.strand == right_subject_node.strand == "+"  # type: ignore
                 and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
             )
             or (
-                right_query_node.strand == right_subject_node.strand == "-"
+                right_query_node.strand == right_subject_node.strand == "-"  # type: ignore
                 and right_query_node.exons[0][0] >= right_subject_node.exons[0][0]  # type: ignore
             )
         )
@@ -225,6 +225,9 @@ class Ruler:
 
         if right_subject_node is None:
             return condtion1()
+
+        raise ValueError("This should not happen.")
+        return False
 
     def __call__(self, series_a: Series, series_b: Series) -> float:
         """Call Ruler to calculate the distance between two series.
