@@ -226,9 +226,6 @@ class Ruler:
         if right_subject_node is None:
             return condtion1()
 
-        raise ValueError("This should not happen.")
-        return False
-
     def __call__(self, series_a: Series, series_b: Series) -> float:
         """Call Ruler to calculate the distance between two series.
 
