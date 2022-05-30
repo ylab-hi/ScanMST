@@ -22,7 +22,7 @@ Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
 [tool.poetry.dependencies]
 python = "^3.8"
 biopython = "^1.79"
-pysam = "0.19"
+pysam = "^0.19"
 HTSeq = "^2.0.1"
 pyfaidx = "^0.6.4"
 psutil = "^5.9.1"
@@ -35,7 +35,7 @@ pybind11 = "^2.9.2"
 pytest = "^7.1.2"
 coverage = { extras = ["toml"], version = "^6.4" }
 safety = "^1.10.3"
-mypy = "^0.950"
+mypy = "^0.960"
 typeguard = "^2.12.1"
 xdoctest = { extras = ["colors"], version = "^1.0.0" }
 sphinx = "^4.5.0"
