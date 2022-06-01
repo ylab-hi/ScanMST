@@ -11,7 +11,7 @@ import platform
 from importlib import resources
 from pathlib import Path
 
-PACKAGE_NAME = "scannls_ont"
+PACKAGE_NAME = "scannls"
 
 
 def load_blat() -> Path:
