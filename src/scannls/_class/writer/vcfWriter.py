@@ -76,6 +76,7 @@ class VCFWriter(Writer):
         "SVTYPE": "String",
         "SVLEN": "Integer",
         "CHR2": "String",
+        "SVEND": "Integer",
         "END": "Integer",
         "STRAND": "String",
         "STRAND1": "String",
@@ -106,7 +107,8 @@ class VCFWriter(Writer):
         "SVTYPE": "The type of event, INS, DEL, TDUP, IDUP, INV, TRA.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for END coordinate in case of a translocation",
-        "END": "2nd position of the structural variant",
+        "SVEND": "2nd position of the structural variant",  # change to SVEND in order to meet vcf standard
+        "END": "A placeholder for END coordinate in case of a translocation",
         "GENE": "Overlapped coding gene for insertion",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
@@ -269,6 +271,7 @@ class VCFWriter(Writer):
             f"##source={source}",
             f"##reference={reference}",
         ]
+        header_lines += self.get_contigs()
 
         for _id in VCFWriter.reserved_info:
             _number: Union[str, int] = (
@@ -296,6 +299,13 @@ class VCFWriter(Writer):
         )
 
         return "\n".join(header_lines) + "\n"
+
+    def get_contigs(self) -> List[str]:
+        """Get contigs from BAM file header."""
+        return [
+            f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>"
+            for contig_dict in self.bam_header["SQ"]
+        ]
 
 
 def obtain_reference_from_bam_header(bam_header: Dict[str, Any]) -> str:
@@ -399,7 +409,7 @@ def get_vcf_features_from_series(
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,
-                    "END": f"{int(_pos2) + 1}",
+                    "SVEND": f"{int(_pos2) + 1}",
                     "DP1": f"{_dp1}",
                     "DP2": f"{_dp2}",
                     "PSO": f"{_pso:.3g}",
@@ -440,7 +450,7 @@ def get_vcf_features_from_series(
                         "CAN": can_field,
                         "BOUNDARY": anno_field,
                         "CHR2": _chrom1,
-                        "END": f"{int(_pos1) + 1}",
+                        "SVEND": f"{int(_pos1) + 1}",
                         "DP": f"{_dp1}",
                         "AF": f"{_af:.3g}",
                         "SVLEN": f"{sv_distance}",
@@ -460,7 +470,7 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
         info_field = (
             f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
             f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
-            f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};DP={feature_dict["DP"]};'
+            f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP={feature_dict["DP"]};'
             f'AF={feature_dict["AF"]};SVLEN={feature_dict["SVLEN"]};'
             f'GENE={feature_dict["GENE"]};'
             f'STRAND={feature_dict["STRAND"]};'
@@ -470,7 +480,7 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
         info_field = (
             f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
             f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
-            f'CHR2={feature_dict["CHR2"]};END={feature_dict["END"]};DP1={feature_dict["DP1"]};'
+            f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
             f'DP2={feature_dict["DP2"]};PSO={feature_dict["PSO"]};SVLEN={feature_dict["SVLEN"]};'
             f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
             f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
