@@ -168,7 +168,6 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="two_bit",
         help="reference genome in 2bit format",
-        required=True,
     )
     parser.add_argument(
         "--non-can",

@@ -19,6 +19,8 @@ from typing import Tuple
 import psutil
 from Bio import SearchIO
 
+from ..blat import load_gfclient
+from ..blat import load_gfserver
 from .basicClass import Insertion
 from .basicClass import NovelInsertion
 from .type import LoggerType
@@ -74,6 +76,8 @@ class Blat:
         self.logger = logger
         self.fix_log_file = fix_log_file
         self.handle_process = None
+        self.gfserver = load_gfserver()
+        self.gfclient = load_gfclient()
 
     @property
     def ref_dir(self) -> str:
@@ -174,7 +178,7 @@ class Blat:
         if os.path.exists(self.log_file_path):
             os.remove(self.log_file_path)
         cmd = (
-            f"gfServer -canStop -log={self.log_file_path} -stepSize=5 start "
+            f"{self.gfserver} -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
         )
         self.logger.trace(f"{cmd=}")
@@ -234,11 +238,14 @@ class Blat:
         os.chdir(self.ref_dir)
         self.logger.trace(f"{self.ref_dir=}")
         self.logger.trace(os.getcwd())
-        cmd = "gfClient -minScore=20 -minIdentity={} localhost {} . {} {} &> /dev/null".format(
-            mini_identity, self.port, in_fasta, out_psl
+        cmd = (
+            f"{self.gfclient} -minScore=20 -minIdentity={mini_identity} localhost {self.port} . "
+            f"{in_fasta} {out_psl}"
         )
         self.logger.trace(f"{cmd=}")
-        subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=True)
+        subprocess.check_call(
+            cmd, stderr=subprocess.STDOUT, shell=True, stdout=subprocess.DEVNULL
+        )
         os.chdir(cwd)
         self.logger.trace(os.getcwd())
         self._remove(in_fasta)
