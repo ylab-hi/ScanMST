@@ -183,7 +183,7 @@ class Ruler:
         right_query_node: Node,
         left_subject_node: Optional[Node],
         right_subject_node: Optional[Node],
-    ) -> bool:
+    ) -> Any:
         """Decide the flag.
 
         :param left_query_node: left query node
@@ -197,22 +197,22 @@ class Ruler:
 
         condtion1 = lambda: (  # noqa: E731
             (
-                left_query_node.strand == left_subject_node.strand == "+"
+                left_query_node.strand == left_subject_node.strand == "+"  # type: ignore
                 and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
             )
             or (
-                left_query_node.strand == left_subject_node.strand == "-"
+                left_query_node.strand == left_subject_node.strand == "-"  # type: ignore
                 and left_query_node.exons[-1][1] <= left_subject_node.exons[-1][1]  # type: ignore
             )
         )
 
         condtion2 = lambda: (  # noqa: E731
             (
-                right_query_node.strand == right_subject_node.strand == "+"
+                right_query_node.strand == right_subject_node.strand == "+"  # type: ignore
                 and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
             )
             or (
-                right_query_node.strand == right_subject_node.strand == "-"
+                right_query_node.strand == right_subject_node.strand == "-"  # type: ignore
                 and right_query_node.exons[0][0] >= right_subject_node.exons[0][0]  # type: ignore
             )
         )

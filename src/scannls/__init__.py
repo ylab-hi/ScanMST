@@ -35,6 +35,7 @@ from ._class.type import LoggerType
 from .cli.arg import DefaultOptions
 from . import core
 from . import cppext
+from . import blat
 
 __all__ = [
     "Read",
@@ -69,6 +70,7 @@ __all__ = [
     "cppext",
     "check_end_node_is_ploya",
     "DefaultOptions",
+    "blat",
 ]
 
 

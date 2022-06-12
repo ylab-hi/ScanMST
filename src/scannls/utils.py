@@ -2,12 +2,16 @@
 import os
 import secrets
 import shutil
+import subprocess
 import time
 from contextlib import contextmanager
 from functools import wraps
+from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Generator
+from typing import List
+from typing import Optional
 from typing import Tuple
 
 import pysam
@@ -15,6 +19,7 @@ from loguru import logger
 
 from . import ToolNotFoundError
 from ._class.type import LoggerType
+from .blat import load_fa2bit
 from scannls import cppext
 
 __all__ = ["external_tool_checking", "get_softclip_length", "timeit", "sleep"]
@@ -28,6 +33,21 @@ def external_tool_checking(log_handler: LoggerType) -> None:
         if not output:
             raise ToolNotFoundError(tool)
         log_handler.success(f"Checking for {tool} found ")
+
+
+def find_2bit_file(
+    fasta_path: str, log_handler: LoggerType, parameter: Optional[List[str]] = None
+) -> str:
+    """Create 2bit file from fasta file."""
+    if parameter is None:
+        parameter = []
+    bit_file = Path(fasta_path).with_suffix(".2bit")
+    if not bit_file.exists():
+        log_handler.info(f"{bit_file.as_posix()} Not Found Creating...")
+        subprocess.check_call(
+            [load_fa2bit(), " ".join(parameter), fasta_path, bit_file.as_posix()]
+        )
+    return bit_file.as_posix()
 
 
 def sleep(input_file: str, max_time: int = 30) -> None:

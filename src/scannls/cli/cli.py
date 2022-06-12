@@ -28,7 +28,7 @@ from .. import SpliceGraph
 from .. import VCFWriter
 from .. import Writers
 from ..core.main import scanbam_run
-from ..utils import external_tool_checking
+from ..utils import find_2bit_file
 from ..utils import sleep
 from .arg import DefaultOptions
 
@@ -154,15 +154,14 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         diagnose=True,
     )
 
-    # check external tools used
-    external_tool_checking(logger)
-
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.closed=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
-
+    # find 2bit file
+    if options.two_bit is None:
+        options.two_bit = find_2bit_file(options.ref, logger)
     blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
     if options.nsleep:
