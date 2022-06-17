@@ -66,6 +66,7 @@ class Blat:
         output_dir: str,
         fix_log_file=None,
         is_start_server=False,
+        lock=None,
     ) -> None:
         """Initialize the blat class."""
         self.port, self.ref_2bit = port, ref_2bit
@@ -78,6 +79,7 @@ class Blat:
         self.handle_process = None
         self.gfserver = load_gfserver()
         self.gfclient = load_gfclient()
+        self.lock = lock
 
     @property
     def ref_dir(self) -> str:
@@ -112,14 +114,13 @@ class Blat:
         :return: the boolean value of whether the server is ready or not
         """
         self.logger.debug("check if the server starts")
-        # self open check self log file
-        flag = False
-        if os.path.exists(self.log_file_path) and self.is_start_server:
-            with open(self.log_file_path) as f:
-                return any("Server ready" in line for line in f)
 
-        # other open by try except to check if the server is ready
-        return flag
+        this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
+        with this_lock:
+            if os.path.exists(self.log_file_path) and self.is_start_server:
+                with open(self.log_file_path) as f:
+                    return any("Server ready" in line for line in f)
+            return False
 
     def is_running(self) -> bool:
         """Function for checking whether the blat server is running or not.
