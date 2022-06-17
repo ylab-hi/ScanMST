@@ -113,7 +113,7 @@ class Blat:
 
         :return: the boolean value of whether the server is ready or not
         """
-        self.logger.debug("check if the server starts")
+        self.logger.debug("check if the server starts by reading the log file")
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
         with this_lock:
