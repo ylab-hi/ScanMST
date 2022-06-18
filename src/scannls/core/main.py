@@ -258,6 +258,7 @@ def detect_sv_from_cigar(
 
 def _scan_bam_helper(
     identified_key,
+    lock,
     *,
     running_mode,
     two_bit,
@@ -298,7 +299,9 @@ def _scan_bam_helper(
     logger.trace(f"{identified_key=} start")
 
     blat_log_file, blat_is_start_server = blat_info
-    blat = Blat(two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server)
+    blat = Blat(
+        two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server, lock
+    )
 
     nls_src_forms_list = []
 
@@ -541,7 +544,7 @@ def scanbam_run(
 
     if parallel == 1:
 
-        intact_series_list = _scan_bam_helper(contigs, **keyword_parameters_dict)
+        intact_series_list = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
 
     else:
 

@@ -38,7 +38,19 @@ def external_tool_checking(log_handler: LoggerType) -> None:
 def find_2bit_file(
     fasta_path: str, log_handler: LoggerType, parameter: Optional[List[str]] = None
 ) -> str:
-    """Create 2bit file from fasta file."""
+    """Create 2bit file from fasta file.
+
+     fa2bit usage:
+      faToTwoBit in.fa [in2.fa in3.fa ...] out.2bit
+     options:
+
+    -long          use 64-bit offsets for index.   Allow for twoBit to contain more than 4Gb of sequence.
+                   NOT COMPATIBLE WITH OLDER CODE.
+    -noMask        Ignore lower-case masking in fa file.
+    -stripVersion  Strip off version number after '.' for GenBank accessions.
+    -ignoreDups    Convert first sequence only if there are duplicate sequence
+                   names.  Use 'twoBitDup' to find duplicate sequences.
+    """
     if parameter is None:
         parameter = []
     bit_file = Path(fasta_path).with_suffix(".2bit")
