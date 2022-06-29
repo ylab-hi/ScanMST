@@ -48,7 +48,7 @@ namespace bam_parser {
     sam_hdr_destroy(header);
   }
 
-  void print_reads(const std::vector<read_t> &reads) {
+  [[maybe_unused]] void print_reads(const std::vector<read_t> &reads) {
     for (auto &read : reads) {
       std::cout << read.query_name << "\t" << read.query_seq << "\t" << read.query_seq.size()
                 << "\t" << read.ref_start << "\t" << read.ref_end << "\t" << read.chrom << "\t"
@@ -69,7 +69,7 @@ namespace bam_parser {
   //#define BAM_CBACK       9
   //
   //#define BAM_CIGAR_STR   "MIDNSHP=XB"
-  parseCigarResult_t parseCigar(const char *cigar) {
+  [[maybe_unused]] parseCigarResult_t parseCigar(const char *cigar) {
     parseCigarResult_t result{};
     uint32_t *buf{nullptr};
     size_t m{0};
@@ -111,7 +111,28 @@ namespace bam_parser {
     }
     if (result.cigartuples[0] == 4) result.lt_soft_len = result.cigartuples[1];
     if (result.cigartuples[2 * m - 2] == 4) result.rt_soft_len = result.cigartuples[2 * m - 1];
+    free(buf);
     return result;
+  }
+
+  std::ostream &operator<<(std::ostream &os, const parseCigarResult_t &cigar_result) {
+    os << "lt_soft_len: " << cigar_result.lt_soft_len << "\n";
+    os << "rt_soft_len: " << cigar_result.rt_soft_len << "\n";
+    os << "read_match: " << cigar_result.read_match << "\n";
+    os << "ref_match: " << cigar_result.ref_match << "\n";
+    os << "indel_len: " << cigar_result.indel_len << "\n";
+    os << "query_len: " << cigar_result.query_len << "\n";
+    os << "cigartuples_without_soft: ";
+    for (auto const &c : cigar_result.cigartuples_without_soft) {
+      os << c << " ";
+    }
+    os << "\n";
+    os << "cigartuples: ";
+    for (auto const &c : cigar_result.cigartuples) {
+      os << c << " ";
+    }
+    os << "\n";
+    return os;
   }
 
   bam_handler::bam_handler(const char *file_path) {
@@ -128,7 +149,7 @@ namespace bam_parser {
     }
 
     sam_header = sam_hdr_read(sam_file);
-    if (sam_header == 0) {
+    if (sam_header == nullptr) {
       std::cerr << "Error: Cannot read header " << file_path << "\n";
       exit(EXIT_FAILURE);
     }
@@ -141,31 +162,6 @@ namespace bam_parser {
     bam_destroy1(sam_record);
   }
 
-  // may be more efficient to use bam_read1_core
-  [[maybe_unused]] std::vector<read_t> bam_handler::fetch(const char *t_chrom, long t_start,
-                                                          long t_end) {
-    const int tid = bam_name2id(sam_header, t_chrom);
-    hts_itr_t *iter = sam_itr_queryi(sam_index, tid, t_start, t_end);
-    std::vector<read_t> reads;
-
-    while (sam_itr_next(sam_file, iter, sam_record) >= 0) {
-      const uint32_t *cigar = bam_get_cigar(sam_record);
-      const uint8_t *seq = bam_get_seq(sam_record);
-      std::string read_seq{};
-      read_seq.reserve(sam_record->core.l_qseq);
-
-      for (int i{0}; i < sam_record->core.l_qseq; i++) {
-        read_seq += seq_nt16_str[bam_seqi(seq, i)];
-      }
-
-      reads.emplace_back(bam_get_qname(sam_record), t_chrom, sam_record->core.pos,
-                         bam_endpos(sam_record), sam_record->core.qual, cigar,
-                         sam_record->core.n_cigar, read_seq, bam_is_rev(sam_record));
-    }
-    sam_itr_destroy(iter);
-    return reads;
-  }
-
   int bam_handler::count(const char *t_chrom, long start_t, long end_t) const {
     const int tid = bam_name2id(sam_header, t_chrom);
     hts_itr_t *iter = sam_itr_queryi(sam_index, tid, start_t, end_t);
@@ -176,6 +172,22 @@ namespace bam_parser {
     }
     sam_itr_destroy(iter);
     return num_reads;
+  }
+
+  [[maybe_unused]] std::string bam_handler::get_cigar_string() const {
+    if (sam_record == nullptr) {
+      return "";
+    }
+    std::string cigar_string;
+    const uint32_t *cigar = bam_get_cigar(sam_record);
+    auto n_cigar = sam_record->core.n_cigar;
+
+    for (size_t i{0}; i < n_cigar; ++i) {
+      const auto op{bam_cigar_opchr(cigar[i])};
+      const auto len{bam_cigar_oplen(cigar[i])};
+      cigar_string += std::to_string(len) + op;
+    }
+    return cigar_string;
   }
 
 }  // namespace bam_parser
