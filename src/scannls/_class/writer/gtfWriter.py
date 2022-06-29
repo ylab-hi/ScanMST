@@ -181,7 +181,7 @@ def get_gtf_features_from_node(
             f'transcript_id "{series_id:0>6}"; '
             f'mega_exon_id "{node_id:0>3}"; '
             f'exon_id "{index:0>3}"; '
-            f'sr "{node_sr:}";'
+            f'sr "{node_sr}";'
         ]
         nodes_gtf_features.append(
             [
