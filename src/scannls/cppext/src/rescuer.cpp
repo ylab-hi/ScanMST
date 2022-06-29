@@ -76,6 +76,7 @@ namespace rescuer {
     }
     return num_increment_sr;
   }
+
   [[maybe_unused]] int Rescuer::count_reads(const std::string &t_chrom, long t_start,
                                             long t_end) const {
     return m_bam_handler.count(t_chrom.c_str(), t_start, t_end);
@@ -128,18 +129,15 @@ namespace rescuer {
         auto softclip_result{get_softclip(read_seq, m_bam_handler.sam_record, tt_mode, cigar,
                                           m_bam_handler.sam_record->core.n_cigar)};
 
-        long const reference_pos = (tt_mode == 2) ? m_bam_handler.sam_record->core.pos
-                                                  : bam_endpos(m_bam_handler.sam_record);
-
-        if (reference_pos != softclip_result.pos || std::abs(reference_pos - tt_start) > max_sr_pos_diff)
+        if (long const reference_pos = (tt_mode == 2) ? m_bam_handler.sam_record->core.pos
+                                                      : bam_endpos(m_bam_handler.sam_record);
+            std::abs(reference_pos - tt_start) > max_sr_pos_diff)
           continue;
 
         int const seq_len{get_read_max_length(softclip_result.read_seq)};
         if (seq_len < min_seq_align_len) continue;  // read length is too short
 
         auto const read_name{bam_get_qname(m_bam_handler.sam_record)};
-
-
 
         if (find(t_current_names.begin(), t_current_names.end(), read_name)
             != t_current_names.end()) {
