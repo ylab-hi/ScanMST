@@ -67,6 +67,4 @@ PYBIND11_MODULE(_cppext, m) {
       .def("count_reads", &Rescuer::count_reads, "count_reads(chrom, start, end) -> int")
       .def("__repr__", [](const Rescuer &r) { return "Rescuer()"; })
       .def("reset_names_list", &Rescuer::reset_names_list, "reset_names_list(names_list) -> None");
-
-
 }

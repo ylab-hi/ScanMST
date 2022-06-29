@@ -120,7 +120,7 @@ class Blat:
             if os.path.exists(self.log_file_path) and self.is_start_server:
                 with open(self.log_file_path) as f:
                     return any("Server ready" in line for line in f)
-            return False
+        return False
 
     def is_running(self) -> bool:
         """Function for checking whether the blat server is running or not.

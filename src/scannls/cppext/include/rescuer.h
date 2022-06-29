@@ -12,14 +12,15 @@
 
 #include "bam.h"
 #include "htslib/sam.h"
-#include "ssw_cpp.h"
 #include "output_container.h"
+#include "ssw_cpp.h"
 
 namespace rescuer {
 
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
   constexpr int max_seq_len = 100;
+  constexpr int max_sr_pos_diff = 10;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -56,8 +57,6 @@ namespace rescuer {
    * @return: parseCigarResult_t
    */
   parseCigarResult_t parser_cigar(const uint32_t *t_cigar_str, size_t t_cigar_len);
-
-
 
   class Rescuer {
   private:
@@ -98,8 +97,9 @@ namespace rescuer {
      * @param t_sv sv list
      * @return number of sr
      */
-    int determine_num_increment_sr(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
-                                   std::vector<std::string> &t_sr_list_names) const;
+    int determine_num_increment_sr(std::vector<std::string> const &t_sr,
+                                   std::vector<std::string> const &t_sv,
+                                   std::vector<std::string> const &t_sr_list_names) const;
 
     /**
      * @brief calculate number of read for a position
@@ -123,29 +123,29 @@ namespace rescuer {
      * @brief reset name list
      * @param t_names_list
      */
-    void reset_names_list(std::vector<std::string> &t_names_list) const;
+    void reset_names_list(std::vector<std::string> const &t_names_list) const;
 
     /**
-   * @brief Add seqs for sr and sv list
-   * @param t_sr seq list of sr
-   * @param t_sv  seq list of sv
-   * @param t_bam  bam handler
-   * @param tt_chrom  chrom name
-   * @param tt_start  start position 0-based
-   * @param tt_end  end position 0-based
-   * @param tt_mode  mode
-   * @param t_min_mapq  min mapq
-   * @param t_min_soft  min soft clip length
-   * @param t_current_names  current names list
-   * @param t_name_list  names in graph
+     * @brief Add seqs for sr and sv list
+     * @param t_sr seq list of sr
+     * @param t_sv  seq list of sv
+     * @param t_bam  bam handler
+     * @param tt_chrom  chrom name
+     * @param tt_start  start position 0-based
+     * @param tt_end  end position 0-based
+     * @param tt_mode  mode
+     * @param t_min_mapq  min mapq
+     * @param t_min_soft  min soft clip length
+     * @param t_current_names  current names list
+     * @param t_name_list  names in graph
      */
-    std::vector<std::string> add_sr_sv_list(std::vector<std::string> &t_sr, std::vector<std::string> &t_sv,
-                         std::string_view tt_chrom, long tt_start,
-                        long tt_end, int tt_mode, std::string_view tt_strand,
-                        std::vector<std::string> &t_current_names) const;
-
+    std::vector<std::string> add_sr_sv_list(std::vector<std::string> &t_sr,
+                                            std::vector<std::string> &t_sv,
+                                            std::string_view tt_chrom, const long tt_start,
+                                            const long tt_end, const int tt_mode,
+                                            std::string_view tt_strand,
+                                            std::vector<std::string> &t_current_names) const;
   };
-
 
 }  // namespace rescuer
 
