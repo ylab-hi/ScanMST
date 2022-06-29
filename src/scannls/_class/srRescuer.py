@@ -151,7 +151,7 @@ class SRRescuer:
                 mode2,
             )
             self.logger.trace(
-                f"{chrom=} {start=} {mode2=} {query_name_next=}"
+                f"{chrom=} {start=} {mode2=} {next_node.strand} {query_name_next=}"
                 f" {query_names_in_graph=}"
             )
 

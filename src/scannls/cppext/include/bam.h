@@ -23,6 +23,8 @@ namespace bam_parser {
     std::vector<uint> cigartuples{};
   };
 
+  std::ostream &operator<<(std::ostream &os, parseCigarResult_t const &cigar_result);
+
   [[maybe_unused]] void printChrome(const bam_hdr_t *har);
   [[maybe_unused]] void readBam(const char *bamFile);
 
@@ -31,7 +33,7 @@ namespace bam_parser {
    * @param cigar string of cigar
    * @return  parseCigarResult_t
    */
-  [[maybe_unused]] parseCigarResult_t parseCigar(const char *cigar);
+  [[maybe_unused]] [[maybe_unused]] parseCigarResult_t parseCigar(const char *cigar);
 
   struct read_t {
     std::string query_name{};
@@ -48,7 +50,7 @@ namespace bam_parser {
            bool t_is_reverse);
   };
 
-  [[maybe_unused]] void print_reads(const std::vector<read_t> &reads);
+  [[maybe_unused]] [[maybe_unused]] void print_reads(const std::vector<read_t> &reads);
 
   class bam_handler {
   public:
@@ -99,15 +101,6 @@ namespace bam_parser {
     }
 
     /**
-     * @breif fetch reads from bam file in terms of chromosome and start and end
-     * @param t_chrom  chromosome name
-     * @param t_start  start position
-     * @param t_end  end position
-     * @return  vector of read_t
-     */
-    [[maybe_unused]] std::vector<read_t> fetch(const char *t_chrom, long t_start, long t_end);
-
-    /**
      * @brief count reads from bam file in terms of the position
      * @param t_chrom  chromosome name
      * @param t_start  start position
@@ -115,6 +108,12 @@ namespace bam_parser {
      * @return  number of reads
      */
     int count(const char *t_chrom, long t_start, long t_end) const;
+
+    /**
+     * @brief get cigar string of a read
+     * @return  cigar string if success, otherwise empty string when sam_record is nullptr
+     */
+    [[maybe_unused]] [[nodiscard]] std::string get_cigar_string() const;
   };
 
 }  // namespace bam_parser
