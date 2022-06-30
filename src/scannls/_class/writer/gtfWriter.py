@@ -173,6 +173,7 @@ def get_gtf_features_from_node(
     exons = node.exons[::-1] if node.strand == "-" else node.exons
 
     node_sr = node.sr
+    node_original_sr = node.original_sr
 
     nodes_gtf_features = []
 
@@ -181,7 +182,8 @@ def get_gtf_features_from_node(
             f'transcript_id "{series_id:0>6}"; '
             f'mega_exon_id "{node_id:0>3}"; '
             f'exon_id "{index:0>3}"; '
-            f'sr "{node_sr}";'
+            f'sr "{node_sr}"; '
+            f'osr "{node_original_sr}";'
         ]
         nodes_gtf_features.append(
             [

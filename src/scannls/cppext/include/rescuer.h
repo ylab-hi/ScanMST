@@ -20,7 +20,7 @@ namespace rescuer {
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
   constexpr int max_seq_len = 100;
-  constexpr int max_sr_pos_diff = 10;
+  constexpr int max_sr_pos_diff = 1;
 
   struct get_softclip_result_t {
     int soft_len{};
