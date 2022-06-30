@@ -109,18 +109,16 @@ class Blat:
     def is_ready(self) -> bool:
         """Function for checking whether the blat server is ready or not.
 
-        after starting the server service
-
+        :except: raise when the process start server but log file is not created
         :return: the boolean value of whether the server is ready or not
         """
-        self.logger.debug("check if the server starts by reading the log file")
+        if not os.path.exists(self.log_file_path):
+            raise RuntimeError("the process start server but the log file is not exist")
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
-        with this_lock:
-            if os.path.exists(self.log_file_path) and self.is_start_server:
-                with open(self.log_file_path) as f:
-                    return any("Server ready" in line for line in f)
-        return False
+        self.logger.debug("check if the server starts by reading the log file")
+        with this_lock, open(self.log_file_path) as f:
+            return any("Server ready" in line for line in f)
 
     def is_running(self) -> bool:
         """Function for checking whether the blat server is running or not.
@@ -253,22 +251,19 @@ class Blat:
 
         return out_psl
 
-    def _wait_ready(self, interval: int = 30) -> None:
+    def _check_if_self_ready(self, interval: int = 60) -> None:
         """Function for waiting the server service to be ready.
 
         :param interval: the interval time for checking the server service
         """
-        # self open and sever is running
-        if self.is_ready() and self.is_running():
-            return
-        # self do not open and sever is running by others
-        if not self.is_ready() and self.is_running():
+        # check self start server and sever is running
+        if self.is_start_server:
+            # check log file
+            if self.is_ready():
+                return
+            #  not ready yet, wait for a while
             time.sleep(interval)
-        # self do not open and server is not running by others, then open server
-        elif not self.is_ready() and not self.is_running():
-            self.start_server()
-
-        self._wait_ready()
+            self._check_if_self_ready()
 
     def query(self, in_seq: str, mini_identity: int = 90) -> str:
         """Function for querying the sequence to the server service.
@@ -277,22 +272,18 @@ class Blat:
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
-        # check if need to start server service in case prog that start sever service is not running
-        self.start_server()
-
         while self.is_running():  # self or other is running service
             try:
+                self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
                 out_psl = self._query(in_seq, mini_identity)
             except subprocess.CalledProcessError:
-                time.sleep(30)
+                time.sleep(60)  # wait for other's service to be ready
             else:
                 return out_psl
 
-        # self or other is not running service, then self open
-        self._wait_ready()
-        out_psl = self._query(in_seq, mini_identity)
-
-        return out_psl
+        # other kill service and self start
+        self.start_server()
+        return self.query(in_seq, mini_identity)
 
     @staticmethod
     def _query_insertion(
