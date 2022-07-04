@@ -65,7 +65,6 @@ class Read:
         "reference_match_size",
         "indel_size",
         "cigartuples_without_soft",
-        "cigartuples",
         "query_length",
         "adhocsms",
         "adhocseq",

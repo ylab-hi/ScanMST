@@ -119,11 +119,17 @@ class SRRescuer:
         )
 
         self.logger.trace(
-            f"{chrom=} {start=} {mode1=} {query_name_current=}"
-            f" {query_names_in_graph=}"
+            f"{chrom=} {start=} {mode1=}  {current_node.strand=} {current_node.ref_start=} "
+            f"{current_node.cigartuples_without_soft=} {query_name_current=} "
+            f"{query_names_in_graph=} "
         )
 
         # reset query_names in graph
+        if (
+            current_node.ref_start is None
+            or current_node.cigartuples_without_soft is None
+        ):
+            raise ValueError(f"{current_node.query_name} with None value")
 
         rescued_sr = self.cppext_rescuer.calculate_sr(
             chrom,
@@ -131,7 +137,9 @@ class SRRescuer:
             start,
             mode1,
             current_node.strand,
+            current_node.ref_start,
             query_name_current,
+            current_node.cigartuples_without_soft,
         )
 
         self.logger.trace(f"current {rescued_sr=}")
@@ -151,9 +159,16 @@ class SRRescuer:
                 mode2,
             )
             self.logger.trace(
-                f"{chrom=} {start=} {mode2=} {next_node.strand} {query_name_next=}"
+                f"{chrom=} {start=} {mode2=} {next_node.strand} {next_node.ref_start=} "
+                f"{next_node.cigartuples_without_soft=} {query_name_next=}"
                 f" {query_names_in_graph=}"
             )
+
+            if (
+                next_node.ref_start is None
+                or next_node.cigartuples_without_soft is None
+            ):
+                raise ValueError(f"{next_node.query_name} with None value")
 
             rescued_sr += self.cppext_rescuer.calculate_sr(
                 chrom,
@@ -161,7 +176,9 @@ class SRRescuer:
                 start,
                 mode2,
                 next_node.strand,
+                next_node.ref_start,
                 query_name_next,
+                next_node.cigartuples_without_soft,
             )
 
             self.logger.trace(f"successors {rescued_sr=}")

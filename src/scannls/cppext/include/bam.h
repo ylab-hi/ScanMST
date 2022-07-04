@@ -50,7 +50,7 @@ namespace bam_parser {
            bool t_is_reverse);
   };
 
-  [[maybe_unused]] [[maybe_unused]] void print_reads(const std::vector<read_t> &reads);
+  [[maybe_unused]] void print_reads(const std::vector<read_t> &reads);
 
   class bam_handler {
   public:

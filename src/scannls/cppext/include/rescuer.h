@@ -8,6 +8,7 @@
 #include <iostream>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "bam.h"
@@ -20,7 +21,7 @@ namespace rescuer {
   using bam_parser::bam_handler;
   using bam_parser::parseCigarResult_t;
   constexpr int max_seq_len = 100;
-  constexpr int max_sr_pos_diff = 1;
+  constexpr int max_sr_pos_diff = 10;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -30,9 +31,6 @@ namespace rescuer {
   };
 
   inline int get_read_max_length(std::string_view t_seq);
-
-  get_softclip_result_t get_softclip(const std::string &t_read_seq, const bam1_t *t_alignment,
-                                     int t_mode, const uint32_t *t_cigar_str, size_t t_cigar_len);
 
   /**
    * @brief Check if cigar string is soft-clipped
@@ -87,8 +85,9 @@ namespace rescuer {
      * @return number of sr
      */
     int calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
-                     std::string_view t_strand,
-                     std::vector<std::string> &t_current_query_name) const;
+                     std::string_view t_strand, long t_read_start,
+                     std::vector<std::string> &t_current_query_name,
+                     const std::vector<uint> &cigartuples_without_soft) const;
 
     /**
      * @brief calculate number of sr according to alignment between srlist and
@@ -139,12 +138,51 @@ namespace rescuer {
      * @param t_current_names  current names list
      * @param t_name_list  names in graph
      */
-    std::vector<std::string> add_sr_sv_list(std::vector<std::string> &t_sr,
-                                            std::vector<std::string> &t_sv,
-                                            std::string_view tt_chrom, const long tt_start,
-                                            const long tt_end, const int tt_mode,
-                                            std::string_view tt_strand,
-                                            std::vector<std::string> &t_current_names) const;
+    std::vector<std::string> add_sr_sv_list(
+        std::vector<std::string> &t_sr, std::vector<std::string> &t_sv, std::string_view tt_chrom,
+        long tt_start, const long tt_end, const int tt_mode, std::string_view tt_strand,
+        long read_start, std::vector<std::string> &t_current_names,
+        const std::vector<uint> &tt_cigartuples_without_soft) const;
+
+    std::tuple<get_softclip_result_t, bool> get_softclip(
+        const std::string &t_read_seq, int t_mode, const uint32_t *t_cigar_buffer,
+        const std::vector<uint> &cigartuples_without_soft) const;
+
+    /**
+     * @brief check if the rescued read need to be skipped
+     * @param read_seq read sequence of rescued read
+     * @param tt_mode mode of node's read
+     * @param tt_start start position of node's read for rescuing
+     * @param cigar cigar string buff of rescued read
+     * @param tt_cigartuples_without_soft cigar tuples without soft clip of node's read
+     * @return tuple<get_softclip_result_t, seq_len, is_skip>
+     */
+    std::tuple<get_softclip_result_t, int, bool> check_if_skip(
+        std::string const &read_seq, int tt_mode, long tt_start, uint32_t const *cigar,
+        const std::vector<uint> &tt_cigartuples_without_soft) const;
+
+    /**
+     * @brief check if rescued reads and node's read have same strand
+     * @param strand  strand of node's read
+     * @return true if not same strand
+     */
+    bool check_strand_if_skip(std::string_view strand) const;
+
+    /**
+     * @brief check start position for rescued reads and node
+     * @param read_start node's read reference start
+     * @return true if rescued reads need to be skipped
+     */
+    bool check_read_start_if_skip(long read_start) const;
+
+    /**
+     * @brief check if has same isoform
+     * @param left_cigartuples_without_soft cigar tuples without soft clip for one read
+     * @param right_cigartuples_without_soft cigar tuples without soft clip for another read
+     * @return true if has same isoform
+     */
+    bool check_if_same_isform(const std::vector<uint> &left_cigartuples_without_soft,
+                              const std::vector<uint> &right_cigartuples_without_soft) const;
   };
 
 }  // namespace rescuer

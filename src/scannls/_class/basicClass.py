@@ -395,6 +395,7 @@ class Node(BasicNode):
         "unique_key",
         "is_polya",
         "_exon_repr",
+        "cigartuples_without_soft",
     ) + BasicNode.__slots__
 
     def __init__(
@@ -436,6 +437,8 @@ class Node(BasicNode):
         self.insertion_info = None
         self.unique_key = None
         self.is_polya = False
+
+        self.cigartuples_without_soft: Optional[List[int]] = None
 
     def __hash__(self) -> int:
         """Hash a node."""
@@ -773,6 +776,7 @@ class Series:
             )
 
             read1_node.prev_sv_type = prev_sv_type
+            read1_node.cigartuples_without_soft = read1.cigartuples_without_soft
 
             previous_breakpoint = event.bp2
             prev_sv_type = event.sv_type
@@ -880,6 +884,12 @@ class Series:
                             prev_sv_type,
                             insertion_node.sv_type,
                         )
+
+                        # add cigartuples_without_soft for insertion node
+                        insertion_node.cigartuples_without_soft = (
+                            insertion.cigartuples_without_soft
+                        )
+
                         self.logger.trace(f"Add Insertion {insertion_node=} to Series")
 
                         self.add_node(insertion_node)
@@ -920,6 +930,7 @@ class Series:
                 )
                 final_node.query_name = read2.query_name
                 final_node.prev_sv_type = prev_sv_type
+                final_node.cigartuples_without_soft = read2.cigartuples_without_soft
 
                 check_end_node_is_ploya(final_node, genome_fasta)
 

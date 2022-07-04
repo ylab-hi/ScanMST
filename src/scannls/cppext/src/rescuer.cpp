@@ -17,13 +17,15 @@ namespace rescuer {
         min_seq_align_len{t_min_seq_align_len} {}
 
   int Rescuer::calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
-                            std::string_view t_strand,
-                            std::vector<std::string> &t_current_query_name) const {
+                            std::string_view t_strand, long t_read_start,
+                            std::vector<std::string> &t_current_query_name,
+                            const std::vector<uint> &cigartuples_without_soft) const {
     std::vector<std::string> sr_list{};
     std::vector<std::string> sv_list{};
 
-    auto sr_list_names = add_sr_sv_list(sr_list, sv_list, t_chrom, t_start, t_end, t_mode, t_strand,
-                                        t_current_query_name);
+    auto sr_list_names
+        = add_sr_sv_list(sr_list, sv_list, t_chrom, t_start, t_end, t_mode, t_strand, t_read_start,
+                         t_current_query_name, cigartuples_without_soft);
 
     if (sr_list.empty() || sv_list.empty()) return 0;
 
@@ -69,8 +71,6 @@ namespace rescuer {
       //       add query name of sr to all names list if the query name of sr update successfully
       //       to ensure that the query name of sr  do not update repeatedly
       if (is_sr_increment) {
-        std::cout << "read name: " << t_sr_list_names[sr_index] << " rescued"
-                  << "\n";
         m_names_list.push_back(t_sr_list_names[sr_index]);
       }
     }
@@ -103,20 +103,17 @@ namespace rescuer {
   std::vector<std::string> Rescuer::add_sr_sv_list(
       std::vector<std::string> &t_sr, std::vector<std::string> &t_sv, std::string_view tt_chrom,
       long tt_start, const long tt_end, const int tt_mode, std::string_view tt_strand,
-      std::vector<std::string> &t_current_names) const {
+      long read_start, std::vector<std::string> &t_current_names,
+      const std::vector<uint> &tt_cigartuples_without_soft) const {
     std::vector<std::string> sr_list_names;
 
     --tt_start;
     const int tid = bam_name2id(m_bam_handler.sam_header, std::string(tt_chrom).c_str());
-
     hts_itr_t *iter = sam_itr_queryi(m_bam_handler.sam_index, tid, tt_start, tt_end);
 
     while (sam_itr_next(m_bam_handler.sam_file, iter, m_bam_handler.sam_record) >= 0) {
-      if (m_bam_handler.sam_record->core.flag & BAM_FREVERSE) {
-        if (tt_strand == "+") continue;
-      } else {
-        if (tt_strand == "-") continue;
-      }
+      if (check_strand_if_skip(tt_strand)) continue;
+      if (check_read_start_if_skip(read_start)) continue;
 
       uint32_t const *cigar{bam_get_cigar(m_bam_handler.sam_record)};
       uint8_t const *seq{bam_get_seq(m_bam_handler.sam_record)};
@@ -124,22 +121,15 @@ namespace rescuer {
       //    get read seq
       if (m_bam_handler.sam_record->core.qual >= min_mapq
           && is_soft_clipped(cigar, m_bam_handler.sam_record->core.n_cigar)) {
-        std::string read_seq{get_read_seq(seq, m_bam_handler.sam_record->core.l_qseq)};
+        std::string const read_seq{get_read_seq(seq, m_bam_handler.sam_record->core.l_qseq)};
 
-        auto softclip_result{get_softclip(read_seq, m_bam_handler.sam_record, tt_mode, cigar,
-                                          m_bam_handler.sam_record->core.n_cigar)};
+        auto [softclip_result, seq_len, is_skip]
+            = check_if_skip(read_seq, tt_mode, tt_start, cigar, tt_cigartuples_without_soft);
 
-        if (long const reference_pos = (tt_mode == 2) ? m_bam_handler.sam_record->core.pos
-                                                      : bam_endpos(m_bam_handler.sam_record);
-            std::abs(reference_pos - tt_start) > max_sr_pos_diff)
-          continue;
+        if (is_skip) continue;
 
-        int const seq_len{get_read_max_length(softclip_result.read_seq)};
-        if (seq_len < min_seq_align_len) continue;  // read length is too short
-
-        auto const read_name{bam_get_qname(m_bam_handler.sam_record)};
-
-        if (find(t_current_names.begin(), t_current_names.end(), read_name)
+        if (auto const read_name{bam_get_qname(m_bam_handler.sam_record)};
+            find(t_current_names.begin(), t_current_names.end(), read_name)
             != t_current_names.end()) {
           if (tt_mode == 2)
             t_sv.emplace_back(softclip_result.read_seq.rbegin(),
@@ -167,8 +157,109 @@ namespace rescuer {
     return sr_list_names;
   }
 
+  std::tuple<get_softclip_result_t, bool> Rescuer::get_softclip(
+      std::string const &t_read_seq, int t_mode, uint32_t const *t_cigar_buffer,
+      const std::vector<uint> &cigartuples_without_soft) const {
+    parseCigarResult_t cigar_result{
+        parser_cigar(t_cigar_buffer, m_bam_handler.sam_record->core.n_cigar)};
+
+    bool is_same_isform{
+        check_if_same_isform(cigartuples_without_soft, cigar_result.cigartuples_without_soft)};
+
+    long ref_end{m_bam_handler.sam_record->core.pos + cigar_result.ref_match};
+
+    if (t_mode == 0) {
+      if (cigar_result.lt_soft_len > cigar_result.rt_soft_len)
+        return std::make_tuple(get_softclip_result_t{static_cast<int>(cigar_result.lt_soft_len),
+                                                     t_read_seq.substr(0, cigar_result.lt_soft_len),
+                                                     m_bam_handler.sam_record->core.pos, 2},
+                               is_same_isform);
+
+      else if (cigar_result.lt_soft_len < cigar_result.rt_soft_len)
+        return std::make_tuple(
+            get_softclip_result_t{
+                static_cast<int>(cigar_result.rt_soft_len),
+                t_read_seq.substr(cigar_result.query_len - cigar_result.rt_soft_len), ref_end, 1},
+            is_same_isform);
+      else
+        return std::make_tuple(get_softclip_result_t{}, is_same_isform);
+
+    } else if (t_mode == 1) {
+      return std::make_tuple(
+          get_softclip_result_t{
+              static_cast<int>(cigar_result.rt_soft_len),
+              t_read_seq.substr(cigar_result.query_len - cigar_result.rt_soft_len), ref_end, 1},
+          is_same_isform);
+    }
+
+    else if (t_mode == 2)
+      return std::make_tuple(get_softclip_result_t{static_cast<int>(cigar_result.lt_soft_len),
+                                                   t_read_seq.substr(0, cigar_result.lt_soft_len),
+                                                   m_bam_handler.sam_record->core.pos, 2},
+                             is_same_isform);
+
+    return std::make_tuple(get_softclip_result_t{}, is_same_isform);
+  }
+
+  bool Rescuer::check_if_same_isform(
+      const std::vector<uint> &left_cigartuples_without_soft,
+      const std::vector<uint> &right_cigartuples_without_soft) const {
+    std::vector<uint> left_result{}, right_result{};
+
+    auto left_size = left_cigartuples_without_soft.size();
+    auto right_size = right_cigartuples_without_soft.size();
+
+    for (std::vector<int>::size_type i = 0; i < left_size; i += 2) {
+      if (left_cigartuples_without_soft[i] == BAM_CREF_SKIP)
+        left_result.push_back(left_cigartuples_without_soft[i + 1]);
+    }
+
+    for (std::vector<int>::size_type i = 0; i < right_size; i += 2) {
+      if (left_cigartuples_without_soft[i] == BAM_CREF_SKIP)
+        right_result.push_back(right_cigartuples_without_soft[i + 1]);
+    }
+
+    if (left_result.size() != right_result.size()) return false;
+
+    if (left_result.empty()) return true;
+
+    return std::equal(left_result.begin(), left_result.end(), right_result.begin());
+  }
+
+  std::tuple<get_softclip_result_t, int, bool> Rescuer::check_if_skip(
+      std::string const &read_seq, int tt_mode, long tt_start, uint32_t const *cigar,
+      const std::vector<uint> &tt_cigartuples_without_soft) const {
+    auto [softclip_result, is_same_isform]
+        = get_softclip(read_seq, tt_mode, cigar, tt_cigartuples_without_soft);
+
+    if (long const reference_pos = (tt_mode == 2) ? m_bam_handler.sam_record->core.pos
+                                                  : bam_endpos(m_bam_handler.sam_record);
+        std::abs(reference_pos - tt_start) > max_sr_pos_diff || !is_same_isform)
+      return std::make_tuple(softclip_result, 0, true);  // skip
+
+    int const seq_len{get_read_max_length(softclip_result.read_seq)};
+    if (seq_len < min_seq_align_len)
+      return std::make_tuple(softclip_result, 0, true);  // read length is too short skip
+
+    return std::make_tuple(softclip_result, seq_len, false);  // not skip
+  }
+
+  bool Rescuer::check_strand_if_skip(std::string_view strand) const {
+    if (m_bam_handler.sam_record->core.flag & BAM_FREVERSE)
+      return !(strand == "-");
+    else
+      return strand == "-";
+  }
+
+  bool Rescuer::check_read_start_if_skip(long read_start) const {
+    if (m_bam_handler.sam_record->core.flag & BAM_FREVERSE)
+      return m_bam_handler.sam_record->core.pos > read_start;
+    // positive strand
+    return m_bam_handler.sam_record->core.pos < read_start;
+  }
+
   bool is_soft_clipped(const uint32_t *t_cigar, size_t t_cigar_len) {
-    for (size_t i{0}; i < t_cigar_len; i++) {
+    for (size_t i{0}; i < t_cigar_len; ++i) {
       if (bam_cigar_op(t_cigar[i]) == BAM_CSOFT_CLIP) {
         return true;
       }
@@ -226,38 +317,9 @@ namespace rescuer {
     return result;
   }
 
-  get_softclip_result_t get_softclip(const std::string &t_read_seq, const bam1_t *t_alignment,
-                                     int t_mode, const uint32_t *t_cigar_str, size_t t_cigar_len) {
-    parseCigarResult_t cigar_result{parser_cigar(t_cigar_str, t_cigar_len)};
-
-    long ref_end{t_alignment->core.pos + cigar_result.ref_match};
-
-    if (t_mode == 0) {
-      if (cigar_result.lt_soft_len > cigar_result.rt_soft_len)
-
-        return {static_cast<int>(cigar_result.lt_soft_len),
-                t_read_seq.substr(0, cigar_result.lt_soft_len), t_alignment->core.pos, 2};
-
-      else if (cigar_result.lt_soft_len < cigar_result.rt_soft_len)
-        return {static_cast<int>(cigar_result.rt_soft_len),
-                t_read_seq.substr(cigar_result.query_len - cigar_result.rt_soft_len), ref_end, 1};
-      else
-        return {};
-
-    } else if (t_mode == 1) {
-      return {static_cast<int>(cigar_result.rt_soft_len),
-              t_read_seq.substr(cigar_result.query_len - cigar_result.rt_soft_len), ref_end, 1};
-    }
-
-    else if (t_mode == 2)
-      return {static_cast<int>(cigar_result.lt_soft_len),
-              t_read_seq.substr(0, cigar_result.lt_soft_len), t_alignment->core.pos, 2};
-
-    return {};
-  }
-
   inline int get_read_max_length(std::string_view t_seq) {
     if (auto seq_len = static_cast<int>(t_seq.size()); seq_len < max_seq_len) return seq_len;
     return max_seq_len;
   }
+
 }  // namespace rescuer

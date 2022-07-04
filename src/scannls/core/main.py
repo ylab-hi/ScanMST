@@ -373,10 +373,9 @@ def _scan_bam_helper(
                 read_length = int(read.query_length)
                 _, _soft_seq, _, read_mode = get_softclip_length(read, mode=0)
 
-                if read.is_reverse:
-                    soft_seq_ori = reverse_complement(_soft_seq)
-                else:
-                    soft_seq_ori = _soft_seq
+                soft_seq_ori = (
+                    reverse_complement(_soft_seq) if read.is_reverse else _soft_seq
+                )
 
                 if (
                     read_mode in {1, 2}
