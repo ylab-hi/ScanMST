@@ -48,8 +48,8 @@ typedef struct _profile s_profile;
    @field	read_end2	0-based sub-optimal alignment ending position on read
    @field	cigar	best alignment cigar; stored the same as that in BAM format, high 28 bits:
    length, low 4 bits: M/I/D (0/1/2); cigar = 0 when the best alignment path is not available
-   @field	cigarLen	length of the cigar string; cigarLen = 0 when the best alignment path
-   is not available
+   @field	cigarLen	length of the cigar string; cigarLen = 0 when the best alignment
+   path is not available
    @field  flag  If the alignment path is accurate (or has missing part). 0: accurate; 1: banded_sw
    is totally failed; 2: banded_sw returned path has missing part
 */
@@ -72,9 +72,9 @@ typedef struct {
        @param	mat	pointer to the substitution matrix; mat needs to be corresponding to the
    read sequence
        @param	n	the square root of the number of elements in mat (mat has n*n elements)
-       @param	score_size	estimated Smith-Waterman score; if your estimated best alignment score
-   is surely < 255 please set 0; if your estimated best alignment score >= 255, please set 1; if you
-   don't know, please set 2
+       @param	score_size	estimated Smith-Waterman score; if your estimated best alignment
+   score is surely < 255 please set 0; if your estimated best alignment score >= 255, please set 1;
+   if you don't know, please set 2
        @return	pointer to the query profile structure
        @note	example for parameter read and mat:
                        If the query sequence is: ACGTATC, the sequence that read points to can be:

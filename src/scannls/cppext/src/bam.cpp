@@ -190,4 +190,12 @@ namespace bam_parser {
     return cigar_string;
   }
 
+  [[maybe_unused]] void bam_handler::print_record() const {
+    if (sam_record == nullptr) {
+      return;
+    }
+    std::cout << " read name: " << bam_get_qname(sam_record) << " cigar:" << get_cigar_string()
+              << '\n';
+  }
+
 }  // namespace bam_parser
