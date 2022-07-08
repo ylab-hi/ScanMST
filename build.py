@@ -57,7 +57,7 @@ def change_env(key: str, value: str):
     return decorator
 
 
-@change_env("CPPFLAGS", "-g")
+@change_env("CPPFLAGS", "-o2")
 def build(setup_kwargs):
     """Build cpp extension."""
     ext_modules = [
