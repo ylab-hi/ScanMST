@@ -53,15 +53,13 @@ namespace rescuer {
         if (bool return_value
             = m_aligner.Align(r.c_str(), v.c_str(), v_len, m_filter, &m_alignment, mask_len);
             !return_value) {
-          std::cout << "No alignment found"
-                    << "\n";
           continue;
         }
-        double const identity{
-            static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
-            / static_cast<double>(r.length())};
 
-        if (identity >= min_identity && (m_alignment.query_begin + m_alignment.ref_begin) <= 2
+        if (double const identity{
+                static_cast<double>(m_alignment.query_end - m_alignment.query_begin + 1)
+                / static_cast<double>(r.length())};
+            identity >= min_identity && (m_alignment.query_begin + m_alignment.ref_begin) <= 2
             && m_alignment.mismatches <= min_mismatch) {
           ++num_increment_sr;
           is_sr_increment = true;
@@ -83,8 +81,8 @@ namespace rescuer {
   }
 
   bool Rescuer::check_if_align(std::string_view t_query, std::string_view t_target) const {
-    int target_len{static_cast<int>(t_target.length())};
-    int const masklen{target_len / 2 > 15 ? target_len / 2 : 15};
+    int const target_len{static_cast<int>(t_target.length())};
+    int const masklen{std::max(target_len >> 1, 15)};
     bool return_value{m_aligner.Align(std::string(t_query).c_str(), std::string(t_target).c_str(),
                                       target_len, m_filter, &m_alignment, masklen)};
 
@@ -183,8 +181,9 @@ namespace rescuer {
             is_same_isform);
       else
         return std::make_tuple(get_softclip_result_t{}, is_same_isform);
+    }
 
-    } else if (t_mode == 1) {
+    if (t_mode == 1) {
       return std::make_tuple(
           get_softclip_result_t{
               static_cast<int>(cigar_result.rt_soft_len),
@@ -192,11 +191,12 @@ namespace rescuer {
           is_same_isform);
     }
 
-    else if (t_mode == 2)
+    if (t_mode == 2) {
       return std::make_tuple(get_softclip_result_t{static_cast<int>(cigar_result.lt_soft_len),
                                                    t_read_seq.substr(0, cigar_result.lt_soft_len),
                                                    m_bam_handler.sam_record->core.pos, 2},
                              is_same_isform);
+    }
 
     return std::make_tuple(get_softclip_result_t{}, is_same_isform);
   }
@@ -206,8 +206,8 @@ namespace rescuer {
       const std::vector<uint> &right_cigartuples_without_soft) const {
     std::vector<uint> left_result{}, right_result{};
 
-    auto left_size = left_cigartuples_without_soft.size();
-    auto right_size = right_cigartuples_without_soft.size();
+    auto const left_size = left_cigartuples_without_soft.size();
+    auto const right_size = right_cigartuples_without_soft.size();
 
     for (std::vector<int>::size_type i = 0; i < left_size; i += 2) {
       if (left_cigartuples_without_soft[i] == BAM_CREF_SKIP)
@@ -215,7 +215,7 @@ namespace rescuer {
     }
 
     for (std::vector<int>::size_type i = 0; i < right_size; i += 2) {
-      if (left_cigartuples_without_soft[i] == BAM_CREF_SKIP)
+      if (right_cigartuples_without_soft[i] == BAM_CREF_SKIP)
         right_result.push_back(right_cigartuples_without_soft[i + 1]);
     }
 
@@ -229,7 +229,7 @@ namespace rescuer {
   std::tuple<get_softclip_result_t, int, bool> Rescuer::check_if_skip(
       std::string const &read_seq, int tt_mode, long tt_start, uint32_t const *cigar,
       const std::vector<uint> &tt_cigartuples_without_soft) const {
-    auto [softclip_result, is_same_isform]
+    auto const [softclip_result, is_same_isform]
         = get_softclip(read_seq, tt_mode, cigar, tt_cigartuples_without_soft);
 
     if (long const reference_pos = (tt_mode == 2) ? m_bam_handler.sam_record->core.pos
@@ -245,10 +245,9 @@ namespace rescuer {
   }
 
   bool Rescuer::check_strand_if_skip(std::string_view strand) const {
-    if (m_bam_handler.sam_record->core.flag & BAM_FREVERSE)
-      return !(strand == "-");
-    else
-      return strand == "-";
+    if (m_bam_handler.sam_record->core.flag & BAM_FREVERSE) return !(strand == "-");
+
+    return strand == "-";
   }
 
   bool Rescuer::check_read_start_if_skip(long read_start) const {
@@ -307,12 +306,11 @@ namespace rescuer {
         case BAM_CSOFT_CLIP:
           result.query_len += len;
           break;
-        default:;
       }
     }
 
-    if (result.cigartuples[0] == 4) result.lt_soft_len = result.cigartuples[1];
-    if (result.cigartuples[2 * t_cigar_len - 2] == 4)
+    if (result.cigartuples[0] == BAM_CSOFT_CLIP) result.lt_soft_len = result.cigartuples[1];
+    if (result.cigartuples[2 * t_cigar_len - 2] == BAM_CSOFT_CLIP)
       result.rt_soft_len = result.cigartuples[2 * t_cigar_len - 1];
     return result;
   }

@@ -114,6 +114,11 @@ namespace bam_parser {
      * @return  cigar string if success, otherwise empty string when sam_record is nullptr
      */
     [[maybe_unused]] [[nodiscard]] std::string get_cigar_string() const;
+
+    /**
+     * @brief print record information
+     */
+    [[maybe_unused]] void print_record() const;
   };
 
 }  // namespace bam_parser
