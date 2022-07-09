@@ -188,8 +188,8 @@ def get_gtf_features_from_node(
         nodes_gtf_features.append(
             [
                 f"{node.chrom}",
-                "exon",
                 "scannls",
+                "exon",
                 f"{start + 1}",
                 f"{end}",
                 ".",
