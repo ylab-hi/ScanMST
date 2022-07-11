@@ -165,7 +165,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.closed=}")
-    logger.info(f"{options.loose=}")
+    logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
     # find 2bit file
@@ -221,7 +221,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             if options.parallel == 1
             else parse_splice_graph_for_cliques_par
         )
-        avg_cov = -1 if options.loose else math.ceil(avg_cov)
+        avg_cov = math.ceil(avg_cov) if options.bound else -1
         parse_splice_graph_for_cliques(cliques, writers, options, avg_cov, logger)
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
