@@ -201,6 +201,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             substitutions_num=options.substitutions_num,
             substitutions_fraction=options.substitutions_fraction,
             indels_fraction=options.indel_fraction,
+            species=options.species,
         )
 
         intact_series_list_len = len(intact_series_list)

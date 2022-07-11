@@ -12,6 +12,7 @@ import textwrap
 from dataclasses import dataclass
 from typing import Any
 from typing import Optional
+from typing import Tuple
 
 from scannls import __version__
 
@@ -33,6 +34,8 @@ class DefaultOptions:
     sleep: bool = True
     bound: bool = True
     log: str = "info"
+    species: str = "human"
+    species_choices: Tuple[str, ...] = ("human", "mouse")
     parallel: int = 1
     port: int = 88888
     min_soft_seg_len: int = 200
@@ -170,8 +173,18 @@ def parse_args() -> argparse.ArgumentParser:
         dest="two_bit",
         help="reference genome in 2bit format",
     )
+
     parser.add_argument(
-        "--non-can",
+        "--species",
+        action="store",
+        dest="species",
+        help="species name for reference genome (default: %(default)s)",
+        choices=DefaultOptions.species_choices,
+        default=DefaultOptions.species,
+    )
+
+    parser.add_argument(
+        "--ncan",
         action="store_true",
         dest="noncanonical",
         default=DefaultOptions.noncanonical,

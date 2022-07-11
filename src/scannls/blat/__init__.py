@@ -11,7 +11,7 @@ import platform
 from importlib import resources
 from pathlib import Path
 
-PACKAGE_NAME = "scannls"
+from .. import __PACKAGE_NAME__
 
 
 def load_blat() -> Path:
@@ -19,7 +19,7 @@ def load_blat() -> Path:
 
     @return: Path object.
     """
-    with resources.path(PACKAGE_NAME, "blat") as f:
+    with resources.path(__PACKAGE_NAME__, "blat") as f:
         blat_path = f
     system = platform.system()
     if system == "Windows":

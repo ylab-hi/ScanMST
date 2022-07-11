@@ -2,7 +2,17 @@
 """Helper functions."""
 import re
 from collections import defaultdict
+from importlib import resources
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
 
+import HTSeq  # type: ignore
+import pyfaidx  # type: ignore
+import yaml  # type: ignore
+
+from .. import __PACKAGE_NAME__
 from .._class.exception import ModesNotEqualError
 from scannls import cppext
 
@@ -23,11 +33,6 @@ __all__ = [
     "obtain_variants_stats",
     "strand_mode_checker",
 ]
-
-from typing import Tuple, List, Dict, Any
-
-import HTSeq  # type: ignore
-import pyfaidx  # type: ignore
 
 
 def extract_splice_sites(in_file: str, bin_size: int) -> Any:
@@ -1295,34 +1300,13 @@ def obtain_variants_stats(
     return num_of_subs, ins_fraction, del_fraction
 
 
-def provide_transcriptome_length(program_info: List[Dict]) -> int:
+def get_transcriptome_length(species: str) -> int:
     """Obtain transcriptome size from BAM header.
 
-    :param program_info: program info. in BAM header
-    :type program_info: list
+    :param species:  species name
     :return: reference transcriptome size.
-    :rtype: int
     """
-    reference_transcriptome_size = {
-        "Homo sapiens": 150000000,
-        "Mus musculus": 128265015,
-    }
-    human = ["hg18", "hg19", "hg38", "b36", "b37", "b38", "GRCh36", "GRCh37", "GRCh38"]
-    mouse = ["mm9", "mm10", "mm39", "GRCm38", "GRCm39"]
-    ref_fa = dict.fromkeys(
-        [f"{i}.fa" for i in human] + [f"{i}.fasta" for i in human], "Homo sapiens"
-    )
-    mouse_fa = dict.fromkeys(
-        [f"{i}.fa" for i in mouse] + [f"{i}.fasta" for i in mouse], "Mus musculus"
-    )
-    ref_fa.update(mouse_fa)
-
-    species = "Homo sapiens"
-    for _idx, _command in enumerate(program_info, 1):
-        if "CL" in _command:
-            command = _command["CL"].lower()
-            for _fa in ref_fa:
-                if f"{_fa.lower()} " in command:
-                    species = ref_fa[_fa]
-                    break
-    return species, reference_transcriptome_size[species]
+    with resources.path(__PACKAGE_NAME__, "blat") as f:
+        path = f / "transcriptome_length.yaml"
+        transcript_length_dict = yaml.safe_load(path.open())
+        return transcript_length_dict["species"][species]

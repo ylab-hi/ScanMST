@@ -25,8 +25,8 @@ from .. import Series
 from .._class.type import LoggerType
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
+from .helper import get_transcriptome_length
 from .helper import obtain_variants_stats
-from .helper import provide_transcriptome_length
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads
 
@@ -494,6 +494,7 @@ def scanbam_run(
     substitutions_num,
     substitutions_fraction,
     indels_fraction,
+    species,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(
@@ -515,12 +516,9 @@ def scanbam_run(
     )
     # iterate over all read of the bam file
     representative_alignments_new_cigar = bam_scanner.iter_bam()
-    species, transcriptome_length = provide_transcriptome_length(
-        bam_scanner.header["PG"]
-    )
-    avg_cov = (
-        bam_scanner.total_length / transcriptome_length
-    )  # TODO: need to change in terms of bam file
+
+    avg_cov = bam_scanner.total_length / get_transcriptome_length(species)
+
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(
         f"species: {species}, Reads coverage: {avg_cov:.2f}, Number of chimeric reads: {num_chimeric_reads}"

@@ -25,9 +25,8 @@ from scannls import cppext
 __all__ = ["external_tool_checking", "get_softclip_length", "timeit", "sleep"]
 
 
-def external_tool_checking(log_handler: LoggerType) -> None:
+def external_tool_checking(software: List[str], log_handler: LoggerType) -> None:
     """Checking dependencies are installed."""
-    software = ["gfClient", "gfServer"]
     for tool in software:
         output = shutil.which(tool)
         if not output:
