@@ -22,6 +22,11 @@ namespace rescuer {
   using bam_parser::parseCigarResult_t;
   constexpr int max_seq_len = 100;
   constexpr int max_sr_pos_diff = 10;
+  constexpr int min_seq_align_len = 10;
+  constexpr uint align_match_score = 2;
+  constexpr uint align_mismatch_penalty = 5;
+  constexpr uint align_gap_open_penalty = 8;
+  constexpr uint align_gap_extend_penalty = 6;
 
   struct get_softclip_result_t {
     int soft_len{};
@@ -64,15 +69,19 @@ namespace rescuer {
     int min_soft_len{};
     int min_mismatch{};
     double min_identity{};
-    int min_seq_align_len{10};
-    StripedSmithWaterman::Aligner m_aligner{StripedSmithWaterman::Aligner{2, 5, 8, 6}};
+    int min_seq_align_len{min_seq_align_len};
+    int average_read_depth{};
+    StripedSmithWaterman::Aligner m_aligner{
+        StripedSmithWaterman::Aligner{align_match_score, align_mismatch_penalty,
+                                      align_gap_open_penalty, align_gap_extend_penalty}};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     mutable StripedSmithWaterman::Alignment m_alignment{};
     mutable std::vector<std::string> m_names_list{};
 
   public:
+    Rescuer() = default;
     Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity,
-            int t_min_seq_align_len);
+            int t_min_seq_align_len, int t_average_read_depth);
 
     /**
      * @brief calculate number of sr for every node

@@ -30,7 +30,8 @@ class DefaultOptions:
     mapq: int = 15
     noncanonical: bool = False
     closed: bool = True
-    nsleep: bool = False
+    sleep: bool = True
+    loose: bool = False
     log: str = "info"
     parallel: int = 1
     port: int = 88888
@@ -183,13 +184,23 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.closed,
         help="close BLAT server when job has done (default: %(default)s)",
     )
+
     parser.add_argument(
         "--nsleep",
         action="store_false",
-        dest="nsleep",
-        default=DefaultOptions.nsleep,
+        dest="sleep",
+        default=DefaultOptions.sleep,
         help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
+
+    parser.add_argument(
+        "--loose",
+        action="store_true",
+        dest="loose",
+        default=DefaultOptions.loose,
+        help="if add max increment threshold based on average read depth when rescuing sr (default: %(default)s)",
+    )
+
     parser.add_argument(
         "--port",
         action="store",

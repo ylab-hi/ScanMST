@@ -7,14 +7,15 @@ namespace rescuer {
 
   // Constructor for rescuer
   Rescuer::Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch,
-                   double t_identity, int t_min_seq_align_len)
+                   double t_identity, int t_min_seq_align_len, int t_average_read_depth)
       : m_file_path{t_file},
         m_bam_handler{t_file},
         min_mapq{t_mapq},
         min_soft_len{t_soft_len},
         min_mismatch{t_mismatch},
         min_identity{t_identity},
-        min_seq_align_len{t_min_seq_align_len} {}
+        min_seq_align_len{t_min_seq_align_len},
+        average_read_depth{t_average_read_depth} {}
 
   int Rescuer::calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
                             std::string_view t_strand, long t_read_start,
@@ -47,7 +48,7 @@ namespace rescuer {
           continue;
         // reference length
         int const v_len{static_cast<int>(v.length())};
-        int const mask_len = v_len >= 30 ? v_len / 2 : 15;
+        int const mask_len = v_len >= 30 ? v_len >> 1 : 15;
 
         // check if conduct alignment
         if (bool return_value
@@ -70,8 +71,14 @@ namespace rescuer {
       //       to ensure that the query name of sr  do not update repeatedly
       if (is_sr_increment) {
         m_names_list.push_back(t_sr_list_names[sr_index]);
+        // -1 means no limit when running in loose mode
+        if (average_read_depth != -1 && num_increment_sr >= average_read_depth) {
+          std::cout << "early stopping " << '\n';
+          return num_increment_sr;
+        }
       }
     }
+
     return num_increment_sr;
   }
 

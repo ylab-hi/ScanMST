@@ -7,6 +7,7 @@
 @Time:        1/11/22 4:28 PM
 """
 import argparse
+import math
 import os
 import sys
 import tempfile
@@ -56,6 +57,7 @@ def parse_splice_graph_for_cliques_seq(
     cliques: Any,
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
+    average_read_depth: int,
     logger: LoggerType,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -67,6 +69,7 @@ def parse_splice_graph_for_cliques_seq(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
+        average_read_depth,
     )
 
     with writers.open() as _:
@@ -83,7 +86,9 @@ def parse_splice_graph_for_cliques_seq(
 
 
 def _parse_splice_graph_for_cliques_par(
-    cliques: Any, options: Union[DefaultOptions, argparse.Namespace]
+    cliques: Any,
+    options: Union[DefaultOptions, argparse.Namespace],
+    average_read_depth: int,
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
@@ -98,6 +103,7 @@ def _parse_splice_graph_for_cliques_par(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
+        average_read_depth,
     )
 
     result_series = []
@@ -113,6 +119,7 @@ def parse_splice_graph_for_cliques_par(
     cliques: Any,
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
+    average_read_depth: int,
     logger: LoggerType,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -120,6 +127,7 @@ def parse_splice_graph_for_cliques_par(
         partial(
             _parse_splice_graph_for_cliques_par,
             options=options,
+            average_read_depth=average_read_depth,
         ),
         logger,
         options.parallel,
@@ -157,6 +165,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.closed=}")
+    logger.info(f"{options.loose=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
     # find 2bit file
@@ -164,14 +173,14 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         options.two_bit = find_2bit_file(options.ref, logger)
     blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
-    if options.nsleep:
+    if options.sleep:
         sleep(options.input)
     blat.start_server()
     blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_series_list, in_bam_header = scanbam_run(
+        intact_series_list, in_bam_header, avg_cov = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
@@ -212,7 +221,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             if options.parallel == 1
             else parse_splice_graph_for_cliques_par
         )
-        parse_splice_graph_for_cliques(cliques, writers, options, logger)
+        avg_cov = -1 if options.loose else math.ceil(avg_cov)
+        parse_splice_graph_for_cliques(cliques, writers, options, avg_cov, logger)
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 

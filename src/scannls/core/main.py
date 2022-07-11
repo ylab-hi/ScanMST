@@ -514,10 +514,12 @@ def scanbam_run(
     )
     # iterate over all read of the bam file
     representative_alignments_new_cigar = bam_scanner.iter_bam()
-    avg_cov = bam_scanner.total_length / 150000000
+    avg_cov = (
+        bam_scanner.total_length / 150000000
+    )  # TODO: need to change in terms of bam file
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(
-        f"Reads coverage: {avg_cov:.4f}, Number of chimeric reads: {num_chimeric_reads}"
+        f"Reads coverage: {avg_cov:.2f}, Number of chimeric reads: {num_chimeric_reads}"
     )
     # get the chromosome name we want to scan
 
@@ -555,4 +557,4 @@ def scanbam_run(
             intact_series_list.extend(contig_series_list)
 
     bam_scanner.in_bam.close()
-    return intact_series_list, bam_scanner.header
+    return intact_series_list, bam_scanner.header, avg_cov
