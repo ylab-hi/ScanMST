@@ -31,7 +31,7 @@ class DefaultOptions:
     noncanonical: bool = False
     closed: bool = True
     sleep: bool = True
-    loose: bool = False
+    bound: bool = True
     log: str = "info"
     parallel: int = 1
     port: int = 88888
@@ -194,11 +194,11 @@ def parse_args() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--loose",
-        action="store_true",
-        dest="loose",
-        default=DefaultOptions.loose,
-        help="if add max increment threshold based on average read depth when rescuing sr (default: %(default)s)",
+        "--nbound",
+        action="store_false",
+        dest="bound",
+        default=DefaultOptions.bound,
+        help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
     )
 
     parser.add_argument(
