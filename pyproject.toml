@@ -37,7 +37,7 @@ coverage = { extras = ["toml"], version = "^6.4" }
 safety = "^2.0.0"
 mypy = "^0.961"
 typeguard = "^2.12.1"
-xdoctest = { extras = ["colors"], version = "^1.0.0" }
+xdoctest = { extras = ["colors"], version = "^1.0.1" }
 sphinx = "^5.0.2"
 sphinx-autobuild = "^2021.3.14"
 pre-commit = "^2.20.0"
@@ -50,7 +50,7 @@ flake8-docstrings = "^1.6.0"
 flake8-rst-docstrings = "^0.2.6"
 pep8-naming = "^0.13.0"
 darglint = "^1.8.0"
-reorder-python-imports = "^3.3.0"
+reorder-python-imports = "^3.8.1"
 pre-commit-hooks = "^4.3.0"
 sphinx-rtd-theme = "^0.5.2"
 sphinx-click = "^4.3.0"
