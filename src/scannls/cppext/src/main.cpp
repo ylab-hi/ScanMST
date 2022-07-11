@@ -10,8 +10,13 @@ int main(int argc, char* argv[]) {
   constexpr int min_mismatch_count = 3;
   constexpr double min_align_ratio = 0.8;
 
-  rescuer::Rescuer p_rescuer{file.c_str(),       mapq_threshold,  min_softclip_length,
-                             min_mismatch_count, min_align_ratio, 10};
+  rescuer::Rescuer p_rescuer{file.c_str(),
+                             mapq_threshold,
+                             min_softclip_length,
+                             min_mismatch_count,
+                             min_align_ratio,
+                             10,
+                             -1};
 
   std::vector<std::string> current_names{"two"};
   std::vector<std::string> names_list{"one", "two"};

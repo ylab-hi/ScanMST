@@ -127,10 +127,17 @@ class SpliceGraph:
         alignment_fraction: float,
         logger: LoggerType,
         prune_threshold: int,
+        average_read_depth: int,
     ) -> "SpliceGraph":
         """Create splice graph."""
         rescuer = SRRescuer(
-            input_bam, mapq, soft_len, mismatch, alignment_fraction, logger
+            input_bam,
+            mapq,
+            soft_len,
+            mismatch,
+            alignment_fraction,
+            average_read_depth,
+            logger,
         )
 
         return cls(logger, rescuer, prune_threshold)

@@ -28,6 +28,7 @@ class SRRescuer:
         soft_len_cutoff: int,
         mismatch_cutoff: int,
         alignment_frac: float,
+        average_read_depth: int,
         logger: LoggerType,
     ) -> None:
         """Initialize Rescuer.
@@ -41,6 +42,7 @@ class SRRescuer:
             mismatch_cutoff,
             alignment_frac,
             10,
+            average_read_depth,
         )
         self.logger = logger
 

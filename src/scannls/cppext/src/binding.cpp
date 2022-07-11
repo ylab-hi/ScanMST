@@ -58,10 +58,10 @@ PYBIND11_MODULE(_cppext, m) {
   py::class_<bam_handler>(m, "bam_handler")
       .def("count", &bam_handler::count, "count(chrom, star, end) -> int");
 
-  py::class_<Rescuer>(
-      m, "Rescuer",
-      "Rescuer(bam_file, min_mapq, min_soft_len, min_mis, min_frac, min_seq_align_len)")
-      .def(py::init<const char *, int, int, int, double, int>())
+  py::class_<Rescuer>(m, "Rescuer",
+                      "Rescuer(bam_file, min_mapq, min_soft_len, min_mis, min_frac, "
+                      "min_seq_align_len, average_read_depth)")
+      .def(py::init<const char *, int, int, int, double, int, int>())
       .def("calculate_sr", &Rescuer::calculate_sr,
            "calculate_sr(chrom, start, end, mode, strand, read_start, current_names, "
            "cigartuples_without_soft) -> int")
