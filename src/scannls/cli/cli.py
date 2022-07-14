@@ -7,7 +7,6 @@
 @Time:        1/11/22 4:28 PM
 """
 import argparse
-import math
 import os
 import sys
 import tempfile
@@ -222,7 +221,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             if options.parallel == 1
             else parse_splice_graph_for_cliques_par
         )
-        avg_cov = math.ceil(avg_cov) if options.bound else -1
+        avg_cov = 5
         parse_splice_graph_for_cliques(cliques, writers, options, avg_cov, logger)
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
