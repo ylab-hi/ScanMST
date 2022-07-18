@@ -29,6 +29,7 @@ class SRRescuer:
         mismatch_cutoff: int,
         alignment_frac: float,
         average_read_depth: int,
+        node_rescued_sr_maximum: int,
         logger: LoggerType,
     ) -> None:
         """Initialize Rescuer.
@@ -45,6 +46,7 @@ class SRRescuer:
             average_read_depth,
         )
         self.logger = logger
+        self.node_rescued_sr_maximum = node_rescued_sr_maximum
 
     def __call__(self, nodes_in_graph: Iterable[Node]) -> None:
         """Rescue SR from soft-clipped non-chimeric reads.
@@ -63,7 +65,9 @@ class SRRescuer:
         for node in nodes_in_graph:
             node.original_sr = node.sr
             self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
-            self.update_sr(node, query_names_in_graph_list)
+            self.update_sr(
+                node, query_names_in_graph_list, self.node_rescued_sr_maximum
+            )
 
         del query_names_in_graph
 
@@ -96,7 +100,12 @@ class SRRescuer:
 
         return chrom, pos
 
-    def update_sr(self, current_node: Node, query_names_in_graph: List[str]) -> None:
+    def update_sr(
+        self,
+        current_node: Node,
+        query_names_in_graph: List[str],
+        node_rescued_sr_maximum: int,
+    ) -> None:
         """Update SR for input node."""
         if current_node.is_end_node():
             return
@@ -184,6 +193,11 @@ class SRRescuer:
             )
 
             self.logger.trace(f"successors {rescued_sr=}")
+            if rescued_sr > node_rescued_sr_maximum:
+                self.logger.trace(
+                    f"rescued SR has reached the higher bound, {rescued_sr=}"
+                )
+                break
 
         self.logger.trace(f"final {rescued_sr=}")
         if rescued_sr > 0:

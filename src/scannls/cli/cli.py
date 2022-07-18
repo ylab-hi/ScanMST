@@ -57,6 +57,7 @@ def parse_splice_graph_for_cliques_seq(
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
     average_read_depth: int,
+    node_rescued_sr_maximum: int,
     logger: LoggerType,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -69,6 +70,7 @@ def parse_splice_graph_for_cliques_seq(
         logger,
         options.prune_threshold,
         average_read_depth,
+        node_rescued_sr_maximum,
     )
 
     with writers.open() as _:
@@ -88,6 +90,7 @@ def _parse_splice_graph_for_cliques_par(
     cliques: Any,
     options: Union[DefaultOptions, argparse.Namespace],
     average_read_depth: int,
+    node_rescued_sr_maximum: int,
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
@@ -103,6 +106,7 @@ def _parse_splice_graph_for_cliques_par(
         logger,
         options.prune_threshold,
         average_read_depth,
+        node_rescued_sr_maximum,
     )
 
     result_series = []
@@ -119,6 +123,7 @@ def parse_splice_graph_for_cliques_par(
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
     average_read_depth: int,
+    node_rescued_sr_maximum: int,
     logger: LoggerType,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -127,6 +132,7 @@ def parse_splice_graph_for_cliques_par(
             _parse_splice_graph_for_cliques_par,
             options=options,
             average_read_depth=average_read_depth,
+            node_rescued_sr_maximum=node_rescued_sr_maximum,
         ),
         logger,
         options.parallel,
@@ -221,8 +227,11 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             if options.parallel == 1
             else parse_splice_graph_for_cliques_par
         )
-        avg_cov = 5
-        parse_splice_graph_for_cliques(cliques, writers, options, avg_cov, logger)
+        avg_cov = 3
+        node_rescued_sr_max = 10
+        parse_splice_graph_for_cliques(
+            cliques, writers, options, avg_cov, node_rescued_sr_max, logger
+        )
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 

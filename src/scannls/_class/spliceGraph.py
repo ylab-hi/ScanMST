@@ -128,6 +128,7 @@ class SpliceGraph:
         logger: LoggerType,
         prune_threshold: int,
         average_read_depth: int,
+        node_rescued_sr_maximum: int,
     ) -> "SpliceGraph":
         """Create splice graph."""
         rescuer = SRRescuer(
@@ -137,6 +138,7 @@ class SpliceGraph:
             mismatch,
             alignment_fraction,
             average_read_depth,
+            node_rescued_sr_maximum,
             logger,
         )
 
