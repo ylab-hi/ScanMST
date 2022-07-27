@@ -802,7 +802,7 @@ toml = ["toml"]
 
 [[package]]
 name = "pyfaidx"
-version = "0.7.0"
+version = "0.7.1"
 description = "pyfaidx: efficient pythonic random access to fasta subsequences"
 category = "main"
 optional = false
@@ -1331,7 +1331,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "f27cb8eedf415276d7dc7e9583238b6f2a96be69fddddf41987c0a204bc2cad5"
+content-hash = "dee5f2343964e68d577a5eb313f04a26c2c37bf25add0f0d6c180348228677ae"
 
 [metadata.files]
 alabaster = [
@@ -1919,7 +1919,7 @@ pydocstyle = [
     {file = "pydocstyle-6.1.1.tar.gz", hash = "sha256:1d41b7c459ba0ee6c345f2eb9ae827cab14a7533a88c5c6f7e94923f72df92dc"},
 ]
 pyfaidx = [
-    {file = "pyfaidx-0.7.0.tar.gz", hash = "sha256:9ad5cc9381f0de9c43d4bdec0faf106b828cdfb6f8150ec71cab2ca7c8bee770"},
+    {file = "pyfaidx-0.7.1.tar.gz", hash = "sha256:3977632b7fd29049f8b11035d7e9dea0e2c5da9c235f982b4c3fae06ff1fa23f"},
 ]
 pyflakes = [
     {file = "pyflakes-2.3.1-py2.py3-none-any.whl", hash = "sha256:7893783d01b8a89811dd72d7dfd4d84ff098e5eed95cfa8905b22bbffe52efc3"},
