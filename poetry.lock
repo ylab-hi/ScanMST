@@ -322,14 +322,14 @@ pycodestyle = "*"
 
 [[package]]
 name = "flake8-broken-line"
-version = "0.4.0"
+version = "0.5.0"
 description = "Flake8 plugin to forbid backslashes for line breaks"
 category = "dev"
 optional = false
 python-versions = ">=3.6,<4.0"
 
 [package.dependencies]
-flake8 = ">=3.5,<5"
+flake8 = ">=3.5,<6"
 
 [[package]]
 name = "flake8-bugbear"
@@ -1175,8 +1175,8 @@ optional = false
 python-versions = ">=3.5"
 
 [package.extras]
-lint = ["flake8", "mypy", "docutils-stubs"]
 test = ["pytest"]
+lint = ["docutils-stubs", "mypy", "flake8"]
 
 [[package]]
 name = "stevedore"
@@ -1331,7 +1331,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "2e3fff8d61f9fe3bebd4d3184dd5958ed3f8b1ac2c2b096f41f1dcf131b203bb"
+content-hash = "bed9cc95e39989600b01ea9099e53f56a24cbd73414fdf2b405e1da576dd03fc"
 
 [metadata.files]
 alabaster = [
@@ -1533,8 +1533,8 @@ flake8-bandit = [
     {file = "flake8_bandit-2.1.2.tar.gz", hash = "sha256:687fc8da2e4a239b206af2e54a90093572a60d0954f3054e23690739b0b0de3b"},
 ]
 flake8-broken-line = [
-    {file = "flake8-broken-line-0.4.0.tar.gz", hash = "sha256:771aab5aa0997666796fed249d0e48e6c01cdfeca8c95521eea28a38b7ced4c7"},
-    {file = "flake8_broken_line-0.4.0-py3-none-any.whl", hash = "sha256:e9c522856862239a2c7ef2c1de0276fa598572aa864bd4e9c7efc2a827538515"},
+    {file = "flake8-broken-line-0.5.0.tar.gz", hash = "sha256:7c98de9dd1385b71e888709c7f2aee3f0514107ecb5875bc95d0c03392191c97"},
+    {file = "flake8_broken_line-0.5.0-py3-none-any.whl", hash = "sha256:daafb19b67eead0410ce7ba155d51a15b9d020ebe7630d87de9c2b93cedb6703"},
 ]
 flake8-bugbear = [
     {file = "flake8-bugbear-22.7.1.tar.gz", hash = "sha256:e450976a07e4f9d6c043d4f72b17ec1baf717fe37f7997009c8ae58064f88305"},
