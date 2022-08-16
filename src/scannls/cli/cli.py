@@ -209,6 +209,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             species=options.species,
         )
 
+        avg_cov = -1 if not options.bound else avg_cov
+
         intact_series_list_len = len(intact_series_list)
 
         if intact_series_list_len == 0:
