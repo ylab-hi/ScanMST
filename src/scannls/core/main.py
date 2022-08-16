@@ -2,6 +2,7 @@
 """This module contains the main function of the draft scannls."""
 import copy
 import inspect
+import math
 import re
 from itertools import chain
 from pathlib import Path
@@ -517,7 +518,7 @@ def scanbam_run(
     # iterate over all read of the bam file
     representative_alignments_new_cigar = bam_scanner.iter_bam()
 
-    avg_cov = bam_scanner.total_length / get_transcriptome_length(species)
+    avg_cov = math.ceil(bam_scanner.total_length / get_transcriptome_length(species))
 
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(

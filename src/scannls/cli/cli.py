@@ -227,8 +227,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             if options.parallel == 1
             else parse_splice_graph_for_cliques_par
         )
-        avg_cov = 3
-        node_rescued_sr_max = 10
+
+        node_rescued_sr_max = 100
         parse_splice_graph_for_cliques(
             cliques, writers, options, avg_cov, node_rescued_sr_max, logger
         )
