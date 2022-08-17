@@ -42,7 +42,7 @@ class SRRescuer:
             soft_len_cutoff,
             mismatch_cutoff,
             alignment_frac,
-            10,
+            soft_len_cutoff,
             average_read_depth,
         )
         self.logger = logger

@@ -209,6 +209,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             species=options.species,
         )
 
+        avg_cov = -1 if not options.bound else avg_cov
+
         intact_series_list_len = len(intact_series_list)
 
         if intact_series_list_len == 0:
@@ -227,8 +229,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             if options.parallel == 1
             else parse_splice_graph_for_cliques_par
         )
-        avg_cov = 3
-        node_rescued_sr_max = 10
+
+        node_rescued_sr_max = 100
         parse_splice_graph_for_cliques(
             cliques, writers, options, avg_cov, node_rescued_sr_max, logger
         )
