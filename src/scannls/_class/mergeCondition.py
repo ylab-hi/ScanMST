@@ -12,11 +12,32 @@ from .basicClass import Node
 from .exception import ExonsNotFoundError
 
 
+def is_same_breakpoint(breakpoint1: str, breakpoint2: str, threshold: int) -> bool:
+    """Check if two breakpoints are different.
+
+    :param breakpoint1:  breakpoint1
+    :param breakpoint2:  breakpoint2
+    :param threshold:  threshold for checking if two breakpoints are different
+    :return:  True if two breakpoints are different, otherwise False
+    """
+    if breakpoint1 == breakpoint2:
+        return True
+
+    chr1, breakpoint1 = breakpoint1.split(":")
+    chr2, breakpoint2 = breakpoint2.split(":")
+
+    if chr1 != chr2:
+        return False
+
+    return abs(int(breakpoint1) - int(breakpoint2)) <= threshold
+
+
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-    node1: Node,
-    node2: Node,
+    node1: Node, node2: Node, threshold: int
 ) -> bool:
     """Check if both head nodes can be merged.
+
+    :param threshold:
 
     .. note::
         nodes with different length may be merged. []: exon -: intron
@@ -24,7 +45,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         node2:    []-[]
 
     """
-    if node1.next_breakpoint != node2.next_breakpoint:
+    if not is_same_breakpoint(node1.next_breakpoint, node2.next_breakpoint, threshold):
         return False
 
     # no introns and breakpoints are same
@@ -121,14 +142,14 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
 
 
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-    node1: Node,
-    node2: Node,
+    node1: Node, node2: Node, threshold: int
 ) -> bool:
     """Check if two end nodes can be merged or not.
 
     node1 is tail node, node2 is tail node
     check if they can be merged.
 
+    :param threshold: threshold for checking if two nodes are merged
     :param node1:  node1
     :param node2:  node2
     :return:  True if two nodes are merged, otherwise False
@@ -150,50 +171,46 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     node2_first_exon_start = node2.exons[0][0]
     node2_last_exon_end = node2.exons[-1][1]
 
+    same_breakpoint = is_same_breakpoint(
+        node1.prev_breakpoint, node2.prev_breakpoint, threshold
+    )
+
+    if not same_breakpoint:
+        return False
+
     if node1.is_polya and node2.is_polya:
         return (
-            node1.prev_breakpoint == node2.prev_breakpoint
-            and node1_first_exon_start == node2_first_exon_start
+            node1_first_exon_start == node2_first_exon_start
             and node1_last_exon_end == node2_last_exon_end
         )
 
     if node1.is_polya and not node2.is_polya:
         if node1.strand == "+":
             return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
+                node1_first_exon_start == node2_first_exon_start
                 and node1_last_exon_end >= node2_last_exon_end
             )
 
         return (
-            node1.prev_breakpoint == node2.prev_breakpoint
-            and node1_last_exon_end == node2_last_exon_end
+            node1_last_exon_end == node2_last_exon_end
             and node1_first_exon_start <= node2_first_exon_start
         )
 
     if not node1.is_polya and node2.is_polya:
         if node1.strand == "+":
             return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
+                node1_first_exon_start == node2_first_exon_start
                 and node1_last_exon_end <= node2_last_exon_end
             )
         return (
-            node1.prev_breakpoint == node2.prev_breakpoint
-            and node1_last_exon_end == node2_last_exon_end
+            node1_last_exon_end == node2_last_exon_end
             and node1_first_exon_start >= node2_first_exon_start
         )
 
     if not node1.is_polya and not node2.is_polya:
         if node1.strand == "+":
-            return (
-                node1.prev_breakpoint == node2.prev_breakpoint
-                and node1_first_exon_start == node2_first_exon_start
-            )
-        return (
-            node1.prev_breakpoint == node2.prev_breakpoint
-            and node1_last_exon_end == node2_last_exon_end
-        )
+            return node1_first_exon_start == node2_first_exon_start
+        return node1_last_exon_end == node2_last_exon_end
 
     return False
 

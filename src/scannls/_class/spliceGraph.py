@@ -228,7 +228,7 @@ class SpliceGraph:
             self.nodes[node.similar_key] = [node]
 
     @staticmethod
-    def _compare_is_merged_helper(node1: Node, node2: Node) -> bool:
+    def _compare_is_merged_helper(node1: Node, node2: Node, threshold: int) -> bool:
         """Check if node1 and node2 can be merged.
 
         .. note::
@@ -260,14 +260,14 @@ class SpliceGraph:
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
         ):  # both are start nodes
             return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-                node1, node2
+                node1, node2, threshold
             )
 
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
             return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-                node1, node2
+                node1, node2, threshold
             )
 
         elif (
@@ -292,7 +292,7 @@ class SpliceGraph:
         return False
 
     @staticmethod
-    def _compare_is_merged(node1: Node, node2: Node) -> bool:
+    def _compare_is_merged(node1: Node, node2: Node, threshold: int) -> bool:
         """Node1 is similar as node2 is precommit of the function.
 
          compare if node1 can merge node2
@@ -300,10 +300,10 @@ class SpliceGraph:
         :param node2: node2
         :return:
         """
-        flag1 = SpliceGraph._compare_is_merged_helper(node1, node2)
+        flag1 = SpliceGraph._compare_is_merged_helper(node1, node2, threshold)
         if flag1:
             return flag1
-        flag2 = SpliceGraph._compare_is_merged_helper(node2, node1)
+        flag2 = SpliceGraph._compare_is_merged_helper(node2, node1, threshold)
         if flag2:
             return flag2
         return False
@@ -321,7 +321,9 @@ class SpliceGraph:
         # iterate all similar nodes in the graph
         for similar_node_in_graph in similar_nodes_in_graph:
             # check if current node is merged into similar node in the graph
-            if SpliceGraph._compare_is_merged(similar_node_in_graph, current_node):
+            if SpliceGraph._compare_is_merged(
+                similar_node_in_graph, current_node, self.prune_threshold
+            ):
                 current_node.is_merged = True
 
                 update_exon_coord_sr_svtype_breakpoints_name_mode(
@@ -362,7 +364,9 @@ class SpliceGraph:
                 for merge_node in merged_nodes_pool
                 if merge_node.similar_key == similar_key
             ]:
-                if SpliceGraph._compare_is_merged(merge_node, current_node):
+                if SpliceGraph._compare_is_merged(
+                    merge_node, current_node, self.prune_threshold
+                ):
                     update_exon_coord_sr_svtype_breakpoints_name_mode(
                         current_node, merge_node
                     )

@@ -48,7 +48,7 @@ class VcfAnnotator:
         for rec in vcf_handle.fetch():
             key = f"{rec.chrom}-{rec.pos}-{rec.info['SVEND']}-{rec.info['SVTYPE']}"
             if sv_info := self.sv_map.get(key):
-                rec.info["SSV"] = sv_info
+                rec.info["SSV"] = self._format_info(sv_info)
             out_handle.write(rec)
         vcf_handle.close()
         out_handle.close()
@@ -77,6 +77,11 @@ class VcfAnnotator:
         self._add_map(self._sv2nl_output + ".dup")
         self._add_map(self._sv2nl_output + ".inv")
         self._add_map(self._sv2nl_output + ".tra")
+
+    @staticmethod
+    def _format_info(infos: List[str]) -> str:
+        """Format info field."""
+        return ",".join(infos)
 
     def _clean(self):
         """Clean up the intermediate files."""
