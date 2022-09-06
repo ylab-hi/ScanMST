@@ -22,7 +22,13 @@ from ._class.type import LoggerType
 from .blat import load_fa2bit
 from scannls import cppext
 
-__all__ = ["external_tool_checking", "get_softclip_length", "timeit", "sleep"]
+__all__ = [
+    "external_tool_checking",
+    "get_softclip_length",
+    "timeit",
+    "sleep",
+    "find_2bit_file",
+]
 
 
 def external_tool_checking(software: List[str], log_handler: LoggerType) -> None:
