@@ -17,6 +17,7 @@ import networkx as nx
 from networkx import find_cliques
 
 from ..utils import timeit
+from .basicClass import BreakPoint
 from .basicClass import Node
 from .basicClass import Series
 from .exception import ExonsNotFoundError
@@ -59,7 +60,7 @@ class Ruler:
 
     @staticmethod
     def breakpoints_distance(
-        sv_type1: str, sv_type2: str, bp1: str, bp2: str
+        sv_type1: str, sv_type2: str, bp1: BreakPoint, bp2: BreakPoint
     ) -> Union[float, int]:
         """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
 
@@ -72,9 +73,7 @@ class Ruler:
         if sv_type1 != sv_type2:
             return float("inf")
 
-        chrm1, pos1 = bp1.split(":")
-        chrm2, pos2 = bp2.split(":")
-        return abs(int(pos1) - int(pos2)) if chrm1 == chrm2 else float("inf")
+        return abs(bp1.pos - bp2.pos) if bp1.chrom == bp2.chrom else float("inf")
 
     @staticmethod
     def first_node_last_node_distance(first_node: Node, last_node: Node) -> float:

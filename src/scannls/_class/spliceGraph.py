@@ -20,6 +20,7 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+from .basicClass import BreakPoint
 from .basicClass import MicroHomology
 from .basicClass import Node
 from .basicClass import NovelInsertion
@@ -537,20 +538,19 @@ class SpliceGraph:
 
     @staticmethod
     def _check_can_battle_condition(
-        breakpoint1: Optional[str], breakpoint2: Optional[str], threshold: int
+        breakpoint1: Optional[BreakPoint],
+        breakpoint2: Optional[BreakPoint],
+        threshold: int,
     ) -> bool:
         """Check if two breakpoints is in threshold .
 
-        :param breakpoint1: 'chr1:100'
-        :param breakpoint2: 'chr1:100'
+        :param breakpoint1
+        :param breakpoint2
         :return: True or False
         """
         if breakpoint1 is None or breakpoint2 is None:
             return False
-        return (
-            abs(int(breakpoint1.split(":")[1]) - int(breakpoint2.split(":")[1]))
-            < threshold
-        )
+        return abs(breakpoint1.pos - breakpoint2.pos) < threshold
 
     def check_can_battle(self, node_a: Node, node_b: Node) -> bool:
         """Check if two nodes can battle."""

@@ -67,9 +67,9 @@ class VcfAnnotator:
         with open(sv_type_file) as sv_file:
             next(sv_file)  # skip header
             for line in sv_file:
-                line = line.strip().split("\t")
-                key = "-".join(line[:4])
-                self.sv_map[key].append("-".join(line[4:]))
+                lines = line.strip().split("\t")
+                key = "-".join(lines[:4])
+                self.sv_map[key].append("-".join(lines[4:]))
 
     def _construct_sv_map(self):
         """Construct sv map."""

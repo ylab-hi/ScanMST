@@ -375,8 +375,8 @@ def get_vcf_features_from_series(
             raise BreakpointNotFoundError(current_node.query_name)
         if next_node.prev_breakpoint is None:
             raise BreakpointNotFoundError(next_node.query_name)
-        _chrom1, _pos1 = current_node.next_breakpoint.split(":")
-        _chrom2, _pos2 = next_node.prev_breakpoint.split(":")
+        _chrom1, _pos1 = current_node.next_breakpoint.to_tuple()
+        _chrom2, _pos2 = next_node.prev_breakpoint.to_tuple()
 
         sv_distance = (
             abs(int(_pos1) - int(_pos2)) if current_node.sv_type != "TRA" else 0

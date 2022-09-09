@@ -6,6 +6,7 @@
 @Time:        12/30/21 2:20 PM
 """
 from collections import Counter
+from dataclasses import dataclass
 from typing import Any
 from typing import Dict
 from typing import Iterable
@@ -334,6 +335,30 @@ class BasicNode:
         self.previous_node_in_series = None
 
 
+@dataclass(unsafe_hash=True)
+class BreakPoint:
+    """BreakPoint is used to represent breakpoints."""
+
+    chrom: str
+    pos: int
+
+    def __str__(self):
+        """Return string representation of BreakPoint object."""
+        return f"{self.chrom}:{self.pos}"
+
+    def to_tuple(self) -> Tuple[str, int]:
+        """Return tuple representation of BreakPoint object."""
+        return self.chrom, self.pos
+
+    @classmethod
+    def from_str(cls, breakpoint_str: Optional[str]) -> Optional["BreakPoint"]:
+        """Create BreakPoint object from string."""
+        if breakpoint_str is None:
+            return None
+        chrom, pos = breakpoint_str.split(":")
+        return cls(chrom, int(pos))
+
+
 class Node(BasicNode):
     """Build a breakpoint node class for storing information of every breakpoint.
 
@@ -419,8 +444,8 @@ class Node(BasicNode):
         self._introns = None
         self.chrom = chrom
         self.query_name = query_name
-        self.prev_breakpoint = prev_bp
-        self.next_breakpoint = next_bp
+        self.prev_breakpoint = BreakPoint.from_str(prev_bp)
+        self.next_breakpoint = BreakPoint.from_str(next_bp)
         self.prev_breakpoint_depth: Optional[int] = None
         self.next_breakpoint_depth: Optional[int] = None
         self.strand = strand
@@ -526,11 +551,9 @@ class Node(BasicNode):
         """Get update breakpoint depth and position of a node."""
         break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
         if break_point is not None:
-            chrom, pos = break_point.split(":")
-            pos = int(pos)  # type: ignore
+            chrom, pos = break_point.to_tuple()
             if mode == 1:
                 pos = pos - 1  # type: ignore
-
             return chrom, pos
         return " ", 1
 
@@ -1131,17 +1154,17 @@ class Event:
         :return: the updated insertion
         """
         if insertion_node.strand == "+":
-            insertion_node.prev_breakpoint = (
+            insertion_node.prev_breakpoint = BreakPoint.from_str(
                 f"{insertion_node.chrom}:{insertion_node.ref_start}"
             )
-            insertion_node.next_breakpoint = (
+            insertion_node.next_breakpoint = BreakPoint.from_str(
                 f"{insertion_node.chrom}:{insertion_node.ref_end}"
             )
         else:
-            insertion_node.prev_breakpoint = (
+            insertion_node.prev_breakpoint = BreakPoint.from_str(
                 f"{insertion_node.chrom}:{insertion_node.ref_end}"
             )
-            insertion_node.next_breakpoint = (
+            insertion_node.next_breakpoint = BreakPoint.from_str(
                 f"{insertion_node.chrom}:{insertion_node.ref_start}"
             )
 
