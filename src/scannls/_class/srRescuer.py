@@ -100,6 +100,36 @@ class SRRescuer:
 
         return chrom, pos
 
+    @staticmethod
+    def obtain_region_for_rescue_sr2(node: Node, mode: int, tag_name: str):
+        """Dummy docstring."""
+        if node.exons is None or node.strand is None or node.chrom is None:
+            raise ExonsNotFoundError(f"{node.chrom=} {node.strand=} {node.exons=}")
+
+        if node.strand == "+":
+            pre_pos = node.exons[0][0]
+            next_pos = node.exons[-1][1]
+        else:
+            pre_pos = node.exons[-1][1]
+            next_pos = node.exons[0][0]
+
+        if mode == 2:
+            pre_pos += 1
+            next_pos += 1
+        else:
+            pre_pos = max(pre_pos, 1)
+            next_pos = max(next_pos, 1)
+
+        if node.prev_breakpoint is None:
+            pre_pos = 0
+
+        if node.next_breakpoint is None:
+            next_pos = 0
+
+        if tag_name == "prev_breakpoint":
+            return node.chrom, pre_pos, next_pos
+        return node.chrom, next_pos, pre_pos
+
     def update_sr(
         self,
         current_node: Node,
@@ -121,12 +151,9 @@ class SRRescuer:
         )
 
         query_name_current = current_node.query_name.split(",")
-        chrom, start = SRRescuer.obtain_region_for_rescue_sr(
-            current_node.strand,
-            current_node.chrom,
-            current_node.exons,
-            "next_breakpoint",
-            mode1,
+
+        chrom, start, check_pos = SRRescuer.obtain_region_for_rescue_sr2(
+            current_node, mode1, "next_breakpoint"
         )
 
         self.logger.trace(
@@ -162,13 +189,11 @@ class SRRescuer:
             )
 
             query_name_next = next_node.query_name.split(",")
-            chrom, start = SRRescuer.obtain_region_for_rescue_sr(
-                next_node.strand,
-                next_node.chrom,
-                next_node.exons,
-                "prev_breakpoint",
-                mode2,
+
+            chrom, start, check_pos = SRRescuer.obtain_region_for_rescue_sr2(
+                next_node, mode2, "prev_breakpoint"
             )
+
             self.logger.trace(
                 f"{chrom=} {start=} {mode2=} {next_node.strand=} {next_node.ref_start=} "
                 f"{next_node.cigartuples_without_soft=} {query_name_next=}"
