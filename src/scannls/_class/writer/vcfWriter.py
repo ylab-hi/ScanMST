@@ -378,9 +378,7 @@ def get_vcf_features_from_series(
         _chrom1, _pos1 = current_node.next_breakpoint.to_tuple()
         _chrom2, _pos2 = next_node.prev_breakpoint.to_tuple()
 
-        sv_distance = (
-            abs(int(_pos1) - int(_pos2)) if current_node.sv_type != "TRA" else 0
-        )
+        sv_distance = abs(_pos1 - _pos2) if current_node.sv_type != "TRA" else 0
         _dp1 = (
             0
             if current_node.next_breakpoint_depth is None
@@ -399,10 +397,10 @@ def get_vcf_features_from_series(
 
         series_hops_features.append(
             {
-                f"{current_node.sv_type}_{_chrom1}|{int(_pos1) + 1}"
-                f"_{_chrom2}|{int(_pos2) + 1}": {
+                f"{current_node.sv_type}_{_chrom1}|{_pos1 + 1}"
+                f"_{_chrom2}|{_pos2 + 1}": {
                     "CHROM": _chrom1,
-                    "POS": f"{int(_pos1) + 1}",
+                    "POS": f"{_pos1 + 1}",
                     "REF": ".",
                     "ALT": f"<{current_node.sv_type}>",
                     "SVTYPE": current_node.sv_type,
@@ -411,7 +409,7 @@ def get_vcf_features_from_series(
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,
-                    "SVEND": f"{int(_pos2) + 1}",
+                    "SVEND": f"{_pos2 + 1}",
                     "DP1": f"{_dp1}",
                     "DP2": f"{_dp2}",
                     "PSO": f"{_pso:.3g}",
@@ -440,10 +438,10 @@ def get_vcf_features_from_series(
             anno_field = "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
             series_hops_features.append(
                 {
-                    f"{_sv_type}_{_chrom1}|{int(_pos1) + 1}"
-                    f"_{_chrom1}|{int(_pos1) + 1}": {
+                    f"{_sv_type}_{_chrom1}|{_pos1 + 1}"
+                    f"_{_chrom1}|{_pos1 + 1}": {
                         "CHROM": _chrom1,
-                        "POS": f"{int(_pos1) + 1}",
+                        "POS": f"{_pos1 + 1}",
                         "REF": f"{ref_allele}",
                         "ALT": f"{alt_allele}",
                         "SVTYPE": _sv_type,
@@ -452,7 +450,7 @@ def get_vcf_features_from_series(
                         "CAN": can_field,
                         "BOUNDARY": anno_field,
                         "CHR2": _chrom1,
-                        "SVEND": f"{int(_pos1) + 1}",
+                        "SVEND": f"{_pos1 + 1}",
                         "DP": f"{_dp1}",
                         "AF": f"{_af:.3g}",
                         "SVLEN": f"{sv_distance}",

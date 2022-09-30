@@ -1104,8 +1104,7 @@ def diff_chrom_same_strand_mode21_handler(
             [*_genes],
         )
 
-    else:
-        return noreturn
+    return noreturn
 
 
 def diff_chrom_same_strand_handler(
@@ -1241,8 +1240,7 @@ def diff_chrom_diff_strand_handler(
             (read_lt.strand, read_rt.strand),
             [*_genes],
         )
-    else:
-        return noreturn
+    return noreturn
 
 
 def obtain_variants_stats(

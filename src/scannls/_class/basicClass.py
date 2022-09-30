@@ -541,7 +541,7 @@ class Node(BasicNode):
 
         if self.insertion_info is not None:
             _, insertion_type = self.insertion_info
-            if insertion_type.__class__.__name__ in ["NovelInsertion", "MicroHomology"]:
+            if insertion_type.__class__.__name__ in ("NovelInsertion", "MicroHomology"):
                 key = f"{insertion_type.query_sequence}-{key}"
 
         self.unique_key = key

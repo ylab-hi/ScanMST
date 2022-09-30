@@ -254,11 +254,10 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
             node1_last_exon_end == node2_last_exon_end
             and node1_first_exon_start >= node2_first_exon_start
         )
-    else:
-        return (
-            node1_first_exon_start == node2_first_exon_start
-            and node1_last_exon_end <= node2_last_exon_end
-        )
+    return (
+        node1_first_exon_start == node2_first_exon_start
+        and node1_last_exon_end <= node2_last_exon_end
+    )
 
 
 def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
@@ -299,8 +298,7 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
             node1_first_exon_start == node2_first_exon_start
             and node1_last_exon_end <= node2_last_exon_end
         )
-    else:
-        return (
-            node1_last_exon_end == node2_last_exon_end
-            and node1_first_exon_start >= node2_first_exon_start
-        )
+    return (
+        node1_last_exon_end == node2_last_exon_end
+        and node1_first_exon_start >= node2_first_exon_start
+    )

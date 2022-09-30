@@ -12,6 +12,7 @@ import secrets
 import subprocess
 import time
 from multiprocessing import Process
+from pathlib import Path
 from typing import Any
 from typing import List
 from typing import Tuple
@@ -127,7 +128,7 @@ class Blat:
         """
         flag = False
         for proc in self._search_processing():
-            if proc.status() in ["running", "sleeping"]:
+            if proc.status() in ("running", "sleeping"):
                 flag = True
             elif proc.status() == "stopped":
                 proc.kill()
@@ -166,13 +167,13 @@ class Blat:
         """
         self.is_start_server = True
         self.logger.debug(f"start server service{self.is_start_server=}")
-        cwd = os.path.abspath(os.getcwd())
-        self.logger.debug(os.getcwd())
+        cwd = Path.cwd().absolute()
+        self.logger.debug(Path.cwd().as_posix())
 
         # change to use_blat directory
         os.chdir(self.ref_dir)
         self.logger.trace(f"{self.ref_dir=}")
-        self.logger.trace(f"{os.getcwd()}")
+        self.logger.trace(f"{Path().cwd()}")
 
         if os.path.exists(self.log_file_path):
             os.remove(self.log_file_path)
@@ -187,7 +188,7 @@ class Blat:
         self.handle_process.start()
         self.logger.debug("starting server service")
         os.chdir(cwd)
-        self.logger.trace(f"{os.getcwd()}")
+        self.logger.trace(f"{Path().cwd()}")
 
     def start_server(self) -> None:
         """Function for starting the server service, if the server is not running.
@@ -231,12 +232,12 @@ class Blat:
 
         out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
 
-        cwd = os.path.abspath(os.getcwd())
-        self.logger.trace(os.getcwd())
+        cwd = Path.cwd().absolute()
+        self.logger.trace(f"{Path().cwd()}")
 
         os.chdir(self.ref_dir)
         self.logger.trace(f"{self.ref_dir=}")
-        self.logger.trace(os.getcwd())
+        self.logger.trace(f"{Path().cwd()}")
         cmd = (
             f"{self.gfclient} -minScore=20 -minIdentity={mini_identity} localhost {self.port} . "
             f"{in_fasta} {out_psl}"
@@ -246,7 +247,7 @@ class Blat:
             cmd, stderr=subprocess.STDOUT, shell=True, stdout=subprocess.DEVNULL
         )
         os.chdir(cwd)
-        self.logger.trace(os.getcwd())
+        self.logger.trace(f"{Path().cwd()}")
         self._remove(in_fasta)
 
         return out_psl
@@ -352,8 +353,7 @@ class Blat:
                 nm=num_of_mismatch,
                 query_sequence=insert_seq,
             )
-        else:
-            return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
+        return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
 
     @staticmethod
     def _remove(file: str) -> None:

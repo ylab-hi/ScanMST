@@ -88,8 +88,7 @@ class ReadsConnector:
         if _lt > _rt:
             return 2
         # MS
-        else:
-            return 1
+        return 1
 
     @staticmethod
     def init_mode_judge(read1: Read, read2: Read) -> None:
@@ -392,8 +391,7 @@ class ReadsConnector:
         read.mode = 1 if read.mode == 2 else 2
         if new_read_strand == read.strand:
             return 1 if read.mode == 2 else 2
-        else:
-            return 1 if read.mode == 1 else 2
+        return 1 if read.mode == 1 else 2
 
     def _double_check_create_new_read_calculate_sms(
         self, hsp: Any, query_seq: str, read: Read

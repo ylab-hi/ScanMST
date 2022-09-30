@@ -126,8 +126,7 @@ def get_softclip_length(
             read.reference_start,
             2,
         )
-    else:
-        return 0, "", -1, 0
+    return 0, "", -1, 0
 
 
 def timeit(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -153,7 +152,7 @@ def change_dir(path: str) -> Generator:
 
     :param path: the path to be changed
     """
-    old_dir = os.getcwd()
+    old_dir = Path.cwd()
     try:
         os.chdir(path)
         yield

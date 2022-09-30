@@ -162,12 +162,13 @@ class Ruler:
             a_sv_type, a_bp1, a_bp2 = i
             b_sv_type, b_bp1, b_bp2 = j
             if a_sv_type != "NA" and b_sv_type != "NA":
-                distance_list.append(
-                    Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp1, b_bp1)
+                distance_list.extend(
+                    (
+                        Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp1, b_bp1),
+                        Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp2, b_bp2),
+                    )
                 )
-                distance_list.append(
-                    Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp2, b_bp2)
-                )
+
                 effect_num_pair += 1
 
         ave_distance = (

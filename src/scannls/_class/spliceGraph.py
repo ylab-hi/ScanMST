@@ -664,7 +664,7 @@ class SpliceGraph:
     ) -> None:
         """Check if there is circle in graph."""
         if (
-            len(nodes_keys) != 0
+            nodes_keys
             and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
             is not None
         ):
