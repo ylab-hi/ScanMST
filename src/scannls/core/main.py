@@ -351,10 +351,9 @@ def _scan_bam_helper(
                     tgt_key = f"{read.qname}\t{l_s_len}\t{r_s_len}"
                     if tgt_key in representative_alignments_new_cigar:
                         updated_cigar = representative_alignments_new_cigar[tgt_key]
-                        # discard supplementary alignments with too many mismatches or lower MAPQ
-                        if not (
-                            int(nm_sa) > max_allowed_nm or int(mapq_sa) < mapq_cutoff
-                        ):
+                        # discard supplementary alignments with too many mismatches
+                        # supplementary alignments with lower MAPQ is allowed
+                        if not (int(nm_sa) > max_allowed_nm):
                             updated_chimeric_alns.append(
                                 f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}"
                             )

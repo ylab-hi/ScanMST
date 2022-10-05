@@ -669,6 +669,7 @@ def detect_read_read_connections_from_cigar(
     # chimeric alignments for a chimeric read
     # a chimeric read can have multiple chimeric alignments
     chimeric_aln_list = []
+    mapq_list = []
 
     chrm_ra = read.reference_name
     pos_ra = read.reference_start
@@ -692,7 +693,8 @@ def detect_read_read_connections_from_cigar(
     if "_" in chrm_ra or chrm_ra in {"chrM", "MT"}:
         return noreturn
 
-    if mapq_ra >= mapq_cutoff and nm_ra < max_allowed_nm:  # type: ignore
+    if nm_ra < max_allowed_nm:  # type: ignore
+        mapq_list.append(mapq_ra)
         chimeric_aln_list.append(
             Read.init(
                 read.query_name,
@@ -714,7 +716,9 @@ def detect_read_read_connections_from_cigar(
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
             return noreturn
 
-        if mapq_sa >= mapq_cutoff and nm_sa < max_allowed_nm:
+
+        if nm_sa < max_allowed_nm:
+            mapq_list.append(mapq_sa)
             chimeric_aln_list.append(
                 Read.init(
                     read.query_name,
@@ -729,6 +733,8 @@ def detect_read_read_connections_from_cigar(
             )
 
     if len(chimeric_aln_list) < 1 + len(chimeric_aln):
+        return noreturn
+    elif max(mapq_list) < mapq_cutoff:
         return noreturn
     else:
 
