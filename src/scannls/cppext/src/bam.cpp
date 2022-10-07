@@ -1,76 +1,47 @@
+//     scannls  Copyright (C) 2022  Yangyang Li
+//     This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+//     This is free software, and you are welcome to redistribute it
+//     under certain conditions; type `show c' for details.
 //
-// Created by li002252 on 2/9/22.
+// The hypothetical commands `show w' and `show c' should show the appropriate
+// parts of the General Public License.  Of course, your program's commands
+// might be different; for a GUI interface, you would use an "about box".
 //
+//   You should also get your employer (if you work as a programmer) or school,
+// if any, to sign a "copyright disclaimer" for the program, if necessary.
+// For more information on this, and how to apply and follow the GNU GPL, see
+// <https://www.gnu.org/licenses/>.
+//
+//   The GNU General Public License does not permit incorporating your program
+// into proprietary programs.  If your program is a subroutine library, you
+// may consider it more useful to permit linking proprietary applications with
+// the library.  If this is what you want to do, use the GNU Lesser General
+// Public License instead of this License.  But first, please read
+// <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
 #include "bam.h"
 
-namespace bam_parser {
+#include <sstream>
 
-  read_t::read_t(std::string t_query_name, std::string t_chrom, long t_ref_start, long t_ref_end,
-                 int t_mapping, const uint32_t *t_cigar, uint32_t t_n_cigar,
-                 std::string t_query_seq, bool t_is_reverse)
-      : query_name{std::move(t_query_name)},
-        chrom{std::move(t_chrom)},
-        ref_start{t_ref_start},
-        ref_end{t_ref_end},
-        mapping_quality{t_mapping},
-        cigar{t_cigar},
-        n_cigar{t_n_cigar},
-        query_seq{std::move(t_query_seq)},
-        is_reverse{t_is_reverse} {}
+#include "utils.hpp"
 
-  [[maybe_unused]] void printChrome(const bam_hdr_t *har) {
-    for (int i = 0; i < har->n_targets; i++) {
-      std::cout << har->target_name[i] << "\n";
-    }
-  }
-
-  [[maybe_unused]] void readBam(const char *bamFile) {
-    //    read bam file
-    samFile *sam = sam_open(bamFile, "r");
-    //    header
-    sam_hdr_t *header = sam_hdr_read(sam);
-    //    one alignment
-    bam1_t *b = bam_init1();
-
-    while (sam_read1(sam, header, b) >= 0) {
-      const uint32_t *cigar = bam_get_cigar(b);
-      const auto cigarLen = bam_cigar2rlen(b->core.n_cigar, cigar);
-      std::cout << "cigarLen: " << cigarLen << "\n";
-
-      for (unsigned int i{0}; i < b->core.n_cigar; i++) {
-        const auto op{bam_cigar_opchr(cigar[i])};
-        const auto len{bam_cigar_oplen(cigar[i])};
-        std::cout << op << " " << len << "\n";
-      }
-    }
-    sam_close(sam);
-    bam_destroy1(b);
-    sam_hdr_destroy(header);
-  }
-
-  [[maybe_unused]] void print_reads(const std::vector<read_t> &reads) {
-    for (auto &read : reads) {
-      std::cout << read.query_name << "\t" << read.query_seq << "\t" << read.query_seq.size()
-                << "\t" << read.ref_start << "\t" << read.ref_end << "\t" << read.chrom << "\t"
-                << read.mapping_quality << "\t" << read.is_reverse << "\n";
-    }
-  }
+namespace cppext {
 
   //
-  //#define BAM_CMATCH      0
-  //#define BAM_CINS        1
-  //#define BAM_CDEL        2
-  //#define BAM_CREF_SKIP   3
-  //#define BAM_CSOFT_CLIP  4
-  //#define BAM_CHARD_CLIP  5
-  //#define BAM_CPAD        6
-  //#define BAM_CEQUAL      7
-  //#define BAM_CDIFF       8
-  //#define BAM_CBACK       9
+  // #define BAM_CMATCH      0
+  // #define BAM_CINS        1
+  // #define BAM_CDEL        2
+  // #define BAM_CREF_SKIP   3
+  // #define BAM_CSOFT_CLIP  4
+  // #define BAM_CHARD_CLIP  5
+  // #define BAM_CPAD        6
+  // #define BAM_CEQUAL      7
+  // #define BAM_CDIFF       8
+  // #define BAM_CBACK       9
   //
-  //#define BAM_CIGAR_STR   "MIDNSHP=XB"
-  [[maybe_unused]] parseCigarResult_t parseCigar(const char *cigar) {
-    parseCigarResult_t result{};
+  // #define BAM_CIGAR_STR   "MIDNSHP=XB"
+  [[maybe_unused]] CigarResult parseCigar(const char *cigar) {
+    CigarResult result{};
     uint32_t *buf{nullptr};
     size_t m{0};
     if (sam_parse_cigar(cigar, nullptr, &buf, &m) == -1) {
@@ -115,87 +86,138 @@ namespace bam_parser {
     return result;
   }
 
-  std::ostream &operator<<(std::ostream &os, const parseCigarResult_t &cigar_result) {
-    os << "lt_soft_len: " << cigar_result.lt_soft_len << "\n";
-    os << "rt_soft_len: " << cigar_result.rt_soft_len << "\n";
-    os << "read_match: " << cigar_result.read_match << "\n";
-    os << "ref_match: " << cigar_result.ref_match << "\n";
-    os << "indel_len: " << cigar_result.indel_len << "\n";
-    os << "query_len: " << cigar_result.query_len << "\n";
-    os << "cigartuples_without_soft: ";
-    for (auto const &c : cigar_result.cigartuples_without_soft) {
-      os << c << " ";
-    }
-    os << "\n";
-    os << "cigartuples: ";
-    for (auto const &c : cigar_result.cigartuples) {
-      os << c << " ";
-    }
-    os << "\n";
-    return os;
+  std::ostream &operator<<(std::ostream &os, const CigarResult &cigar_result) {
+    return os << cigar_result.to_string();
   }
 
-  bam_handler::bam_handler(const char *file_path) {
-    sam_file = sam_open(file_path, "r");
-    if (sam_file == nullptr) {
-      std::cerr << "Error: Cannot open file " << file_path << "\n";
-      exit(EXIT_FAILURE);
-    }
+  BamReader::BamReader(std::string_view file_path)
+      : file(file_path),
+        sam_file(sam_open(file_path.data(), "r"), &deleter<samFile>),
+        sam_header(sam_hdr_read(sam_file.get()), &deleter<sam_hdr_t>),
+        sam_index(sam_index_load(sam_file.get(), file_path.data()), &deleter<hts_idx_t>) {}
 
-    sam_index = sam_index_load(sam_file, file_path);
-    if (sam_index == nullptr) {
-      std::cerr << "Error: Cannot open index file " << file_path << "\n";
-      exit(EXIT_FAILURE);
-    }
+  BamReader::Iterator BamReader::query(std::string_view chrom, long start, long end) const {
+    const int tid = bam_name2id(sam_header.get(), chrom.data());
 
-    sam_header = sam_hdr_read(sam_file);
-    if (sam_header == nullptr) {
-      std::cerr << "Error: Cannot read header " << file_path << "\n";
-      exit(EXIT_FAILURE);
-    }
+    return {sam_itr_queryi(sam_index.get(), tid, start - 1, end), sam_file.get(), sam_record.get(),
+            sam_header.get()};
   }
 
-  bam_handler::~bam_handler() {
-    hts_idx_destroy(sam_index);
-    sam_close(sam_file);
-    sam_hdr_destroy(sam_header);
-    bam_destroy1(sam_record);
+  [[maybe_unused]] BamReader::Iterator BamReader::query(const Region &region) const {
+    return BamReader::query(region.chrom, region.start, region.end);
   }
 
-  int bam_handler::count(const char *t_chrom, long start_t, long end_t) const {
-    const int tid = bam_name2id(sam_header, t_chrom);
-    hts_itr_t *iter = sam_itr_queryi(sam_index, tid, start_t, end_t);
+  int BamReader::count(std::string_view t_chrom, long start_t, long end_t) const {
     int num_reads{0};
+    auto iterator = query(t_chrom, start_t, end_t);
 
-    while (sam_itr_next(sam_file, iter, sam_record) >= 0) {
+    while (!iterator.is_end()) {
       ++num_reads;
+      iterator.next();
     }
-    sam_itr_destroy(iter);
     return num_reads;
   }
 
-  [[maybe_unused]] std::string bam_handler::get_cigar_string() const {
-    if (sam_record == nullptr) {
-      return "";
+  [[maybe_unused]] int BamReader::count(const Region &region) const {
+    return count(region.chrom, region.start, region.end);
+  }
+
+  [[maybe_unused]] void BamReader::print_chroms() const {
+    if (sam_header != nullptr) {
+      for (int i = 0; i < sam_header->n_targets; i++) {
+        std::cout << sam_header->target_name[i] << "\n";
+      }
     }
-    std::string cigar_string;
+  }
+
+  bool BamReader::Iterator::is_end() const { return is_end_; }
+  bool BamReader::Iterator::is_reverse() const { return bam_is_rev(sam_record); }
+
+  long BamReader::Iterator::pos() const { return sam_record->core.pos; }
+  uint8_t BamReader::Iterator::quality() const { return sam_record->core.qual; }
+  uint BamReader::Iterator::cigar_length() const { return sam_record->core.n_cigar; }
+  uint *BamReader::Iterator::cigar_buffer() const { return bam_get_cigar(sam_record); }
+  long BamReader::Iterator::end_pos() const { return bam_endpos(sam_record); }
+  std::string BamReader::Iterator::read_name() const { return bam_get_qname(sam_record); }
+  std::string BamReader::Iterator::chrom() const {
+    return sam_header->target_name[sam_record->core.tid];
+  }
+
+  bool BamReader::Iterator::same_strand_with(bool is_reversed) const {
+    return is_reversed == is_reverse();
+  }
+
+  bool BamReader::Iterator::quality_eq_than(int quality_) const { return quality() >= quality_; }
+
+  std::string BamReader::Iterator::cigar_string() const {
+    if (!cigar_string_.empty()) return cigar_string_;
+
     const uint32_t *cigar = bam_get_cigar(sam_record);
     auto n_cigar = sam_record->core.n_cigar;
 
     for (size_t i{0}; i < n_cigar; ++i) {
       const auto op{bam_cigar_opchr(cigar[i])};
       const auto len{bam_cigar_oplen(cigar[i])};
-      cigar_string += std::to_string(len) + op;
+      cigar_string_ += std::to_string(len) + op;
     }
-    return cigar_string;
+
+    return cigar_string_;
   }
 
-  [[maybe_unused]] void bam_handler::print_record() const {
-    if (sam_record == nullptr) {
-      return;
-    }
-    std::cout << " read name: " << bam_get_qname(sam_record) << " cigar:" << get_cigar_string()
-              << '\n';
+  [[maybe_unused]] std::string BamReader::Iterator::to_string() const {
+    std::stringstream ss{};
+    ss << "chrom " << chrom() << " read name: " << read_name() << " is reverse :" << is_reverse()
+       << " cigar:" << cigar_string() << " pos:" << pos() << " end pos:" << end_pos() << "\n";
+    return ss.str();
   }
 
-}  // namespace bam_parser
+  [[maybe_unused]] void BamReader::Iterator::print() const { std::cout << to_string(); }
+
+  std::string BamReader::Iterator::sequence() const {
+    if (!read_sequence_.empty()) return read_sequence_;
+    const uint8_t *seq = bam_get_seq(sam_record);
+    const int l_seq = sam_record->core.l_qseq;
+    read_sequence_.resize(l_seq);
+    for (int i = 0; i < l_seq; ++i) {
+      read_sequence_[i] = seq_nt16_str[bam_seqi(seq, i)];
+    }
+    return read_sequence_;
+  }
+
+  void BamReader::Iterator::next() {
+    if (auto res = sam_itr_next(sam_file, iter.get(), sam_record); res < 0) {
+      is_end_ = true;
+    }
+  }
+
+  [[maybe_unused]] std::string CigarResult::to_string() const {
+    std::stringstream ss{};
+    ss << "parseCigarResult_t("
+       << "\n";
+    ss << "lt_soft_len: " << lt_soft_len << "\n";
+    ss << "rt_soft_len: " << rt_soft_len << "\n";
+    ss << "read_match: " << read_match << "\n";
+    ss << "ref_match: " << ref_match << "\n";
+    ss << "indel_len: " << indel_len << "\n";
+    ss << "query_len: " << query_len << "\n";
+    ss << "cigartuples_without_soft: ";
+    for (auto const &c : cigartuples_without_soft) {
+      ss << c << " ";
+    }
+    ss << "\n";
+    ss << "cigartuples: ";
+    for (auto const &c : cigartuples) {
+      ss << c << " ";
+    }
+    ss << ")"
+       << "\n";
+    return ss.str();
+  }
+
+  [[maybe_unused]] std::string Region::to_string() const {
+    std::stringstream ss{};
+    ss << "Region(" << chrom << ":" << start << "-" << end << ")"
+       << "\n";
+    return ss.str();
+  }
+}  // namespace cppext

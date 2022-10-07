@@ -1,11 +1,32 @@
+//     scannls  Copyright (C) 2022  Yangyang Li
+//     This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+//     This is free software, and you are welcome to redistribute it
+//     under certain conditions; type `show c' for details.
 //
-// Created by li002252 on 2/11/22.
+// The hypothetical commands `show w' and `show c' should show the appropriate
+// parts of the General Public License.  Of course, your program's commands
+// might be different; for a GUI interface, you would use an "about box".
 //
+//   You should also get your employer (if you work as a programmer) or school,
+// if any, to sign a "copyright disclaimer" for the program, if necessary.
+// For more information on this, and how to apply and follow the GNU GPL, see
+// <https://www.gnu.org/licenses/>.
+//
+//   The GNU General Public License does not permit incorporating your program
+// into proprietary programs.  If your program is a subroutine library, you
+// may consider it more useful to permit linking proprietary applications with
+// the library.  If this is what you want to do, use the GNU Lesser General
+// Public License instead of this License.  But first, please read
+// <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
 #ifndef SCANNLSEXT_RESCUER_H
 #define SCANNLSEXT_RESCUER_H
 #include <algorithm>
+#include <climits>
+#include <cmath>
+#include <cstdlib>
 #include <iostream>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -13,45 +34,17 @@
 
 #include "bam.h"
 #include "htslib/sam.h"
-#include "output_container.h"
 #include "ssw_cpp.h"
+#include "utils.hpp"
 
-namespace rescuer {
+namespace cppext {
 
-  using bam_parser::bam_handler;
-  using bam_parser::parseCigarResult_t;
-  constexpr int max_seq_len = 100;
+  constexpr int max_align_seq_len = 100;
   constexpr int max_sr_pos_diff = 10;
-  constexpr int min_seq_align_len = 10;
-  constexpr uint align_match_score = 2;
-  constexpr uint align_mismatch_penalty = 5;
-  constexpr uint align_gap_open_penalty = 8;
-  constexpr uint align_gap_extend_penalty = 6;
-
-  struct get_softclip_result_t {
-    int soft_len{};
-    std::string read_seq{};
-    long pos{-1};
-    int mode{0};
-  };
-
-  inline int get_read_max_length(std::string_view t_seq);
-
-  /**
-   * @brief Check if cigar string is soft-clipped
-   * @param t_cigar cigar string
-   * @param t_cigar_len cigar string length
-   * @return true if soft-clipped
-   */
-  bool is_soft_clipped(const uint32_t *t_cigar, size_t t_cigar_len);
-
-  /**
-   * @brief Get read sequence
-   * @param t_seqs : the read sequence
-   * @param t_seq_len : the length of the read sequence
-   * @return : read sequence
-   */
-  std::string get_read_seq(const uint8_t *t_seqs, int t_seq_len);
+  constexpr uint8_t align_match_score = 2;
+  constexpr uint8_t align_mismatch_penalty = 5;
+  constexpr uint8_t align_gap_open_penalty = 8;
+  constexpr uint8_t align_gap_extend_penalty = 6;
 
   /**
    * @brief Parse cigar string from original uint32_t array
@@ -59,55 +52,60 @@ namespace rescuer {
    * @param t_cigar_len: length of cigar string array
    * @return: parseCigarResult_t
    */
-  parseCigarResult_t parser_cigar(const uint32_t *t_cigar_str, size_t t_cigar_len);
+  CigarResult parser_cigar(const uint32_t *t_cigar_str, size_t t_cigar_len);
+
+  /**
+   * @brief Parse cigar string from record iterator
+   * @param iterator
+   * @return parseCigarResult_t
+   */
+  CigarResult parser_cigar(BamReader::Iterator const &iterator);
+
+  struct Options;
+  struct BreakPoint;
+  struct Seqs;
 
   class Rescuer {
   private:
-    const char *m_file_path{};
-    bam_handler m_bam_handler{};
+    BamReader bam_reader{};
     int min_mapq{};
-    int min_soft_len{};
+    int min_soft_len{};  // may be not used
     int min_mismatch{};
     double min_identity{};
-    int min_seq_align_len{min_seq_align_len};
-    int average_read_depth{};
-    StripedSmithWaterman::Aligner m_aligner{
-        StripedSmithWaterman::Aligner{align_match_score, align_mismatch_penalty,
-                                      align_gap_open_penalty, align_gap_extend_penalty}};
+    int min_seq_align_len{};
+    std::optional<int> average_read_depth{};
+    StripedSmithWaterman::Aligner m_aligner{align_match_score, align_mismatch_penalty,
+                                            align_gap_open_penalty, align_gap_extend_penalty};
     StripedSmithWaterman::Filter m_filter{StripedSmithWaterman::Filter{}};
     mutable StripedSmithWaterman::Alignment m_alignment{};
     mutable std::vector<std::string> m_names_list{};
 
   public:
-    Rescuer() = default;
-    Rescuer(const char *t_file, int t_mapq, int t_soft_len, int t_mismatch, double t_identity,
-            int t_min_seq_align_len, int t_average_read_depth);
+    explicit Rescuer(Options const &t_options);
+
+    [[maybe_unused]] std::string to_string() const;
 
     /**
      * @brief calculate number of sr for every node
-     * @param t_chrom chromosome
-     * @param t_start start position 0-based
-     * @param t_end   end position
+     * @param region info including chrom, start, end
      * @param t_mode  mode of node
-     * @param t_current_query_name current query names
+     * @param current_query_name current query names
      * @param t_query_name_list query names list
      * @return number of sr
      */
-    int calculate_sr(std::string_view t_chrom, long t_start, long t_end, int t_mode,
-                     std::string_view t_strand, long t_read_start,
-                     std::vector<std::string> &t_current_query_name,
+    int calculate_sr(const Region &region, BreakPoint const &break_point,
+                     std::vector<std::string> &current_query_name,
                      const std::vector<uint> &cigartuples_without_soft) const;
 
     /**
      * @brief calculate number of sr according to alignment between srlist and
-     * svlist
-     * @param t_sr sr list
-     * @param t_sv sv list
+     * @param candidate_list sr list
+     * @param reference_list sv list
      * @return number of sr
      */
-    int determine_num_increment_sr(std::vector<std::string> const &t_sr,
-                                   std::vector<std::string> const &t_sv,
-                                   std::vector<std::string> const &t_sr_list_names) const;
+    int calculate_incremented_sr(const std::vector<Seqs> &candidate_list,
+                                 const std::vector<Seqs> &reference_list,
+                                 std::vector<std::string> const &candidate_list_names) const;
 
     /**
      * @brief calculate number of read for a position
@@ -121,11 +119,22 @@ namespace rescuer {
 
     /**
      * @brief check if two read sequence need to be aligned or not
-     * @param t_query query sequence
-     * @param t_target target sequence
+     * @param query query sequence
+     * @param target target sequence
      * @return true if need to be aligned
      */
-    bool check_if_align(std::string_view t_query, std::string_view t_target) const;
+    bool check_rescue(const Seqs &query, const Seqs &target) const;
+
+    bool check_identity(std::string_view query, std::string_view target, double threshold) const;
+
+    bool check_rescue_condition(std::string_view query, std::string_view target) const;
+
+    /**
+     * @param query  query sequence
+     * @param target  target sequence
+     * @return the identity of query
+     */
+    std::optional<double> calculate_identity(std::string_view query, std::string_view target) const;
 
     /**
      * @brief reset name list
@@ -135,8 +144,8 @@ namespace rescuer {
 
     /**
      * @brief Add seqs for sr and sv list
-     * @param t_sr seq list of sr
-     * @param t_sv  seq list of sv
+     * @param candidate_seqs seq list of sr
+     * @param reference_seqs  seq list of sv
      * @param t_bam  bam handler
      * @param tt_chrom  chrom name
      * @param tt_start  start position 0-based
@@ -144,45 +153,36 @@ namespace rescuer {
      * @param tt_mode  mode
      * @param t_min_mapq  min mapq
      * @param t_min_soft  min soft clip length
-     * @param t_current_names  current names list
+     * @param current_names  current names list
      * @param t_name_list  names in graph
      */
-    std::vector<std::string> add_sr_sv_list(
-        std::vector<std::string> &t_sr, std::vector<std::string> &t_sv, std::string_view tt_chrom,
-        long tt_start, const long tt_end, const int tt_mode, std::string_view tt_strand,
-        long read_start, std::vector<std::string> &t_current_names,
-        const std::vector<uint> &tt_cigartuples_without_soft) const;
-
-    std::tuple<get_softclip_result_t, bool> get_softclip(
-        const std::string &t_read_seq, int t_mode, const uint32_t *t_cigar_buffer,
+    std::vector<std::string> add_align_seqs(
+        std::vector<Seqs> &candidate_seqs, std::vector<Seqs> &reference_seqs, Region const &region,
+        BreakPoint const &break_point, std::vector<std::string> &current_names,
         const std::vector<uint> &cigartuples_without_soft) const;
+
+    std::optional<Seqs> get_align_sequences(BamReader::Iterator const &iterator,
+                                            BreakPoint const &break_point,
+                                            CigarResult const &cigar_result) const;
 
     /**
      * @brief check if the rescued read need to be skipped
      * @param read_seq read sequence of rescued read
      * @param tt_mode mode of node's read
      * @param tt_start start position of node's read for rescuing
-     * @param cigar cigar string buff of rescued read
+     * @param  iterator cigar string buff of rescued read
      * @param tt_cigartuples_without_soft cigar tuples without soft clip of node's read
      * @return tuple<get_softclip_result_t, seq_len, is_skip>
      */
-    std::tuple<get_softclip_result_t, int, bool> check_if_skip(
-        std::string const &read_seq, int tt_mode, long tt_start, uint32_t const *cigar,
-        const std::vector<uint> &tt_cigartuples_without_soft) const;
-
-    /**
-     * @brief check if rescued reads and node's read have same strand
-     * @param strand  strand of node's read
-     * @return true if not same strand
-     */
-    bool check_strand_if_skip(std::string_view strand) const;
+    static std::optional<int> get_align_seq_len(uint seq_size, uint min_align_len);
 
     /**
      * @brief check start position for rescued reads and node
-     * @param read_start node's read reference start
+     * @param break_point node's read reference start
      * @return true if rescued reads need to be skipped
      */
-    bool check_read_start_if_skip(long read_start) const;
+    static bool check_read_pos(BamReader::Iterator const &iterator, const CigarResult &cigar_result,
+                               const BreakPoint &break_point);
 
     /**
      * @brief check if has same isoform
@@ -190,10 +190,75 @@ namespace rescuer {
      * @param right_cigartuples_without_soft cigar tuples without soft clip for another read
      * @return true if has same isoform
      */
-    bool check_if_same_isform(const std::vector<uint> &left_cigartuples_without_soft,
-                              const std::vector<uint> &right_cigartuples_without_soft) const;
+    static bool check_if_same_isform(const std::vector<uint> &left_cigartuples_without_soft,
+                                     const std::vector<uint> &right_cigartuples_without_soft);
   };
 
-}  // namespace rescuer
+  struct Options {
+    using self = Options;
+
+    Options() = default;
+
+    self &file(std::string_view file);
+
+    self &mapq(int mapq);
+
+    self &soft_len(int soft_len);
+
+    self &mismatch(int mismatch);
+
+    self &identity(double identity);
+
+    self &min_seq_align_len(int min_seq_align_len);
+
+    [[maybe_unused]] self &average_read_depth(int average_read_depth);
+
+    [[maybe_unused]] [[nodiscard]] std::string to_string() const;
+
+    std::string file_{};
+    int mapq_{};
+    int soft_len_{};
+    int mismatch_{};
+    double identity_{};
+    int min_seq_align_len_{};
+    std::optional<int> average_read_depth_{};
+  };
+
+  struct BreakPoint {
+    BreakPoint() = default;
+    BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_,
+               std::string_view chrom_, long breakpoint_start_);
+
+    BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_,
+               std::string_view chrom_, long breakpoint_start_, long breakpoint_end_);
+
+    [[maybe_unused]] [[nodiscard]] std::string to_string() const;
+    [[nodiscard]] bool is_middle() const;
+
+    long read_start{};  // read match start position
+    long read_end{};    // read match end position
+    int mode{};
+    bool is_reverse{};
+    std::string breakpoint_chrom{};
+    long breakpoint_start{};
+    std::optional<long> breakpoint_end{};
+  };
+
+  struct Seqs {
+    Seqs() = default;
+    explicit Seqs(std::string_view seq1_);
+    Seqs(std::string_view seq1_, std::string_view seq2_);
+
+    [[maybe_unused]] [[nodiscard]] std::string to_string() const;
+
+    friend std::ostream &operator<<(std::ostream &os, const Seqs &seqs) {
+      return os << seqs.to_string();
+    }
+
+    std::string seq1{};
+    std::optional<std::string> seq2{};
+  };
+
+}  // namespace cppext
 
 #endif  // SCANNLSEXT_RESCUER_H

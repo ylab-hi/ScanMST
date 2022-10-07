@@ -18,7 +18,6 @@ except ImportError:
     {sys.executable} -m pip install nox-poetry"""
     raise SystemExit(dedent(message))
 
-
 package = "scannls"
 python_versions = ["3.8", "3.9", "3.10"]
 nox.needs_version = ">= 2021.6.6"
@@ -28,6 +27,7 @@ nox.options.sessions = (
     "mypy",
     "tests",
     "typeguard",
+    "refurb",
     # "xdoctest",
     # "docs-build",
 )
@@ -92,7 +92,6 @@ def precommit(session: Session) -> None:
         "black",
         "darglint",
         "flake8",
-        "flake8-bandit",
         "flake8-bugbear",
         "flake8-docstrings",
         "flake8-rst-docstrings",
@@ -159,6 +158,15 @@ def typeguard(session: Session) -> None:
     session.install(".")
     session.install("pytest", "typeguard", "pygments", "pytest-mock")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
+
+
+@session(python="3.10")
+def refurb(session: Session) -> None:
+    """Runtime type checking using Typeguard."""
+    args = session.posargs or ["src", "tests", "docs/conf.py"]
+    session.install("pybind11", "setuptools")
+    session.install(".")
+    session.install("refurb")
 
 
 @session(python=python_versions)

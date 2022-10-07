@@ -8,13 +8,15 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 namespace py = pybind11;
-using bam_parser::bam_handler;
-using bam_parser::parseCigarResult_t;
-using rescuer::Rescuer;
+using cppext::BamReader;
+using cppext::Options;
+using cppext::parseCigarResult_t;
+using cppext::Region;
+using cppext::Rescuer;
 
 PYBIND11_MODULE(_cppext, m) {
   m.doc() = "Cpp extension for BAM file parser";
-  m.def("parseCigar", &bam_parser::parseCigar, "parse cigar string");
+  m.def("parseCigar", &cppext::parseCigar, "parse cigar string");
   py::class_<parseCigarResult_t>(m, "parseCigarResult")
       .def_readonly("cigartuples", &parseCigarResult_t::cigartuples)
       .def_readonly("cigartuples_without_soft", &parseCigarResult_t::cigartuples_without_soft)
@@ -24,7 +26,7 @@ PYBIND11_MODULE(_cppext, m) {
       .def_readonly("read_match", &parseCigarResult_t::read_match)
       .def_readonly("query_len", &parseCigarResult_t::query_len)
       .def_readonly("indel_len", &parseCigarResult_t::indel_len)
-      .def("__repr__", [](const parseCigarResult_t &r) { return "parseCigarResult()"; });
+      .def("__repr__", [](const parseCigarResult_t &r) { return r.to_string(); });
 
   py::class_<StripedSmithWaterman::Alignment>(m, "Alignment")
       .def(py::init<>())
@@ -47,25 +49,51 @@ PYBIND11_MODULE(_cppext, m) {
       .def_readwrite("score_filter", &StripedSmithWaterman::Filter::score_filter)
       .def_readwrite("distance_filter", &StripedSmithWaterman::Filter::distance_filter)
       .def(py::init<>())
-      .def(py::init<const bool &, const bool &, const uint16_t &, const uint16_t &>());
+      .def(py::init<bool, bool, uint16_t, uint16_t>());
 
   // Aligner Class
   py::class_<StripedSmithWaterman::Aligner>(m, "Aligner")
       .def(py::init<>())
-      .def(py::init<const uint8_t &, const uint8_t &, const uint8_t &, const uint8_t &>())
+      .def(py::init<uint8_t, uint8_t, uint8_t, uint8_t>())
       .def("SetReferenceSequence", &StripedSmithWaterman::Aligner::SetReferenceSequence);
 
-  py::class_<bam_handler>(m, "bam_handler")
-      .def("count", &bam_handler::count, "count(chrom, star, end) -> int");
+  py::class_<BamReader>(m, "BamReader")
+      .def("count", py::overload_cast<const Region &>(&BamReader::count, py::const_),
+           "count reads in a region")
+      .def("count", py::overload_cast<std::string_view, long, long>(&BamReader::count, py::const_),
+           "count reads in a region");
 
-  py::class_<Rescuer>(m, "Rescuer",
-                      "Rescuer(bam_file, min_mapq, min_soft_len, min_mis, min_frac, "
-                      "min_seq_align_len, average_read_depth)")
-      .def(py::init<const char *, int, int, int, double, int, int>())
+  py::class_<Region>(m, "Region")
+      .def(py::init<>())
+      .def(py::init<const std::string &, uint32_t, const int &>())
+      .def_readwrite("chrom", &Region::chrom)
+      .def_readwrite("start", &Region::start)
+      .def_readwrite("end", &Region::end);
+
+  py::class_<Options>(m, "Options")
+      .def(py::init<>())
+      .def_readwrite("mapq_", &Options::mapq_)
+      .def_readwrite("soft_len_", &Options::soft_len_)
+      .def_readwrite("mismatch_", &Options::mismatch_)
+      .def_readwrite("identity_", &Options::identity_)
+      .def_readwrite("min_seq_align_len_", &Options::min_seq_align_len_)
+      .def_readwrite("average_read_depth_", &Options::average_read_depth_)
+      .def("file", &Options::file)
+      .def("mapq", &Options::mapq)
+      .def("soft_len", &Options::soft_len)
+      .def("mismatch", &Options::mismatch)
+      .def("identity", &Options::identity)
+      .def("min_seq_align_len", &Options::min_seq_align_len)
+      .def("average_read_depth", &Options::average_read_depth)
+      .def("__repr__", [](const Options &o) { return o.to_string(); });
+
+
+  py::class_<Rescuer>(m, "Rescuer")
+      .def(py::init<Options const &>())
       .def("calculate_sr", &Rescuer::calculate_sr,
-           "calculate_sr(chrom, start, end, mode, strand, read_start, current_names, "
+           "calculate_sr(Region, mode, strand, read_start, current_names, "
            "cigartuples_without_soft) -> int")
       .def("count_reads", &Rescuer::count_reads, "count_reads(chrom, start, end) -> int")
-      .def("__repr__", [](const Rescuer &r) { return "Rescuer()"; })
+      .def("__repr__", [](const Rescuer &r) { return r.to_string(); })
       .def("reset_names_list", &Rescuer::reset_names_list, "reset_names_list(names_list) -> None");
 }

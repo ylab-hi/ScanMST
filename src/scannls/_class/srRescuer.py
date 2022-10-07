@@ -2,7 +2,7 @@
 """SR rescuer.
 
 @Filename:    srRescuer.py
-@license:     MIT Licence
+@author:      Yangyang Li
 @Time:        12/30/21 15:00 PM
 """
 from typing import Any
@@ -16,6 +16,30 @@ from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 from .type import LoggerType
 from scannls import cppext
+
+
+def is_middle_node(node: Node) -> bool:
+    """Check if the node is middle node."""
+    return node.prev_breakpoint is not None and node.next_breakpoint is not None
+
+
+def make_breakpoint(node: Node, start: int, mode: int) -> cppext.BreakPoint:
+    """Make breakpoint."""
+    return (
+        cppext.BreakPoint(
+            node.ref_start,
+            node.ref_end,
+            mode,
+            node.is_reverse(),
+            node.chrom,
+            start - 1,  # may be unused
+            start,  # may be unused
+        )
+        if is_middle_node(node)
+        else cppext.BreakPoint(
+            node.ref_start, node.ref_end, mode, node.is_reverse(), node.chrom, start - 1
+        )
+    )
 
 
 class SRRescuer:
@@ -36,15 +60,20 @@ class SRRescuer:
 
         :param logger: logger
         """
-        self.cppext_rescuer = cppext.Rescuer(
-            input_bam_file,
-            mapq_cutoff,
-            soft_len_cutoff,
-            mismatch_cutoff,
-            alignment_frac,
-            soft_len_cutoff,
-            average_read_depth,
+        options = (
+            cppext.Options()
+            .file(input_bam_file)
+            .mapq(mapq_cutoff)
+            .soft_len(soft_len_cutoff)
+            .mismatch(mismatch_cutoff)
+            .identity(alignment_frac)
+            .min_seq_align_len(10)
         )
+        if average_read_depth != -1:
+            options = options.average_read_depth(average_read_depth)
+
+        self.cppext_rescuer = cppext.Rescuer(options)
+
         self.logger = logger
         self.node_rescued_sr_maximum = node_rescued_sr_maximum
 
@@ -169,13 +198,12 @@ class SRRescuer:
         ):
             raise ValueError(f"{current_node.query_name} with None value")
 
+        region = cppext.Region(chrom, start - 1, start)
+        break_point = make_breakpoint(current_node, start - 1, mode1)
+
         rescued_sr = self.cppext_rescuer.calculate_sr(
-            chrom,
-            start,
-            start,
-            mode1,
-            current_node.strand,
-            current_node.ref_start,
+            region,
+            break_point,
             query_name_current,
             current_node.cigartuples_without_soft,
         )
@@ -206,13 +234,11 @@ class SRRescuer:
             ):
                 raise ValueError(f"{next_node.query_name} with None value")
 
+            region = cppext.Region(chrom, start - 1, start)
+            break_point = make_breakpoint(next_node, start - 1, mode2)
             rescued_sr += self.cppext_rescuer.calculate_sr(
-                chrom,
-                start,
-                start,
-                mode2,
-                next_node.strand,
-                next_node.ref_start,
+                region,
+                break_point,
                 query_name_next,
                 next_node.cigartuples_without_soft,
             )

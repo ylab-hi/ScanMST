@@ -524,11 +524,11 @@ class Node(BasicNode):
     def similar_key(self) -> str:
         """Get similar key of a node."""
         introns = self.introns
-        choosen_intron = None
+        chosen_intron = None
         if introns:
-            choosen_intron = introns[-1] if self.strand == "+" else introns[0]
+            chosen_intron = introns[-1] if self.strand == "+" else introns[0]
 
-        key = f"{choosen_intron[0]}-{choosen_intron[1]}" if choosen_intron else "None"
+        key = f"{chosen_intron[0]}-{chosen_intron[1]}" if chosen_intron else "None"
         return f"{self.chrom}_{key}"
 
     def get_unique_key(self):
@@ -553,9 +553,13 @@ class Node(BasicNode):
         if break_point is not None:
             chrom, pos = break_point.to_tuple()
             if mode == 1:
-                pos = pos - 1  # type: ignore
+                pos -= 1
             return chrom, pos
         return " ", 1
+
+    def is_reverse(self) -> bool:
+        """Check if a node is reverse."""
+        return self.strand == "-"
 
 
 class Series:

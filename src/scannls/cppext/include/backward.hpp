@@ -417,7 +417,9 @@ extern "C" uintptr_t _Unwind_GetIPInfo(_Unwind_Context *, int *);
 #  include <utility>  // for std::swap
 namespace backward {
   namespace details {
-    template <typename K, typename V> struct hashtable { typedef std::unordered_map<K, V> type; };
+    template <typename K, typename V> struct hashtable {
+      typedef std::unordered_map<K, V> type;
+    };
     using std::move;
   }  // namespace details
 }  // namespace backward
@@ -427,7 +429,9 @@ namespace backward {
 #  include <map>
 namespace backward {
   namespace details {
-    template <typename K, typename V> struct hashtable { typedef std::map<K, V> type; };
+    template <typename K, typename V> struct hashtable {
+      typedef std::map<K, V> type;
+    };
     template <typename T> const T &move(const T &v) { return v; }
     template <typename T> T &move(T &v) { return v; }
   }  // namespace details
@@ -504,11 +508,17 @@ namespace backward {
 
   namespace details {
 
-    template <typename T> struct rm_ptr { typedef T type; };
+    template <typename T> struct rm_ptr {
+      typedef T type;
+    };
 
-    template <typename T> struct rm_ptr<T *> { typedef T type; };
+    template <typename T> struct rm_ptr<T *> {
+      typedef T type;
+    };
 
-    template <typename T> struct rm_ptr<const T *> { typedef const T type; };
+    template <typename T> struct rm_ptr<const T *> {
+      typedef const T type;
+    };
 
     template <typename R, typename T, R (*F)(T)> struct deleter {
       template <typename U> void operator()(U &ptr) const { (*F)(ptr); }
@@ -1806,7 +1816,7 @@ namespace backward {
       }
 #    endif
 
-//#define BACKWARD_I_DO_NOT_RECOMMEND_TO_ENABLE_THIS_HORRIBLE_PIECE_OF_CODE
+// #define BACKWARD_I_DO_NOT_RECOMMEND_TO_ENABLE_THIS_HORRIBLE_PIECE_OF_CODE
 #    ifdef BACKWARD_I_DO_NOT_RECOMMEND_TO_ENABLE_THIS_HORRIBLE_PIECE_OF_CODE
       if (!cudie) {
         // If it's still not enough, lets dive deeper in the shit, and try

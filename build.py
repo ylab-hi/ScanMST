@@ -2,31 +2,73 @@
 """Build cpp extension.
 
 @Filename:    build.py
-@license:     MIT Licence
+@author:      Yangyang Li
 @Time:        1/7/22 3:00 PM
 """
 import os
+import shlex
+import typing
 from contextlib import contextmanager
 from functools import wraps
+from pathlib import Path
 
 from pybind11.setup_helpers import build_ext
 from pybind11.setup_helpers import Pybind11Extension
 
-HTSLIB_LIBRARY_DIR = os.environ.get("HTSLIB_LIBRARY_DIR", None)
-HTSLIB_INCLUDE_DIR = os.environ.get("HTSLIB_INCLUDE_DIR", None)
-HTSLIB_CONFIGURE_OPTIONS = os.environ.get("HTSLIB_CONFIGURE_OPTIONS", None)
-HTSLIB_SOURCE = None
 
-if not HTSLIB_LIBRARY_DIR:
-    raise ValueError("HTSLIB_LIBRARY_DIR is not set")
+def remove_env(key: str):
+    """Remove environment variable."""
+    env_cflags = os.environ.get("CFLAGS", "")
+    env_cppflags = os.environ.get("CPPFLAGS", "")
+    flags = shlex.split(env_cflags) + shlex.split(env_cppflags)
+
+    for flag in flags:
+        if flag.startswith(key):
+            raise RuntimeError(f"Please remove {key} from CFLAGS and CPPFLAGS.")
+
+
+def check_conda_env() -> None:
+    """Check if conda env is activated."""
+    if "CONDA_PREFIX" not in os.environ:
+        raise RuntimeError("Please activate conda env first.")
+
+
+def check_hts_path(hts_lib_path: Path, hts_include_path: Path) -> None:
+    """Check if htslib path is valid."""
+    header_path = hts_include_path / "htslib"
+    if not header_path.exists():
+        raise RuntimeError("Please install htslib first.")
+
+    lib_path = hts_lib_path / "libhts.so"
+
+    if not lib_path.exists():
+        raise RuntimeError("Please install htslib first.")
+
+
+def get_hts_lib_path() -> (Path, Path):
+    """Get htslib path."""
+    remove_env("-g")
+    check_conda_env()
+    conda_path = Path(os.environ["CONDA_PREFIX"])
+
+    htslib_library_dir = conda_path / "lib"
+    htslib_include_dir = conda_path / "include"
+
+    check_hts_path(htslib_library_dir, htslib_include_dir)
+
+    return htslib_library_dir, htslib_include_dir
+
 
 # linking against a shared, externally installed htslib version, no
 # sources required for htslib
 htslib_sources = []
 shared_htslib_sources = []
 chtslib_sources = []
-htslib_library_dirs = [HTSLIB_LIBRARY_DIR]
-htslib_include_dirs = [HTSLIB_INCLUDE_DIR]
+
+HTSLIB_LIBRARY_DIR, HTSLIB_INCLUDE_DIR = get_hts_lib_path()
+
+htslib_library_dirs = [HTSLIB_LIBRARY_DIR.as_posix()]
+htslib_include_dirs = [HTSLIB_INCLUDE_DIR.as_posix()]
 external_htslib_libraries = ["z", "hts"]
 
 
@@ -57,7 +99,20 @@ def change_env(key: str, value: str):
     return decorator
 
 
-@change_env("CPPFLAGS", "-o2")
+def get_files(
+    path: typing.Union[Path, str], suffix: typing.List[str]
+) -> typing.Iterator[str]:
+    """Get bindings."""
+    if isinstance(path, str):
+        path = Path(path)
+
+    for file in path.iterdir():
+        if file.is_dir():
+            yield from get_files(file, suffix)
+        if file.suffix in suffix:
+            yield file.as_posix()
+
+
 def build(setup_kwargs):
     """Build cpp extension."""
     ext_modules = [
@@ -68,8 +123,9 @@ def build(setup_kwargs):
                 "src/scannls/cppext/src/rescuer.cpp",
                 "src/scannls/cppext/src/ssw.c",
                 "src/scannls/cppext/src/ssw_cpp.cpp",
-                "src/scannls/cppext/src/binding.cpp",
-            ],
+                # "src/scannls/cppext/src/binding.cpp",
+            ]
+            + list(get_files("src/scannls/cppext/bindings", [".cpp", ".c"])),
             include_dirs=htslib_include_dirs + ["src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,

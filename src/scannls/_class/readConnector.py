@@ -714,7 +714,6 @@ def detect_read_read_connections_from_cigar(
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
             return noreturn
 
-
         if nm_sa < max_allowed_nm:
             mapq_list.append(mapq_sa)
             chimeric_aln_list.append(
@@ -730,9 +729,9 @@ def detect_read_read_connections_from_cigar(
                 )
             )
 
-    if len(chimeric_aln_list) < 1 + len(chimeric_aln):
-        return noreturn
-    elif max(mapq_list) < mapq_cutoff:
+    if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
+        max(mapq_list) < mapq_cutoff
+    ):
         return noreturn
     else:
 

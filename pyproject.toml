@@ -43,7 +43,6 @@ sphinx-autobuild = "^2021.3.14"
 pre-commit = "^2.20.0"
 flake8 = "^5.0.4"
 black = "^22.6"
-flake8-bandit = "^2.1.2"
 bandit = "1.7.2"
 flake8-bugbear = "^22.9.11"
 flake8-docstrings = "^1.6.0"
@@ -86,6 +85,10 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 norecursedirs = ["cppext"]
 
+
+[tool.bandit]
+exclude_dirs = ['tests']
+skips = ["B602", "B404", "B603"]
 
 [build-system]
 requires = ["pybind11>2.9.1", "poetry-core>=1.0.0"]

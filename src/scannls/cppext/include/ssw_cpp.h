@@ -1,30 +1,30 @@
 // ssw_cpp.h
 // Created by Wan-Ping Lee
 // Last revision by Mengyao Zhao on 2017-05-30
+// Last revision by Yangyang Li on 2020-10-05
 
 #ifndef COMPLETE_STRIPED_SMITH_WATERMAN_CPP_H_
 #define COMPLETE_STRIPED_SMITH_WATERMAN_CPP_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <string>
 #include <vector>
 
 namespace StripedSmithWaterman {
 
   struct Alignment {
-    uint16_t sw_score;            // The best alignment score
-    uint16_t sw_score_next_best;  // The next best alignment score
-    int32_t ref_begin;            // Reference begin position of the best alignment
-    int32_t ref_end;              // Reference end position of the best alignment
-    int32_t query_begin;          // Query begin position of the best alignment
-    int32_t query_end;            // Query end position of the best alignment
-    int32_t ref_end_next_best;    // Reference end position of the next best alignment
-    int32_t mismatches;           // Number of mismatches of the alignment
-    std::string cigar_string;     // Cigar string of the best alignment
-    std::vector<uint32_t> cigar;  // Cigar stored in the BAM format
-                                  //   high 28 bits: length
-                                  //   low 4 bits: M/I/D/S/X (0/1/2/4/8);
+    uint16_t sw_score{};            // The best alignment score
+    uint16_t sw_score_next_best{};  // The next best alignment score
+    int32_t ref_begin{};            // Reference begin position of the best alignment
+    int32_t ref_end{};              // Reference end position of the best alignment
+    int32_t query_begin{};          // Query begin position of the best alignment
+    int32_t query_end{};            // Query end position of the best alignment
+    int32_t ref_end_next_best{};    // Reference end position of the next best alignment
+    int32_t mismatches{};           // Number of mismatches of the alignment
+    std::string cigar_string{};     // Cigar string of the best alignment
+    std::vector<uint32_t> cigar{};  // Cigar stored in the BAM format
+                                    //   high 28 bits: length
+                                    //   low 4 bits: M/I/D/S/X (0/1/2/4/8);
     void Clear() {
       sw_score = 0;
       sw_score_next_best = 0;
@@ -45,24 +45,20 @@ namespace StripedSmithWaterman {
     // NOTE: Only need score of alignments, please set 'report_begin_position'
     //       and 'report_cigar' false.
 
-    bool report_begin_position;  // Give ref_begin and query_begin.
-                                 //   If it is not set, ref_begin and query_begin are -1.
-    bool report_cigar;           // Give cigar_string and cigar.
-                                 //   report_begin_position is automatically TRUE.
+    bool report_begin_position{true};  // Give ref_begin and query_begin.
+                                       //   If it is not set, ref_begin and query_begin are -1.
+    bool report_cigar{true};           // Give cigar_string and cigar.
+                                       //   report_begin_position is automatically TRUE.
 
     // When *report_cigar* is true and alignment passes these two filters,
     //   cigar_string and cigar will be given.
-    uint16_t score_filter;     // score >= score_filter
-    uint16_t distance_filter;  // ((ref_end - ref_begin) < distance_filter) &&
-                               // ((query_end - read_begin) < distance_filter)
+    uint16_t score_filter{0};         // score >= score_filter
+    uint16_t distance_filter{32767};  // ((ref_end - ref_begin) < distance_filter) &&
+                                      // ((query_end - read_begin) < distance_filter)
 
-    Filter()
-        : report_begin_position(true),
-          report_cigar(true),
-          score_filter(0),
-          distance_filter(32767){};
+    Filter() = default;
 
-    Filter(const bool& pos, const bool& cigar, const uint16_t& score, const uint16_t& dis)
+    Filter(bool pos, bool cigar, uint16_t score, uint16_t dis)
         : report_begin_position(pos),
           report_cigar(cigar),
           score_filter(score),
@@ -77,7 +73,7 @@ namespace StripedSmithWaterman {
     //             If you target for other character aligners, then please
     //             use the other constructor and pass the corresponding matrix in.
     // =========
-    Aligner(void);
+    Aligner();
 
     // =========
     // @function Construct an Aligner by assigning scores.
@@ -85,16 +81,16 @@ namespace StripedSmithWaterman {
     //             If you target for other character aligners, then please
     //             use the other constructor and pass the corresponding matrix in.
     // =========
-    Aligner(const uint8_t& match_score, const uint8_t& mismatch_penalty,
-            const uint8_t& gap_opening_penalty, const uint8_t& gap_extending_penalty);
+    Aligner(uint8_t match_score, uint8_t mismatch_penalty, uint8_t gap_opening_penalty,
+            uint8_t gap_extending_penalty);
 
     // =========
     // @function Construct an Aligner by the specific matrixs.
     // =========
-    Aligner(const int8_t* score_matrix, const int& score_matrix_size,
-            const int8_t* translation_matrix, const int& translation_matrix_size);
+    Aligner(const int8_t* score_matrix, int score_matrix_size, const int8_t* translation_matrix,
+            int translation_matrix_size);
 
-    ~Aligner(void);
+    ~Aligner();
 
     // =========
     // @function Build the reference sequence and thus make
@@ -107,15 +103,15 @@ namespace StripedSmithWaterman {
     // @param    length The length of bases will be be built.
     // @return   The length of the built bases.
     // =========
-    int SetReferenceSequence(const char* seq, const int& length);
+    int SetReferenceSequence(const char* seq, int length);
 
-    void CleanReferenceSequence(void);
+    void CleanReferenceSequence();
 
     // =========
     // @function Set penalties for opening and extending gaps
     //           [NOTICE] The defaults are 3 and 1 respectively.
     // =========
-    void SetGapPenalty(const uint8_t& opening, const uint8_t& extending) {
+    void SetGapPenalty(uint8_t opening, uint8_t extending) {
       gap_opening_penalty_ = opening;
       gap_extending_penalty_ = extending;
     };
@@ -134,7 +130,7 @@ namespace StripedSmithWaterman {
     // @return   True: succeed; false: fail.
     // =========
     bool Align(const char* query, const Filter& filter, Alignment* alignment,
-               const int32_t maskLen) const;
+               int32_t maskLen) const;
 
     // =========
     // @function Align the query againt the reference.
@@ -153,53 +149,53 @@ namespace StripedSmithWaterman {
     //                     alignment information.
     // @return   True: succeed; false: fail.
     // =========
-    bool Align(const char* query, const char* ref, const int& ref_len, const Filter& filter,
-               Alignment* alignment, const int32_t maskLen) const;
+    bool Align(const char* query, const char* ref, int ref_len, const Filter& filter,
+               Alignment* alignment, int32_t maskLen) const;
 
     // @function Clear up all containers and thus the aligner is disabled.
     //             To rebuild the aligner please use Build functions.
-    void Clear(void);
+    void Clear();
 
     // =========
     // @function Rebuild the aligner's ability on default values.
     //           [NOTICE] If the aligner is not cleaned, rebuilding will fail.
     // @return   True: succeed; false: fail.
     // =========
-    bool ReBuild(void);
+    bool ReBuild();
 
     // =========
     // @function Rebuild the aligner's ability by the specific matrixs.
     //           [NOTICE] If the aligner is not cleaned, rebuilding will fail.
     // @return   True: succeed; false: fail.
     // =========
-    bool ReBuild(const uint8_t& match_score, const uint8_t& mismatch_penalty,
-                 const uint8_t& gap_opening_penalty, const uint8_t& gap_extending_penalty);
+    bool ReBuild(uint8_t match_score, uint8_t mismatch_penalty, uint8_t gap_opening_penalty,
+                 uint8_t gap_extending_penalty);
 
     // =========
     // @function Construct an Aligner by the specific matrixs.
     //           [NOTICE] If the aligner is not cleaned, rebuilding will fail.
     // @return   True: succeed; false: fail.
     // =========
-    bool ReBuild(const int8_t* score_matrix, const int& score_matrix_size,
-                 const int8_t* translation_matrix, const int& translation_matrix_size);
+    bool ReBuild(const int8_t* score_matrix, int score_matrix_size,
+                 const int8_t* translation_matrix, int translation_matrix_size);
 
   private:
-    int8_t* score_matrix_;
-    int score_matrix_size_;
-    int8_t* translation_matrix_;
+    std::vector<int8_t> score_matrix_{};
+    int score_matrix_size_{5};
+    std::vector<int8_t> translation_matrix_{};
 
-    uint8_t match_score_;            // default: 2
-    uint8_t mismatch_penalty_;       // default: 2
-    uint8_t gap_opening_penalty_;    // default: 3
-    uint8_t gap_extending_penalty_;  // default: 1
+    uint8_t match_score_{2};            // default: 2
+    uint8_t mismatch_penalty_{2};       // default: 2
+    uint8_t gap_opening_penalty_{3};    // default: 3
+    uint8_t gap_extending_penalty_{1};  // default: 1
 
-    int8_t* translated_reference_;
-    int32_t reference_length_;
+    std::vector<int8_t> translated_reference_{};
+    int32_t reference_length_{0};
 
     int TranslateBase(const char* bases, const int& length, int8_t* translated) const;
-    void SetAllDefault(void);
-    void BuildDefaultMatrix(void);
-    void ClearMatrices(void);
+    void SetAllDefault();
+    void BuildDefaultMatrix();
+    void ClearMatrices();
 
     Aligner& operator=(const Aligner&);
     Aligner(const Aligner&);
@@ -208,17 +204,14 @@ namespace StripedSmithWaterman {
   // ================
   // inline functions
   // ================
-  inline void Aligner::CleanReferenceSequence(void) {
+  inline void Aligner::CleanReferenceSequence() {
     if (reference_length_ == 0) return;
 
-    // delete the current buffer
-    if (reference_length_ > 1)
-      delete[] translated_reference_;
-    else
-      delete translated_reference_;
+    std::vector<int8_t>().swap(translated_reference_);
+    reference_length_ = 0;
 
     reference_length_ = 0;
   }
 }  // namespace StripedSmithWaterman
 
-#endif  // COMPLETE_STRIPED_SMITH_WATERMAN_CPP_H_
+#endif  // COMPLETE_STRIPED_SMITH_WATERMAN_CPP_H
