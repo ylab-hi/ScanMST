@@ -181,8 +181,7 @@ namespace cppext {
      * @param break_point node's read reference start
      * @return true if rescued reads need to be skipped
      */
-    static bool check_read_pos(BamReader::Iterator const &iterator, const CigarResult &cigar_result,
-                               const BreakPoint &break_point);
+    static bool check_read_pos(BamReader::Iterator const &iterator, const BreakPoint &break_point);
 
     /**
      * @brief check if has same isoform
@@ -226,22 +225,15 @@ namespace cppext {
 
   struct BreakPoint {
     BreakPoint() = default;
-    BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_,
-               std::string_view chrom_, long breakpoint_start_);
-
-    BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_,
-               std::string_view chrom_, long breakpoint_start_, long breakpoint_end_);
+    BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_, bool is_middle_);
 
     [[maybe_unused]] [[nodiscard]] std::string to_string() const;
-    [[nodiscard]] bool is_middle() const;
 
     long read_start{};  // read match start position
     long read_end{};    // read match end position
     int mode{};
     bool is_reverse{};
-    std::string breakpoint_chrom{};
-    long breakpoint_start{};
-    std::optional<long> breakpoint_end{};
+    bool is_middle{};  // is middle node
   };
 
   struct Seqs {

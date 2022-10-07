@@ -9,8 +9,8 @@ int main(int argc, char* argv[]) {
   //  constexpr std::string_view file{
   //      "/projects/b1171/ylk4626/project/scannls/src/scannls/cppext/test/chr2_214987647.test.bam"};
   //      "test.bam"};
-    constexpr std::string_view file{"../test/data/chr2_214987647.test.bam"};
-//  constexpr std::string_view file{"../test/data/test.bam"};
+  constexpr std::string_view file{"../test/data/chr2_214987647.test.bam"};
+  //  constexpr std::string_view file{"../test/data/test.bam"};
 
   constexpr int mapq_threshold = 15;
   constexpr int min_softclip_length = 5;
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   //  std::string breakpoint_chrom{};
   //  long breakpoint_start{};
   //  std::optional<long> breakpoint_end{};
-  BreakPoint const breakpoint{read_start, 0, mode, true, "chr2", start - 1};
+  BreakPoint const breakpoint{read_start, 0, mode, true, false};
 
   log(region.to_string());
 

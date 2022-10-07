@@ -23,22 +23,10 @@ def is_middle_node(node: Node) -> bool:
     return node.prev_breakpoint is not None and node.next_breakpoint is not None
 
 
-def make_breakpoint(node: Node, start: int, mode: int) -> cppext.BreakPoint:
+def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
     """Make breakpoint."""
-    return (
-        cppext.BreakPoint(
-            node.ref_start,
-            node.ref_end,
-            mode,
-            node.is_reverse(),
-            node.chrom,
-            start - 1,  # may be unused
-            start,  # may be unused
-        )
-        if is_middle_node(node)
-        else cppext.BreakPoint(
-            node.ref_start, node.ref_end, mode, node.is_reverse(), node.chrom, start - 1
-        )
+    return cppext.BreakPoint(
+        node.ref_start, node.ref_end, mode, node.is_reverse(), is_middle_node(node)
     )
 
 
@@ -199,7 +187,7 @@ class SRRescuer:
             raise ValueError(f"{current_node.query_name} with None value")
 
         region = cppext.Region(chrom, start - 1, start)
-        break_point = make_breakpoint(current_node, start - 1, mode1)
+        break_point = make_breakpoint(current_node, mode1)
 
         rescued_sr = self.cppext_rescuer.calculate_sr(
             region,
@@ -235,7 +223,7 @@ class SRRescuer:
                 raise ValueError(f"{next_node.query_name} with None value")
 
             region = cppext.Region(chrom, start - 1, start)
-            break_point = make_breakpoint(next_node, start - 1, mode2)
+            break_point = make_breakpoint(next_node, mode2)
             rescued_sr += self.cppext_rescuer.calculate_sr(
                 region,
                 break_point,

@@ -88,9 +88,6 @@ namespace cppext {
     auto sr_list_names = add_align_seqs(candidate_list, reference_list, region, break_point,
                                         current_query_name, cigartuples_without_soft);
 
-    logc("candidate list: ", candidate_list);
-    logc("reference_list: ", reference_list);
-
     if (candidate_list.empty() || reference_list.empty()) return 0;
     return calculate_incremented_sr(candidate_list, reference_list, sr_list_names);
   }
@@ -197,11 +194,8 @@ namespace cppext {
     m_names_list = t_names_list;
   }
 
-  bool Rescuer::check_read_pos(BamReader::Iterator const &iterator, const CigarResult &cigar_result,
-                               const BreakPoint &break_point) {
-    log(iterator.to_string(), cigar_result.to_string());
-
-    if (break_point.is_middle()) {
+  bool Rescuer::check_read_pos(BamReader::Iterator const &iterator, const BreakPoint &break_point) {
+    if (break_point.is_middle) {
       return std::abs(iterator.pos() - break_point.read_start) <= max_sr_pos_diff
              && std::abs(iterator.end_pos() - break_point.read_end) <= max_sr_pos_diff;
     }
@@ -228,11 +222,10 @@ namespace cppext {
          !iterator.is_end() && iterator.same_strand_with(break_point.is_reverse); iterator.next()) {
       //    get read seq
 
-      iterator.print();
       if (iterator.quality_eq_than(min_mapq)) {
         CigarResult cigar_result{parser_cigar(iterator)};
 
-        if (!check_read_pos(iterator, cigar_result, break_point)
+        if (!check_read_pos(iterator, break_point)
             || !check_if_same_isform(cigartuples_without_soft,
                                      cigar_result.cigartuples_without_soft))
           continue;
@@ -272,7 +265,7 @@ namespace cppext {
 
     std::string const read_seq = iterator.sequence();
 
-    if (break_point.is_middle()) {
+    if (break_point.is_middle) {
       auto const lt_seq_len
           = get_align_seq_len(cigar_result.lt_soft_len, static_cast<uint>(min_seq_align_len));
       auto const rt_seq_len
@@ -287,7 +280,6 @@ namespace cppext {
       return seqs;
     }
 
-    log("break_point.mode: ", break_point.mode);
     if (break_point.mode == 1) {
       // right soft clipped
       auto const rt_seq_len
@@ -401,25 +393,12 @@ namespace cppext {
   }
 
   BreakPoint::BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_,
-                         std::string_view chrom_, long breakpoint_start_)
+                         bool is_middle_)
       : read_start{read_start_},
         read_end{read_end_},
         mode{mode_},
         is_reverse{is_reverse_},
-        breakpoint_chrom{chrom_},
-        breakpoint_start{breakpoint_start_} {}
-
-  BreakPoint::BreakPoint(long read_start_, long read_end_, int mode_, bool is_reverse_,
-                         std::string_view chrom_, long breakpoint_start_, long breakpoint_end_)
-      : read_start{read_start_},
-        read_end{read_end_},
-        mode{mode_},
-        is_reverse{is_reverse_},
-        breakpoint_chrom{chrom_},
-        breakpoint_start{breakpoint_start_},
-        breakpoint_end{breakpoint_end_} {}
-
-  bool BreakPoint::is_middle() const { return breakpoint_end.has_value(); }
+        is_middle{is_middle_} {}
 
   [[maybe_unused]] std::string BreakPoint::to_string() const {
     std::stringstream ss{};
@@ -429,7 +408,7 @@ namespace cppext {
        << "  read_start: " << read_start << "\n"
        << "  mode: " << mode << "\n"
        << "  is_reverse: " << is_reverse << "\n"
-       << "  is_middle: " << is_middle() << "\n"
+       << "  is_middle: " << is_middle << "\n"
        << ")"
        << "\n";
 
