@@ -1,28 +1,29 @@
 #include <bam.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+#include <rescuer.h>
+
+#include <functional>
 #include <ios>
 #include <iterator>
 #include <locale>
 #include <memory>
 #include <optional>
 #include <ostream>
-#include <rescuer.h>
-#include <sstream> // __str__
+#include <sstream>  // __str__
 #include <streambuf>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <functional>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <string>
-
 #ifndef BINDER_PYBIND11_TYPE_CASTER
-	#define BINDER_PYBIND11_TYPE_CASTER
-	PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
-	PYBIND11_DECLARE_HOLDER_TYPE(T, T*)
-	PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>)
+#  define BINDER_PYBIND11_TYPE_CASTER
+PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
+PYBIND11_DECLARE_HOLDER_TYPE(T, T *)
+PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>)
 #endif
+
+// clang-format off
 
 void bind_rescuer(std::function< pybind11::module &(std::string const &namespace_) > &M)
 {
@@ -73,20 +74,15 @@ void bind_rescuer(std::function< pybind11::module &(std::string const &namespace
 	{ // cppext::BreakPoint file:rescuer.h line:227
 		pybind11::class_<cppext::BreakPoint, std::shared_ptr<cppext::BreakPoint>> cl(M("cppext"), "BreakPoint", "" );
 		cl.def( pybind11::init( [](){ return new cppext::BreakPoint(); } ) );
-		cl.def( pybind11::init<long, long, int, bool, class std::basic_string_view<char>, long>(), pybind11::arg("read_start_"), pybind11::arg("read_end_"), pybind11::arg("mode_"), pybind11::arg("is_reverse_"), pybind11::arg("chrom_"), pybind11::arg("breakpoint_start_") );
-
-		cl.def( pybind11::init<long, long, int, bool, class std::basic_string_view<char>, long, long>(), pybind11::arg("read_start_"), pybind11::arg("read_end_"), pybind11::arg("mode_"), pybind11::arg("is_reverse_"), pybind11::arg("chrom_"), pybind11::arg("breakpoint_start_"), pybind11::arg("breakpoint_end_") );
+		cl.def( pybind11::init<long, long, int, bool, bool>(), pybind11::arg("read_start_"), pybind11::arg("read_end_"), pybind11::arg("mode_"), pybind11::arg("is_reverse_"), pybind11::arg("is_middle_"));
 
 		cl.def( pybind11::init( [](cppext::BreakPoint const &o){ return new cppext::BreakPoint(o); } ) );
 		cl.def_readwrite("read_start", &cppext::BreakPoint::read_start);
 		cl.def_readwrite("read_end", &cppext::BreakPoint::read_end);
 		cl.def_readwrite("mode", &cppext::BreakPoint::mode);
 		cl.def_readwrite("is_reverse", &cppext::BreakPoint::is_reverse);
-		cl.def_readwrite("breakpoint_chrom", &cppext::BreakPoint::breakpoint_chrom);
-		cl.def_readwrite("breakpoint_start", &cppext::BreakPoint::breakpoint_start);
-		cl.def_readwrite("breakpoint_end", &cppext::BreakPoint::breakpoint_end);
+                cl.def_readwrite("is_middle", &cppext::BreakPoint::is_middle);
 		cl.def("to_string", (std::string (cppext::BreakPoint::*)() const) &cppext::BreakPoint::to_string, "C++: cppext::BreakPoint::to_string() const --> std::string");
-		cl.def("is_middle", (bool (cppext::BreakPoint::*)() const) &cppext::BreakPoint::is_middle, "C++: cppext::BreakPoint::is_middle() const --> bool");
 		cl.def("assign", (struct cppext::BreakPoint & (cppext::BreakPoint::*)(const struct cppext::BreakPoint &)) &cppext::BreakPoint::operator=, "C++: cppext::BreakPoint::operator=(const struct cppext::BreakPoint &) --> struct cppext::BreakPoint &", pybind11::return_value_policy::automatic, pybind11::arg(""));
 	}
 	{ // cppext::Seqs file:rescuer.h line:247
@@ -105,3 +101,5 @@ void bind_rescuer(std::function< pybind11::module &(std::string const &namespace
 		cl.def("__str__", [](cppext::Seqs const &o) -> std::string { std::ostringstream s; s << o; return s.str(); } );
 	}
 }
+
+// clang-format on
