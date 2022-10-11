@@ -75,8 +75,6 @@ void bind_bam(std::function< pybind11::module &(std::string const &namespace_) >
 			pybind11::class_<cppext::BamReader::Iterator, std::shared_ptr<cppext::BamReader::Iterator>> cl(enclosing_class, "Iterator", "" );
 			cl.def( pybind11::init( [](){ return new cppext::BamReader::Iterator(); } ) );
 			cl.def_readwrite("is_end_", &cppext::BamReader::Iterator::is_end_);
-			cl.def_readwrite("cigar_string_", &cppext::BamReader::Iterator::cigar_string_);
-			cl.def_readwrite("read_sequence_", &cppext::BamReader::Iterator::read_sequence_);
 			cl.def("next", (void (cppext::BamReader::Iterator::*)()) &cppext::BamReader::Iterator::next, "C++: cppext::BamReader::Iterator::next() --> void");
 			cl.def("is_end", (bool (cppext::BamReader::Iterator::*)() const) &cppext::BamReader::Iterator::is_end, "C++: cppext::BamReader::Iterator::is_end() const --> bool");
 			cl.def("is_reverse", (bool (cppext::BamReader::Iterator::*)() const) &cppext::BamReader::Iterator::is_reverse, "C++: cppext::BamReader::Iterator::is_reverse() const --> bool");
