@@ -40,9 +40,9 @@ class SRRescuer:
         soft_len_cutoff: int,
         mismatch_cutoff: int,
         alignment_frac: float,
-        average_read_depth: int,
         node_rescued_sr_maximum: int,
         logger: LoggerType,
+        average_read_depth: Optional[int],
     ) -> None:
         """Initialize Rescuer.
 
@@ -57,7 +57,7 @@ class SRRescuer:
             .identity(alignment_frac)
             .min_seq_align_len(10)
         )
-        if average_read_depth != -1:
+        if average_read_depth is not None:
             options = options.average_read_depth(average_read_depth)
 
         self.cppext_rescuer = cppext.Rescuer(options)
@@ -175,6 +175,7 @@ class SRRescuer:
 
         self.logger.trace(
             f"{chrom=} {start=} {mode1=}  {current_node.strand=} {current_node.ref_start=} "
+            f"{current_node.ref_end=} {is_middle_node(current_node)} "
             f"{current_node.cigartuples_without_soft=} {query_name_current=} "
             f"{query_names_in_graph=} "
         )
@@ -211,7 +212,8 @@ class SRRescuer:
             )
 
             self.logger.trace(
-                f"{chrom=} {start=} {mode2=} {next_node.strand=} {next_node.ref_start=} "
+                f"{chrom=} {start=} {mode2=} {next_node.strand=} {next_node.ref_start=} {next_node.ref_end=} "
+                f"{is_middle_node(next_node)} "
                 f"{next_node.cigartuples_without_soft=} {query_name_next=}"
                 f" {query_names_in_graph=}"
             )

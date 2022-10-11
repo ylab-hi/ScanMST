@@ -150,7 +150,7 @@ namespace cppext {
   bool BamReader::Iterator::quality_eq_than(int quality_) const { return quality() >= quality_; }
 
   std::string BamReader::Iterator::cigar_string() const {
-    if (!cigar_string_.empty()) return cigar_string_;
+    std::string cigar_string_;
 
     const uint32_t *cigar = bam_get_cigar(sam_record);
     auto n_cigar = sam_record->core.n_cigar;
@@ -174,7 +174,8 @@ namespace cppext {
   [[maybe_unused]] void BamReader::Iterator::print() const { std::cout << to_string(); }
 
   std::string BamReader::Iterator::sequence() const {
-    if (!read_sequence_.empty()) return read_sequence_;
+    std::string read_sequence_{};
+
     const uint8_t *seq = bam_get_seq(sam_record);
     const int l_seq = sam_record->core.l_qseq;
     read_sequence_.resize(l_seq);

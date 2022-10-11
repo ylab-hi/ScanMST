@@ -43,10 +43,11 @@ namespace cppext {
     std::vector<uint> cigartuples{};
 
     [[maybe_unused]] [[nodiscard]] std::string to_string() const;
-
-    [[nodiscard]] bool both_soft_clipped() const { return lt_soft_len > 0 && rt_soft_len > 0; }
-    [[nodiscard]] bool is_right_soft_clipped() const { return rt_soft_len > 0; }
-    [[nodiscard]] bool is_left_soft_clipped() const { return lt_soft_len > 0; }
+    [[maybe_unused]] [[nodiscard]] bool both_soft_clipped() const {
+      return lt_soft_len > 0 && rt_soft_len > 0;
+    }
+    [[maybe_unused]] [[nodiscard]] bool is_right_soft_clipped() const { return rt_soft_len > 0; }
+    [[maybe_unused]] [[nodiscard]] bool is_left_soft_clipped() const { return lt_soft_len > 0; }
   };
 
   std::ostream &operator<<(std::ostream &os, CigarResult const &cigar_result);
@@ -143,9 +144,6 @@ namespace cppext {
     bam_hdr_t *sam_header = nullptr;
     bool is_end_{false};
 
-    mutable std::string cigar_string_{};
-    mutable std::string read_sequence_{};
-
     Iterator() = default;
 
     Iterator(hts_itr_t *iter, samFile *sam_file_, bam1_t *sam_record_, bam_hdr_t *sam_header_)
@@ -162,21 +160,21 @@ namespace cppext {
 
     void next();
 
-    bool is_end() const;
-    bool is_reverse() const;
+    [[nodiscard]] bool is_end() const;
+    [[nodiscard]] bool is_reverse() const;
 
     [[maybe_unused]] [[nodiscard]] std::string read_name() const;
-    std::string chrom() const;
-    long pos() const;
-    long end_pos() const;
-    uint8_t quality() const;
-    std::string sequence() const;
+    [[nodiscard]] std::string chrom() const;
+    [[nodiscard]] long pos() const;
+    [[nodiscard]] long end_pos() const;
+    [[nodiscard]] uint8_t quality() const;
+    [[nodiscard]] std::string sequence() const;
     [[nodiscard]] std::string cigar_string() const;
 
-    uint cigar_length() const;
-    uint *cigar_buffer() const;
+    [[nodiscard]] uint cigar_length() const;
+    [[nodiscard]] uint *cigar_buffer() const;
 
-    [[maybe_unused]] std::string to_string() const;
+    [[maybe_unused]] [[nodiscard]] std::string to_string() const;
     [[maybe_unused]] void print() const;
 
     [[nodiscard]] bool same_strand_with(bool is_reversed) const;

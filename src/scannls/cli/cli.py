@@ -13,6 +13,7 @@ import tempfile
 import time
 from functools import partial
 from typing import Any
+from typing import Optional
 from typing import Union
 
 from loguru import logger
@@ -56,9 +57,9 @@ def parse_splice_graph_for_cliques_seq(
     cliques: Any,
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
-    average_read_depth: int,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
+    average_read_depth: Optional[int] = None,
 ) -> None:
     """Parse splice graph for cliques."""
     splice_graph = SpliceGraph.create_splice_graph(
@@ -69,8 +70,8 @@ def parse_splice_graph_for_cliques_seq(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
-        average_read_depth,
         node_rescued_sr_maximum,
+        average_read_depth,
     )
 
     with writers.open() as _:
@@ -89,8 +90,8 @@ def parse_splice_graph_for_cliques_seq(
 def _parse_splice_graph_for_cliques_par(
     cliques: Any,
     options: Union[DefaultOptions, argparse.Namespace],
-    average_read_depth: int,
     node_rescued_sr_maximum: int,
+    average_read_depth: Optional[int],
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
@@ -105,8 +106,8 @@ def _parse_splice_graph_for_cliques_par(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
-        average_read_depth,
         node_rescued_sr_maximum,
+        average_read_depth,
     )
 
     result_series = []
@@ -122,17 +123,17 @@ def parse_splice_graph_for_cliques_par(
     cliques: Any,
     writers: Writers,
     options: Union[DefaultOptions, argparse.Namespace],
-    average_read_depth: int,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
+    average_read_depth: Optional[int] = None,
 ) -> None:
     """Parse splice graph for cliques."""
     parallel_workers = ParallelWorker(
         partial(
             _parse_splice_graph_for_cliques_par,
             options=options,
-            average_read_depth=average_read_depth,
             node_rescued_sr_maximum=node_rescued_sr_maximum,
+            average_read_depth=average_read_depth,
         ),
         logger,
         options.parallel,
@@ -209,7 +210,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             species=options.species,
         )
 
-        avg_cov = -1 if not options.bound else avg_cov
+        avg_cov = None if not options.bound else avg_cov
 
         intact_series_list_len = len(intact_series_list)
 
@@ -224,6 +225,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         cliques = clique_finder.find_clique()
 
         writers = get_writers(options.output, options.ref, in_bam_header, logger)
+
         parse_splice_graph_for_cliques = (
             parse_splice_graph_for_cliques_seq
             if options.parallel == 1
@@ -232,7 +234,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         node_rescued_sr_max = 100
         parse_splice_graph_for_cliques(
-            cliques, writers, options, avg_cov, node_rescued_sr_max, logger
+            cliques, writers, options, node_rescued_sr_max, logger, avg_cov
         )
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
