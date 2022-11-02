@@ -23,7 +23,7 @@ from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
 from ._class.readConnector import detect_read_read_connections_from_cigar
 from ._class.readConnector import ReadsConnector
-from .utils import get_softclip_length, external_tool_checking
+from .utils import get_softclip_length, external_tool_checking, get_longest_insertion_sequence, cigarstring2cigartuples
 from ._class.cliqueFinder import CliqueFinder
 from ._class.spliceGraph import SpliceGraph
 from ._class.spliceGraph import SpliceType
@@ -50,6 +50,8 @@ __all__ = [
     "ReadsConnector",
     "detect_read_read_connections_from_cigar",
     "get_softclip_length",
+    "get_longest_insertion_sequence",
+    "cigarstring2cigartuples",
     "SpliceGraph",
     "SpliceType",
     "SRRescuer",
