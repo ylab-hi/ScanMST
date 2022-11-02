@@ -11,6 +11,7 @@ from typing import Tuple
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import yaml  # type: ignore
+import pysam # type: ignore
 
 from .. import __PACKAGE_NAME__
 from .._class.exception import ModesNotEqualError
@@ -22,6 +23,7 @@ __all__ = [
     "splicing_confirmation",
     "cigar_validity",
     "blat2chimeric_alignment",
+    "insertion2chimeric_alignment",
     "same_chrom_same_strand_mode21_handler",
     "same_chrom_same_strand_handler",
     "same_chrom_diff_strand_handler",
@@ -34,6 +36,10 @@ __all__ = [
     "strand_mode_checker",
 ]
 
+def reverse_complement(in_str: str) -> str:
+    """Obtain reverse complement sequence."""
+    rctrans = str.maketrans("ACGT", "TGCA")
+    return str.translate(seq, rctrans)[::-1]
 
 def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     """Extract splice sites and gene regions from input GTF file.
@@ -503,6 +509,132 @@ def blat2chimeric_alignment(
             )
 
     return chimeric_aln_str
+
+
+def obtain_insertion_surrouding_cigarstrings(
+    cigar_str: str,
+    insertion_length: int,
+) -> Tuple[str, str]:
+    """Obtain the upstream and downstream CIGAR strings of the targeted insertion."""
+
+    insertion_str = f"{insertion_length}I"
+    try:
+        ins_idx = cigar_str.index(insertion_str)
+    except ValueError:
+        surrounding_cigar = "", ""
+    else:
+        surrounding_cigar = (
+            cigar_str[:ins_idx],
+            cigar_str[ins_idx + len(insertion_str) :],
+        )
+    return surrounding_cigar
+
+
+def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
+    """Obtain the read segment length providing CIGAR string."""
+
+    parse_result = cppext.parseCigar(cigar_str)
+    cigartuples = parse_result.cigartuples
+    read_seg_len = 0
+
+    for idx in range(0, len(cigartuples), 2):
+        op_code = cigartuples[idx]
+        _len = cigartuples[idx + 1]
+
+        if op_code in {0, 1, 4}:  # M, I or S
+            read_seg_len = read_seg_len + _len
+    return read_seg_len
+
+
+def insertion2chimeric_alignment(
+    read: pysam.libcalignedsegment.AlignedSegment,
+    insertion_ref_pos: int,
+    insertion_seq: str,
+    read_length: int,
+    read_strand: str,
+    max_allowed_nm: int,
+    blat: Any,
+    blat_ident_pct_cutoff: float = 0.95,
+    top: int = 3,
+    align_len_threshold: int = 50,
+) -> Tuple[str, str]:
+    """Create chimeric alignments from the alignment with long insertion.
+
+    the alignment which has a long insertion segment but without SA tag.
+
+    :param read: pysam.libcalignedsegment.AlignedSegment
+    :param insertion_ref_pos: the insertion reference start position from the original read
+    :param insertion_seq: insertion segment sequence
+    :param read_length: the length of the aligned read
+    :param read_strand: the strand of the aligned read (-/+)
+    :param max_allowed_nm: the maximum allowed NM
+    :param blat: instantiated blat object
+    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
+    :param top: the top number of the alignments
+    :param align_len_threshold: the threshold of the insertion sequence length
+    :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
+    """
+    read_strand = "-" if read.is_reverse else "+"
+    if read_strand == "-":
+        insertion_seq = reverse_complement(insertion_seq)
+
+    insertion_seq_len = len(insertion_seq)
+
+    original_cigar_str = read.cigarstring
+    original_ref_start = read.reference_start
+    nm_read = read.get_tag("NM")
+
+    left_cigar_str, right_cigar_str = obtain_insertion_surrouding_cigarstrings(
+        original_cigar_str, insertion_seq_len
+    )
+    left_cigar_read_seg_len = obtain_read_segment_length_from_cigar_string(
+        left_cigar_str
+    )
+    right_cigar_read_seg_len = obtain_read_segment_length_from_cigar_string(
+        right_cigar_str
+    )
+
+    flag, insertion_info = blat.query_insertion(
+        insert_seq=insertion_seq,
+        threshold_identity=blat_ident_pct_cutoff,
+        top=top,
+        align_len_threshold=align_len_threshold,
+    )
+
+    chimeric_aln_str = ""
+    primary_aln_cigarstring = ""
+    if flag:
+        # BLAT unique HSP
+        chrom_blat = insertion_info.chrom
+        strand_blat = insertion_info.strand
+        pos_blat = insertion_info.ref_start
+        ref_end_blat = insertion_info.ref_end
+        cigar_blat = insertion_info.cigarstring
+        mapq_blat = insertion_info.mapq
+        nm_blat = insertion_info.nm
+        # Insertion sequence BLAT HSP and original insertion have the same chrom and reference start position
+        if (
+            chrom_blat == read.reference_name
+            and strand_blat == read_strand
+            and pos_blat == insertion_ref_pos
+            and ref_end_blat <= read.reference_end
+        ):
+            # SM
+            cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
+            # MS
+            cigar_sa = f"{left_cigar_str}{cigar_blat}{read_length - left_cigar_read_seg_len - insertion_seq_len}S"
+
+            valid_cigar_ra = cigar_validity(cigar_ra)
+            valid_cigar_sa = cigar_validity(cigar_sa)
+
+            nm_sa = nm_read - insertion_seq_len + nm_blat
+            if nm_sa < max_allowed_nm:
+                chimeric_aln_str = (
+                    f"{chrom_blat},{original_ref_start+1},{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
+                )
+                primary_aln_cigarstring = valid_cigar_ra
+
+    return primary_aln_cigarstring, chimeric_aln_str
 
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:

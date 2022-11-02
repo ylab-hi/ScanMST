@@ -19,12 +19,15 @@ from .. import Blat
 from .. import detect_read_read_connections_from_cigar
 from .. import Event
 from .. import get_softclip_length
+from .. import get_longest_insertion_sequence
+from .. import cigarstring2cigartuples
 from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
 from .._class.type import LoggerType
 from .helper import blat2chimeric_alignment
+from .helper import insertion2chimeric_alignment
 from .helper import extract_splice_sites
 from .helper import get_transcriptome_length
 from .helper import obtain_variants_stats
@@ -371,8 +374,10 @@ def _scan_bam_helper(
             elif not read.has_tag("SA"):
                 chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
+                read_ori_nm = read.get_tag("NM")
                 read_length = int(read.query_length)
                 _, _soft_seq, _, read_mode = get_softclip_length(read, mode=0)
+                ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
 
                 soft_seq_ori = (
                     reverse_complement(_soft_seq) if read.is_reverse else _soft_seq
@@ -396,13 +401,41 @@ def _scan_bam_helper(
                     if chimeric_aln_str:
                         logger.trace(
                             f"Pre-checking: {read.query_name= } "
-                            f"does not has SA, after BLAT it has one SA tag"
+                            f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it has one SA tag"
                         )
                         read.set_tag("SA", chimeric_aln_str)
                         is_set_tag = 1
                         after_set_sa_chimeric_alns_num = 1
 
                         # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
+                # Detect novel chimeric alignments for reads with long insertion (I)
+                # but without SA tags using BLAT
+                elif ins_ref_pos > 0:
+                    (
+                        primary_aln_cigarstring,
+                        chimeric_aln_str,
+                    ) = insertion2chimeric_alignment(
+                        read,
+                        ins_ref_pos,
+                        ins_seq,
+                        read_length,
+                        read_strand,
+                        max_allowed_nm,
+                        blat,
+                        blat_ident_pct_cutoff,
+                    )
+                    if primary_aln_cigarstring:
+                        logger.trace(
+                            f"Pre-checking: {read.query_name= } "
+                            f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag"
+                        )
+                        read.cigarstring = primary_aln_cigarstring
+                        read.cigartuples = cigarstring2cigartuples(primary_aln_cigarstring)
+                        read.reference_start = ins_ref_pos
+                        read.set_tag("NM", read_ori_nm - ins_len)
+                        read.set_tag("SA", chimeric_aln_str)
+                        is_set_tag = 1
+                        after_set_sa_chimeric_alns_num = 1
 
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if (

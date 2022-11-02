@@ -18,7 +18,6 @@ from typing import Tuple
 from typing import Union
 
 import pyfaidx
-from Bio.Seq import Seq
 
 from .. import Read
 from ..core.helper import cigar_validity
@@ -1180,8 +1179,8 @@ class Event:
 
 def reverse_complement(in_str: str) -> str:
     """Obtain reverse complement sequence."""
-    my_dna = Seq(in_str)
-    return str(my_dna.reverse_complement())
+    rctrans = str.maketrans("ACGT", "TGCA")
+    return str.translate(seq, rctrans)[::-1]
 
 
 def check_end_node_is_ploya(
