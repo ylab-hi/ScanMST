@@ -61,19 +61,18 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     for feature in gtf_file:
         biotype = feature.attr["gene_type"]
         gene_name = feature.attr["gene_name"]
-        if biotype == "protein_coding":
-            if feature.type == "exon":
-                trx_id = feature.attr["transcript_id"]
-                trx_to_exon[trx_id].append(feature.iv)
-            if feature.type == "gene":
-                gene_iv[
-                    HTSeq.GenomicInterval(
-                        feature.iv.chrom,
-                        feature.iv.start - bin_size,
-                        feature.iv.end + bin_size,
-                        ".",
-                    )
-                ] += str(gene_name)
+        if feature.type == "exon":
+            trx_id = feature.attr["transcript_id"]
+            trx_to_exon[trx_id].append(feature.iv)
+        if feature.type == "gene":
+            gene_iv[
+                HTSeq.GenomicInterval(
+                    feature.iv.chrom,
+                    feature.iv.start - bin_size,
+                    feature.iv.end + bin_size,
+                    ".",
+                )
+            ] += str(gene_name)
 
     for trx_id in trx_to_exon:
         exon_list = trx_to_exon[trx_id]
