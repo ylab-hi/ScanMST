@@ -55,6 +55,7 @@ __all__ = [
     "SpliceGraph",
     "SpliceType",
     "SRRescuer",
+    "CliqueFinder",
     "FastaWriter",
     "GTFWriter",
     "VCFWriter",

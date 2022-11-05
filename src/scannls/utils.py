@@ -195,9 +195,7 @@ def get_longest_insertion_sequence(
 
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_start = read.reference_start
-    ref_end = read.reference_start + parse_result.ref_match
     lt_soft_len = parse_result.lt_soft_len
-    rt_soft_len = parse_result.rt_soft_len
 
     cigartuples_without_soft = parse_result.cigartuples_without_soft
 

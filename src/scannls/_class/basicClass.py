@@ -1177,7 +1177,7 @@ class Event:
         )
 
 
-def reverse_complement(in_str: str) -> str:
+def reverse_complement(seq: str) -> str:
     """Obtain reverse complement sequence."""
     rctrans = str.maketrans("ACGT", "TGCA")
     return str.translate(seq, rctrans)[::-1]

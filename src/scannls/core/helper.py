@@ -11,7 +11,7 @@ from typing import Tuple
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import yaml  # type: ignore
-import pysam # type: ignore
+import pysam  # type: ignore
 
 from .. import __PACKAGE_NAME__
 from .._class.exception import ModesNotEqualError
@@ -36,10 +36,12 @@ __all__ = [
     "strand_mode_checker",
 ]
 
-def reverse_complement(in_str: str) -> str:
+
+def reverse_complement(seq: str) -> str:
     """Obtain reverse complement sequence."""
     rctrans = str.maketrans("ACGT", "TGCA")
     return str.translate(seq, rctrans)[::-1]
+
 
 def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     """Extract splice sites and gene regions from input GTF file.
@@ -59,8 +61,8 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     trx_to_exon = defaultdict(list)
 
     for feature in gtf_file:
-        biotype = feature.attr["gene_type"]
-        gene_name = feature.attr["gene_name"]
+        gene_name = feature.attr.get("gene_name") or feature.attr.get("gene")
+
         if feature.type == "exon":
             trx_id = feature.attr["transcript_id"]
             trx_to_exon[trx_id].append(feature.iv)
@@ -628,9 +630,7 @@ def insertion2chimeric_alignment(
 
             nm_sa = nm_read - insertion_seq_len + nm_blat
             if nm_sa < max_allowed_nm:
-                chimeric_aln_str = (
-                    f"{chrom_blat},{original_ref_start+1},{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
-                )
+                chimeric_aln_str = f"{chrom_blat},{original_ref_start+1},{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
                 primary_aln_cigarstring = valid_cigar_ra
 
     return primary_aln_cigarstring, chimeric_aln_str
