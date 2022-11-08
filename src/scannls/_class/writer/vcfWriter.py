@@ -70,7 +70,7 @@ class VCFWriter(Writer):
         "DP2": "Integer",
         "SR": "Integer",
         "OSR": "Integer",
-        "PSO": "Float",
+        "PSI": "Float",
         "AF": "Float",
         "SVMETHOD": "String",
         "SVTYPE": "String",
@@ -102,7 +102,7 @@ class VCFWriter(Writer):
         "OSR": "The number of support reads for the breakpoints before rescuer",
         "AF": "Estimated allele frequency in the range (0,1], "
         "representing the ratio of reads showing the alternative allele to all reads",
-        "PSO": "Estimated Percent splice-out in the range (0,1], "
+        "PSI": "Estimated Percent splice-in in the range (0,1], "
         "representing the percentage of NLS transcripts",
         "SVTYPE": "The type of event, INS, DEL, TDUP, IDUP, INV, TRA.",
         "SVLEN": "Difference in length between REF and ALT alleles",
@@ -243,9 +243,9 @@ class VCFWriter(Writer):
                         type_position_key
                     ]["AF"]
                 else:
-                    out_vcf_dict[type_position_key]["PSO"] = hop_feature[
+                    out_vcf_dict[type_position_key]["PSI"] = hop_feature[
                         type_position_key
-                    ]["PSO"]
+                    ]["PSI"]
 
                 out_vcf_dict[type_position_key][
                     "TRANSCRIPT_ID"
@@ -412,7 +412,7 @@ def get_vcf_features_from_series(
                     "SVEND": f"{_pos2 + 1}",
                     "DP1": f"{_dp1}",
                     "DP2": f"{_dp2}",
-                    "PSO": f"{_pso:.3g}",
+                    "PSI": f"{_pso:.3g}",
                     "SVLEN": f"{sv_distance}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
@@ -481,7 +481,7 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
             f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
             f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
             f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
-            f'DP2={feature_dict["DP2"]};PSO={feature_dict["PSO"]};SVLEN={feature_dict["SVLEN"]};'
+            f'DP2={feature_dict["DP2"]};PSI={feature_dict["PSI"]};SVLEN={feature_dict["SVLEN"]};'
             f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
             f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
             f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
