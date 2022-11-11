@@ -436,7 +436,9 @@ class ReadsConnector:
             mapq,
             num_of_mismatch,
             read.query_sequence,
+            read.query_qualities
         )
+
         new_read.mode = new_read_mode
 
         return new_read

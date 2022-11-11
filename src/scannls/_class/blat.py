@@ -11,6 +11,7 @@ import os
 import secrets
 import subprocess
 import time
+import array
 from multiprocessing import Process
 from pathlib import Path
 from typing import Any
@@ -343,6 +344,7 @@ class Blat:
             ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
                 top_hsp, in_seq_len=len(insert_seq)
             )
+            dummy_qualities = array.array("B", [40] * len(insert_seq))
             return flag, Insertion(
                 hit_num=1,
                 chrom=ref_chrom,
@@ -352,6 +354,7 @@ class Blat:
                 mapq=60,
                 nm=num_of_mismatch,
                 query_sequence=insert_seq,
+                query_qualities=dummy_qualities,
             )
         return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
 

@@ -39,7 +39,11 @@ class Read:
 
     >>> chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra = ('chr1', 6524193,
     ...     '+', '5S10M2I5M10N10M15S', 60, 0, 'ATCGAAATTAGCTGGGTGTAGTGGCAGGTACCTATGGTCCTGGCTAC')
-    >>> read = Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra)
+    >>> from array import array
+    >>> query_qualities = array('B', [24, 23, 24, 24, 25, 27, 29, 31, 34, 33, 32, 34, 19,
+            19, 19, 19, 33, 30, 29, 30, 30, 31, 28, 25, 26, 27, 14, 11, 29, 31, 34, 33, 32, 34, 19,
+            29, 31, 34, 33, 32, 34, 19, 29, 31, 34, 33, 32])
+    >>> read = Read.init(chrm_ra, pos_ra, strand_ra, cigar_ra, mapq_ra, nm_ra, seq_ra, query_qualities)
     >>> read
     Read(chr1, 6524193, 6524213, +, 60, 0)
     >>> read.read_match_size

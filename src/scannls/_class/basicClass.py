@@ -110,9 +110,9 @@ class Insertion(Read):
     :param query_sequence: read sequence in the BAM file
 
     :Example:
-
-    >>> insertion = Insertion(hit_num=1, chrom= '1', ref_start=1, strand='+',
-    ...                 cigarstring='1S1M1S',mapq=60, nm=0, query_sequence='ATCA')
+    >>> import array
+    >>> insertion = Insertion(hit_num=1, chrom='1', ref_start=1, strand='+',
+    ...                 cigarstring='1S1M1S',mapq=60, nm=0, query_sequence='ATCA', query_qualities=array.array('B', [10,20,10,9]))
     >>> insertion
     Insertion(1:1-4:+, 1-2|2-3, TPA, 1, 4)
 
@@ -136,6 +136,7 @@ class Insertion(Read):
         mapq: int,
         nm: int,
         query_sequence: str,
+        query_qualities: List[int]
     ):
         """Initialize Insertion."""
         parse_cigar_result = cppext.parseCigar(cigarstring)
@@ -155,6 +156,7 @@ class Insertion(Read):
             parse_cigar_result.indel_len,
             parse_cigar_result.cigartuples_without_soft,
             parse_cigar_result.query_len,
+            query_qualities
         ),
 
         self.hit_num = hit_num
