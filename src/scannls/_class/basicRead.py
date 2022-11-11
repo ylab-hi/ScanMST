@@ -58,6 +58,7 @@ class Read:
         "mapq",
         "nm",
         "query_sequence",
+        "query_qualities",
         "query_name",
         "lt_soft_len",
         "rt_soft_len",
@@ -90,6 +91,7 @@ class Read:
         indel_size: int,
         cigartuples_without_soft: List[int],
         query_length: int,
+        query_qualities: List[int],
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name
@@ -107,6 +109,7 @@ class Read:
         self.indel_size = indel_size
         self.cigartuples_without_soft = cigartuples_without_soft
         self.query_length = query_length
+        self.query_qualities = query_qualities
         self.ref_end = self.ref_start + self.reference_match_size
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
@@ -149,6 +152,7 @@ class Read:
         mapq: int,
         nm: int,
         query_seq: str,
+        query_qualities: List[int],
     ) -> "Read":
         """Calculate the features of the read and initialize the read."""
         parse_cigar_result = cppext.parseCigar(cigar_str)
@@ -169,6 +173,7 @@ class Read:
             parse_cigar_result.indel_len,
             parse_cigar_result.cigartuples_without_soft,
             parse_cigar_result.query_len,
+            query_qualities,
         )
 
     def get_exons_and_introns(self) -> Any:

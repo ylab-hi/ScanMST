@@ -654,6 +654,72 @@ def detect_read_read_connections_from_cigar(
             query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
         )
 
+    def mean(in_list: List[int]) -> float:
+        """Helper function to calculate mean value of a list."""
+        return sum(in_list) / len(in_list)
+
+    def is_reverse_transcription_artifacts(
+        read_list: List[Read],
+        minimum_cutoff: int = 20,
+        maximum_cutoff: int = 200,
+        base_quality_cutoff: int = 10,
+    ) -> bool:
+        """Helper function to determine the reverse transcription (RT) artifacts.
+
+        :param read_list: a list of chimeric read, the first one should be the representative alignment
+        :param minimum_cutoff: minimum allowed distance between transcript and the corresponding RT artifact
+        :param maximum_cutoff: maximum allowed distance between transcript and the corresponding RT artifact
+        :param base_quality_cutoff: the difference in averaged base quality between transcript and RT artifact
+        :type read_list: List[Read]
+        :type minimum_cutoff: int
+        :type maximum_cutoff: int
+        :type base_quality_cutoff: int
+        :return: the input read list contains reverse transcription artifacts
+        :rtype: bool
+        """
+        is_artifact = False
+        ra_read = read_list[0]
+        sa_reads = read_list[1:]
+        ra_strand = ra_read.strand
+        mean_qualities_read_match_ra = mean(
+            ra_read.query_qualities[
+                ra_read.lt_soft_len : (ra_read.query_length - ra_read.rt_soft_len)
+            ]
+        )
+        for sa_read in sa_reads:
+            sa_strand = sa_read.strand
+            if ra_strand != sa_strand and ra_read.chrom == sa_read.chrom:
+                if (
+                    abs(ra_read.ref_start - sa_read.ref_start) <= minimum_cutoff
+                    or abs(ra_read.ref_end - sa_read.ref_end) <= minimum_cutoff
+                ):
+                    is_artifact = True
+                    break
+
+                elif (
+                    minimum_cutoff
+                    < abs(ra_read.ref_start - sa_read.ref_start)
+                    < maximum_cutoff
+                    or minimum_cutoff
+                    < abs(ra_read.ref_end - sa_read.ref_end)
+                    < maximum_cutoff
+                ):
+                    mean_qualities_read_match_sa = mean(
+                        sa_read.query_qualities[
+                            sa_read.lt_soft_len : (
+                                sa_read.query_length - sa_read.rt_soft_len
+                            )
+                        ]
+                    )
+                    if (
+                        abs(mean_qualities_read_match_ra - mean_qualities_read_match_sa)
+                        > base_quality_cutoff
+                    ):
+                        is_artifact = True
+                        break
+
+        return is_artifact
+
     noreturn = [], {}, 0  # type: ignore
     if read.is_supplementary:
         return noreturn
@@ -677,6 +743,7 @@ def detect_read_read_connections_from_cigar(
     mapq_ra = read.mapping_quality
     nm_ra = read.get_tag("NM")
     seq_ra = read.query_sequence
+    query_qualities_ra = read.query_qualities
 
     if (
         chrm_ra is None
@@ -684,6 +751,7 @@ def detect_read_read_connections_from_cigar(
         or seq_ra is None
         or nm_ra is None
         or cigar_ra is None
+        or query_qualities_ra is None
     ):
         raise ValueError("None value found in read")
 
@@ -703,12 +771,17 @@ def detect_read_read_connections_from_cigar(
                 mapq_ra,
                 nm_ra,  # type: ignore
                 seq_ra,
+                query_qualities_ra,
             )
         )
 
     for sa_string in chimeric_aln:
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
+        if strand_sa == strand_ra:
+            query_qualities_sa = query_qualities_ra
+        else:
+            query_qualities_sa = query_qualities_ra[::-1]
 
         # filter reads in uncommon chromosome and mitochondrion
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
@@ -726,12 +799,15 @@ def detect_read_read_connections_from_cigar(
                     mapq_sa,
                     nm_sa,
                     seq_sa,
+                    query_qualities_sa,
                 )
             )
 
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
         max(mapq_list) < mapq_cutoff
     ):
+        return noreturn
+    elif is_reverse_transcription_artifacts(chimeric_aln_list):
         return noreturn
     else:
 
