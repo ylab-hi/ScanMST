@@ -6,6 +6,7 @@
 @Time:        12/15/21 2:14 PM
 """
 import re
+from itertools import combinations
 from typing import Any
 from typing import List
 from typing import Tuple
@@ -436,7 +437,7 @@ class ReadsConnector:
             mapq,
             num_of_mismatch,
             read.query_sequence,
-            read.query_qualities
+            read.query_qualities,
         )
 
         new_read.mode = new_read_mode
@@ -680,46 +681,39 @@ def detect_read_read_connections_from_cigar(
         :rtype: bool
         """
         is_artifact = False
-        ra_read = read_list[0]
-        sa_reads = read_list[1:]
-        ra_strand = ra_read.strand
-        mean_qualities_read_match_ra = mean(
-            ra_read.query_qualities[
-                ra_read.lt_soft_len : (ra_read.query_length - ra_read.rt_soft_len)
-            ]
-        )
-        for sa_read in sa_reads:
-            sa_strand = sa_read.strand
-            if ra_strand != sa_strand and ra_read.chrom == sa_read.chrom:
+        for read1, read2 in combinations(read_list, 2):
+            mean_qualities_read1_match = mean(
+                read1.query_qualities[
+                    read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)
+                ]
+            )
+            mean_qualities_read2_match = mean(
+                read2.query_qualities[
+                    read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
+                ]
+            )
+            if read1.strand != read2.strand and read1.chrom == read2.chrom:
                 if (
-                    abs(ra_read.ref_start - sa_read.ref_start) <= minimum_cutoff
-                    or abs(ra_read.ref_end - sa_read.ref_end) <= minimum_cutoff
+                    abs(read1.ref_start - read2.ref_start) <= minimum_cutoff
+                    or abs(read1.ref_end - read2.ref_end) <= minimum_cutoff
                 ):
                     is_artifact = True
                     break
 
                 elif (
                     minimum_cutoff
-                    < abs(ra_read.ref_start - sa_read.ref_start)
+                    < abs(read1.ref_start - read2.ref_start)
                     < maximum_cutoff
                     or minimum_cutoff
-                    < abs(ra_read.ref_end - sa_read.ref_end)
+                    < abs(read1.ref_end - read2.ref_end)
                     < maximum_cutoff
                 ):
-                    mean_qualities_read_match_sa = mean(
-                        sa_read.query_qualities[
-                            sa_read.lt_soft_len : (
-                                sa_read.query_length - sa_read.rt_soft_len
-                            )
-                        ]
-                    )
                     if (
-                        abs(mean_qualities_read_match_ra - mean_qualities_read_match_sa)
+                        abs(mean_qualities_read1_match - mean_qualities_read2_match)
                         > base_quality_cutoff
                     ):
                         is_artifact = True
                         break
-
         return is_artifact
 
     noreturn = [], {}, 0  # type: ignore
@@ -810,6 +804,7 @@ def detect_read_read_connections_from_cigar(
     ):
         return noreturn
     elif is_reverse_transcription_artifacts(chimeric_aln_list):
+        logger.debug(f"{chimeric_aln_list=} has reverse transcription artifacts")
         return noreturn
     else:
 
