@@ -115,7 +115,7 @@ class Blat:
         :return: the boolean value of whether the server is ready or not
         """
         if not os.path.exists(self.log_file_path):
-            raise RuntimeError("the process start server but the log file is not exist")
+            raise RuntimeError(f"the process start server but the log file is not exist: {self.log_file_path}")
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
         self.logger.debug("check if the server starts by reading the log file")
@@ -176,8 +176,8 @@ class Blat:
         self.logger.trace(f"{self.ref_dir=}")
         self.logger.trace(f"{Path().cwd()}")
 
-        if os.path.exists(self.log_file_path):
-            os.remove(self.log_file_path)
+        #if os.path.exists(self.log_file_path):
+        #    os.remove(self.log_file_path)
         cmd = (
             f"{self.gfserver} -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
@@ -212,7 +212,7 @@ class Blat:
             for proc in self._search_processing():
                 proc.kill()
 
-            self._remove(self.log_file_path)  # remove temp log file
+            # self._remove(self.log_file_path)  # remove temp log file
             self.is_stop_server = True
 
     def _query(self, in_seq: str, mini_identity: int = 90) -> str:

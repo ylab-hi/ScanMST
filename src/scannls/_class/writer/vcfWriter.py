@@ -432,7 +432,7 @@ def get_vcf_features_from_series(
             ref_allele, alt_allele = get_vcf_features_from_insertion(
                 insertion, current_node, reference_io
             )
-            _af = insertion.ao / _dp1
+            _af = 0 if _dp1 == 0 else insertion.ao / _dp1
             sv_distance = len(alt_allele)
             _sv_type = "INS"
             anno_field = "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
