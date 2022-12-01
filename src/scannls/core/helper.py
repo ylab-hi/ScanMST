@@ -1161,6 +1161,11 @@ def same_chrom_diff_strand_handler(
                 f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
             )
             return noreturn
+        chrm_start = lt_chrm
+        junc_start = min(ra_bp, sa_bp)
+        chrm_end = lt_chrm
+        junc_end = junc_start + abs(ra_bp - sa_bp)
+
         if junc_start == ra_bp:
             strands = (read_lt.strand, read_rt.strand)
             lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
@@ -1174,10 +1179,6 @@ def same_chrom_diff_strand_handler(
             lt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
             rt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
 
-        chrm_start = lt_chrm
-        junc_start = min(ra_bp, sa_bp)
-        chrm_end = lt_chrm
-        junc_end = junc_start + abs(ra_bp - sa_bp)
         _nls, _anno, _can = splicing_confirmation(
             chrm_start,
             junc_start,
