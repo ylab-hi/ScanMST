@@ -397,12 +397,12 @@ def splicing_confirmation(
         return donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
 
     # key: strand of donor site, strand of accepter site
-    # values: possible matched donor site and accepter site
+    # values: possible matched donor site and accepter site (>99% splice site using GT-AG)
     canonical_splice_dict = {
-        "++": {"GT": "AG", "GC": "AG", "AT": "AC"},
-        "+-": {"GT": "CT", "GC": "CT", "AT": "GT"},
-        "-+": {"AC": "AG", "GC": "AG", "AT": "AC"},
-        "--": {"AC": "CT", "GC": "CT", "AT": "GT"},
+        "++": {"GT": "AG"},
+        "+-": {"GT": "CT"},
+        "-+": {"AC": "AG"},
+        "--": {"AC": "CT"},
     }
 
     donor_bp, acceptor_bp = donor_accepter_breakpoint_determintor(
@@ -414,9 +414,7 @@ def splicing_confirmation(
 
     splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}", None)
 
-    possible_donors = defaultdict(set)
-    for _k, _v in splice_motif_dict.items():
-        possible_donors[_v].add(_k)
+    possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
 
     # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
     try:
@@ -453,7 +451,7 @@ def splicing_confirmation(
     elif motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
         donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
 
-        if any(j in donor_seq for j in possible_donors[motif_ac]):
+        if possible_donors[motif_ac] in donor_seq:
             return True, 1, 1
         else:
             return (False, 1, 0) if motif_required else (True, 1, 0)
@@ -819,12 +817,15 @@ def same_chrom_same_strand_mode21_handler(
             _, _anno, _can = splicing_confirmation(
                 lt_chrm,
                 del_start,
+                read_rt.strand,
+                rt_mode,
                 lt_chrm,
                 del_end,
+                read_lt.strand,
+                lt_mode,
                 splice_bin,
                 genome_fasta,
                 cvg,
-                False,
                 motif_required,
             )
             _genes = gene_annotation(lt_chrm, del_start, lt_chrm, del_end, gene_iv)
@@ -861,12 +862,15 @@ def same_chrom_same_strand_mode21_handler(
             _nls, _anno, _can = splicing_confirmation(
                 chrm_start,
                 junc_start,
+                read_lt.strand,
+                lt_mode,
                 chrm_end,
                 junc_end,
+                read_rt.strand,
+                rt_mode,
                 splice_bin,
                 genome_fasta,
                 cvg,
-                False,
                 motif_required,
             )
             _genes = gene_annotation(
@@ -935,12 +939,15 @@ def same_chrom_same_strand_mode21_handler(
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
+                    read_lt.strand,
+                    lt_mode,
                     chrm_end,
                     junc_end,
+                    read_rt.strand,
+                    rt_mode,
                     splice_bin,
                     genome_fasta,
                     cvg,
-                    False,
                     motif_required,
                 )
                 _genes = gene_annotation(
@@ -1107,12 +1114,15 @@ def same_chrom_diff_strand_handler(
         _nls, _anno, _can = splicing_confirmation(
             chrm_start,
             junc_start,
+            read_lt.strand,
+            same_mode,
             chrm_end,
             junc_end,
+            read_rt.strand,
+            same_mode,
             splice_bin,
             genome_fasta,
             cvg,
-            True,
             motif_required,
         )
         strands = (read_lt.strand, read_rt.strand)
@@ -1151,22 +1161,6 @@ def same_chrom_diff_strand_handler(
                 f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
             )
             return noreturn
-        chrm_start = lt_chrm
-        junc_start = min(ra_bp, sa_bp)
-        chrm_end = lt_chrm
-        junc_end = junc_start + abs(ra_bp - sa_bp)
-        _nls, _anno, _can = splicing_confirmation(
-            chrm_start,
-            junc_start,
-            chrm_end,
-            junc_end,
-            splice_bin,
-            genome_fasta,
-            cvg,
-            True,
-            motif_required,
-        )
-
         if junc_start == ra_bp:
             strands = (read_lt.strand, read_rt.strand)
             lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
@@ -1179,6 +1173,25 @@ def same_chrom_diff_strand_handler(
             rt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
             lt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
             rt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+
+        chrm_start = lt_chrm
+        junc_start = min(ra_bp, sa_bp)
+        chrm_end = lt_chrm
+        junc_end = junc_start + abs(ra_bp - sa_bp)
+        _nls, _anno, _can = splicing_confirmation(
+            chrm_start,
+            junc_start,
+            strands[0],
+            same_mode,
+            chrm_end,
+            junc_end,
+            strands[1],
+            same_mode,
+            splice_bin,
+            genome_fasta,
+            cvg,
+            motif_required,
+        )
         _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
         if _nls:
             return (
@@ -1242,12 +1255,15 @@ def diff_chrom_same_strand_mode21_handler(
     _nls, _anno, _can = splicing_confirmation(
         chrm_start,
         junc_start,
+        read_lt.strand,
+        lt_mode,
         chrm_end,
         junc_end,
+        read_rt.strand,
+        rt_mode,
         splice_bin,
         genome_fasta,
         cvg,
-        False,
         motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
@@ -1393,12 +1409,15 @@ def diff_chrom_diff_strand_handler(
     _nls, _anno, _can = splicing_confirmation(
         chrm_start,
         junc_start,
+        read_lt.strand,
+        same_mode,
         chrm_end,
         junc_end,
+        read_rt.strand,
+        same_mode,
         splice_bin,
         genome_fasta,
         cvg,
-        True,
         motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
