@@ -293,12 +293,15 @@ def gene_annotation(
 def splicing_confirmation(
     chrm1: str,
     pos1: int,
+    strand1: str,
+    mode1: int,
     chrm2: str,
     pos2: int,
+    strand2: str,
+    mode2: int,
     splice_bin: int,
     genome_fasta: pyfaidx.Fasta,
     cvg: HTSeq.GenomicArrayOfSets,
-    strand_changed: bool,
     motif_required: bool = True,
 ) -> Tuple[bool, int, int]:
     """Judge whether the breakpoints are NLS events or not.
@@ -311,11 +314,13 @@ def splicing_confirmation(
     :param chrm2: chromosome for breakpoint2
     :param pos1: position for breakpoint1
     :param pos2: position for breakpoint2
+    :param mode1: SM/MS mode for breakpoint1
+    :param mode2: SM/MS mode for breakpoint2
+    :param strand1: strand for breakpoint1
+    :param strand2: strand for breakpoint2
     :param splice_bin: bin size for splice sites searching
     :param genome_fasta: reference genome (pyfaidx.Fasta object)
     :param cvg: splice site annotations (HTSeq.GenomicArrayOfSets)
-    :param strand_changed: whether breakpoint1 and breakpoint2 use the same
-        strand or not
     :param motif_required: canonical splice sites required;
            if True: considering canonical splice sites only;
            else: considering canonical and noncanonical splice sites both
@@ -336,83 +341,126 @@ def splicing_confirmation(
 
     """
 
-    def canonical_site_finder(in_seq: str) -> List[str]:
-        """Find canonical splice sites in the input sequence.
-
-        :param in_seq: input sequence (usually sequence nearby the breakpoints)
-        :type in_seq: str
-        :return: a list of canonical splice sites in the input sequence,
-            it can be a empty list
-        :rtype: list
-        """
-        candidate_sites = ["GT", "AG", "CT", "AC"]
-        matches = (i in in_seq for i in candidate_sites)
-        hit_sites = [j for i, j in zip(matches, candidate_sites) if i]
-        return hit_sites
-
-    def splice_paired_checker(
-        hit_sites: List[str], pair_seq: str, splice_motif_dict: Dict[str, str]
+    def matched_candidate_sites_checker(
+        donor_seq: str, acceptor_seq, splice_motif_dict: Dict[str, str]
     ) -> bool:
         """Find canonical splice sites in the input sequence.
 
-        :param hit_sites: canonical splice site at one end
-        :param pair_seq: sequence at the other pair end
-        :param splice_motif_dict: paired splice sites (same strand or different strand)
+        :param donor_seq: adjacent sequence at donor breakpoint
+        :param acceptor_seq: adjacent sequence at acceptor breakpoint
+        :param acceptor_seq: sequence at the other pair end
+        :param splice_motif_dict: paired splice sites
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
         paired = False
-        for site in hit_sites:
-            if site in splice_motif_dict and splice_motif_dict[site] in pair_seq:
+        for _donor, _acceptor in splice_motif_dict.items():
+            if _donor in donor_seq and _acceptor in acceptor_seq:
                 paired = True
                 break
         return paired
 
-    splice_motif_dict = (
-        {"GT": "CT", "AG": "AC", "CT": "GT", "AC": "AG"}
-        if strand_changed
-        else {"GT": "AG", "AG": "GT", "CT": "AC", "AC": "CT"}
+    def donor_accepter_breakpoint_determintor(
+        chrm1: str,
+        pos1: int,
+        strand1: str,
+        mode1: int,
+        chrm2: str,
+        pos2: int,
+        strand2: str,
+        mode2: int,
+    ) -> Tuple[Tuple[str, int, str], Tuple[str, int, str]]:
+        """Determine the donor breakpoint and the accepter breakpoint.
+
+        :param chrm1: chromosome for breakpoint1
+        :param chrm2: chromosome for breakpoint2
+        :param pos1: position for breakpoint1
+        :param pos2: position for breakpoint2
+        :param mode1: SM/MS mode for breakpoint1
+        :param mode2: SM/MS mode for breakpoint2
+        :param strand1: strand for breakpoint1
+        :param strand2: strand for breakpoint2
+        """
+        _breakpoint1 = (chrm1, pos1, strand1)
+        _breakpoint2 = (chrm2, pos2, strand2)
+        donor_accepter_dict = {
+            "++21": (_breakpoint2, _breakpoint1),
+            "++12": (_breakpoint1, _breakpoint2),
+            "--21": (_breakpoint1, _breakpoint2),
+            "--12": (_breakpoint2, _breakpoint1),
+            "+-22": (_breakpoint2, _breakpoint1),
+            "+-11": (_breakpoint1, _breakpoint2),
+            "-+22": (_breakpoint1, _breakpoint2),
+            "-+11": (_breakpoint2, _breakpoint1),
+        }
+
+        return donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
+
+    # key: strand of donor site, strand of accepter site
+    # values: possible matched donor site and accepter site
+    canonical_splice_dict = {
+        "++": {"GT": "AG", "GC": "AG", "AT": "AC"},
+        "+-": {"GT": "CT", "GC": "CT", "AT": "GT"},
+        "-+": {"AC": "AG", "GC": "AG", "AT": "AC"},
+        "--": {"AC": "CT", "GC": "CT", "AT": "GT"},
+    }
+
+    donor_bp, acceptor_bp = donor_accepter_breakpoint_determintor(
+        chrm1, pos1, strand1, mode1, chrm2, pos2, strand2, mode2
     )
+
+    chrm_do, pos_do, strand_do = donor_bp
+    chrm_ac, pos_ac, strand_ac = acceptor_bp
+
+    splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}", None)
+
+    possible_donors = defaultdict(set)
+    for _k, _v in splice_motif_dict.items():
+        possible_donors[_v].add(_k)
+
+    # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
     try:
-        junc1 = list(cvg[HTSeq.GenomicPosition(chrm1, pos1)])[0]
+        motif_do = list(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)])[0]
     except IndexError:
-        junc1 = ""
+        motif_do = ""
     try:
-        junc2 = list(cvg[HTSeq.GenomicPosition(chrm2, pos2)])[0]
+        motif_ac = list(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)])[0]
     except IndexError:
-        junc2 = ""
+        motif_ac = ""
+
     # Non-annotated coding exon boundary
-    if junc1 not in splice_motif_dict and junc2 not in splice_motif_dict:
-        junc_seq1 = genome_fasta[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
-        junc_seq2 = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
-        _junc1 = canonical_site_finder(junc_seq1)
-        _junc2 = canonical_site_finder(junc_seq2)
-        if splice_paired_checker(
-            _junc1, junc_seq2, splice_motif_dict
-        ) or splice_paired_checker(_junc2, junc_seq1, splice_motif_dict):
+    if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
+        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+        acceptor_seq = genome_fasta[chrm_ac][
+            pos_ac - splice_bin : pos_ac + splice_bin
+        ].seq
+        if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
             return True, 0, 1
         else:
             return (False, 0, 0) if motif_required else (True, 0, 0)
+
     # pos1 in annotated coding exon boundary, pos2 not.
-    elif junc1 in splice_motif_dict and junc2 not in splice_motif_dict:
-        junc_seq = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
-        if splice_motif_dict[junc1] in junc_seq:
+    elif motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
+        acceptor_seq = genome_fasta[chrm_ac][
+            pos_ac - splice_bin : pos_ac + splice_bin
+        ].seq
+        if splice_motif_dict[motif_do] in acceptor_seq:
             return True, 2, 1
         else:
             return (False, 2, 0) if motif_required else (True, 2, 0)
 
     # pos2 in annotated coding exon boundary, pos1 not.
-    elif junc1 not in splice_motif_dict and junc2 in splice_motif_dict:
-        junc_seq = genome_fasta[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
-        if splice_motif_dict[junc2] in junc_seq:
+    elif motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
+        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+
+        if any(j in donor_seq for j in possible_donors[motif_ac]):
             return True, 1, 1
         else:
             return (False, 1, 0) if motif_required else (True, 1, 0)
 
     # pos1 and pos2 both in annotated coding exon boundary
-    # junc1 in splice_motif_dict and junc2 in splice_motif_dict
-    else:
-        if splice_motif_dict[junc1] == junc2:
+    elif motif_do in splice_motif_dict and motif_ac in splice_motif_dict.values():
+        if splice_motif_dict[motif_do] == motif_ac:
             return True, 3, 1
         else:
             return (False, 3, 0) if motif_required else (True, 3, 0)
