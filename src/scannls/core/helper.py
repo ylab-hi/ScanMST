@@ -11,6 +11,7 @@ from typing import Tuple
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import yaml  # type: ignore
+import pysam  # type: ignore
 
 from .. import __PACKAGE_NAME__
 from .._class.exception import ModesNotEqualError
@@ -22,6 +23,7 @@ __all__ = [
     "splicing_confirmation",
     "cigar_validity",
     "blat2chimeric_alignment",
+    "insertion2chimeric_alignment",
     "same_chrom_same_strand_mode21_handler",
     "same_chrom_same_strand_handler",
     "same_chrom_diff_strand_handler",
@@ -33,6 +35,12 @@ __all__ = [
     "obtain_variants_stats",
     "strand_mode_checker",
 ]
+
+
+def reverse_complement(seq: str) -> str:
+    """Obtain reverse complement sequence."""
+    rctrans = str.maketrans("ACGT", "TGCA")
+    return str.translate(seq, rctrans)[::-1]
 
 
 def extract_splice_sites(in_file: str, bin_size: int) -> Any:
@@ -53,21 +61,20 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     trx_to_exon = defaultdict(list)
 
     for feature in gtf_file:
-        biotype = feature.attr["gene_type"]
-        gene_name = feature.attr["gene_name"]
-        if biotype == "protein_coding":
-            if feature.type == "exon":
-                trx_id = feature.attr["transcript_id"]
-                trx_to_exon[trx_id].append(feature.iv)
-            if feature.type == "gene":
-                gene_iv[
-                    HTSeq.GenomicInterval(
-                        feature.iv.chrom,
-                        feature.iv.start - bin_size,
-                        feature.iv.end + bin_size,
-                        ".",
-                    )
-                ] += str(gene_name)
+        gene_name = feature.attr.get("gene_name") or feature.attr.get("gene")
+
+        if feature.type == "exon":
+            trx_id = feature.attr["transcript_id"]
+            trx_to_exon[trx_id].append(feature.iv)
+        if feature.type == "gene":
+            gene_iv[
+                HTSeq.GenomicInterval(
+                    feature.iv.chrom,
+                    feature.iv.start - bin_size,
+                    feature.iv.end + bin_size,
+                    ".",
+                )
+            ] += str(gene_name)
 
     for trx_id in trx_to_exon:
         exon_list = trx_to_exon[trx_id]
@@ -286,12 +293,15 @@ def gene_annotation(
 def splicing_confirmation(
     chrm1: str,
     pos1: int,
+    strand1: str,
+    mode1: int,
     chrm2: str,
     pos2: int,
+    strand2: str,
+    mode2: int,
     splice_bin: int,
     genome_fasta: pyfaidx.Fasta,
     cvg: HTSeq.GenomicArrayOfSets,
-    strand_changed: bool,
     motif_required: bool = True,
 ) -> Tuple[bool, int, int]:
     """Judge whether the breakpoints are NLS events or not.
@@ -304,11 +314,13 @@ def splicing_confirmation(
     :param chrm2: chromosome for breakpoint2
     :param pos1: position for breakpoint1
     :param pos2: position for breakpoint2
+    :param mode1: SM/MS mode for breakpoint1
+    :param mode2: SM/MS mode for breakpoint2
+    :param strand1: strand for breakpoint1
+    :param strand2: strand for breakpoint2
     :param splice_bin: bin size for splice sites searching
     :param genome_fasta: reference genome (pyfaidx.Fasta object)
     :param cvg: splice site annotations (HTSeq.GenomicArrayOfSets)
-    :param strand_changed: whether breakpoint1 and breakpoint2 use the same
-        strand or not
     :param motif_required: canonical splice sites required;
            if True: considering canonical splice sites only;
            else: considering canonical and noncanonical splice sites both
@@ -329,83 +341,124 @@ def splicing_confirmation(
 
     """
 
-    def canonical_site_finder(in_seq: str) -> List[str]:
-        """Find canonical splice sites in the input sequence.
-
-        :param in_seq: input sequence (usually sequence nearby the breakpoints)
-        :type in_seq: str
-        :return: a list of canonical splice sites in the input sequence,
-            it can be a empty list
-        :rtype: list
-        """
-        candidate_sites = ["GT", "AG", "CT", "AC"]
-        matches = (i in in_seq for i in candidate_sites)
-        hit_sites = [j for i, j in zip(matches, candidate_sites) if i]
-        return hit_sites
-
-    def splice_paired_checker(
-        hit_sites: List[str], pair_seq: str, splice_motif_dict: Dict[str, str]
+    def matched_candidate_sites_checker(
+        donor_seq: str, acceptor_seq, splice_motif_dict: Dict[str, str]
     ) -> bool:
         """Find canonical splice sites in the input sequence.
 
-        :param hit_sites: canonical splice site at one end
-        :param pair_seq: sequence at the other pair end
-        :param splice_motif_dict: paired splice sites (same strand or different strand)
+        :param donor_seq: adjacent sequence at donor breakpoint
+        :param acceptor_seq: adjacent sequence at acceptor breakpoint
+        :param acceptor_seq: sequence at the other pair end
+        :param splice_motif_dict: paired splice sites
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
         paired = False
-        for site in hit_sites:
-            if site in splice_motif_dict and splice_motif_dict[site] in pair_seq:
+        for _donor, _acceptor in splice_motif_dict.items():
+            if _donor in donor_seq and _acceptor in acceptor_seq:
                 paired = True
                 break
         return paired
 
-    splice_motif_dict = (
-        {"GT": "CT", "AG": "AC", "CT": "GT", "AC": "AG"}
-        if strand_changed
-        else {"GT": "AG", "AG": "GT", "CT": "AC", "AC": "CT"}
+    def donor_accepter_breakpoint_determintor(
+        chrm1: str,
+        pos1: int,
+        strand1: str,
+        mode1: int,
+        chrm2: str,
+        pos2: int,
+        strand2: str,
+        mode2: int,
+    ) -> Tuple[Tuple[str, int, str], Tuple[str, int, str]]:
+        """Determine the donor breakpoint and the accepter breakpoint.
+
+        :param chrm1: chromosome for breakpoint1
+        :param chrm2: chromosome for breakpoint2
+        :param pos1: position for breakpoint1
+        :param pos2: position for breakpoint2
+        :param mode1: SM/MS mode for breakpoint1
+        :param mode2: SM/MS mode for breakpoint2
+        :param strand1: strand for breakpoint1
+        :param strand2: strand for breakpoint2
+        """
+        _breakpoint1 = (chrm1, pos1, strand1)
+        _breakpoint2 = (chrm2, pos2, strand2)
+        donor_accepter_dict = {
+            "++21": (_breakpoint2, _breakpoint1),
+            "++12": (_breakpoint1, _breakpoint2),
+            "--21": (_breakpoint1, _breakpoint2),
+            "--12": (_breakpoint2, _breakpoint1),
+            "+-22": (_breakpoint2, _breakpoint1),
+            "+-11": (_breakpoint1, _breakpoint2),
+            "-+22": (_breakpoint1, _breakpoint2),
+            "-+11": (_breakpoint2, _breakpoint1),
+        }
+
+        return donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
+
+    # key: strand of donor site, strand of accepter site
+    # values: possible matched donor site and accepter site (>99% splice site using GT-AG)
+    canonical_splice_dict = {
+        "++": {"GT": "AG"},
+        "+-": {"GT": "CT"},
+        "-+": {"AC": "AG"},
+        "--": {"AC": "CT"},
+    }
+
+    donor_bp, acceptor_bp = donor_accepter_breakpoint_determintor(
+        chrm1, pos1, strand1, mode1, chrm2, pos2, strand2, mode2
     )
+
+    chrm_do, pos_do, strand_do = donor_bp
+    chrm_ac, pos_ac, strand_ac = acceptor_bp
+
+    splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}", None)
+
+    possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
+
+    # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
     try:
-        junc1 = list(cvg[HTSeq.GenomicPosition(chrm1, pos1)])[0]
+        motif_do = list(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)])[0]
     except IndexError:
-        junc1 = ""
+        motif_do = ""
     try:
-        junc2 = list(cvg[HTSeq.GenomicPosition(chrm2, pos2)])[0]
+        motif_ac = list(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)])[0]
     except IndexError:
-        junc2 = ""
+        motif_ac = ""
+
     # Non-annotated coding exon boundary
-    if junc1 not in splice_motif_dict and junc2 not in splice_motif_dict:
-        junc_seq1 = genome_fasta[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
-        junc_seq2 = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
-        _junc1 = canonical_site_finder(junc_seq1)
-        _junc2 = canonical_site_finder(junc_seq2)
-        if splice_paired_checker(
-            _junc1, junc_seq2, splice_motif_dict
-        ) or splice_paired_checker(_junc2, junc_seq1, splice_motif_dict):
+    if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
+        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+        acceptor_seq = genome_fasta[chrm_ac][
+            pos_ac - splice_bin : pos_ac + splice_bin
+        ].seq
+        if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
             return True, 0, 1
         else:
             return (False, 0, 0) if motif_required else (True, 0, 0)
+
     # pos1 in annotated coding exon boundary, pos2 not.
-    elif junc1 in splice_motif_dict and junc2 not in splice_motif_dict:
-        junc_seq = genome_fasta[chrm2][pos2 - splice_bin : pos2 + splice_bin].seq
-        if splice_motif_dict[junc1] in junc_seq:
+    elif motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
+        acceptor_seq = genome_fasta[chrm_ac][
+            pos_ac - splice_bin : pos_ac + splice_bin
+        ].seq
+        if splice_motif_dict[motif_do] in acceptor_seq:
             return True, 2, 1
         else:
             return (False, 2, 0) if motif_required else (True, 2, 0)
 
     # pos2 in annotated coding exon boundary, pos1 not.
-    elif junc1 not in splice_motif_dict and junc2 in splice_motif_dict:
-        junc_seq = genome_fasta[chrm1][pos1 - splice_bin : pos1 + splice_bin].seq
-        if splice_motif_dict[junc2] in junc_seq:
+    elif motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
+        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+
+        if possible_donors[motif_ac] in donor_seq:
             return True, 1, 1
         else:
             return (False, 1, 0) if motif_required else (True, 1, 0)
 
     # pos1 and pos2 both in annotated coding exon boundary
-    # junc1 in splice_motif_dict and junc2 in splice_motif_dict
-    else:
-        if splice_motif_dict[junc1] == junc2:
+    elif motif_do in splice_motif_dict and motif_ac in splice_motif_dict.values():
+        if splice_motif_dict[motif_do] == motif_ac:
             return True, 3, 1
         else:
             return (False, 3, 0) if motif_required else (True, 3, 0)
@@ -503,6 +556,130 @@ def blat2chimeric_alignment(
             )
 
     return chimeric_aln_str
+
+
+def obtain_insertion_surrouding_cigarstrings(
+    cigar_str: str,
+    insertion_length: int,
+) -> Tuple[str, str]:
+    """Obtain the upstream and downstream CIGAR strings of the targeted insertion."""
+
+    insertion_str = f"{insertion_length}I"
+    try:
+        ins_idx = cigar_str.index(insertion_str)
+    except ValueError:
+        surrounding_cigar = "", ""
+    else:
+        surrounding_cigar = (
+            cigar_str[:ins_idx],
+            cigar_str[ins_idx + len(insertion_str) :],
+        )
+    return surrounding_cigar
+
+
+def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
+    """Obtain the read segment length providing CIGAR string."""
+
+    parse_result = cppext.parseCigar(cigar_str)
+    cigartuples = parse_result.cigartuples
+    read_seg_len = 0
+
+    for idx in range(0, len(cigartuples), 2):
+        op_code = cigartuples[idx]
+        _len = cigartuples[idx + 1]
+
+        if op_code in {0, 1, 4}:  # M, I or S
+            read_seg_len = read_seg_len + _len
+    return read_seg_len
+
+
+def insertion2chimeric_alignment(
+    read: pysam.libcalignedsegment.AlignedSegment,
+    insertion_ref_pos: int,
+    insertion_seq: str,
+    read_length: int,
+    read_strand: str,
+    max_allowed_nm: int,
+    blat: Any,
+    blat_ident_pct_cutoff: float = 0.95,
+    top: int = 3,
+    align_len_threshold: int = 50,
+) -> Tuple[str, str]:
+    """Create chimeric alignments from the alignment with long insertion.
+
+    the alignment which has a long insertion segment but without SA tag.
+
+    :param read: pysam.libcalignedsegment.AlignedSegment
+    :param insertion_ref_pos: the insertion reference start position from the original read
+    :param insertion_seq: insertion segment sequence
+    :param read_length: the length of the aligned read
+    :param read_strand: the strand of the aligned read (-/+)
+    :param max_allowed_nm: the maximum allowed NM
+    :param blat: instantiated blat object
+    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
+    :param top: the top number of the alignments
+    :param align_len_threshold: the threshold of the insertion sequence length
+    :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
+    """
+    read_strand = "-" if read.is_reverse else "+"
+    if read_strand == "-":
+        insertion_seq = reverse_complement(insertion_seq)
+
+    insertion_seq_len = len(insertion_seq)
+
+    original_cigar_str = read.cigarstring
+    original_ref_start = read.reference_start
+    nm_read = read.get_tag("NM")
+
+    left_cigar_str, right_cigar_str = obtain_insertion_surrouding_cigarstrings(
+        original_cigar_str, insertion_seq_len
+    )
+    left_cigar_read_seg_len = obtain_read_segment_length_from_cigar_string(
+        left_cigar_str
+    )
+    right_cigar_read_seg_len = obtain_read_segment_length_from_cigar_string(
+        right_cigar_str
+    )
+
+    flag, insertion_info = blat.query_insertion(
+        insert_seq=insertion_seq,
+        threshold_identity=blat_ident_pct_cutoff,
+        top=top,
+        align_len_threshold=align_len_threshold,
+    )
+
+    chimeric_aln_str = ""
+    primary_aln_cigarstring = ""
+    if flag:
+        # BLAT unique HSP
+        chrom_blat = insertion_info.chrom
+        strand_blat = insertion_info.strand
+        pos_blat = insertion_info.ref_start
+        ref_end_blat = insertion_info.ref_end
+        cigar_blat = insertion_info.cigarstring
+        mapq_blat = insertion_info.mapq
+        nm_blat = insertion_info.nm
+        # Insertion sequence BLAT HSP and original insertion have the same chrom and reference start position
+        if (
+            chrom_blat == read.reference_name
+            and strand_blat == read_strand
+            and pos_blat == insertion_ref_pos
+            and ref_end_blat <= read.reference_end
+        ):
+            # SM
+            cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
+            # MS
+            cigar_sa = f"{left_cigar_str}{cigar_blat}{read_length - left_cigar_read_seg_len - insertion_seq_len}S"
+
+            valid_cigar_ra = cigar_validity(cigar_ra)
+            valid_cigar_sa = cigar_validity(cigar_sa)
+
+            nm_sa = nm_read - insertion_seq_len + nm_blat
+            if nm_sa < max_allowed_nm:
+                chimeric_aln_str = f"{chrom_blat},{original_ref_start+1},{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
+                primary_aln_cigarstring = valid_cigar_ra
+
+    return primary_aln_cigarstring, chimeric_aln_str
 
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
@@ -640,12 +817,15 @@ def same_chrom_same_strand_mode21_handler(
             _, _anno, _can = splicing_confirmation(
                 lt_chrm,
                 del_start,
+                read_rt.strand,
+                rt_mode,
                 lt_chrm,
                 del_end,
+                read_lt.strand,
+                lt_mode,
                 splice_bin,
                 genome_fasta,
                 cvg,
-                False,
                 motif_required,
             )
             _genes = gene_annotation(lt_chrm, del_start, lt_chrm, del_end, gene_iv)
@@ -682,12 +862,15 @@ def same_chrom_same_strand_mode21_handler(
             _nls, _anno, _can = splicing_confirmation(
                 chrm_start,
                 junc_start,
+                read_lt.strand,
+                lt_mode,
                 chrm_end,
                 junc_end,
+                read_rt.strand,
+                rt_mode,
                 splice_bin,
                 genome_fasta,
                 cvg,
-                False,
                 motif_required,
             )
             _genes = gene_annotation(
@@ -756,12 +939,15 @@ def same_chrom_same_strand_mode21_handler(
                 _nls, _anno, _can = splicing_confirmation(
                     chrm_start,
                     junc_start,
+                    read_lt.strand,
+                    lt_mode,
                     chrm_end,
                     junc_end,
+                    read_rt.strand,
+                    rt_mode,
                     splice_bin,
                     genome_fasta,
                     cvg,
-                    False,
                     motif_required,
                 )
                 _genes = gene_annotation(
@@ -928,12 +1114,15 @@ def same_chrom_diff_strand_handler(
         _nls, _anno, _can = splicing_confirmation(
             chrm_start,
             junc_start,
+            read_lt.strand,
+            same_mode,
             chrm_end,
             junc_end,
+            read_rt.strand,
+            same_mode,
             splice_bin,
             genome_fasta,
             cvg,
-            True,
             motif_required,
         )
         strands = (read_lt.strand, read_rt.strand)
@@ -976,17 +1165,6 @@ def same_chrom_diff_strand_handler(
         junc_start = min(ra_bp, sa_bp)
         chrm_end = lt_chrm
         junc_end = junc_start + abs(ra_bp - sa_bp)
-        _nls, _anno, _can = splicing_confirmation(
-            chrm_start,
-            junc_start,
-            chrm_end,
-            junc_end,
-            splice_bin,
-            genome_fasta,
-            cvg,
-            True,
-            motif_required,
-        )
 
         if junc_start == ra_bp:
             strands = (read_lt.strand, read_rt.strand)
@@ -1000,6 +1178,21 @@ def same_chrom_diff_strand_handler(
             rt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
             lt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
             rt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+
+        _nls, _anno, _can = splicing_confirmation(
+            chrm_start,
+            junc_start,
+            strands[0],
+            same_mode,
+            chrm_end,
+            junc_end,
+            strands[1],
+            same_mode,
+            splice_bin,
+            genome_fasta,
+            cvg,
+            motif_required,
+        )
         _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
         if _nls:
             return (
@@ -1063,12 +1256,15 @@ def diff_chrom_same_strand_mode21_handler(
     _nls, _anno, _can = splicing_confirmation(
         chrm_start,
         junc_start,
+        read_lt.strand,
+        lt_mode,
         chrm_end,
         junc_end,
+        read_rt.strand,
+        rt_mode,
         splice_bin,
         genome_fasta,
         cvg,
-        False,
         motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
@@ -1214,12 +1410,15 @@ def diff_chrom_diff_strand_handler(
     _nls, _anno, _can = splicing_confirmation(
         chrm_start,
         junc_start,
+        read_lt.strand,
+        same_mode,
         chrm_end,
         junc_end,
+        read_rt.strand,
+        same_mode,
         splice_bin,
         genome_fasta,
         cvg,
-        True,
         motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)

@@ -18,7 +18,6 @@ from typing import Tuple
 from typing import Union
 
 import pyfaidx
-from Bio.Seq import Seq
 
 from .. import Read
 from ..core.helper import cigar_validity
@@ -111,9 +110,9 @@ class Insertion(Read):
     :param query_sequence: read sequence in the BAM file
 
     :Example:
-
-    >>> insertion = Insertion(hit_num=1, chrom= '1', ref_start=1, strand='+',
-    ...                 cigarstring='1S1M1S',mapq=60, nm=0, query_sequence='ATCA')
+    >>> import array
+    >>> insertion = Insertion(hit_num=1, chrom='1', ref_start=1, strand='+',
+    ...                 cigarstring='1S1M1S',mapq=60, nm=0, query_sequence='ATCA', query_qualities=array.array('B', [10,20,10,9]))
     >>> insertion
     Insertion(1:1-4:+, 1-2|2-3, TPA, 1, 4)
 
@@ -137,6 +136,7 @@ class Insertion(Read):
         mapq: int,
         nm: int,
         query_sequence: str,
+        query_qualities: List[int]
     ):
         """Initialize Insertion."""
         parse_cigar_result = cppext.parseCigar(cigarstring)
@@ -156,6 +156,7 @@ class Insertion(Read):
             parse_cigar_result.indel_len,
             parse_cigar_result.cigartuples_without_soft,
             parse_cigar_result.query_len,
+            query_qualities
         ),
 
         self.hit_num = hit_num
@@ -1178,14 +1179,14 @@ class Event:
         )
 
 
-def reverse_complement(in_str: str) -> str:
+def reverse_complement(seq: str) -> str:
     """Obtain reverse complement sequence."""
-    my_dna = Seq(in_str)
-    return str(my_dna.reverse_complement())
+    rctrans = str.maketrans("ACGT", "TGCA")
+    return str.translate(seq, rctrans)[::-1]
 
 
 def check_end_node_is_ploya(
-    node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.8, length: int = 20
+    node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.7, length: int = 20
 ) -> None:
     """Check whether the node is bona fide polyA or internal priming events."""
     if node.ref_end is None or node.ref_start is None:

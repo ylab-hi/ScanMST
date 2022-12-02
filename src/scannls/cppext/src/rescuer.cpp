@@ -233,6 +233,7 @@ namespace cppext {
         auto align_sequence = get_align_sequences(iterator, break_point, cigar_result);
         if (!align_sequence.has_value()) continue;
 
+
         if (auto read_name{iterator.read_name()};
             find(current_names.begin(), current_names.end(), read_name) != current_names.end()) {
           reference_seqs.push_back(std::move(align_sequence.value()));
