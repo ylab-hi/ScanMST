@@ -73,6 +73,9 @@ script = "build.py"
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
 
+[tool.poetry.group.dev.dependencies]
+codespell = "^2.2.2"
+
 [tool.mypy]
 strict = false
 pretty = true
