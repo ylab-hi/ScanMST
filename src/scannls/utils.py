@@ -237,7 +237,7 @@ def get_longest_insertion_sequence(
 
 
 def cigarstring2cigartuples(cigarstring: str) -> List[Tuple[int, int]]:
-    """ Convert cigarstring to cigartuples.
+    """Convert cigarstring to cigartuples.
 
     :param cigarstring: cigarstring from reads
     :return: cigartuples is a list of (operation, length) tuples, such as [(0, 30), (1, 20), (4, 5)]

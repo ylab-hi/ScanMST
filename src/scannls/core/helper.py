@@ -10,8 +10,8 @@ from typing import Tuple
 
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
-import yaml  # type: ignore
 import pysam  # type: ignore
+import yaml  # type: ignore
 
 from .. import __PACKAGE_NAME__
 from .._class.exception import ModesNotEqualError
@@ -563,7 +563,6 @@ def obtain_insertion_surrouding_cigarstrings(
     insertion_length: int,
 ) -> Tuple[str, str]:
     """Obtain the upstream and downstream CIGAR strings of the targeted insertion."""
-
     insertion_str = f"{insertion_length}I"
     try:
         ins_idx = cigar_str.index(insertion_str)
@@ -579,7 +578,6 @@ def obtain_insertion_surrouding_cigarstrings(
 
 def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
     """Obtain the read segment length providing CIGAR string."""
-
     parse_result = cppext.parseCigar(cigar_str)
     cigartuples = parse_result.cigartuples
     read_seg_len = 0
@@ -676,7 +674,10 @@ def insertion2chimeric_alignment(
 
             nm_sa = nm_read - insertion_seq_len + nm_blat
             if nm_sa < max_allowed_nm:
-                chimeric_aln_str = f"{chrom_blat},{original_ref_start+1},{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
+                chimeric_aln_str = (
+                    f"{chrom_blat},{original_ref_start + 1},"
+                    f"{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
+                )
                 primary_aln_cigarstring = valid_cigar_ra
 
     return primary_aln_cigarstring, chimeric_aln_str

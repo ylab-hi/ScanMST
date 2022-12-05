@@ -16,20 +16,20 @@ from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from .. import Blat
+from .. import cigarstring2cigartuples
 from .. import detect_read_read_connections_from_cigar
 from .. import Event
-from .. import get_softclip_length
 from .. import get_longest_insertion_sequence
-from .. import cigarstring2cigartuples
+from .. import get_softclip_length
 from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
 from .._class.type import LoggerType
 from .helper import blat2chimeric_alignment
-from .helper import insertion2chimeric_alignment
 from .helper import extract_splice_sites
 from .helper import get_transcriptome_length
+from .helper import insertion2chimeric_alignment
 from .helper import obtain_variants_stats
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads
@@ -401,7 +401,8 @@ def _scan_bam_helper(
                     if chimeric_aln_str:
                         logger.trace(
                             f"Pre-checking: {read.query_name= } "
-                            f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it has one SA tag"
+                            f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it "
+                            f"has one SA tag "
                         )
                         read.set_tag("SA", chimeric_aln_str)
                         is_set_tag = 1
@@ -430,7 +431,9 @@ def _scan_bam_helper(
                             f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag"
                         )
                         read.cigarstring = primary_aln_cigarstring
-                        read.cigartuples = cigarstring2cigartuples(primary_aln_cigarstring)
+                        read.cigartuples = cigarstring2cigartuples(
+                            primary_aln_cigarstring
+                        )
                         read.reference_start = ins_ref_pos
                         read.set_tag("NM", read_ori_nm - ins_len)
                         read.set_tag("SA", chimeric_aln_str)

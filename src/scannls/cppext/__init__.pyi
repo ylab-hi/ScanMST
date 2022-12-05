@@ -2,294 +2,228 @@
 from __future__ import annotations
 import typing
 
-
 class Aligner:
     def SetReferenceSequence(self, arg0: str, arg1: int) -> int: ...
-
     @typing.overload
     def __init__(self) -> None: ...
-
     @typing.overload
     def __init__(self, arg0: int, arg1: int, arg2: int, arg3: int) -> None: ...
 
     pass
 
-
 class Alignment:
     def Clear(self) -> None: ...
-
     def __init__(self) -> None: ...
-
     @property
     def best_score(self) -> int:
         """
         :type: int
         """
-
     @best_score.setter
     def best_score(self, arg0: int) -> None:
         pass
-
     @property
     def best_score2(self) -> int:
         """
         :type: int
         """
-
     @best_score2.setter
     def best_score2(self, arg0: int) -> None:
         pass
-
     @property
     def cigar(self) -> typing.List[int]:
         """
         :type: typing.List[int]
         """
-
     @cigar.setter
     def cigar(self, arg0: typing.List[int]) -> None:
         pass
-
     @property
     def cigar_string(self) -> str:
         """
         :type: str
         """
-
     @cigar_string.setter
     def cigar_string(self, arg0: str) -> None:
         pass
-
     @property
     def mismatches(self) -> int:
         """
         :type: int
         """
-
     @mismatches.setter
     def mismatches(self, arg0: int) -> None:
         pass
-
     @property
     def query_begin(self) -> int:
         """
         :type: int
         """
-
     @query_begin.setter
     def query_begin(self, arg0: int) -> None:
         pass
-
     @property
     def query_end(self) -> int:
         """
         :type: int
         """
-
     @query_end.setter
     def query_end(self, arg0: int) -> None:
         pass
-
     @property
     def ref_end_next_best(self) -> int:
         """
         :type: int
         """
-
     @ref_end_next_best.setter
     def ref_end_next_best(self, arg0: int) -> None:
         pass
-
     @property
     def reference_begin(self) -> int:
         """
         :type: int
         """
-
     @reference_begin.setter
     def reference_begin(self, arg0: int) -> None:
         pass
-
     @property
     def reference_end(self) -> int:
         """
         :type: int
         """
-
     @reference_end.setter
     def reference_end(self, arg0: int) -> None:
         pass
-
     pass
-
 
 class Filter:
     @typing.overload
     def __init__(self) -> None: ...
-
     @typing.overload
     def __init__(self, arg0: bool, arg1: bool, arg2: int, arg3: int) -> None: ...
-
     @property
     def distance_filter(self) -> int:
         """
         :type: int
         """
-
     @distance_filter.setter
     def distance_filter(self, arg0: int) -> None:
         pass
-
     @property
     def report_begin_position(self) -> bool:
         """
         :type: bool
         """
-
     @report_begin_position.setter
     def report_begin_position(self, arg0: bool) -> None:
         pass
-
     @property
     def report_cigar(self) -> bool:
         """
         :type: bool
         """
-
     @report_cigar.setter
     def report_cigar(self, arg0: bool) -> None:
         pass
-
     @property
     def score_filter(self) -> int:
         """
         :type: int
         """
-
     @score_filter.setter
     def score_filter(self, arg0: int) -> None:
         pass
-
     pass
 
-
 class Region:
-
     @typing.overload
     def __init__(self): ...
-
     @typing.overload
     def __init__(self, chrom: str, start: int, end: int): ...
-
     @property
     def chrom(self) -> str: ...
-
     @property
     def start(self) -> int: ...
-
     @property
     def end(self) -> int: ...
-
     @chrom.setter
     def chrom(self, chrom: str) -> None: ...
-
     @start.setter
     def start(self, start: int) -> None: ...
-
     @end.setter
     def end(self, end: int) -> None: ...
 
-
 class Options:
     def __init__(self) -> None: ...
-
     def __repr__(self) -> str: ...
-
     def file(self, arg0: str) -> Options: ...
-
     def mapq(self, arg0: int) -> Options: ...
-
     def soft_len(self, arg0: int) -> Options: ...
-
     def mismatch(self, arg0: int) -> Options: ...
-
     def identity(self, arg0: float) -> Options: ...
-
     def min_seq_align_len(self, arg0: int) -> Options: ...
-
     def average_read_depth(self, arg0: int) -> Options: ...
 
-
 class Rescuer:
-
     def __init__(self, region: Options) -> None: ...
-
     def __repr__(self) -> str: ...
-
     @staticmethod
-    def calculate_sr(region: Region, mode: int, strand: typing.Optional[str], read_start: int,
-                     current_names: typing.List[str], cigartuples_without_soft: typing.List[int]) -> int: ...
-
+    def calculate_sr(
+        region: Region,
+        mode: int,
+        strand: typing.Optional[str],
+        read_start: int,
+        current_names: typing.List[str],
+        cigartuples_without_soft: typing.List[int],
+    ) -> int: ...
     @staticmethod
     def reset_names_list(names_in_graph: typing.List[str]) -> None: ...
-
     @staticmethod
     def count_reads(chrom: str, start: int, end: int) -> int: ...
 
-
 class parseCigarResult:
     def __repr__(self) -> str: ...
-
     @property
     def cigartuples(self) -> typing.List[int]:
         """
         :type: typing.List[int]
         """
-
     @property
     def cigartuples_without_soft(self) -> typing.List[int]:
         """
         :type: typing.List[int]
         """
-
     @property
     def indel_len(self) -> int:
         """
         :type: int
         """
-
     @property
     def lt_soft_len(self) -> int:
         """
         :type: int
         """
-
     @property
     def query_len(self) -> int:
         """
         :type: int
         """
-
     @property
     def read_match(self) -> int:
         """
         :type: int
         """
-
     @property
     def ref_match(self) -> int:
         """
         :type: int
         """
-
     @property
     def rt_soft_len(self) -> int:
         """
         :type: int
         """
-
     pass
-
 
 def parseCigar(cigar: str) -> parseCigarResult:
     """

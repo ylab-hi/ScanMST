@@ -673,12 +673,7 @@ def detect_read_read_connections_from_cigar(
         :param minimum_cutoff: minimum allowed distance between transcript and the corresponding RT artifact
         :param maximum_cutoff: maximum allowed distance between transcript and the corresponding RT artifact
         :param base_quality_cutoff: the difference in averaged base quality between transcript and RT artifact
-        :type read_list: List[Read]
-        :type minimum_cutoff: int
-        :type maximum_cutoff: int
-        :type base_quality_cutoff: int
         :return: the input read list contains reverse transcription artifacts
-        :rtype: bool
         """
         is_artifact = False
         for read1, read2 in combinations(read_list, 2):
@@ -692,28 +687,32 @@ def detect_read_read_connections_from_cigar(
                     read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
                 ]
             )
-            if read1.strand != read2.strand and read1.chrom == read2.chrom:
-                if (
-                    abs(read1.ref_start - read2.ref_start) <= minimum_cutoff
-                    or abs(read1.ref_end - read2.ref_end) <= minimum_cutoff
-                ):
-                    is_artifact = True
-                    break
+            if (
+                read1.strand != read2.strand
+                and read1.chrom == read2.chrom
+                and (
+                    (
+                        abs(read1.ref_start - read2.ref_start) <= minimum_cutoff
+                        or abs(read1.ref_end - read2.ref_end) <= minimum_cutoff
+                    )
+                    or (
+                        (
+                            minimum_cutoff
+                            < abs(read1.ref_start - read2.ref_start)
+                            < maximum_cutoff
+                            or minimum_cutoff
+                            < abs(read1.ref_end - read2.ref_end)
+                            < maximum_cutoff
+                        )
+                        and (
+                            abs(mean_qualities_read1_match - mean_qualities_read2_match)
+                            > base_quality_cutoff
+                        )
+                    )
+                )
+            ):
+                return True
 
-                elif (
-                    minimum_cutoff
-                    < abs(read1.ref_start - read2.ref_start)
-                    < maximum_cutoff
-                    or minimum_cutoff
-                    < abs(read1.ref_end - read2.ref_end)
-                    < maximum_cutoff
-                ):
-                    if (
-                        abs(mean_qualities_read1_match - mean_qualities_read2_match)
-                        > base_quality_cutoff
-                    ):
-                        is_artifact = True
-                        break
         return is_artifact
 
     noreturn = [], {}, 0  # type: ignore

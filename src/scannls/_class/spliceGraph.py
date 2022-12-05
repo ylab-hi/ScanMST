@@ -55,7 +55,7 @@ class SpliceType(Enum):
 
 
 class SpliceGraph:
-    """SpliceGraph class is used to trace the path of splice graph."""
+    """SpliceGraph class is used to trace the path of the splice graph."""
 
     dict_factory = dict
     list_factory = list
@@ -77,7 +77,7 @@ class SpliceGraph:
         is_plot: bool = False,
         is_check_circle: bool = False,
     ) -> Iterable[Series]:
-        """Find specific path based on splice graph.
+        """Find a specific path based on splice graph.
 
         :param series_list: series list
 
@@ -146,7 +146,7 @@ class SpliceGraph:
         return cls(logger, rescuer, prune_threshold)
 
     def __contains__(self, node: Node) -> bool:
-        """Check if node is in graph.
+        """Check if node is in a graph.
 
         :param node: node to be checked
         :return: True if node is in graph, otherwise False
@@ -391,7 +391,7 @@ class SpliceGraph:
                 # initialize and get unique key of current node and set node.unique_key
                 # if not set when you reach node.unique_key, will return None
                 _ = current_node.get_unique_key()
-                # get similar key(chrom and intron) of current node
+                # get a similar key(chrom and intron) of current node
                 similar_key = current_node.similar_key
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
                     current_node, similar_key, merged_nodes_pool
@@ -414,6 +414,9 @@ class SpliceGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
+        if start_node in path:
+            self.logger.warning(f"A circle is found in the graph {start_node}")
+
         if not start_node or start_node in path:
             group_paths.append(path)
         else:
@@ -491,6 +494,9 @@ class SpliceGraph:
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
         result_series_list = []
+
+        if not self.get_start_nodes() and len(self.nodes.values()) > 0:
+            self.logger.warning(f"A circle may exist in graph {self.nodes.values()}")
 
         for start_node in self.get_start_nodes():
             start_node.set_trace_id(1)
@@ -648,7 +654,7 @@ class SpliceGraph:
         self._prune(SpliceType.backward)
 
     def check_circle_in_graph(self, nodes_keys: Set[str]):
-        """Check if there is circle in graph."""
+        """Check if there is a circle in graph."""
         all_nodes_keys: Set[str] = set()
         result_paths: List[List[Node]] = []
 
@@ -662,7 +668,7 @@ class SpliceGraph:
     def check_circle_in_graph_helper(
         self, nodes_keys: Set[str], result_paths: List[List[Node]]
     ) -> None:
-        """Check if there is circle in graph."""
+        """Check if there is a circle in graph."""
         if (
             nodes_keys
             and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
