@@ -21,6 +21,7 @@ from pyfaidx import FastaNotFoundError
 from .. import __version__
 from ..basicClass import Node
 from ..basicClass import NovelInsertion
+from ..basicClass import MicroHomology
 from ..basicClass import reverse_complement
 from ..basicClass import Series
 from ..exception import AnnotationCodeNotFoundError
@@ -89,7 +90,7 @@ class VCFWriter(Writer):
         "TRANSCRIPT_ID": "String",
     }
     reserved_format = {"GT": "String"}
-    reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA"]
+    reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA", "HOM"]
 
     description = {
         "CANONICAL": "Canonical splice site",
@@ -104,7 +105,7 @@ class VCFWriter(Writer):
         "representing the ratio of reads showing the alternative allele to all reads",
         "PSI": "Estimated Percent splice-in in the range (0,1], "
         "representing the percentage of NLS transcripts",
-        "SVTYPE": "The type of event, INS, DEL, TDUP, IDUP, INV, TRA.",
+        "SVTYPE": "The type of event, INS, HOM, DEL, TDUP, IDUP, INV, TRA.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for END coordinate in case of a translocation",
         "SVEND": "2nd position of the structural variant",  # change to SVEND in order to meet vcf standard
@@ -121,6 +122,7 @@ class VCFWriter(Writer):
         "MODE2": "Mode for softclipped reads at breakpoint2",
         "GT": "Genotype",
         "INS": "Insertion",
+        "HOM": "Homology",
         "DEL": "Deletion",
         "TDUP": "Tandem duplication",
         "IDUP": "Inverted duplication",
@@ -238,7 +240,7 @@ class VCFWriter(Writer):
                     + hop_feature[type_position_key]["OSR"]
                 )
 
-                if out_vcf_dict[type_position_key]["SVTYPE"] == "INS":
+                if out_vcf_dict[type_position_key]["SVTYPE"] in {"INS", "HOM"}:
                     out_vcf_dict[type_position_key]["AF"] = hop_feature[
                         type_position_key
                     ]["AF"]
@@ -425,48 +427,86 @@ def get_vcf_features_from_series(
                 }
             }
         )
-        if current_node.insertion_info and isinstance(
-            current_node.insertion_info[1], NovelInsertion
-        ):
-            insertion = current_node.insertion_info[1]
-            ref_allele, alt_allele = get_vcf_features_from_insertion(
-                insertion, current_node, reference_io
-            )
-            _af = 0 if _dp1 == 0 else insertion.ao / _dp1
-            sv_distance = len(alt_allele)
-            _sv_type = "INS"
-            anno_field = "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
-            series_hops_features.append(
-                {
-                    f"{_sv_type}_{_chrom1}|{_pos1 + 1}"
-                    f"_{_chrom1}|{_pos1 + 1}": {
-                        "CHROM": _chrom1,
-                        "POS": f"{_pos1 + 1}",
-                        "REF": f"{ref_allele}",
-                        "ALT": f"{alt_allele}",
-                        "SVTYPE": _sv_type,
-                        "SR": insertion.ao,
-                        "OSR": insertion.ao,
-                        "CAN": can_field,
-                        "BOUNDARY": anno_field,
-                        "CHR2": _chrom1,
-                        "SVEND": f"{_pos1 + 1}",
-                        "DP": f"{_dp1}",
-                        "AF": f"{_af:.3g}",
-                        "SVLEN": f"{sv_distance}",
-                        "GENE": f"{gene1}",
-                        "STRAND": f"{current_node.strand}",
-                        "TRANSCRIPT_ID": f"{series_id}",
-                        "SVMETHOD": "ScanNLS",
+        if current_node.insertion_info:
+            if isinstance(current_node.insertion_info[1], NovelInsertion):
+                insertion = current_node.insertion_info[1]
+                ref_allele, alt_allele = get_vcf_features_from_insertion(
+                    insertion, current_node, reference_io
+                )
+                _af = 0 if _dp1 == 0 else insertion.ao / _dp1
+                sv_distance = len(alt_allele)
+                _sv_type = "INS"
+                anno_field = (
+                    "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
+                )
+                series_hops_features.append(
+                    {
+                        f"{_sv_type}_{_chrom1}|{_pos1 + 1}"
+                        f"_{_chrom1}|{_pos1 + 1}": {
+                            "CHROM": _chrom1,
+                            "POS": f"{_pos1 + 1}",
+                            "REF": f"{ref_allele}",
+                            "ALT": f"{alt_allele}",
+                            "SVTYPE": _sv_type,
+                            "SR": insertion.ao,
+                            "OSR": insertion.ao,
+                            "CAN": can_field,
+                            "BOUNDARY": anno_field,
+                            "CHR2": _chrom1,
+                            "SVEND": f"{_pos1 + 1}",
+                            "DP": f"{_dp1}",
+                            "AF": f"{_af:.3g}",
+                            "SVLEN": f"{sv_distance}",
+                            "GENE": f"{gene1}",
+                            "STRAND": f"{current_node.strand}",
+                            "TRANSCRIPT_ID": f"{series_id}",
+                            "SVMETHOD": "ScanNLS",
+                        }
                     }
-                }
-            )
+                )
+            elif isinstance(current_node.insertion_info[1], MicroHomology):
+                microhomology = current_node.insertion_info[1]
+                ref_allele, alt_allele = get_vcf_features_from_insertion(
+                    microhomology, current_node, reference_io
+                )
+                _af = 0 if _dp1 == 0 else microhomology.ao / _dp1
+                sv_distance = len(alt_allele)
+                _sv_type = "HOM"
+                anno_field = (
+                    "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
+                )
+                series_hops_features.append(
+                    {
+                        f"{_sv_type}_{_chrom1}|{_pos1 + 1}"
+                        f"_{_chrom1}|{_pos1 + 1}": {
+                            "CHROM": _chrom1,
+                            "POS": f"{_pos1 + 1}",
+                            "REF": f"{ref_allele}",
+                            "ALT": f"{alt_allele}",
+                            "SVTYPE": _sv_type,
+                            "SR": microhomology.ao,
+                            "OSR": microhomology.ao,
+                            "CAN": can_field,
+                            "BOUNDARY": anno_field,
+                            "CHR2": _chrom1,
+                            "SVEND": f"{_pos1 + 1}",
+                            "DP": f"{_dp1}",
+                            "AF": f"{_af:.3g}",
+                            "SVLEN": f"{sv_distance}",
+                            "GENE": f"{gene1}",
+                            "STRAND": f"{current_node.strand}",
+                            "TRANSCRIPT_ID": f"{series_id}",
+                            "SVMETHOD": "ScanNLS",
+                        }
+                    }
+                )
+
     return series_hops_features
 
 
 def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]:
     """VCF feature transformer."""
-    if feature_dict["SVTYPE"] == "INS":
+    if feature_dict["SVTYPE"] in {"INS", "HOM"}:
         info_field = (
             f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
             f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
@@ -510,7 +550,7 @@ def get_vcf_features_from_insertion(
     :param insertion:
     :param node: Node and InsertionType
     :param reference_io: ReferenceIO object
-    :return: sequence of exon for one node
+    :return: reference allele and alternative allele
     """
     # positive strand sequence for novel insertion
     novel_insertion_sequence = insertion.query_sequence

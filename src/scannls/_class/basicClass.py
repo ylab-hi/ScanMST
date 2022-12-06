@@ -80,6 +80,8 @@ class MicroHomology:
     MicroHomology(ATCA)
     >>> microhomology.query_sequence
     ATCA
+    >>> microhomology.ao
+    1
 
     .. seealso::
         :class:`Insertion` and :class:`NovelInsertion`
@@ -88,6 +90,7 @@ class MicroHomology:
     def __init__(self, query_sequence: str):
         """Initialize MicroHomology."""
         self.query_sequence = query_sequence
+        self.ao = 1
 
     def __repr__(self):
         """Represent MicroHomology object."""
@@ -97,6 +100,9 @@ class MicroHomology:
         """Reverse complement query sequence."""
         self.query_sequence = reverse_complement(self.query_sequence)
 
+    def increment_ao(self, num=1) -> None:
+        """Increment ao."""
+        self.ao += num
 
 class Insertion(Read):
     """Insertion is used to represent reads insertion whose hit is 1.
