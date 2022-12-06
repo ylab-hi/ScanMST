@@ -104,6 +104,7 @@ class MicroHomology:
         """Increment ao."""
         self.ao += num
 
+
 class Insertion(Read):
     """Insertion is used to represent reads insertion whose hit is 1.
 

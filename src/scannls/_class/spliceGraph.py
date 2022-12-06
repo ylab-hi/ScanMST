@@ -780,14 +780,11 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     # update sr
     updated_node.update_sr(current_node.sr)
 
-    if updated_node.insertion_info:
-        # update novel insertion ao
-        if isinstance(updated_node.insertion_info[1], NovelInsertion):
-            updated_node.insertion_info[1].increment_ao()
-
-        # update microhomology ao
-        elif isinstance(updated_node.insertion_info[1], MicroHomology):
-            updated_node.insertion_info[1].increment_ao()
+    if updated_node.insertion_info and isinstance(
+        updated_node.insertion_info[1], (NovelInsertion, MicroHomology)
+    ):
+        # update novel insertion ao or microhomology ao
+        updated_node.insertion_info[1].increment_ao()
 
     update_node_with_other_node(
         updated_node,
