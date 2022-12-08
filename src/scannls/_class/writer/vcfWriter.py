@@ -19,9 +19,9 @@ from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from .. import __version__
+from ..basicClass import MicroHomology
 from ..basicClass import Node
 from ..basicClass import NovelInsertion
-from ..basicClass import MicroHomology
 from ..basicClass import reverse_complement
 from ..basicClass import Series
 from ..exception import AnnotationCodeNotFoundError

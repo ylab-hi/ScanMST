@@ -326,7 +326,6 @@ def splicing_confirmation(
            else: considering canonical and noncanonical splice sites both
     :return: report/not report, overlapping boundary in bits, canonical
         splice site/noncanonical splice site
-    :rtype: tuple
 
     .. note::
         Possible current_output scenarios
@@ -412,7 +411,10 @@ def splicing_confirmation(
     chrm_do, pos_do, strand_do = donor_bp
     chrm_ac, pos_ac, strand_ac = acceptor_bp
 
-    splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}", None)
+    splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}")
+
+    if splice_motif_dict is None:
+        raise ValueError("Invalid strand combination")
 
     possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
 
@@ -810,8 +812,12 @@ def same_chrom_same_strand_mode21_handler(
                 + bp_region_seq_len
             )
 
-        lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
-        rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
+        lt_bp_seq = obtain_bp_region_seq(
+            read_lt, lt_mode, bp_region_seq_len, genome_fasta
+        )
+        rt_bp_seq = obtain_bp_region_seq(
+            read_rt, rt_mode, bp_region_seq_len, genome_fasta
+        )
 
         evt_size = query_offset - target_offset
 
@@ -1133,8 +1139,12 @@ def same_chrom_diff_strand_handler(
         strands = (read_lt.strand, read_rt.strand)
         lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
         rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
-        lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
-        rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
+        lt_bp_seq = obtain_bp_region_seq(
+            read_lt, lt_mode, bp_region_seq_len, genome_fasta
+        )
+        rt_bp_seq = obtain_bp_region_seq(
+            read_rt, rt_mode, bp_region_seq_len, genome_fasta
+        )
         if _nls:
             _genes = gene_annotation(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
@@ -1175,14 +1185,22 @@ def same_chrom_diff_strand_handler(
             strands = (read_lt.strand, read_rt.strand)
             lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
             rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
-            lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
-            rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
+            lt_bp_seq = obtain_bp_region_seq(
+                read_lt, lt_mode, bp_region_seq_len, genome_fasta
+            )
+            rt_bp_seq = obtain_bp_region_seq(
+                read_rt, rt_mode, bp_region_seq_len, genome_fasta
+            )
         elif junc_start == sa_bp:
             strands = (read_rt.strand, read_lt.strand)
             lt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
             rt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
-            lt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
-            rt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
+            lt_bp_seq = obtain_bp_region_seq(
+                read_rt, rt_mode, bp_region_seq_len, genome_fasta
+            )
+            rt_bp_seq = obtain_bp_region_seq(
+                read_lt, lt_mode, bp_region_seq_len, genome_fasta
+            )
 
         _nls, _anno, _can = splicing_confirmation(
             chrm_start,
@@ -1455,13 +1473,9 @@ def obtain_variants_stats(
     :param cigar_str: CIGAR string
     :param md_tag: MD tag
     :param indel_len_cutoff: INDEL length threshold
-    :type cigar_str: str
-    :type md_tag: str
-    :type indel_len_cutoff: int
     :return: number of substitutions, fraction of long insertions and fraction of long deletions.
-    :rtype: tuple
 
-    ..note.
+    .. note::
         'A': 65
         'Z': 90
         '^': 94

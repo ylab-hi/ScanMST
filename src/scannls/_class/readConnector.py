@@ -678,8 +678,8 @@ def detect_read_read_connections_from_cigar(
         is_artifact = False
         for read1, read2 in combinations(read_list, 2):
             if read1.query_qualities is None or read2.query_qualities is None:
-                mean_qualities_read1_match = 40.
-                mean_qualities_read2_match = 40.
+                mean_qualities_read1_match = 40.0
+                mean_qualities_read2_match = 40.0
             else:
                 mean_qualities_read1_match = mean(
                     read1.query_qualities[
