@@ -730,7 +730,7 @@ class Series:
 
     @staticmethod
     def reorder_event(evt: "Event"):
-        """Order breakpoints pairs following the transcription direction using.
+        """Order breakpoint pairs following the transcription direction using.
 
         information of reads 'mode' and 'strand'
         +1;-1 => up;down
