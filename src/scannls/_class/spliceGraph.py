@@ -89,7 +89,9 @@ class SpliceGraph:
         """
         if isinstance(series_list, types.GeneratorType):
             series_list = list(series_list)
+
         self.series_list = copy.deepcopy(series_list)
+
         del series_list  # remove reference to series_list
         self.nodes: Dict[str, List[Node]] = self.dict_factory()
         # construct splice graph
@@ -99,22 +101,22 @@ class SpliceGraph:
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
 
-        if len(self.nodes.values()) > 3:
+        if len(self.nodes.values()) > 4:
             from .plotGraph import plot_graph
 
             # viz graph by js
             plot_graph(
-                self, f"clique_{clique_ind}_{len(self.nodes.values())}_bprune", False
+                self, f"clique_{clique_ind}_{len(self.nodes.values())}_bprune", True
             )
 
         self.prune()
 
-        if len(self.nodes.values()) > 3:
+        if len(self.nodes.values()) > 4:
             from .plotGraph import plot_graph
 
             # viz graph by js
             plot_graph(
-                self, f"clique_{clique_ind}_{len(self.nodes.values())}_aprune", False
+                self, f"clique_{clique_ind}_{len(self.nodes.values())}_aprune", True
             )
 
         # trace path
