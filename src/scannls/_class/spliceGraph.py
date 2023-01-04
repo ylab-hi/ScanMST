@@ -99,23 +99,7 @@ class SpliceGraph:
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
 
-        if len(self.nodes.values()) > 3:
-            from .plotGraph import plot_graph
-
-            # viz graph by js
-            plot_graph(
-                self, f"clique_{clique_ind}_{len(self.nodes.values())}_bprune", False
-            )
-
         self.prune()
-
-        if len(self.nodes.values()) > 3:
-            from .plotGraph import plot_graph
-
-            # viz graph by js
-            plot_graph(
-                self, f"clique_{clique_ind}_{len(self.nodes.values())}_aprune", False
-            )
 
         # trace path
         current_nodes_keys: Set[str] = set()
