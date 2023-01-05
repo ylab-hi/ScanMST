@@ -235,7 +235,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="ident_cutoff",
         type=float,
-        help="blat_ident_pct_cutoff (default: %(default)s)",
+        help="BLAT identity cutoff (default: %(default)s)",
         default=DefaultOptions.ident_cutoff,
     )
 

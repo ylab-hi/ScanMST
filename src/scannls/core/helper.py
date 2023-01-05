@@ -663,8 +663,14 @@ def insertion2chimeric_alignment(
         if (
             chrom_blat == read.reference_name
             and strand_blat == read_strand
-            and pos_blat == insertion_ref_pos
-            and ref_end_blat <= read.reference_end
+            and (
+                abs(pos_blat - insertion_ref_pos) <= 10
+                and ref_end_blat <= read.reference_end
+            )
+            or (
+                abs(ref_end_blat - insertion_ref_pos) <= 10
+                and pos_blat >= read.reference_start
+            )
         ):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
