@@ -89,7 +89,9 @@ class SpliceGraph:
         """
         if isinstance(series_list, types.GeneratorType):
             series_list = list(series_list)
+
         self.series_list = copy.deepcopy(series_list)
+
         del series_list  # remove reference to series_list
         self.nodes: Dict[str, List[Node]] = self.dict_factory()
         # construct splice graph
