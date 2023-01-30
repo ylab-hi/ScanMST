@@ -241,4 +241,3 @@ void BamReader::Iterator::next() {
   return ss.str();
 }
 } // namespace cppext
->>>>>>> c5cd6df (fix complict)

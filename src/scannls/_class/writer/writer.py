@@ -5,51 +5,27 @@
 @license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """
-<<<<<<< HEAD
-from abc import ABC
-from abc import abstractmethod
-from contextlib import contextmanager
-from pathlib import Path
-from typing import Any
-from typing import IO
-from typing import List
-from typing import Optional
-from typing import Tuple
-=======
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any
->>>>>>> c5cd6df (fix complict)
+from typing import IO, Any, Optional, List
 
 from ..basicClass import Series
 from ..type import LoggerType
 
-<<<<<<< HEAD
-
-=======
->>>>>>> c5cd6df (fix complict)
 # todo: add asyncio support
 
 
 class Writer(ABC):
     """Abstract class for writing object to file."""
 
-<<<<<<< HEAD
-    def __init__(self, file_path: str, logger: LoggerType):
-=======
     def __init__(self, file_path: str, logger: LoggerType) -> None:
->>>>>>> c5cd6df (fix complict)
         """Initialize Writer object."""
         self.logger = logger
         self.file_path = Path(file_path)
         if self.file_path.exists():
             self.logger.warning(f"{self.file_path} exists, will be overwritten.")
-<<<<<<< HEAD
         self.io: Optional[IO] = None
-=======
-        self.io: IO | None = None
->>>>>>> c5cd6df (fix complict)
 
     @abstractmethod
     def write_data(self, data_object: Any, object_id: int):
@@ -80,11 +56,7 @@ class Writer(ABC):
 class Writers:
     """Writers."""
 
-<<<<<<< HEAD
-    def __init__(self, writers: Tuple["Writer", ...]):
-=======
     def __init__(self, writers: tuple["Writer", ...]) -> None:
->>>>>>> c5cd6df (fix complict)
         """Init writers."""
         self.writers_list = writers
 
@@ -97,11 +69,7 @@ class Writers:
         for writer in self.writers_list:
             writer.write_data(series, clique_id)
 
-<<<<<<< HEAD
-    def open_writers(self, mode: str = "w") -> List[IO]:
-=======
     def open_writers(self, mode: str = "w") -> list[IO]:
->>>>>>> c5cd6df (fix complict)
         """Open writers."""
         writers_list = []
         for writer in self.writers_list:

@@ -102,7 +102,7 @@ select = ["F", "E", "W", "C90", "I", "D", "UP", "N", "YTT",
   "S", "BLE", "FBT", "B", "A" , "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "RUF"]
 # select = ["B","B9","C","D","E","F","N","RST","S","W","C4","SIM","YTT"]
 exclude = ["cppext"]
-extend-ignore = ["ANN001", "D203", "D213"]
+extend-ignore = ["ANN001", "D203", "D213",  "UP007"]
 
 
 [build-system]

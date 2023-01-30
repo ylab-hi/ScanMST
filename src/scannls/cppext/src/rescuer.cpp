@@ -464,4 +464,3 @@ Seqs::Seqs(std::string_view seq1_) : seq1{seq1_} {}
   return ss.str();
 }
 } // namespace cppext
->>>>>>> c5cd6df (fix complict)

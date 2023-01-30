@@ -40,7 +40,7 @@ def external_tool_checking(software: list[str], log_handler: LoggerType) -> None
 
 
 def find_2bit_file(
-    fasta_path: str, log_handler: LoggerType, parameter: Optional[List[str]] = None
+    fasta_path: str, log_handler: LoggerType, parameter: Optional[list[str]]
 ) -> str:
     """Create 2bit file from fasta file.
 

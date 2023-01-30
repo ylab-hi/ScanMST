@@ -16,7 +16,6 @@ from pybind11.setup_helpers import build_ext
 from pybind11.setup_helpers import Pybind11Extension
 
 
-
 def remove_env(key: str):
     """Remove environment variable."""
     env_cflags = os.environ.get("CFLAGS", "")
