@@ -10,7 +10,6 @@ repository = "https://github.com/ylab-hi/ScanNLS"
 # documentation = "https://ScanNLS.readthedocs.io"
 classifiers = [
   "Development Status :: 1 - Planning",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
 ]
