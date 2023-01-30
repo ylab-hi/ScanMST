@@ -9,7 +9,6 @@
 import copy
 
 import pytest
-
 from scannls import Series
 
 

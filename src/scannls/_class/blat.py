@@ -15,16 +15,13 @@ import time
 from multiprocessing import Process
 from pathlib import Path
 from typing import Any
-from typing import List
-from typing import Tuple
 
 import psutil
 from Bio import SearchIO
 
-from ..blat import load_gfclient
-from ..blat import load_gfserver
-from .basicClass import Insertion
-from .basicClass import NovelInsertion
+
+from ..blat import load_gfclient, load_gfserver
+from .basicClass import Insertion, NovelInsertion
 from .type import LoggerType
 
 
@@ -93,11 +90,10 @@ class Blat:
             abs_2bit = os.path.join(
                 os.path.expanduser("~"), self.ref_2bit.replace("~/", "")
             )
-            ref_dir = os.path.dirname(abs_2bit)
-        else:
-            abs_2bit = os.path.abspath(self.ref_2bit)
-            ref_dir = os.path.dirname(abs_2bit)
-        return ref_dir
+            return os.path.dirname(abs_2bit)
+
+        abs_2bit = os.path.abspath(self.ref_2bit)
+        return os.path.dirname(abs_2bit)
 
     @property
     def log_file_path(self) -> str:
@@ -137,7 +133,7 @@ class Blat:
                 proc.kill()
         return flag
 
-    def _search_processing(self) -> List[psutil.Process]:
+    def _search_processing(self) -> list[psutil.Process]:
         """Function for searching the process of blat server.
 
         in current system
@@ -416,7 +412,7 @@ class Blat:
         return top_hsp, mapq
 
     @staticmethod
-    def psl2sam(hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
+    def psl2sam(hsp: Any, in_seq_len: int) -> tuple[str, int, str, str, int]:
         """Convert the top HSP in PSL file to SAM fields chrom, reference_start.
 
         strand, cigarstring, num_of_mismatch. The function try to implement
@@ -454,8 +450,10 @@ class Blat:
             y = [
                 item[0] for item in hsp.query_range_all
             ]  # may need replace by query_start_all when the bug is fixed in Biopython
+
         z = hsp.hit_start_all
         y0, z0 = y[0], z[0]
+
         for i in range(1, len(hsp)):
             ly = y[i] - y[i - 1] - x[i - 1]
             lz = z[i] - z[i - 1] - x[i - 1]

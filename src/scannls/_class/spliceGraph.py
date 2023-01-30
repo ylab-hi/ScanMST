@@ -9,35 +9,15 @@
 import copy
 import types
 from collections import defaultdict
-from enum import auto
-from enum import Enum
-from typing import Any
-from typing import Dict
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
+from enum import Enum, auto
+from typing import Any, Iterable, Iterator, Optional
 
-from .basicClass import BreakPoint
-from .basicClass import MicroHomology
-from .basicClass import Node
-from .basicClass import NovelInsertion
-from .basicClass import Series
+from .basicClass import BreakPoint, MicroHomology, Node, NovelInsertion, Series
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
 from .srRescuer import SRRescuer
@@ -93,7 +73,7 @@ class SpliceGraph:
         self.series_list = copy.deepcopy(series_list)
 
         del series_list  # remove reference to series_list
-        self.nodes: Dict[str, List[Node]] = self.dict_factory()
+        self.nodes: dict[str, list[Node]] = self.dict_factory()
         # construct splice graph
         self.construct()
         # sr rescuer
@@ -104,7 +84,7 @@ class SpliceGraph:
         self.prune()
 
         # trace path
-        current_nodes_keys: Set[str] = set()
+        current_nodes_keys: set[str] = set()
         for node_list in self.trace():
             yield Series.create_series_from_node_list(
                 node_list, self.logger, current_nodes_keys, is_add_key=False
@@ -167,8 +147,8 @@ class SpliceGraph:
 
     def print_path(self) -> None:
         """Print path based on splice graph."""
-        for node_list in self.trace():
-            print(Series.create_series_from_node_list(node_list, self.logger, set()))
+        for _node_list in self.trace():
+            pass
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
@@ -213,7 +193,7 @@ class SpliceGraph:
                 return node
         return None
 
-    def get_nodes_with_similar_key(self, similar_key: str) -> List[Node]:
+    def get_nodes_with_similar_key(self, similar_key: str) -> list[Node]:
         """Get nodes in graph with similar key."""
         return self.nodes.get(similar_key, [])
 
@@ -312,7 +292,7 @@ class SpliceGraph:
         self,
         current_node: Node,
         similar_key: str,
-        merged_nodes_pool: Set[Node],
+        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
         # get similar nodes in the graph
@@ -346,7 +326,7 @@ class SpliceGraph:
         self,
         current_node: Node,
         similar_key: str,
-        merged_nodes_pool: Set[Node],
+        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if the current node is added in graph and update a predecessor and successor."""
         if not current_node.is_merged:  # false
@@ -379,7 +359,7 @@ class SpliceGraph:
     def construct(self) -> None:
         """Main function to construct graph."""
         # iterate all series
-        merged_nodes_pool: Set[Node] = set()
+        merged_nodes_pool: set[Node] = set()
         self.logger.debug(f"Input Clique {self.series_list=}")
         for series in self.series_list:
             # iterate all nodes in series
@@ -405,8 +385,8 @@ class SpliceGraph:
         self,
         start_node: Node,
         trace_id: int,
-        path: List[Node],
-        group_paths: List[List[Node]],
+        path: list[Node],
+        group_paths: list[list[Node]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -426,14 +406,14 @@ class SpliceGraph:
                     successor.set_trace_id(trace_id)
                     successor.set_harmoic_mean_sr(successor.sr)
                     self._trace_forward(
-                        successor, trace_id + 1, path + [start_node], group_paths
+                        successor, trace_id + 1, [*path, start_node], group_paths
                     )
             else:
                 # successor be [] or None
                 self._trace_forward(
                     successors,  # type: ignore
                     trace_id + 1,
-                    path + [start_node],
+                    [*path, start_node],
                     group_paths,
                 )
 
@@ -441,8 +421,8 @@ class SpliceGraph:
         self,
         end_node: Node,
         trace_id: int,
-        path: List[Node],
-        group_paths: List[List[Node]],
+        path: list[Node],
+        group_paths: list[list[Node]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -457,14 +437,14 @@ class SpliceGraph:
                     predecessor.set_trace_id(trace_id)
                     predecessor.set_harmoic_mean_sr(predecessor.sr)
                     self._trace_backward(
-                        predecessor, trace_id + 1, path + [end_node], group_paths
+                        predecessor, trace_id + 1, [*path, end_node], group_paths
                     )
             else:
                 # predecessor be [] or None
                 self._trace_backward(
                     predecessors,  # type: ignore
                     trace_id + 1,
-                    path + [end_node],
+                    [*path, end_node],
                     group_paths,
                 )
 
@@ -507,12 +487,12 @@ class SpliceGraph:
 
         return result_series_list
 
-    def create_same_level_node_list(self) -> List[List[Node]]:
+    def create_same_level_node_list(self) -> list[list[Node]]:
         """Create node trace id dict.
 
         :return: trace_id: List[node] dict
         """
-        node_trace_id_dict: Dict[int, List[Node]] = defaultdict(list)
+        node_trace_id_dict: dict[int, list[Node]] = defaultdict(list)
         for node in self:
             node_trace_id_dict[node.trace_id].append(node)
 
@@ -584,7 +564,7 @@ class SpliceGraph:
             node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
         )
 
-    def _begin_battle(self, node_a: Node, node_b: Node) -> Tuple[bool, ...]:
+    def _begin_battle(self, node_a: Node, node_b: Node) -> tuple[bool, ...]:
         """Begin battle between two nodes.
 
         :return: Two bool values:
@@ -608,7 +588,7 @@ class SpliceGraph:
         self._rule_out(node_b, node_a)
         return True, False
 
-    def battle(self, same_level_node_list: List[List[Node]]) -> None:
+    def battle(self, same_level_node_list: list[list[Node]]) -> None:
         """Nodes with same trace id battle each other.
 
         Node with larger number of sr wins, otherwise lose.
@@ -654,10 +634,10 @@ class SpliceGraph:
         self.reset_trace_id()
         self._prune(SpliceType.backward)
 
-    def check_circle_in_graph(self, nodes_keys: Set[str]):
+    def check_circle_in_graph(self, nodes_keys: set[str]):
         """Check if there is a circle in graph."""
-        all_nodes_keys: Set[str] = set()
-        result_paths: List[List[Node]] = []
+        all_nodes_keys: set[str] = set()
+        result_paths: list[list[Node]] = []
 
         for node in self:
             if (key := node.unique_key) is not None:
@@ -667,7 +647,7 @@ class SpliceGraph:
         return result_paths
 
     def check_circle_in_graph_helper(
-        self, nodes_keys: Set[str], result_paths: List[List[Node]]
+        self, nodes_keys: set[str], result_paths: list[list[Node]]
     ) -> None:
         """Check if there is a circle in graph."""
         if (
@@ -675,7 +655,7 @@ class SpliceGraph:
             and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
             is not None
         ):
-            current_nodes_keys: Set[str] = set()
+            current_nodes_keys: set[str] = set()
             self._trace_forward_record_node_unique_keys(
                 start_node, [], result_paths, current_nodes_keys
             )
@@ -686,9 +666,9 @@ class SpliceGraph:
     def _trace_forward_record_node_unique_keys(
         self,
         start_node: Node,
-        path: List[Node],
-        group_paths: List[List[Node]],
-        nodes_keys: Set[str],
+        path: list[Node],
+        group_paths: list[list[Node]],
+        nodes_keys: set[str],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -703,13 +683,13 @@ class SpliceGraph:
                     if (key := successor.unique_key) is not None:
                         nodes_keys.add(key)
                     self._trace_forward_record_node_unique_keys(
-                        successor, path + [start_node], group_paths, nodes_keys
+                        successor, [*path, start_node], group_paths, nodes_keys
                     )
             else:
                 # successor be [] or None
                 self._trace_forward_record_node_unique_keys(
                     successors,  # type: ignore
-                    path + [start_node],
+                    [*path, start_node],
                     group_paths,
                     nodes_keys,
                 )

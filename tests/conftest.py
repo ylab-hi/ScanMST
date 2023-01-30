@@ -1,18 +1,10 @@
 # !/usr/bin/env python
 """Conftest for pytest."""
-from typing import List
 
 import pytest
-from tests import assign_value_for_instance
-from tests import FakeBlat
-from tests import FakeLogger
+from scannls import Event, Insertion, MicroHomology, Node, NovelInsertion, Read
 
-from scannls import Event
-from scannls import Insertion
-from scannls import MicroHomology
-from scannls import Node
-from scannls import NovelInsertion
-from scannls import Read
+from tests import FakeBlat, FakeLogger, assign_value_for_instance
 
 
 @pytest.fixture(scope="session")
@@ -55,7 +47,7 @@ def insertion():
 
 
 @pytest.fixture(scope="function")
-def nodes() -> List[Node]:
+def nodes() -> list[Node]:
     """Return a list of nodes."""
     param_dict = [
         # n1

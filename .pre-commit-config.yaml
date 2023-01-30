@@ -28,43 +28,53 @@ repos:
         language: system
         types: [text]
         stages: [commit, push, manual]
-      - id: flake8
-        name: flake8
-        entry: flake8
-        language: system
-        types: [python]
-        require_serial: true
-      - id: reorder-python-imports
-        name: Reorder python imports
-        entry: reorder-python-imports
-        language: system
-        types: [python]
-        args: [--application-directories=src]
+      # - id: flake8
+      #   name: flake8
+      #   entry: flake8
+      #   language: system
+      #   types: [python]
+      #   require_serial: true
+
+      # - id: reorder-python-imports
+      #   name: Reorder python imports
+      #   entry: reorder-python-imports
+      #   language: system
+      #   types: [python]
+      #   args: [--application-directories=src]
+
       - id: trailing-whitespace
         name: Trim Trailing Whitespace
         entry: trailing-whitespace-fixer
         language: system
         types: [text]
         stages: [commit, push, manual]
+      # - id: bandit
+      #   name: bandit
+      #   entry: bandit
+      #   language: system
+      #   types: [python]
+      #   require_serial: true
+      #   args: ["-c", "pyproject.toml"]
 
-      - id: bandit
-        name: bandit
-        entry: bandit
-        language: system
-        types: [python]
-        require_serial: true
-        args: ["-c", "pyproject.toml"]
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.0.0-alpha.0
     hooks:
       - id: prettier
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.0.0
-    hooks:
-      - id: pyupgrade
-        args: [--py38-plus]
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.12.1
     hooks:
       - id: blacken-docs
         additional_dependencies: [black==20.8b1]
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.0.222
+    hooks:
+      - id: ruff
+        # Respect `exclude` and `extend-exclude` settings.
+        args: ["--force-exclude"]
+
+  # - repo: https://github.com/dosisod/refurb
+  #   rev: REVISION
+  #   hooks:
+  #     - id: refurb

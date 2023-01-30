@@ -50,7 +50,8 @@ def load_gfclient() -> Path:
 def load_fa2bit():
     """Load fa2bit.
 
-    Returns:
+    Returns
+    -------
         fa2bit: fa2bit object.
     """
     path = load_blat() / "faToTwoBit"

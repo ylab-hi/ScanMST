@@ -7,13 +7,9 @@
 @Time:        1/30/22 6:18 PM
 """
 from functools import singledispatchmethod
-from typing import Any
-from typing import IO
-from typing import List
+from typing import IO, Any
 
-from ..basicClass import Node
-from ..basicClass import NovelInsertion
-from ..basicClass import Series
+from ..basicClass import Node, NovelInsertion, Series
 from ..exception import ExonsNotFoundError
 from ..type import LoggerType
 from .writer import Writer
@@ -48,7 +44,7 @@ class GTFWriter(Writer):
         """Check if file is opened."""
         return self.io is not None and not self.io.closed
 
-    def formatter(self, fields: List[str], delimiter: str = "\t") -> str:
+    def formatter(self, fields: list[str], delimiter: str = "\t") -> str:
         """Formatter for writing data."""
         if fields is None or len(fields) != GTFWriter.num_fields:
             self.logger.warning(
@@ -106,7 +102,7 @@ class GTFWriter(Writer):
 
 def get_nodes_gtf_features_from_series(
     series: Series, series_id: int
-) -> List[List[str]]:
+) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
     :param series: Series including nodes.
@@ -128,7 +124,7 @@ def get_nodes_gtf_features_from_series(
 
 def get_gtf_features_from_insertion(
     insertion: NovelInsertion, series_id: int, node_id: int
-) -> List[str]:
+) -> list[str]:
     """Get GTF features of novel insertion."""
     return [
         ".",
@@ -146,7 +142,7 @@ def get_gtf_features_from_insertion(
 
 def get_gtf_features_from_node(
     node: Node, series_id: int, node_id: int
-) -> List[List[str]]:
+) -> list[list[str]]:
     """Get exon gtf features of a node.
 
     :param node_id: node id

@@ -8,20 +8,16 @@ import time
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any
-from typing import Callable
-from typing import Generator
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Generator, Optional
 
 import pysam
 from loguru import logger
 
-from . import ToolNotFoundError
+from scannls import cppext
+
+from ._class.exception import ToolNotFoundError
 from ._class.type import LoggerType
 from .blat import load_fa2bit
-from scannls import cppext
 
 __all__ = [
     "external_tool_checking",
@@ -34,7 +30,7 @@ __all__ = [
 ]
 
 
-def external_tool_checking(software: List[str], log_handler: LoggerType) -> None:
+def external_tool_checking(software: list[str], log_handler: LoggerType) -> None:
     """Checking dependencies are installed."""
     for tool in software:
         output = shutil.which(tool)
@@ -80,7 +76,7 @@ def sleep(input_file: str, max_time: int = 30) -> None:
 def get_softclip_length(
     read: pysam.libcalignedsegment.AlignedSegment,
     mode: int,
-) -> Tuple[int, str, int, int]:
+) -> tuple[int, str, int, int]:
     """Extract softclipped sequence information from input read.
 
     :param mode: read mode
@@ -183,7 +179,7 @@ def change_dir_decorator(path: str):
 def get_longest_insertion_sequence(
     read: pysam.libcalignedsegment.AlignedSegment,
     insertion_length_cutoff: int = 50,
-) -> Tuple[int, str, int]:
+) -> tuple[int, str, int]:
     """Extract longest insertion sequences information from input read.
 
     :param read: reads from pysam
@@ -236,7 +232,7 @@ def get_longest_insertion_sequence(
         return 0, "", 0
 
 
-def cigarstring2cigartuples(cigarstring: str) -> List[Tuple[int, int]]:
+def cigarstring2cigartuples(cigarstring: str) -> list[tuple[int, int]]:
     """Convert cigarstring to cigartuples.
 
     :param cigarstring: cigarstring from reads

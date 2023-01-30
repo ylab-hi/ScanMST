@@ -5,43 +5,43 @@ __PACKAGE_NAME__ = "scannls"
 
 from rich.traceback import install
 
-
+from . import blat, core, cppext
+from ._class.basicClass import (
+    Event,
+    Insertion,
+    MicroHomology,
+    Node,
+    NovelInsertion,
+    Series,
+    check_end_node_is_ploya,
+    reverse_complement,
+)
 from ._class.basicRead import Read
-from ._class.exception import ReadNotFoundError
-from ._class.exception import ToolNotFoundError
-from ._class.exception import BreakpointNotFoundError
-from ._class.exception import ModesNotEqualError
-from ._class.basicClass import Event
-from ._class.basicClass import reverse_complement
-from ._class.basicClass import Series, Node
-from ._class.basicClass import NovelInsertion
-from ._class.basicClass import MicroHomology
-from ._class.basicClass import Insertion
-from ._class.basicClass import check_end_node_is_ploya
 from ._class.blat import Blat
+from ._class.cliqueFinder import CliqueFinder
+from ._class.exception import (
+    BreakpointNotFoundError,
+    ModesNotEqualError,
+    ReadNotFoundError,
+    ToolNotFoundError,
+)
 from ._class.myLogger import MyLogger
 from ._class.parallel import ParallelWorker
-from ._class.readConnector import detect_read_read_connections_from_cigar
-from ._class.readConnector import ReadsConnector
+from ._class.readConnector import (
+    ReadsConnector,
+    detect_read_read_connections_from_cigar,
+)
+from ._class.spliceGraph import SpliceGraph, SpliceType
+from ._class.srRescuer import SRRescuer
+from ._class.type import LoggerType
+from ._class.writer import FastaWriter, GTFWriter, VCFWriter, Writers
+from .cli.arg import DefaultOptions
 from .utils import (
-    get_softclip_length,
+    cigarstring2cigartuples,
     external_tool_checking,
     get_longest_insertion_sequence,
-    cigarstring2cigartuples,
+    get_softclip_length,
 )
-from ._class.cliqueFinder import CliqueFinder
-from ._class.spliceGraph import SpliceGraph
-from ._class.spliceGraph import SpliceType
-from ._class.srRescuer import SRRescuer
-from ._class.writer import FastaWriter
-from ._class.writer import GTFWriter
-from ._class.writer import VCFWriter
-from ._class.writer import Writers
-from ._class.type import LoggerType
-from .cli.arg import DefaultOptions
-from . import core
-from . import cppext
-from . import blat
 
 __all__ = [
     "Read",

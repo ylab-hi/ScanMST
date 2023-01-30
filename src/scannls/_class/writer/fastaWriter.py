@@ -8,18 +8,11 @@
 """
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import Any
-from typing import IO
-from typing import Tuple
+from typing import IO, Any
 
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta, FastaNotFoundError
 
-from ..basicClass import MicroHomology
-from ..basicClass import Node
-from ..basicClass import NovelInsertion
-from ..basicClass import reverse_complement
-from ..basicClass import Series
+from ..basicClass import MicroHomology, Node, NovelInsertion, Series, reverse_complement
 from ..type import LoggerType
 from .writer import Writer
 
@@ -27,7 +20,7 @@ from .writer import Writer
 class FastaWriter(Writer):
     """Writer for Fasta files."""
 
-    def __init__(self, file_path: str, reference: str, logger: LoggerType):
+    def __init__(self, file_path: str, reference: str, logger: LoggerType) -> None:
         """Initialize FastaWriter object."""
         super().__init__(file_path, logger)
         self.reference = Path(reference)
@@ -96,7 +89,7 @@ class FastaWriter(Writer):
 
 def get_nodes_sequence_from_series(
     series: Series, reference_io: Fasta
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Get sequence of nodes of series.
 
     :param series: Series including nodes.

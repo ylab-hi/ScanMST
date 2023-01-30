@@ -9,12 +9,9 @@
 import multiprocessing
 import os
 from concurrent import futures
-from typing import Any
-from typing import Callable
-from typing import Dict
+from typing import Any, Callable
 
 from .type import LoggerType
-
 
 # TODO: add asyncio support
 
@@ -67,7 +64,7 @@ class ParallelWorker:
             n_jobs = current_max_processor
         return n_jobs  # the max processor is decided by ProcessPoolExecutor
 
-    def run(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+    def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Using concurrent.future to parallel process."""
         tasks = {}
         result = {}

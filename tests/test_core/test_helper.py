@@ -7,15 +7,16 @@ from dataclasses import dataclass
 import HTSeq  # type: ignore
 import pytest
 from pyfaidx import Fasta  # type: ignore
-
-from scannls.core.helper import cigar_validity
-from scannls.core.helper import diff_chrom_diff_strand_handler
-from scannls.core.helper import diff_chrom_same_strand_mode21_handler
-from scannls.core.helper import extract_splice_sites
-from scannls.core.helper import gene_annotation
-from scannls.core.helper import same_chrom_diff_strand_handler
-from scannls.core.helper import same_chrom_same_strand_mode21_handler
-from scannls.core.helper import splicing_confirmation
+from scannls.core.helper import (
+    cigar_validity,
+    diff_chrom_diff_strand_handler,
+    diff_chrom_same_strand_mode21_handler,
+    extract_splice_sites,
+    gene_annotation,
+    same_chrom_diff_strand_handler,
+    same_chrom_same_strand_mode21_handler,
+    splicing_confirmation,
+)
 
 path = os.path.dirname(__file__)
 os.chdir(path)

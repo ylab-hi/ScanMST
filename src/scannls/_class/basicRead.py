@@ -7,11 +7,37 @@
 @license:     MIT Licence
 @Time:        1/9/22 12:13 PM
 """
-from typing import Any
-from typing import List
-from typing import Optional
+from enum import IntEnum
+from typing import Any, Optional
 
 from scannls import cppext
+
+# // #define BAM_CMATCH      0
+# // #define BAM_CINS        1
+# // #define BAM_CDEL        2
+# // #define BAM_CREF_SKIP   3
+# // #define BAM_CSOFT_CLIP  4
+# // #define BAM_CHARD_CLIP  5
+# // #define BAM_CEQUAL      7
+# // #define BAM_CPAD        6
+# // #define BAM_CDIFF       8
+# // #define BAM_CBACK       9
+# // #define BAM_CIGAR_STR   "MIDNSHP=XB"
+
+
+class CigarCode(IntEnum):
+    """Cigar Code."""
+
+    Match = 0
+    Insertion = 1
+    Del = 2
+    Ref_skip = 3
+    Soft_clip = 4
+    Hard_clip = 5
+    Pad = 6
+    Equal = 7
+    Diff = 8
+    Back = 9
 
 
 class Read:
@@ -94,9 +120,9 @@ class Read:
         read_match_size: int,
         reference_match_size: int,
         indel_size: int,
-        cigartuples_without_soft: List[int],
+        cigartuples_without_soft: list[int],
         query_length: int,
-        query_qualities: Optional[List[int]] = None,
+        query_qualities: Optional[list[int]] = None,
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name
@@ -157,7 +183,7 @@ class Read:
         mapq: int,
         nm: int,
         query_seq: str,
-        query_qualities: List[int],
+        query_qualities: list[int],
     ) -> "Read":
         """Calculate the features of the read and initialize the read."""
         parse_cigar_result = cppext.parseCigar(cigar_str)
@@ -195,9 +221,9 @@ class Read:
             op_code = self.cigartuples_without_soft[ind]
             _len = self.cigartuples_without_soft[ind + 1]
 
-            if op_code in {0, 2}:  # M, D
+            if op_code in {CigarCode.Match, CigarCode.Del}:  # M, D
                 current_pos = current_pos + _len
-            elif op_code == 3:  # N
+            elif op_code == CigarCode.Ref_skip:  # N
                 exons.append([start_pos, current_pos])
                 current_pos = current_pos + _len
                 start_pos = current_pos
@@ -228,7 +254,7 @@ class Read:
         :return: using canonical splice sites OR not
         :rtype: bool
         """
-        exons, introns = self.get_exons_and_introns()
+        _, introns = self.get_exons_and_introns()
 
         if len(introns) == 0:
             return True

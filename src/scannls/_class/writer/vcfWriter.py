@@ -8,6 +8,7 @@
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
+<<<<<<< HEAD
 from typing import Any
 from typing import Dict
 from typing import IO
@@ -30,6 +31,22 @@ from ..exception import ExonsNotFoundError
 from ..exception import GenesNotFoundError
 from ..exception import ModesNotFoundError
 from ..exception import SplicingCodeNotFoundError
+=======
+from typing import IO, Any
+
+from pyfaidx import Fasta, FastaNotFoundError
+
+from .. import __version__
+from ..basicClass import MicroHomology, Node, NovelInsertion, Series, reverse_complement
+from ..exception import (
+    AnnotationCodeNotFoundError,
+    BreakpointNotFoundError,
+    ExonsNotFoundError,
+    GenesNotFoundError,
+    ModesNotFoundError,
+    SplicingCodeNotFoundError,
+)
+>>>>>>> c5cd6df (fix complict)
 from ..type import LoggerType
 from .writer import Writer
 
@@ -134,7 +151,11 @@ class VCFWriter(Writer):
         self,
         file_path: str,
         reference: str,
+<<<<<<< HEAD
         bam_header: Dict[str, Any],
+=======
+        bam_header: dict[str, Any],
+>>>>>>> c5cd6df (fix complict)
         logger: LoggerType,
     ) -> None:
         """Initialize VCFWriter object."""
@@ -146,7 +167,11 @@ class VCFWriter(Writer):
         self.series_id: int = 1
         self.bam_header = bam_header
         self.sample_name: str = self.file_path.stem
+<<<<<<< HEAD
         self.hops_feature_in_series_list: List[Any] = []
+=======
+        self.hops_feature_in_series_list: list[Any] = []
+>>>>>>> c5cd6df (fix complict)
         self.clique_id: int = 1
 
     @property
@@ -154,7 +179,11 @@ class VCFWriter(Writer):
         """Check if file is opened."""
         return self.io is not None and not self.io.closed
 
+<<<<<<< HEAD
     def formatter(self, fields: List[str], delimiter: str = "\t") -> str:
+=======
+    def formatter(self, fields: list[str], delimiter: str = "\t") -> str:
+>>>>>>> c5cd6df (fix complict)
         """Formatter for writing data."""
         if fields is None or len(fields) != VCFWriter.num_fields:
             self.logger.warning(
@@ -278,9 +307,13 @@ class VCFWriter(Writer):
         header_lines += self.get_contigs()
 
         for _id in VCFWriter.reserved_info:
+<<<<<<< HEAD
             _number: Union[str, int] = (
                 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
             )
+=======
+            _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
+>>>>>>> c5cd6df (fix complict)
             if _id == "TRANSCRIPT_ID":
                 _number = "."
             header_lines.append(
@@ -304,7 +337,11 @@ class VCFWriter(Writer):
 
         return "\n".join(header_lines) + "\n"
 
+<<<<<<< HEAD
     def get_contigs(self) -> List[str]:
+=======
+    def get_contigs(self) -> list[str]:
+>>>>>>> c5cd6df (fix complict)
         """Get contigs from BAM file header."""
         return [
             f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>"
@@ -312,7 +349,11 @@ class VCFWriter(Writer):
         ]
 
 
+<<<<<<< HEAD
 def obtain_reference_from_bam_header(bam_header: Dict[str, Any]) -> str:
+=======
+def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
+>>>>>>> c5cd6df (fix complict)
     """Obtain reference info from BAM header."""
     aligners = {
         "CLC",
@@ -504,7 +545,11 @@ def get_vcf_features_from_series(
     return series_hops_features
 
 
+<<<<<<< HEAD
 def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]:
+=======
+def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]:
+>>>>>>> c5cd6df (fix complict)
     """VCF feature transformer."""
     if feature_dict["SVTYPE"] in {"INS", "HOM"}:
         info_field = (
@@ -544,7 +589,11 @@ def vcf_feature_transformer(feature_dict: Dict[str, str], idx: int) -> List[str]
 
 def get_vcf_features_from_insertion(
     insertion: NovelInsertion, node: Node, reference_io: Fasta
+<<<<<<< HEAD
 ) -> Tuple[str, str]:
+=======
+) -> tuple[str, str]:
+>>>>>>> c5cd6df (fix complict)
     """Get novel insertion sequence of a node.
 
     :param insertion:

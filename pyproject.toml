@@ -89,10 +89,21 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 norecursedirs = ["cppext"]
 
-
 [tool.bandit]
 exclude_dirs = ['tests']
 skips = ["B602", "B404", "B603"]
+
+
+[tool.ruff]
+line-length = 120
+select = ["F", "E", "W", "C90", "I", "D", "UP", "N", "YTT",
+  # "ANN",/
+  # "TID"
+  "S", "BLE", "FBT", "B", "A" , "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "RUF"]
+# select = ["B","B9","C","D","E","F","N","RST","S","W","C4","SIM","YTT"]
+exclude = ["cppext"]
+extend-ignore = ["ANN001", "D203", "D213"]
+
 
 [build-system]
 requires = ["pybind11>2.9.1", "poetry-core>=1.0.0", "setuptools>=40.6.0"]

@@ -16,6 +16,7 @@ from pybind11.setup_helpers import build_ext
 from pybind11.setup_helpers import Pybind11Extension
 
 
+
 def remove_env(key: str):
     """Remove environment variable."""
     env_cflags = os.environ.get("CFLAGS", "")
@@ -51,7 +52,7 @@ def check_hts_path(hts_lib_path: Path, hts_include_path: Path) -> None:
         raise RuntimeError("Please install htslib first.")
 
 
-def get_hts_lib_path() -> (Path, Path):
+def get_hts_lib_path() -> tuple[Path, Path]:
     """Get htslib path."""
     remove_env("-g")
     check_conda_env()
@@ -105,9 +106,7 @@ def change_env(key: str, value: str):
     return decorator
 
 
-def get_files(
-    path: typing.Union[Path, str], suffix: typing.List[str]
-) -> typing.Iterator[str]:
+def get_files(path: typing.Optional[Path], suffix: list[str]) -> typing.Iterator[str]:
     """Get bindings."""
     if isinstance(path, str):
         path = Path(path)

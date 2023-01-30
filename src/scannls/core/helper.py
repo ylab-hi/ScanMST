@@ -13,9 +13,10 @@ import pyfaidx  # type: ignore
 import pysam  # type: ignore
 import yaml  # type: ignore
 
+from scannls import cppext
+
 from .. import __PACKAGE_NAME__
 from .._class.exception import ModesNotEqualError
-from scannls import cppext
 
 __all__ = [
     "extract_splice_sites",
@@ -275,13 +276,13 @@ def gene_annotation(
     except IndexError:
         gene1 = ""
     except TypeError:
-        print(chrm1, pos1)
+        pass
     try:
         gene2 = "&".join(list(gene_iv[HTSeq.GenomicPosition(chrm2, pos2)]))
     except IndexError:
         gene2 = ""
     except TypeError:
-        print(chrm2, pos2)
+        pass
 
     if not gene1:
         gene1 = "INTERGENIC"
@@ -1168,7 +1169,7 @@ def same_chrom_diff_strand_handler(
                 lt_start_end_exons,
                 rt_start_end_exons,
                 (lt_bp_seq, rt_bp_seq),
-                tuple([*strands]),
+                (*strands,),
                 [*_genes],
             )
         else:
@@ -1237,7 +1238,7 @@ def same_chrom_diff_strand_handler(
                 lt_start_end_exons,
                 rt_start_end_exons,
                 (lt_bp_seq, rt_bp_seq),
-                tuple([*strands]),
+                (*strands,),
                 [*_genes],
             )
         else:

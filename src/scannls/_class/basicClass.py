@@ -7,25 +7,17 @@
 """
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any
-from typing import Dict
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Union
+from typing import Any, Iterable, Iterator, Optional, List, Tuple, Union, Set, Dict
 
 import pyfaidx
 
-from .. import Read
+from scannls import cppext
+
 from ..core.helper import cigar_validity
 from ..core.nls_inference import infer_nls_from_connected_reads
+from .basicRead import Read
 from .exception import ReadNotFoundError
-from .type import EventType
-from .type import LoggerType
-from scannls import cppext
+from .type import EventType, LoggerType
 
 
 class NovelInsertion:
@@ -87,7 +79,7 @@ class MicroHomology:
         :class:`Insertion` and :class:`NovelInsertion`
     """
 
-    def __init__(self, query_sequence: str):
+    def __init__(self, query_sequence: str) -> None:
         """Initialize MicroHomology."""
         self.query_sequence = query_sequence
         self.ao = 1
@@ -133,7 +125,7 @@ class Insertion(Read):
     .. seealso:: :class:`NovelInsertion`, :class:`Node` and :class:`Read`
     """
 
-    __slots__ = ("hit_num",) + Read.__slots__
+    __slots__ = ("hit_num", *Read.__slots__)
 
     def __init__(
         self,
@@ -145,8 +137,8 @@ class Insertion(Read):
         mapq: int,
         nm: int,
         query_sequence: str,
-        query_qualities: List[int],
-    ):
+        query_qualities: list[int],
+    ) -> None:
         """Initialize Insertion."""
         parse_cigar_result = cppext.parseCigar(cigarstring)
         super().__init__(
@@ -227,13 +219,13 @@ class BasicNode:
         "original_sr",
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize BasicNode object."""
-        self.successors: List[Node] = []
-        self.predecessors: List[Node] = []
+        self.successors: list[Node] = []
+        self.predecessors: list[Node] = []
 
-        self.merged_child_nodes: List[Node] = []
-        self.merged_parent_nodes: List[Node] = []
+        self.merged_child_nodes: list[Node] = []
+        self.merged_parent_nodes: list[Node] = []
 
         self.next_node_in_series: Optional[Node] = None
         self.previous_node_in_series: Optional[Node] = None
@@ -356,7 +348,7 @@ class BreakPoint:
         """Return string representation of BreakPoint object."""
         return f"{self.chrom}:{self.pos}"
 
-    def to_tuple(self) -> Tuple[str, int]:
+    def to_tuple(self) -> tuple[str, int]:
         """Return tuple representation of BreakPoint object."""
         return self.chrom, self.pos
 
@@ -431,7 +423,8 @@ class Node(BasicNode):
         "is_polya",
         "_exon_repr",
         "cigartuples_without_soft",
-    ) + BasicNode.__slots__
+        *BasicNode.__slots__,
+    )
 
     def __init__(
         self,
@@ -472,7 +465,6 @@ class Node(BasicNode):
         self.insertion_info = None
         self.unique_key = None
         self.is_polya = False
-
         self.cigartuples_without_soft: Optional[List[int]] = None
 
     def __hash__(self) -> int:
@@ -746,7 +738,7 @@ class Series:
         return evt
 
     @staticmethod
-    def order_events_by_trancription_direction(event_list: List["Event"]):
+    def order_events_by_trancription_direction(event_list: list["Event"]):
         """Construct breakpoints order following transcription direction.
 
          for multiple-hop events or one-hop events

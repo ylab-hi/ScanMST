@@ -11,8 +11,6 @@ import shlex
 import subprocess
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict
-from typing import List
 
 from pysam import VariantFile
 
@@ -22,13 +20,13 @@ from .type import LoggerType
 class VcfAnnotator:
     """VcfAnnotator is used to annotate vcf file given genome structural variation info."""
 
-    def __init__(self, vcf_file: str, sv_file: str, logger: LoggerType):
+    def __init__(self, vcf_file: str, sv_file: str, logger: LoggerType) -> None:
         """Initialize the VcfAnnotator class."""
         self._vcf = vcf_file
         self._out = vcf_file + ".annotated.vcf"
 
         self._sv = sv_file
-        self.sv_map: Dict[str, List[str]] = defaultdict(list)
+        self.sv_map: dict[str, list[str]] = defaultdict(list)
 
         self.logger = logger
         self._sv2nl_output = vcf_file + ".sv2nl"
@@ -79,7 +77,7 @@ class VcfAnnotator:
         self._add_map(self._sv2nl_output + ".tra")
 
     @staticmethod
-    def _format_info(infos: List[str]) -> str:
+    def _format_info(infos: list[str]) -> str:
         """Format info field."""
         return ",".join(infos)
 

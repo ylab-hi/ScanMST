@@ -19,7 +19,7 @@ class MyLogger(LoggerType):
     Hence, it is difficult to debug in parallel mode
     """
 
-    def __init__(self, contig: str, logger: Logger):
+    def __init__(self, contig: str, logger: Logger) -> None:
         """Initialize logger with contig name."""
         self.logger = logger
         self.contig = contig

@@ -40,7 +40,7 @@ class Aligner:
         we can simply call it from Python.
     """
 
-    def __init__(self, seqa: str, seqb: str):
+    def __init__(self, seqa: str, seqb: str) -> None:
         """Initialize Aligner class."""
         self.seqa = seqa
         self.seqb = seqb
@@ -82,8 +82,8 @@ class Aligner:
                 score, number of gaps, number of mismatches for two sequences
             2. start and end coordinates are 0-based and end is not included, same as Python
         """
-        seqa_coords: List[Tuple[int, int]] = []
-        seqb_coords: List[Tuple[int, int]] = []
+        seqa_coords: list[tuple[int, int]] = []
+        seqb_coords: list[tuple[int, int]] = []
         with open(result_file) as f:
             for line in [line.strip() for line in f if not line.startswith("#")]:
                 if line.startswith("seq1"):

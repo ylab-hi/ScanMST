@@ -9,7 +9,6 @@
 import os
 
 import pytest
-
 from scannls import cppext as cpp
 
 

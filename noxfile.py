@@ -7,8 +7,7 @@ from textwrap import dedent
 import nox
 
 try:
-    from nox_poetry import Session
-    from nox_poetry import session
+    from nox_poetry import Session, session
 except ImportError:
     message = f"""\
     Nox failed to import the 'nox-poetry' package.
@@ -163,6 +162,7 @@ def typeguard(session: Session) -> None:
 @session(python="3.10")
 def refurb(session: Session) -> None:
     """Runtime type checking using Typeguard."""
+
     args = session.posargs or ["src", "tests", "docs/conf.py"]
     session.install("pybind11", "setuptools")
     session.install(".")

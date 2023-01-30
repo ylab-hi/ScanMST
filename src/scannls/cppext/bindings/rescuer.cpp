@@ -10,14 +10,14 @@
 #include <memory>
 #include <optional>
 #include <ostream>
-#include <sstream>  // __str__
+#include <sstream> // __str__
 #include <streambuf>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #ifndef BINDER_PYBIND11_TYPE_CASTER
-#  define BINDER_PYBIND11_TYPE_CASTER
+#define BINDER_PYBIND11_TYPE_CASTER
 PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 PYBIND11_DECLARE_HOLDER_TYPE(T, T *)
 PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>)
@@ -28,10 +28,10 @@ PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>)
 void bind_rescuer(std::function< pybind11::module &(std::string const &namespace_) > &M)
 {
 	// cppext::parser_cigar(const unsigned int *, unsigned long) file:rescuer.h line:55
-	M("cppext").def("parser_cigar", (struct cppext::CigarResult (*)(const unsigned int *, unsigned long)) &cppext::parser_cigar, "Parse cigar string from original uint32_t array\n \n\n uint32_t array of cigar string\n \n\n length of cigar string array\n \n\n: parseCigarResult_t\n\nC++: cppext::parser_cigar(const unsigned int *, unsigned long) --> struct cppext::CigarResult", pybind11::arg("t_cigar_str"), pybind11::arg("t_cigar_len"));
+	// M("cppext").def("parser_cigar", (struct cppext::CigarResult (*)(const unsigned int *, unsigned long)) &cppext::parser_cigar, "Parse cigar string from original uint32_t array\n \n\n uint32_t array of cigar string\n \n\n length of cigar string array\n \n\n: parseCigarResult_t\n\nC++: cppext::parser_cigar(const unsigned int *, unsigned long) --> struct cppext::CigarResult", pybind11::arg("t_cigar_str"), pybind11::arg("t_cigar_len"));
 
 	// cppext::parser_cigar(const struct cppext::BamReader::Iterator &) file:rescuer.h line:62
-	M("cppext").def("parser_cigar", (struct cppext::CigarResult (*)(const struct cppext::BamReader::Iterator &)) &cppext::parser_cigar, "Parse cigar string from record iterator\n \n\n\n \n\n parseCigarResult_t\n\nC++: cppext::parser_cigar(const struct cppext::BamReader::Iterator &) --> struct cppext::CigarResult", pybind11::arg("iterator"));
+	// M("cppext").def("parser_cigar", (struct cppext::CigarResult (*)(const struct cppext::BamReader::Iterator &)) &cppext::parser_cigar, "Parse cigar string from record iterator\n \n\n\n \n\n parseCigarResult_t\n\nC++: cppext::parser_cigar(const struct cppext::BamReader::Iterator &) --> struct cppext::CigarResult", pybind11::arg("iterator"));
 
 	{ // cppext::Rescuer file:rescuer.h line:68
 		pybind11::class_<cppext::Rescuer, std::shared_ptr<cppext::Rescuer>> cl(M("cppext"), "Rescuer", "" );

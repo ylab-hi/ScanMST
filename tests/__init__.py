@@ -1,8 +1,6 @@
 """Test suite for the ScanNLS package."""
 from dataclasses import dataclass
-from typing import Any
-from typing import Mapping
-from typing import Tuple
+from typing import Any, Mapping
 
 from scannls import Node
 
@@ -61,7 +59,7 @@ class FakeBlat:
         name: str = "fake_blat",
         query_return: str = "query_return",
         query_insertion_return: str = "query_insertion_return",
-        psl2sam_return: Tuple[Any, ...] = ("psl2sam_return",),
+        psl2sam_return: tuple[Any, ...] = ("psl2sam_return",),
     ):
         """Init."""
         self.name = name
@@ -77,7 +75,7 @@ class FakeBlat:
         """Query insertion."""
         return self.query_insertion_return
 
-    def psl2sam(self, *_) -> Tuple[Any, ...]:
+    def psl2sam(self, *_) -> tuple[Any, ...]:
         """PSL2SAM."""
         return self.psl2sam_return
 

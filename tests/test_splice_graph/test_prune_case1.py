@@ -7,12 +7,10 @@
 """
 import pytest
 from loguru import logger
+from scannls import Node, SpliceGraph, SpliceType
 
-from . import add_edge_according_order
 from .. import assign_value_for_instance
-from scannls import Node
-from scannls import SpliceGraph
-from scannls import SpliceType
+from . import add_edge_according_order
 
 
 @pytest.fixture(scope="function", autouse=True)

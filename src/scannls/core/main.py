@@ -7,31 +7,32 @@ import re
 from itertools import chain
 from pathlib import Path
 from typing import Any
-from typing import List
 
-import HTSeq
 import pyfaidx
 import pysam
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta, FastaNotFoundError
 
-from .. import Blat
-from .. import cigarstring2cigartuples
-from .. import detect_read_read_connections_from_cigar
-from .. import Event
-from .. import get_longest_insertion_sequence
-from .. import get_softclip_length
-from .. import MyLogger
-from .. import ParallelWorker
-from .. import reverse_complement
-from .. import Series
+from .. import (
+    Blat,
+    Event,
+    MyLogger,
+    ParallelWorker,
+    Series,
+    cigarstring2cigartuples,
+    detect_read_read_connections_from_cigar,
+    get_longest_insertion_sequence,
+    get_softclip_length,
+    reverse_complement,
+)
 from .._class.type import LoggerType
-from .helper import blat2chimeric_alignment
-from .helper import extract_splice_sites
-from .helper import get_transcriptome_length
-from .helper import insertion2chimeric_alignment
-from .helper import obtain_variants_stats
-from .helper import strand_mode_checker
+from .helper import (
+    blat2chimeric_alignment,
+    extract_splice_sites,
+    get_transcriptome_length,
+    insertion2chimeric_alignment,
+    obtain_variants_stats,
+    strand_mode_checker,
+)
 from .nls_inference import infer_nls_from_connected_reads
 
 
@@ -55,7 +56,7 @@ class BamScanner:
         substitutions_num,
         substitutions_fraction,
         indels_fraction,
-    ):
+    ) -> None:
         """Initialize the class."""
         self.in_bam_path = input_bam
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
@@ -223,7 +224,7 @@ def detect_sv_from_cigar(
         logger=logger,
     )
 
-    event_list: List[Event] = []
+    event_list: list[Event] = []
     if read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
@@ -563,7 +564,7 @@ def scanbam_run(
 
     contigs = [
         contig
-        for contig in bam_scanner.bam_chrom_info.keys()
+        for contig in bam_scanner.bam_chrom_info
         if "_" not in contig and "M" not in contig
     ]
 

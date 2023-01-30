@@ -10,9 +10,7 @@
 import argparse
 import textwrap
 from dataclasses import dataclass
-from typing import Any
-from typing import Optional
-from typing import Tuple
+from typing import Any, Optional
 
 from scannls import __version__
 
@@ -35,7 +33,7 @@ class DefaultOptions:
     bound: bool = True
     log: str = "info"
     species: str = "human"
-    species_choices: Tuple[str, ...] = ("human", "mouse")
+    species_choices: tuple[str, ...] = ("human", "mouse")
     parallel: int = 1
     port: int = 88888
     min_soft_seg_len: int = 200
@@ -54,7 +52,7 @@ class DefaultOptions:
 class RichArgParser(argparse.ArgumentParser):
     """RichArgParser."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """RichArgParser."""
         from rich.console import Console
 
@@ -77,7 +75,7 @@ class RichArgParser(argparse.ArgumentParser):
 class RichHelpFormatter(argparse.HelpFormatter):
     """RichHelpFormatter."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """RichHelpFormatter."""
         super().__init__(*args, max_help_position=42, **kwargs)  # type: ignore
 

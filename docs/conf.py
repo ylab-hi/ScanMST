@@ -1,9 +1,8 @@
 """Sphinx configuration."""
 from datetime import datetime
 
-
 project = "ScanNLS"
-author = "Ting-You Wang"
+author = "Yangyang Li, Ting-You Wang"
 copyright = f"{datetime.now().year}, {author}"
 extensions = [
     "sphinx.ext.autodoc",

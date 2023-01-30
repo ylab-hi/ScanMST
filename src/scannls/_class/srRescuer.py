@@ -5,17 +5,13 @@
 @author:      Yangyang Li
 @Time:        12/30/21 15:00 PM
 """
-from typing import Any
-from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Iterable, Optional
+
+from scannls import cppext
 
 from .basicClass import Node
-from .exception import ExonsNotFoundError
-from .exception import ModesNotFoundError
+from .exception import ExonsNotFoundError, ModesNotFoundError
 from .type import LoggerType
-from scannls import cppext
 
 
 def is_middle_node(node: Node) -> bool:
@@ -95,7 +91,7 @@ class SRRescuer:
         exons: Any,
         tgt_name: str,
         mode: int,
-    ) -> Tuple[str, int]:
+    ) -> tuple[str, int]:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
         ..note.
@@ -119,7 +115,7 @@ class SRRescuer:
 
     @staticmethod
     def obtain_region_for_rescue_sr2(node: Node, mode: int, tag_name: str):
-        """Dummy docstring."""
+        """Obtain region from rescue."""
         if node.exons is None or node.strand is None or node.chrom is None:
             raise ExonsNotFoundError(f"{node.chrom=} {node.strand=} {node.exons=}")
 
@@ -150,7 +146,7 @@ class SRRescuer:
     def update_sr(
         self,
         current_node: Node,
-        query_names_in_graph: List[str],
+        query_names_in_graph: list[str],
         node_rescued_sr_maximum: int,
     ) -> None:
         """Update SR for input node."""

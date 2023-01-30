@@ -6,20 +6,13 @@
 @Time:        1/19/22 7:59 PM
 """
 from itertools import combinations
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
+from typing import Any, Union, Optional
 
 import networkx as nx
 from networkx import find_cliques
 
 from ..utils import timeit
-from .basicClass import BreakPoint
-from .basicClass import Node
-from .basicClass import Series
+from .basicClass import BreakPoint, Node, Series
 from .exception import ExonsNotFoundError
 from .type import LoggerType
 
@@ -42,7 +35,7 @@ class Ruler:
         return f"{self.__class__.__name__}()"
 
     @staticmethod
-    def obtain_breakpoint_pairs(series: Series) -> List:
+    def obtain_breakpoint_pairs(series: Series) -> list:
         """Generate breakpoint pairs from a series.
 
         :param series: a series
@@ -144,7 +137,7 @@ class Ruler:
         return distance
 
     @staticmethod
-    def breakpoint_pairs_distance(bp_pair1: List, bp_pair2: List) -> float:
+    def breakpoint_pairs_distance(bp_pair1: list, bp_pair2: list) -> float:
         """Calculate breakpoint distance.
 
         :param bp_pair1: breakpoint pair list 1: [(sv_type, bp1, bp2), ...]
@@ -326,12 +319,12 @@ class CliqueFinder:
         intact_series_list_len: int,
         logger: LoggerType,
         threshold: float = 0.2,
-    ):
+    ) -> None:
         """Initialize CliqueFinder."""
         self.ruler = Ruler(logger)
         self.intact_series_list_len = intact_series_list_len
         self.intact_series_list = intact_series_list
-        self.distance_dict: Dict[Tuple[int, int], float] = {}
+        self.distance_dict: dict[tuple[int, int], float] = {}
         self.graph = nx.Graph()
         self.threshold = threshold
 
