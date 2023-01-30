@@ -53,6 +53,7 @@ class SRRescuer:
             .identity(alignment_frac)
             .min_seq_align_len(10)
         )
+
         if average_read_depth is not None:
             options = options.average_read_depth(average_read_depth)
 
