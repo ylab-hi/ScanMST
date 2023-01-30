@@ -8,7 +8,7 @@
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Optional, List
+from typing import IO, Any, Optional
 
 from ..basicClass import Series
 from ..type import LoggerType

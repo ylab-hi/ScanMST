@@ -8,7 +8,6 @@
 @Time:        1/28/22 8:46 PM
 """
 from typing import Any
-from typing import Dict
 
 import networkx as nx
 
@@ -23,7 +22,7 @@ def get_label_from_node(node: Node) -> str:
 
 
 def plot_graph_helper(
-    start_node: Node, path, nx_graph: nx.Graph, labels: Dict[Node, str]
+    start_node: Node, path, nx_graph: nx.Graph, labels: dict[Node, str]
 ) -> None:
     """Plot graph helper."""
     if not start_node or start_node in path:
@@ -35,11 +34,11 @@ def plot_graph_helper(
                 nx_graph.add_edge(
                     get_label_from_node(start_node), get_label_from_node(successor)
                 )
-                plot_graph_helper(successor, path + [start_node], nx_graph, labels)
+                plot_graph_helper(successor, [*path, start_node], nx_graph, labels)
         else:
             # successor be [] or None
             plot_graph_helper(
-                successors, path + [start_node], nx_graph, labels  # type: ignore
+                successors, [*path, start_node], nx_graph, labels  # type: ignore
             )
 
 

@@ -12,8 +12,7 @@ from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
 
-from pybind11.setup_helpers import build_ext
-from pybind11.setup_helpers import Pybind11Extension
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 
 def remove_env(key: str):

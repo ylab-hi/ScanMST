@@ -4,9 +4,6 @@ import re
 from collections import defaultdict
 from importlib import resources
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
 
 import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
@@ -254,7 +251,7 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
 
 def gene_annotation(
     chrm1: str, pos1: int, chrm2: str, pos2: int, gene_iv: HTSeq.GenomicArrayOfSets
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Obtain gene annotations for breakpoints.
 
     :param chrm1: chromosome for breakpoint1
@@ -304,7 +301,7 @@ def splicing_confirmation(
     genome_fasta: pyfaidx.Fasta,
     cvg: HTSeq.GenomicArrayOfSets,
     motif_required: bool = True,
-) -> Tuple[bool, int, int]:
+) -> tuple[bool, int, int]:
     """Judge whether the breakpoints are NLS events or not.
 
     if motif_required is ON: it will only report NLS events with 'canonical
@@ -342,7 +339,7 @@ def splicing_confirmation(
     """
 
     def matched_candidate_sites_checker(
-        donor_seq: str, acceptor_seq, splice_motif_dict: Dict[str, str]
+        donor_seq: str, acceptor_seq, splice_motif_dict: dict[str, str]
     ) -> bool:
         """Find canonical splice sites in the input sequence.
 
@@ -369,7 +366,7 @@ def splicing_confirmation(
         pos2: int,
         strand2: str,
         mode2: int,
-    ) -> Tuple[Tuple[str, int, str], Tuple[str, int, str]]:
+    ) -> tuple[tuple[str, int, str], tuple[str, int, str]]:
         """Determine the donor breakpoint and the accepter breakpoint.
 
         :param chrm1: chromosome for breakpoint1
@@ -564,7 +561,7 @@ def blat2chimeric_alignment(
 def obtain_insertion_surrouding_cigarstrings(
     cigar_str: str,
     insertion_length: int,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Obtain the upstream and downstream CIGAR strings of the targeted insertion."""
     insertion_str = f"{insertion_length}I"
     try:
@@ -605,7 +602,7 @@ def insertion2chimeric_alignment(
     blat_ident_pct_cutoff: float = 0.95,
     top: int = 3,
     align_len_threshold: int = 50,
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """Create chimeric alignments from the alignment with long insertion.
 
     the alignment which has a long insertion segment but without SA tag.
@@ -1474,7 +1471,7 @@ def diff_chrom_diff_strand_handler(
 
 def obtain_variants_stats(
     cigar_str: str, md_tag: str, indel_len_cutoff: int = 4
-) -> Tuple[int, float, float]:
+) -> tuple[int, float, float]:
     """Obtain variants stats from read matched part.
 
     :param cigar_str: CIGAR string
@@ -1490,7 +1487,7 @@ def obtain_variants_stats(
         https://lh3.github.io/2018/03/27/the-history-the-cigar-x-operator-and-the-md-tag
     """
     parsed_cigar_result = cppext.parseCigar(cigar_str)
-    cigartuples_without_soft: List[int] = parsed_cigar_result.cigartuples_without_soft
+    cigartuples_without_soft: list[int] = parsed_cigar_result.cigartuples_without_soft
 
     del_num = 0
     ins_num = 0

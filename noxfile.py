@@ -40,6 +40,7 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
     that environment when invoked from git.
 
     Args:
+    ----
         session: The Session object.
     """
     if session.bin is None:
@@ -162,8 +163,7 @@ def typeguard(session: Session) -> None:
 @session(python="3.10")
 def refurb(session: Session) -> None:
     """Runtime type checking using Typeguard."""
-
-    args = session.posargs or ["src", "tests", "docs/conf.py"]
+    session.posargs or ["src", "tests", "docs/conf.py"]
     session.install("pybind11", "setuptools")
     session.install(".")
     session.install("refurb")

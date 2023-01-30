@@ -6,7 +6,7 @@
 @Time:        1/19/22 7:59 PM
 """
 from itertools import combinations
-from typing import Any, Union, Optional
+from typing import Any, Optional, Union
 
 import networkx as nx
 from networkx import find_cliques

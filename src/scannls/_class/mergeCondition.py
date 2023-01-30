@@ -7,10 +7,10 @@
 @Time:        4/18/22 7:51 PM
 """
 from itertools import zip_longest
+from typing import Optional
 
 from .basicClass import BreakPoint, Node
 from .exception import ExonsNotFoundError
-from typing import Optional
 
 
 def is_same_breakpoint(

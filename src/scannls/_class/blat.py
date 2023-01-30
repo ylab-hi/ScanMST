@@ -19,7 +19,6 @@ from typing import Any
 import psutil
 from Bio import SearchIO
 
-
 from ..blat import load_gfclient, load_gfserver
 from .basicClass import Insertion, NovelInsertion
 from .type import LoggerType

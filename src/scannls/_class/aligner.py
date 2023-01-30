@@ -10,8 +10,6 @@ import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
-from typing import List
-from typing import Tuple
 
 
 @dataclass
@@ -71,8 +69,7 @@ class Aligner:
                 self.cmd(seqa=tempfile_seq1, seqb=tempfile_seq2, out=tempfile_name),
                 shell=True,
             )
-            align_result = self.parse_gapmis_result(tempfile_name)
-        return align_result
+            return self.parse_gapmis_result(tempfile_name)
 
     def parse_gapmis_result(self, result_file: str) -> AlignerResult:
         """Parse the result of gapmis.

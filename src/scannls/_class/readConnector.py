@@ -8,8 +8,6 @@
 import re
 from itertools import combinations
 from typing import Any
-from typing import List
-from typing import Tuple
 
 from Bio import SearchIO
 from loguru import logger
@@ -44,7 +42,7 @@ class ReadsConnector:
 
     def __init__(
         self,
-        read_list: List[Read],
+        read_list: list[Read],
         blat: Blat,
         logger: LoggerType,
         align_len_threshold: int = 20,
@@ -52,8 +50,8 @@ class ReadsConnector:
         top: int = 3,
     ) -> None:
         """Initialize the ReadsConnector class."""
-        self.candidate_nodes: List[Read] = []
-        self.reads_chain: List[Read] = []
+        self.candidate_nodes: list[Read] = []
+        self.reads_chain: list[Read] = []
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = read_list
         self.logger = logger
@@ -158,8 +156,8 @@ class ReadsConnector:
     def _determine_microhomology_len(
         read_match_sequence: str,
         read_query_length: int,
-        prev_sms: Tuple[int, int, int],
-        next_sms: Tuple[int, int, int],
+        prev_sms: tuple[int, int, int],
+        next_sms: tuple[int, int, int],
         prev_read_mode: int,
         next_read_mode: int,
     ) -> Any:
@@ -222,8 +220,8 @@ class ReadsConnector:
     def update_query_sequence(
         read_match_sequence: str,
         read_query_sequence: str,
-        prev_sms: Tuple[int, int, int],
-        next_sms: Tuple[int, int, int],
+        prev_sms: tuple[int, int, int],
+        next_sms: tuple[int, int, int],
         prev_read_mode: int,
         next_read_mode: int,
     ) -> Any:
@@ -657,12 +655,12 @@ def detect_read_read_connections_from_cigar(
             query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
         )
 
-    def mean(in_list: List[int]) -> float:
+    def mean(in_list: list[int]) -> float:
         """Helper function to calculate mean value of a list."""
         return sum(in_list) / len(in_list)
 
     def is_reverse_transcription_artifacts(
-        read_list: List[Read],
+        read_list: list[Read],
         minimum_cutoff: int = 20,
         maximum_cutoff: int = 200,
         base_quality_cutoff: int = 10,

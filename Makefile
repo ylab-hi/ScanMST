@@ -8,5 +8,3 @@ clean:
 	find .  \( -type f -name "*.py[co]" -o -type d -name "__pycache__" \) -delete && echo "Removed pycs and __pycache__"
 	rm -rf dist
 	rm -rf build
-
-

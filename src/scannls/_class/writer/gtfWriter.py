@@ -191,7 +191,7 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
+                *info,
             ]
-            + info
         )
     return nodes_gtf_features

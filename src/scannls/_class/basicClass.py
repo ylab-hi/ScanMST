@@ -7,7 +7,7 @@
 """
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Iterable, Iterator, Optional, List, Tuple, Union, Set, Dict
+from typing import Any, Iterable, Iterator, Optional, Union
 
 import pyfaidx
 
@@ -434,12 +434,12 @@ class Node(BasicNode):
         chrom: Optional[str] = None,
         ref_start: Optional[int] = None,
         ref_end: Optional[int] = None,
-        exons: Optional[List[Any]] = None,
+        exons: Optional[list[Any]] = None,
         sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
-        modes: Optional[List[int]] = None,
-        genes: Optional[Tuple[str, str]] = None,
+        modes: Optional[list[int]] = None,
+        genes: Optional[tuple[str, str]] = None,
         query_name: str = "",
     ) -> None:
         """Initialize a Node object."""
@@ -465,7 +465,7 @@ class Node(BasicNode):
         self.insertion_info = None
         self.unique_key = None
         self.is_polya = False
-        self.cigartuples_without_soft: Optional[List[int]] = None
+        self.cigartuples_without_soft: Optional[list[int]] = None
 
     def __hash__(self) -> int:
         """Hash a node."""
@@ -549,7 +549,7 @@ class Node(BasicNode):
         self.unique_key = key
         return key
 
-    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> Tuple[str, Any]:
+    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> tuple[str, Any]:
         """Get update breakpoint depth and position of a node."""
         break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
         if break_point is not None:
@@ -640,7 +640,7 @@ class Series:
 
     def __init__(self, blat: Any, logger: LoggerType) -> None:
         """Initialize a Series object."""
-        self.nodes: List[Node] = []
+        self.nodes: list[Node] = []
         self.is_in_graph = False
         self.blat = blat
         self.logger = logger
@@ -667,9 +667,9 @@ class Series:
     @classmethod
     def create_series_from_node_list(
         cls,
-        node_list: List[Node],
+        node_list: list[Node],
         logger: LoggerType,
-        nodes_keys: Set[str],
+        nodes_keys: set[str],
         is_add_key: bool = True,
     ) -> "Series":
         """Create a series from a list of nodes."""
@@ -752,7 +752,7 @@ class Series:
                the read where `breakpoint1` of event2 habors should be the identical
         """
         is_reversed = False
-        output_event_list: List["Event"] = []
+        output_event_list: list["Event"] = []
         for index, evt in enumerate(event_list):
             parsed_evt = Series.reorder_event(evt)
 
@@ -850,10 +850,11 @@ class Series:
                         )
                     )
                     # get type of insertion between insertion node and second node
-                    if insertion.strand == read2.strand:
-                        insertion_mode = 2 if event.mode2 == 1 else 1
-                    else:
-                        insertion_mode = event.mode2
+                    insertion_mode = (
+                        (2 if event.mode2 == 1 else 1)
+                        if insertion.strand == read2.strand
+                        else event.mode2
+                    )
 
                     self.logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = Event(
@@ -1040,7 +1041,7 @@ class Event:
         self.insertion_info = self.insertion_info[::-1]
 
     @property
-    def modes(self) -> List[int]:
+    def modes(self) -> list[int]:
         """Return the modes of the event.
 
         :return: the mode of read1 and read2 in the event
@@ -1093,7 +1094,7 @@ class Event:
         """Return True if the event is same strand."""
         return self.strand1 == self.strand2
 
-    def read1(self, read_chains: List[Read]) -> Read:
+    def read1(self, read_chains: list[Read]) -> Read:
         """Return the read1 of the event."""
         for read in read_chains:
             if (
@@ -1104,7 +1105,7 @@ class Event:
                 return read
         raise ReadNotFoundError
 
-    def read2(self, read_chains: List[Read]) -> Read:
+    def read2(self, read_chains: list[Read]) -> Read:
         """Return the read2 of the event."""
         for read in read_chains:
             if (
@@ -1116,7 +1117,7 @@ class Event:
         raise ReadNotFoundError
 
     def update_specific_info_within_event(
-        self, node: Node, info_key_list: List[str]
+        self, node: Node, info_key_list: list[str]
     ) -> Node:
         """Update node info from the event by the info_key_list.
 
@@ -1200,6 +1201,6 @@ def check_end_node_is_ploya(
             node.ref_start - length : node.ref_start
         ].reverse.complement.seq
 
-    counter: Dict[str, int] = Counter(seq)
+    counter: dict[str, int] = Counter(seq)
     if counter["A"] <= ratio * len(seq):
         node.is_polya = True
