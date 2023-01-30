@@ -16,7 +16,7 @@ from loguru import logger
 from scannls import cppext
 
 from ._class.exception import ToolNotFoundError
-from ._class.type import LoggerType
+from ._class.type import LoggerType, Mode
 from .blat import load_fa2bit
 
 __all__ = [
@@ -91,7 +91,8 @@ def get_softclip_length(
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_end = read.reference_start + parse_result.ref_match
 
-    if mode == 0:
+    if mode == Mode.type0:
+
         if parse_result.lt_soft_len > parse_result.rt_soft_len:
             return (
                 parse_result.lt_soft_len,
@@ -99,7 +100,8 @@ def get_softclip_length(
                 read.reference_start,
                 2,
             )
-        elif parse_result.lt_soft_len < parse_result.rt_soft_len:
+
+        if parse_result.lt_soft_len < parse_result.rt_soft_len:
             return (
                 parse_result.rt_soft_len,
                 read.query_sequence[
@@ -108,17 +110,17 @@ def get_softclip_length(
                 ref_end,
                 1,
             )
-        else:
-            return 0, "", -1, 0
+        return 0, "", -1, 0
 
-    if mode == 1:
+    if mode == Mode.type1:
         return (
             parse_result.rt_soft_len,
             read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
             ref_end,
             1,
         )
-    elif mode == 2:
+
+    if mode == Mode.type2:
         return (
             parse_result.lt_soft_len,
             read.query_sequence[: parse_result.lt_soft_len],
@@ -228,8 +230,7 @@ def get_longest_insertion_sequence(
         if mat:
             ins_ref_pos += int(mat.group(1))
         return ins_ref_pos, ins_seq, ins_length
-    else:
-        return 0, "", 0
+    return 0, "", 0
 
 
 def cigarstring2cigartuples(cigarstring: str) -> list[tuple[int, int]]:

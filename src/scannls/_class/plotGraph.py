@@ -27,19 +27,19 @@ def plot_graph_helper(
     """Plot graph helper."""
     if not start_node or start_node in path:
         return
-    else:
-        if successors := start_node.successors:
-            for successor in successors:
-                labels.update({successor: get_label_from_node(successor)})
-                nx_graph.add_edge(
-                    get_label_from_node(start_node), get_label_from_node(successor)
-                )
-                plot_graph_helper(successor, [*path, start_node], nx_graph, labels)
-        else:
-            # successor be [] or None
-            plot_graph_helper(
-                successors, [*path, start_node], nx_graph, labels  # type: ignore
+
+    if successors := start_node.successors:
+        for successor in successors:
+            labels.update({successor: get_label_from_node(successor)})
+            nx_graph.add_edge(
+                get_label_from_node(start_node), get_label_from_node(successor)
             )
+            plot_graph_helper(successor, [*path, start_node], nx_graph, labels)
+    else:
+        # successor be [] or None
+        plot_graph_helper(
+            successors, [*path, start_node], nx_graph, labels  # type: ignore
+        )
 
 
 def plot_graph(graph: Any, figure_name: str, is_matplotlib=True) -> None:

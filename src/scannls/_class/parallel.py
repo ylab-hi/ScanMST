@@ -61,7 +61,8 @@ class ParallelWorker:
             self.logger.warning(
                 f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
             )
-            n_jobs = current_max_processor
+            return current_max_processor
+
         return n_jobs  # the max processor is decided by ProcessPoolExecutor
 
     def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:

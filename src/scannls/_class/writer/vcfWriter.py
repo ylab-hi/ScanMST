@@ -8,7 +8,7 @@
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, Any, Union
 
 from pyfaidx import Fasta, FastaNotFoundError
 

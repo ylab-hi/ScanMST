@@ -6,9 +6,19 @@
 @license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
+from enum import IntEnum
 from typing import Any, NewType, Protocol
 
 from .basicRead import Read
+
+
+class Mode(IntEnum):
+    """Mode code."""
+
+    type0 = 0
+    type1 = 1
+    type2 = 2
+
 
 ReadType = NewType("ReadType", Read)
 

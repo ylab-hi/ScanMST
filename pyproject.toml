@@ -98,10 +98,17 @@ line-length = 120
 select = ["F", "E", "W", "C90", "I", "D", "UP", "N", "YTT",
   # "ANN",/
   # "TID"
-  "S", "BLE", "FBT", "B", "A" , "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "RUF"]
+  "S", "BLE",
+  # "FBT",
+  "B", "A" , "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "RUF"]
 # select = ["B","B9","C","D","E","F","N","RST","S","W","C4","SIM","YTT"]
-exclude = ["cppext"]
-extend-ignore = ["ANN001", "D203", "D213",  "UP007"]
+exclude = ["cppext", "nls_inference.py"]
+extend-ignore = ["ANN001", "D203", "D213",  "UP007", "PGH003","EM102", "EM101", "S101", "PLR2004", "C901",
+  "A003",
+  "B905",
+  "FBT003",
+  "DTZ002",
+]
 
 
 [build-system]

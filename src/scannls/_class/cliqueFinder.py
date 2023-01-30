@@ -92,7 +92,6 @@ class Ruler:
         if _ft_strand != _lt_strand:
             return 1.0
 
-        distance = 1.0
         #       [xxxx]-->--
         # -->--[xxxx]
         first_node_first_exon_start = first_node.exons[0][0]
@@ -115,7 +114,7 @@ class Ruler:
                 _lt_cov = overlapped_len / (
                     last_node_last_exon_end - last_node_first_exon_start
                 )
-                distance = 1 - (_ft_cov + _lt_cov) / 2
+                return 1 - (_ft_cov + _lt_cov) / 2
 
         #  --<--[xxxx]
         #         [xxxx]--<--
@@ -133,8 +132,10 @@ class Ruler:
             _lt_cov = overlapped_len / (
                 last_node_last_exon_end - last_node_first_exon_start
             )
-            distance = 1 - (_ft_cov + _lt_cov) / 2
-        return distance
+
+            return 1 - (_ft_cov + _lt_cov) / 2
+
+        return 1.0
 
     @staticmethod
     def breakpoint_pairs_distance(bp_pair1: list, bp_pair2: list) -> float:
@@ -167,8 +168,8 @@ class Ruler:
         ave_distance = (
             sum(distance_list) / (effect_num_pair * 2) if effect_num_pair > 0 else 100
         )
-        distance = ave_distance / normalization_factor
-        return distance
+
+        return ave_distance / normalization_factor
 
     @staticmethod
     def __decide_flag(
@@ -218,6 +219,8 @@ class Ruler:
 
         if right_subject_node is None:
             return condtion1()
+
+        raise ValueError("Should not be here")
 
     def __call__(self, series_a: Series, series_b: Series) -> float:
         """Call Ruler to calculate the distance between two series.
