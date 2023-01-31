@@ -12,7 +12,7 @@ import sys
 import tempfile
 import time
 from functools import partial
-from typing import Any
+from typing import Any, Union
 
 from loguru import logger
 
@@ -55,10 +55,10 @@ def get_writers(
 def parse_splice_graph_for_cliques_seq(
     cliques: Any,
     writers: Writers,
-    options: DefaultOptions | argparse.Namespace,
+    options: Union[DefaultOptions, argparse.Namespace],
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: int | None = None,
+    average_read_depth: Union[int, None] = None,
 ) -> None:
     """Parse splice graph for cliques."""
     splice_graph = SpliceGraph.create_splice_graph(
@@ -88,9 +88,9 @@ def parse_splice_graph_for_cliques_seq(
 
 def _parse_splice_graph_for_cliques_par(
     cliques: Any,
-    options: DefaultOptions | argparse.Namespace,
+    options: Union[DefaultOptions, argparse.Namespace],
     node_rescued_sr_maximum: int,
-    average_read_depth: int | None,
+    average_read_depth: Union[int, None],
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
@@ -121,10 +121,10 @@ def _parse_splice_graph_for_cliques_par(
 def parse_splice_graph_for_cliques_par(
     cliques: Any,
     writers: Writers,
-    options: DefaultOptions | argparse.Namespace,
+    options: Union[DefaultOptions, argparse.Namespace],
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: int | None = None,
+    average_read_depth: Union[int, None] = None,
 ) -> None:
     """Parse splice graph for cliques."""
     parallel_workers = ParallelWorker(
@@ -153,7 +153,7 @@ def parse_splice_graph_for_cliques_par(
                     writers.write_series(series, ind)
 
 
-def cli(options: argparse.Namespace | DefaultOptions):
+def cli(options: Union[argparse.Namespace, DefaultOptions]):
     """Cli function."""
     start = time.perf_counter()
     # add logger

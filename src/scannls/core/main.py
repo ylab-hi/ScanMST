@@ -1,5 +1,5 @@
 # !/usr/bin/env python
-"""This module contains the main function of the draft scannls."""
+"""Module contains the main function of the draft scannls."""
 import copy
 import inspect
 import math
@@ -8,6 +8,7 @@ from itertools import chain
 from pathlib import Path
 from typing import Any
 
+import HTSeq
 import pyfaidx
 import pysam
 from pyfaidx import Fasta, FastaNotFoundError

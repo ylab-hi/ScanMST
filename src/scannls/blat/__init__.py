@@ -5,10 +5,10 @@
 @contact:     li002252@umn.edu
 @license:     MIT Licence
 @Time:        5/23/22 10:35 AM
-@source: https://hgdownload.soe.ucsc.edu/admin/exe/
+@source:      https://hgdownload.soe.ucsc.edu/admin/exe/
 """
 import platform
-from importlib import resources
+import sys
 from pathlib import Path
 
 from .. import __PACKAGE_NAME__
@@ -19,8 +19,8 @@ def load_blat() -> Path:
 
     @return: Path object.
     """
-    with resources.path(__PACKAGE_NAME__, "blat") as f:
-        blat_path = f
+    blat_path = Path(sys.modules[__PACKAGE_NAME__].__file__).parent / "blat"
+
     system = platform.system()
     if system == "Windows":
         raise NotImplementedError("Windows is not supported for blat.")

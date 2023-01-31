@@ -5,7 +5,6 @@ from collections import defaultdict
 from importlib import resources
 from typing import Any
 
-import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import pysam  # type: ignore
 import yaml  # type: ignore
