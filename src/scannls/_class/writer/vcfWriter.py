@@ -1,6 +1,5 @@
 # !/usr/bin/env python
 """VCF Writer class.
-
 @Filename:    vcfWriter.py
 @license:     MIT Licence
 @Time:        1/30/22 6:19 PM
@@ -333,6 +332,7 @@ def obtain_reference_from_bam_header(bam_header: Dict[str, Any]) -> str:
         "bwa",
         "bowtie",
         "bowtie2",
+        "NGMLR",
         "minimap2",
     }
     avail_aligners = {x.upper() for x in aligners}
@@ -379,6 +379,18 @@ def get_vcf_features_from_series(
             raise BreakpointNotFoundError(next_node.query_name)
         _chrom1, _pos1 = current_node.next_breakpoint.to_tuple()
         _chrom2, _pos2 = next_node.prev_breakpoint.to_tuple()
+
+        microhomology_sequence = ""
+        if current_node.insertion_info and not current_node.insertion_info[0]:
+            insertion = current_node.insertion_info[1]
+            if isinstance(insertion, MicroHomology):
+                microhomology_sequence += insertion.query_sequence
+
+        # correct the breakpoint position in order to obtain a precise "sv_distance"
+        if current_node.strand == "+":
+            _pos1 = _pos1 - len(microhomology_sequence)
+        else:
+            _pos1 = _pos1 + len(microhomology_sequence)
 
         sv_distance = abs(_pos1 - _pos2) if current_node.sv_type != "TRA" else 0
         _dp1 = (
