@@ -13,6 +13,7 @@ from typing import List
 
 from ..basicClass import Node
 from ..basicClass import NovelInsertion
+from ..basicClass import MicroHomology
 from ..basicClass import Series
 from ..exception import ExonsNotFoundError
 from ..type import LoggerType
