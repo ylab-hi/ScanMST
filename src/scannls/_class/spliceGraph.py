@@ -772,12 +772,16 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     :return: None
     """
     # update exon coordinates
-    updated_node.exons[0][0] = updated_node.ref_start = min(  # type: ignore
+    updated_node.ref_start = min(  # type: ignore
         updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
     )
-    updated_node.exons[-1][1] = updated_node.ref_end = max(  # type: ignore
+    updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
+
+    updated_node.ref_end = max(  # type: ignore
         updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
     )
+    updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
+
     # update sr
     updated_node.update_sr(current_node.sr)
 
