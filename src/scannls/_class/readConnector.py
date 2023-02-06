@@ -677,16 +677,20 @@ def detect_read_read_connections_from_cigar(
         """
         is_artifact = False
         for read1, read2 in combinations(read_list, 2):
-            mean_qualities_read1_match = mean(
-                read1.query_qualities[
-                    read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)
-                ]
-            )
-            mean_qualities_read2_match = mean(
-                read2.query_qualities[
-                    read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
-                ]
-            )
+            if read1.query_qualities is None or read2.query_qualities is None:
+                mean_qualities_read1_match = 40.0
+                mean_qualities_read2_match = 40.0
+            else:
+                mean_qualities_read1_match = mean(
+                    read1.query_qualities[
+                        read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)
+                    ]
+                )
+                mean_qualities_read2_match = mean(
+                    read2.query_qualities[
+                        read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
+                    ]
+                )
             if (
                 read1.strand != read2.strand
                 and read1.chrom == read2.chrom
@@ -746,7 +750,6 @@ def detect_read_read_connections_from_cigar(
         or seq_ra is None
         or nm_ra is None
         or cigar_ra is None
-        or query_qualities_ra is None
     ):
         raise ValueError("None value found in read")
 
@@ -776,7 +779,10 @@ def detect_read_read_connections_from_cigar(
         if strand_sa == strand_ra:
             query_qualities_sa = query_qualities_ra
         else:
-            query_qualities_sa = query_qualities_ra[::-1]
+            if query_qualities_ra is None:
+                query_qualities_sa = None
+            else:
+                query_qualities_sa = query_qualities_ra[::-1]
 
         # filter reads in uncommon chromosome and mitochondrion
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:

@@ -13,6 +13,7 @@ from typing import List
 
 from ..basicClass import Node
 from ..basicClass import NovelInsertion
+from ..basicClass import MicroHomology
 from ..basicClass import Series
 from ..exception import ExonsNotFoundError
 from ..type import LoggerType
@@ -171,6 +172,18 @@ def get_gtf_features_from_node(
         raise ExonsNotFoundError(f"{node.query_name}")
 
     exons = node.exons[::-1] if node.strand == "-" else node.exons
+
+    microhomology_sequence = ""
+    if node.insertion_info and not node.insertion_info[0]:
+        insertion = node.insertion_info[1]
+        if isinstance(insertion, MicroHomology):
+            microhomology_sequence += insertion.query_sequence
+
+    # last exon end position needs a correction if there is a microhomology.
+    if node.strand == "+":
+        exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
+    else:
+        exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
 
     node_sr = node.sr
     node_original_sr = node.original_sr

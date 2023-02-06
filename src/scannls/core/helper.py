@@ -326,7 +326,6 @@ def splicing_confirmation(
            else: considering canonical and noncanonical splice sites both
     :return: report/not report, overlapping boundary in bits, canonical
         splice site/noncanonical splice site
-    :rtype: tuple
 
     .. note::
         Possible current_output scenarios
@@ -412,7 +411,10 @@ def splicing_confirmation(
     chrm_do, pos_do, strand_do = donor_bp
     chrm_ac, pos_ac, strand_ac = acceptor_bp
 
-    splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}", None)
+    splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}")
+
+    if splice_motif_dict is None:
+        raise ValueError("Invalid strand combination")
 
     possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
 
@@ -661,8 +663,14 @@ def insertion2chimeric_alignment(
         if (
             chrom_blat == read.reference_name
             and strand_blat == read_strand
-            and pos_blat == insertion_ref_pos
-            and ref_end_blat <= read.reference_end
+            and (
+                abs(pos_blat - insertion_ref_pos) <= 10
+                and ref_end_blat <= read.reference_end
+            )
+            or (
+                abs(ref_end_blat - insertion_ref_pos) <= 10
+                and pos_blat >= read.reference_start
+            )
         ):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
@@ -714,12 +722,13 @@ def softclipped_length_and_event_size_checker(
     )
 
 
-def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
+def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     """Obtain breakpoint region sequence from read.
 
     :param bp_region_seq_len: the length of the breakpoint region sequence
     :param read:  the chimeirc read
     :param mode: mode for the chimeirc read
+    :param genome_fasta: reference genome (pyfaidx.Fasta object)
     :type mode: int
     :return: (putative insertion/microhomology sequence from the read; + means insertion,
         - means microhomology, mode)
@@ -733,6 +742,7 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
           SSSSSSSXXMMM    MMMXXSSSSSSS
     """
     read_seq = read.query_sequence
+    chrom = read.chrom
     bp_region_seq = ""
     # inserted sequence
     if bp_region_seq_len > 0:
@@ -744,13 +754,15 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len) -> str:
     # microhomology
     elif bp_region_seq_len < 0:
         if mode == 2:  # SM
-            bp_region_seq = read_seq[
-                read.lt_soft_len : read.lt_soft_len - bp_region_seq_len
-            ]
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_start : read.ref_start - bp_region_seq_len
+            ].seq
+
         elif mode == 1:  # MS
-            bp_region_seq = read_seq[
-                bp_region_seq_len - read.rt_soft_len : -read.rt_soft_len
-            ]
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_end + bp_region_seq_len : read.ref_end
+            ].seq
+
         bp_region_seq = "-" + bp_region_seq
 
     return bp_region_seq
@@ -806,8 +818,12 @@ def same_chrom_same_strand_mode21_handler(
                 + bp_region_seq_len
             )
 
-        lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
-        rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
+        lt_bp_seq = obtain_bp_region_seq(
+            read_lt, lt_mode, bp_region_seq_len, genome_fasta
+        )
+        rt_bp_seq = obtain_bp_region_seq(
+            read_rt, rt_mode, bp_region_seq_len, genome_fasta
+        )
 
         evt_size = query_offset - target_offset
 
@@ -1129,8 +1145,12 @@ def same_chrom_diff_strand_handler(
         strands = (read_lt.strand, read_rt.strand)
         lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
         rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
-        lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
-        rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
+        lt_bp_seq = obtain_bp_region_seq(
+            read_lt, lt_mode, bp_region_seq_len, genome_fasta
+        )
+        rt_bp_seq = obtain_bp_region_seq(
+            read_rt, rt_mode, bp_region_seq_len, genome_fasta
+        )
         if _nls:
             _genes = gene_annotation(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
@@ -1171,14 +1191,22 @@ def same_chrom_diff_strand_handler(
             strands = (read_lt.strand, read_rt.strand)
             lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
             rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
-            lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
-            rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
+            lt_bp_seq = obtain_bp_region_seq(
+                read_lt, lt_mode, bp_region_seq_len, genome_fasta
+            )
+            rt_bp_seq = obtain_bp_region_seq(
+                read_rt, rt_mode, bp_region_seq_len, genome_fasta
+            )
         elif junc_start == sa_bp:
             strands = (read_rt.strand, read_lt.strand)
             lt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
             rt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
-            lt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
-            rt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
+            lt_bp_seq = obtain_bp_region_seq(
+                read_rt, rt_mode, bp_region_seq_len, genome_fasta
+            )
+            rt_bp_seq = obtain_bp_region_seq(
+                read_lt, lt_mode, bp_region_seq_len, genome_fasta
+            )
 
         _nls, _anno, _can = splicing_confirmation(
             chrm_start,
@@ -1252,8 +1280,8 @@ def diff_chrom_same_strand_mode21_handler(
         logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
         return noreturn
 
-    lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
-    rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
+    lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
+    rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
     _nls, _anno, _can = splicing_confirmation(
         chrm_start,
         junc_start,
@@ -1406,8 +1434,8 @@ def diff_chrom_diff_strand_handler(
         logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
         return noreturn
 
-    lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len)
-    rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len)
+    lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
+    rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
     _nls, _anno, _can = splicing_confirmation(
         chrm_start,
         junc_start,
@@ -1451,13 +1479,9 @@ def obtain_variants_stats(
     :param cigar_str: CIGAR string
     :param md_tag: MD tag
     :param indel_len_cutoff: INDEL length threshold
-    :type cigar_str: str
-    :type md_tag: str
-    :type indel_len_cutoff: int
     :return: number of substitutions, fraction of long insertions and fraction of long deletions.
-    :rtype: tuple
 
-    ..note.
+    .. note::
         'A': 65
         'Z': 90
         '^': 94

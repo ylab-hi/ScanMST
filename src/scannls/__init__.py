@@ -69,7 +69,6 @@ __all__ = [
     "ReadNotFoundError",
     "BreakpointNotFoundError",
     "ModesNotEqualError",
-    "cli",
     "LoggerType",
     "external_tool_checking",
     "NovelInsertion",

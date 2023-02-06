@@ -89,7 +89,9 @@ class SpliceGraph:
         """
         if isinstance(series_list, types.GeneratorType):
             series_list = list(series_list)
+
         self.series_list = copy.deepcopy(series_list)
+
         del series_list  # remove reference to series_list
         self.nodes: Dict[str, List[Node]] = self.dict_factory()
         # construct splice graph
@@ -98,12 +100,9 @@ class SpliceGraph:
         self.rescuer(self)
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
-        self.prune()
-        if is_plot:
-            from .plotGraph import plot_graph
 
-            # viz graph by js
-            plot_graph(self, f"clique_{clique_ind}", False)
+        self.prune()
+
         # trace path
         current_nodes_keys: Set[str] = set()
         for node_list in self.trace():
@@ -321,7 +320,7 @@ class SpliceGraph:
 
         # iterate all similar nodes in the graph
         for similar_node_in_graph in similar_nodes_in_graph:
-            # check if current node is merged into similar node in the graph
+            # check if the current node is merged into a similar node in the graph
             if SpliceGraph._compare_is_merged(
                 similar_node_in_graph, current_node, self.prune_threshold
             ):
@@ -336,8 +335,8 @@ class SpliceGraph:
                 # nodes in merged_parent_nodes are all in the graph
                 current_node.merged_parent_nodes.append(similar_node_in_graph)
 
-                # only consider nodes that has been processed: previous node in current series
-                # keep in mind next node in current series is not processed yet!!!!
+                # only consider nodes that have been processed: previous node in current series
+                # keeps in mind the next node in current series is not processed yet!!!!
                 # a -> b and b <- a
                 similar_node_in_graph.add_predecessor(
                     current_node.previous_node_in_series
@@ -349,14 +348,14 @@ class SpliceGraph:
         similar_key: str,
         merged_nodes_pool: Set[Node],
     ) -> None:
-        """Check if current node is added in graph and update predecessor and successor."""
+        """Check if the current node is added in graph and update a predecessor and successor."""
         if not current_node.is_merged:  # false
 
             current_node.is_in_graph = True  # check if node is in graph
             self.add_node_with_similar_key(current_node)
 
-            # only consider nodes that has been processed: previous node in series
-            # keep in mind next node in series is not processed yet!!!!
+            # only consider nodes that have been processed: previous node in series
+            # keeps in mind the next node in series is not processed yet!!!!
             current_node.add_predecessor(current_node.previous_node_in_series)
 
             # check merged node to see if merge node can be merged into current node
@@ -415,7 +414,9 @@ class SpliceGraph:
             :func:`SpliceGraph.trace`
         """
         if start_node in path:
-            self.logger.warning(f"A circle is found in the graph {start_node}")
+            self.logger.warning(
+                f"A circle is found in the graph {start_node} in {path}"
+            )
 
         if not start_node or start_node in path:
             group_paths.append(path)
@@ -518,9 +519,9 @@ class SpliceGraph:
         return [i for i in node_trace_id_dict.values() if len(i) > 1]
 
     def _rule_out(self, winner: Node, loser: Node) -> None:
-        """Rule out loser and add sr to winner.
+        """Rule out the loser and add sr to the winner.
 
-        Loser is out, and its sr, successors, predecessors are added to winner.
+        Loser is out, and its sr, successors, predecessors are added to the winner.
         """
         winner.update_sr(loser.sr)
         winner.add_successor_from_list(loser.successors)
@@ -548,7 +549,7 @@ class SpliceGraph:
         breakpoint2: Optional[BreakPoint],
         threshold: int,
     ) -> bool:
-        """Check if two breakpoints is in threshold .
+        """Check if two breakpoints are in the threshold.
 
         :param breakpoint1
         :param breakpoint2
@@ -635,7 +636,7 @@ class SpliceGraph:
         # 1. trace and mark node with trace_id
         self._trace(direction)
         # 2. save every trace_id and its corresponding node to be Dict
-        # 3. check length of node list, if number of nodes is less than 2, remove it
+        # 3. check the length of a node list, if the number of nodes is less than 2, remove it
         same_level_node_list = self.create_same_level_node_list()
         # 4. compare them and rule out loser
         self.battle(same_level_node_list)
@@ -717,9 +718,9 @@ class SpliceGraph:
 def update_exon_coord_sr_svtype_breakpoints_name_mode(
     updated_node: Node, current_node: Node
 ) -> None:
-    """Update exon coordinates of the updated node based on current node.
+    """Update exon coordinates of the updated node based on the current node.
 
-    :param updated_node:  node has been inserted into graph
+    :param updated_node: node has been inserted into graph
     :param current_node: node has not been inserted into graph
     :return: None
     """
@@ -740,7 +741,7 @@ def update_exon_coord_sr_svtype_breakpoints_name_mode(
 def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
     updated_node: Node, current_node: Node
 ) -> None:
-    """Update exon coordinates of the updated node based on current node.
+    """Update exon coordinates of the updated node based on the current node.
 
     Two nodes with different number of exons
 
@@ -762,9 +763,9 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
 def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     updated_node: Node, current_node: Node
 ) -> None:
-    """Update exon coordinates of the updated node based on current node.
+    """Update exon coordinates of the updated node based on the current node.
 
-    Two nodes with same number of exons
+    Two nodes with the same number of exons
 
     :param updated_node:  node has been inserted into graph
     :param current_node: node has not been inserted into graph
@@ -779,10 +780,11 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     )
     # update sr
     updated_node.update_sr(current_node.sr)
-    # update novel insertion ao
+
     if updated_node.insertion_info and isinstance(
-        updated_node.insertion_info[1], NovelInsertion
+        updated_node.insertion_info[1], (NovelInsertion, MicroHomology)
     ):
+        # update novel insertion ao or microhomology ao
         updated_node.insertion_info[1].increment_ao()
 
     update_node_with_other_node(
@@ -837,9 +839,9 @@ def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
 def update_node_with_other_node(
     node: Node, other_node: Node, features: Iterable[str]
 ) -> None:
-    """Update node with other node.
+    """Update node with another node.
 
-    if current feature of node is None, then use other node's feature.
+    if current feature of node is None, then use another node's feature.
     """
     for feature in features:
         if getattr(node, feature) is None:

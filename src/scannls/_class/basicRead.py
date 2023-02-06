@@ -9,6 +9,7 @@
 """
 from typing import Any
 from typing import List
+from typing import Optional
 
 from scannls import cppext
 
@@ -95,7 +96,7 @@ class Read:
         indel_size: int,
         cigartuples_without_soft: List[int],
         query_length: int,
-        query_qualities: List[int],
+        query_qualities: Optional[List[int]] = None,
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name

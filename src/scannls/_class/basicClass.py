@@ -80,6 +80,8 @@ class MicroHomology:
     MicroHomology(ATCA)
     >>> microhomology.query_sequence
     ATCA
+    >>> microhomology.ao
+    1
 
     .. seealso::
         :class:`Insertion` and :class:`NovelInsertion`
@@ -88,6 +90,7 @@ class MicroHomology:
     def __init__(self, query_sequence: str):
         """Initialize MicroHomology."""
         self.query_sequence = query_sequence
+        self.ao = 1
 
     def __repr__(self):
         """Represent MicroHomology object."""
@@ -96,6 +99,10 @@ class MicroHomology:
     def reverse_completement_query(self):
         """Reverse complement query sequence."""
         self.query_sequence = reverse_complement(self.query_sequence)
+
+    def increment_ao(self, num=1) -> None:
+        """Increment ao."""
+        self.ao += num
 
 
 class Insertion(Read):
@@ -723,7 +730,7 @@ class Series:
 
     @staticmethod
     def reorder_event(evt: "Event"):
-        """Order breakpoints pairs following the transcription direction using.
+        """Order breakpoint pairs following the transcription direction using.
 
         information of reads 'mode' and 'strand'
         +1;-1 => up;down
