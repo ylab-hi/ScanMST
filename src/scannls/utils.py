@@ -16,8 +16,8 @@ from loguru import logger
 
 from scannls import cppext
 
-from ._class.exception import ToolNotFoundError
-from ._class.type import LoggerType, Mode
+from .base.exception import ToolNotFoundError
+from .base.type import LoggerType, Mode
 from .blat import load_fa2bit
 
 __all__ = [

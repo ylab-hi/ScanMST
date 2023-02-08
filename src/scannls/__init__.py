@@ -6,7 +6,7 @@ __PACKAGE_NAME__ = "scannls"
 from rich.traceback import install
 
 from . import blat, cppext
-from ._class.basicClass import (
+from .base.basicClass import (
     Event,
     Insertion,
     MicroHomology,
@@ -16,25 +16,25 @@ from ._class.basicClass import (
     check_end_node_is_ploya,
     reverse_complement,
 )
-from ._class.basicRead import Read
-from ._class.blat import Blat
-from ._class.cliqueFinder import CliqueFinder
-from ._class.exception import (
+from .base.basicRead import Read
+from .base.blat import Blat
+from .base.cliqueFinder import CliqueFinder
+from .base.exception import (
     BreakpointNotFoundError,
     ModesNotEqualError,
     ReadNotFoundError,
     ToolNotFoundError,
 )
-from ._class.myLogger import MyLogger
-from ._class.parallel import ParallelWorker
-from ._class.readConnector import (
+from .base.myLogger import MyLogger
+from .base.parallel import ParallelWorker
+from .base.readConnector import (
     ReadsConnector,
     detect_read_read_connections_from_cigar,
 )
-from ._class.spliceGraph import SpliceGraph, SpliceType
-from ._class.srRescuer import SRRescuer
-from ._class.type import LoggerType
-from ._class.writer import FastaWriter, GTFWriter, VCFWriter, Writers
+from .base.spliceGraph import SpliceGraph, SpliceType
+from .base.srRescuer import SRRescuer
+from .base.type import LoggerType
+from .base.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 from .cli.arg import DefaultOptions
 from .utils import (
     cigarstring2cigartuples,

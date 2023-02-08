@@ -8,7 +8,6 @@
 @Time:        3/25/22 9:01 AM
 """
 import argparse
-import textwrap
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -86,10 +85,9 @@ def parse_args() -> argparse.ArgumentParser:
         description="[red]scannls[/] :rocket: Nonlinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
-        epilog=textwrap.dedent(
-            """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
-            University of Minnesota, 2022"""
-        ),
+        #     """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
+        #     University of Minnesota, 2022"""
+        # ),
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(

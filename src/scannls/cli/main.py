@@ -24,7 +24,7 @@ from .. import (
     get_softclip_length,
     reverse_complement,
 )
-from .._class.type import LoggerType
+from ..base.type import LoggerType
 from .helper import (
     blat2chimeric_alignment,
     extract_splice_sites,

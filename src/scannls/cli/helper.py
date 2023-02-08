@@ -14,7 +14,7 @@ import yaml  # type: ignore
 from scannls import cppext
 
 from .. import __PACKAGE_NAME__
-from .._class.exception import ModesNotEqualError
+from ..base.exception import ModesNotEqualError
 
 __all__ = [
     "extract_splice_sites",
