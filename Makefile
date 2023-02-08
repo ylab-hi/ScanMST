@@ -9,7 +9,7 @@ local: ## Sync to local
 	rsync -avhP  --exclude  "*egg*" --exclude "build"  --exclude "*.so"  --exclude "poetry.lock" --exclude ".*" --exclude  "__pycache__" quest:/projects/b1171/ylk4626/project/scannls ./
 
 
-remote: local-py ## Sync to remote
+remote: ## Sync to remote
 	rsync -avhP --exclude  "*egg*" --exclude "build"  --exclude "*.so"  --exclude "poetry.lock" --exclude ".*" --exclude  "__pycache__"  ./ quest:/projects/b1171/ylk4626/project/scannls
 
 clean: ## Clean up

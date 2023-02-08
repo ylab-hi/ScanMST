@@ -814,7 +814,9 @@ def detect_read_read_connections_from_cigar(
         read_connector = ReadsConnector(
             read_list=chimeric_aln_list, blat=blat, logger=logger
         )
+
         flag = read_connector.connect()
+
         if flag:
             logger.debug(
                 f"reads chain: {read_connector.reads_chain};"

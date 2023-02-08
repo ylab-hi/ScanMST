@@ -225,16 +225,22 @@ def detect_sv_from_cigar(
     )
 
     event_list: list[Event] = []
+
     if read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
         for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
+
             if (_lt, _rt) in reads_pair_mode_dict:
+
                 _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
+
             elif (_rt, _lt) in reads_pair_mode_dict:
+
                 _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
 
             if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
+
                 logger.warning(
                     f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}"
                 )
@@ -254,11 +260,16 @@ def detect_sv_from_cigar(
                 )
             )
 
+            import ipdb
+
+            ipdb.set_trace()
+
             if not event.is_type_na():
                 event_list.append(event)
                 logger.trace(str(event))
             else:  # temporary solution
                 logger.warning(f"Event Type is NA {event=}")
+
     return event_list, read_chains, num_added_reads
 
 
@@ -324,7 +335,9 @@ def _scan_bam_helper(
             and not read.is_unmapped
             and not read.is_supplementary
         ):
+
             chimeric_alns_num = 2
+
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
@@ -366,12 +379,14 @@ def _scan_bam_helper(
                     read.set_tag("SA", "{};".format(";".join(updated_chimeric_alns)))
                     after_set_sa_chimeric_alns = read.get_tag("SA")[:-1].split(";")
                     after_set_sa_chimeric_alns_num = len(after_set_sa_chimeric_alns) + 1
+
                 # remove SA tags of representative alignments with too much mismatches
                 # update SA tag of representative alignments (END)
 
             # Detect novel chimeric alignments for reads with long softclipped segment
             # but without SA tags using BLAT
             elif not read.has_tag("SA"):
+
                 chimeric_alns_num = 1
                 read_strand = "-" if read.is_reverse else "+"
                 read_ori_nm = read.get_tag("NM")
@@ -408,7 +423,7 @@ def _scan_bam_helper(
                         is_set_tag = 1
                         after_set_sa_chimeric_alns_num = 1
 
-                        # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
+                # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
                 # Detect novel chimeric alignments for reads with long insertion (I)
                 # but without SA tags using BLAT
                 elif ins_ref_pos > 0:
@@ -425,11 +440,14 @@ def _scan_bam_helper(
                         blat,
                         blat_ident_pct_cutoff,
                     )
+
                     if primary_aln_cigarstring:
+
                         logger.trace(
                             f"Pre-checking: {read.query_name= } "
                             f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag"
                         )
+
                         read.cigarstring = primary_aln_cigarstring
                         read.cigartuples = cigarstring2cigartuples(
                             primary_aln_cigarstring
@@ -437,6 +455,7 @@ def _scan_bam_helper(
                         read.reference_start = ins_ref_pos
                         read.set_tag("NM", read_ori_nm - ins_len)
                         read.set_tag("SA", chimeric_aln_str)
+
                         is_set_tag = 1
                         after_set_sa_chimeric_alns_num = 1
 
@@ -445,14 +464,19 @@ def _scan_bam_helper(
                 read.has_tag("SA")
                 and chimeric_alns_num == after_set_sa_chimeric_alns_num
             ):
+
                 logger.trace(
                     f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}"
                 )
+
                 nm = read.get_tag("NM")
+
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring, read.get_tag("MD"), long_indel_length
                 )
+
                 subs_fraction = 0 if nm == 0 else num_of_subs / nm
+
                 if (
                     not (
                         num_of_subs > substitutions_num
@@ -461,6 +485,7 @@ def _scan_bam_helper(
                     and ins_fraction <= indels_fraction
                     and del_fraction <= indels_fraction
                 ):
+
                     event_lists, read_chains, num_added_reads = detect_sv_from_cigar(
                         read=read,
                         mapq_cutoff=mapq_cutoff,
@@ -473,7 +498,9 @@ def _scan_bam_helper(
                         blat=blat,
                         logger=logger,
                     )
+
                     logger.trace(f"{read_chains=}")
+
                     nls_event_list = []
                     for event in event_lists:
                         if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:

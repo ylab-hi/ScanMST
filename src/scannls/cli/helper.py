@@ -1150,10 +1150,12 @@ def same_chrom_diff_strand_handler(
         rt_bp_seq = obtain_bp_region_seq(
             read_rt, rt_mode, bp_region_seq_len, genome_fasta
         )
+
         if _nls:
             _genes = gene_annotation(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
             )
+
             return (
                 "IDUP",
                 _anno,
@@ -1172,6 +1174,7 @@ def same_chrom_diff_strand_handler(
             )
         else:
             return noreturn
+
     else:  # conventional INV
         # If using noncanonical splice site, return NA
         if not read_lt.splice_site_checker(
@@ -1181,6 +1184,7 @@ def same_chrom_diff_strand_handler(
                 f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}"
             )
             return noreturn
+
         chrm_start = lt_chrm
         junc_start = min(ra_bp, sa_bp)
         chrm_end = lt_chrm
