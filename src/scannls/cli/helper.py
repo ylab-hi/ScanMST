@@ -1,10 +1,12 @@
 # !/usr/bin/env python
 """Helper functions."""
 import re
+import sys
 from collections import defaultdict
-from importlib import resources
+from pathlib import Path
 from typing import Any
 
+import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import pysam  # type: ignore
 import yaml  # type: ignore
@@ -1525,7 +1527,8 @@ def get_transcriptome_length(species: str) -> int:
     :param species:  species name
     :return: reference transcriptome size.
     """
-    with resources.path(__PACKAGE_NAME__, "blat") as f:
-        path = f / "transcriptome_length.yaml"
-        transcript_length_dict = yaml.safe_load(path.open())
-        return transcript_length_dict["species"][species]
+    blat_path = Path(sys.modules[__PACKAGE_NAME__].__file__).parent / "blat"
+
+    path = blat_path / "transcriptome_length.yaml"
+    transcript_length_dict = yaml.safe_load(path.open())
+    return transcript_length_dict["species"][species]

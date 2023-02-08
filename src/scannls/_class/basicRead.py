@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Basic Read Class.
 
 @Filename:    basicRead.py

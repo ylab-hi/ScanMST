@@ -1,9 +1,8 @@
 # !/usr/bin/env python
-"""Command line interface for scannls.
+"""Initialize the scannls.draft module.
 
-@Filename:    __init__.py.py
-@Author:      YangyangLi
+@Filename:    __init__.py
 @contact:     li002252@umn.edu
 @license:     MIT Licence
-@Time:        5/16/22 7:29 PM
+@Time:        1/1/22 8:28 PM
 """

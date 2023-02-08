@@ -5,10 +5,11 @@ import secrets
 import shutil
 import subprocess
 import time
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Optional
 
 import pysam
 from loguru import logger

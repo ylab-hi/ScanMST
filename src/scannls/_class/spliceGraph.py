@@ -9,8 +9,9 @@
 import copy
 import types
 from collections import defaultdict
+from collections.abc import Iterable, Iterator
 from enum import Enum, auto
-from typing import Any, Iterable, Iterator, Optional
+from typing import Any, Optional
 
 from .basicClass import BreakPoint, MicroHomology, Node, NovelInsertion, Series
 from .mergeCondition import (

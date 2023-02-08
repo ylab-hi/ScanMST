@@ -129,7 +129,7 @@ def build(setup_kwargs):
                 # "src/scannls/cppext/src/binding.cpp",
             ]
             + list(get_files("src/scannls/cppext/bindings", [".cpp", ".c"])),
-            include_dirs=htslib_include_dirs + ["src/scannls/cppext/include"],
+            include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,
         )

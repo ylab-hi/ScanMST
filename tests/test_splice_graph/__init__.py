@@ -7,7 +7,7 @@
 @license:     MIT Licence
 @Time:        1/20/22 6:58 PM
 """
-from typing import Sequence
+from collections.abc import Sequence
 
 from scannls import Node
 

@@ -28,9 +28,9 @@ from .. import (
     VCFWriter,
     Writers,
 )
-from ..core.main import scanbam_run
 from ..utils import find_2bit_file, sleep
 from .arg import DefaultOptions
+from .main import scanbam_run
 
 
 def get_writers(

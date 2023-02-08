@@ -5,7 +5,7 @@ __PACKAGE_NAME__ = "scannls"
 
 from rich.traceback import install
 
-from . import blat, core, cppext
+from . import blat, cppext
 from ._class.basicClass import (
     Event,
     Insertion,

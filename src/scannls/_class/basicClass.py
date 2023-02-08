@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Type of the scannls.
 
 @Author:      YangyangLi
@@ -6,15 +5,16 @@
 @Time:        12/30/21 2:20 PM
 """
 from collections import Counter
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Any, Iterable, Iterator, Optional, Union
+from typing import Any, Optional, Union
 
 import pyfaidx
 
 from scannls import cppext
 
-from ..core.helper import cigar_validity
-from ..core.nls_inference import infer_nls_from_connected_reads
+from ..cli.helper import cigar_validity
+from ..cli.nls_inference import infer_nls_from_connected_reads
 from .basicRead import Read
 from .exception import ReadNotFoundError
 from .type import EventType, LoggerType
@@ -510,17 +510,17 @@ class Node(BasicNode):
         """Get introns of a node."""
         if self._introns is not None:
             return self._introns
-        else:
-            if len(self.exons) <= 1:
-                return []
 
-            positions = []
-            for i, j in self.exons:
-                positions.extend([i, j])
-            positions.pop(0)
-            positions.pop(-1)
-            self._introns = list(zip(positions[::2], positions[1::2]))
-            return self._introns
+        if len(self.exons) <= 1:
+            return []
+
+        positions = []
+        for i, j in self.exons:
+            positions.extend([i, j])
+        positions.pop(0)
+        positions.pop(-1)
+        self._introns = list(zip(positions[::2], positions[1::2]))
+        return self._introns
 
     @property
     def similar_key(self) -> str:
@@ -621,8 +621,8 @@ class Series:
     ... query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',
     ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]],
     ... sv_type=None)]
-    >>> series_with_novel_insertion
     Series(
+            >>> series_with_novel_insertion
         Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, None, chr17:7702552)
         Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
     """
@@ -785,6 +785,10 @@ class Series:
         """Add event list as Node to self.nodes."""
         event_list = self.order_events_by_trancription_direction(event_list)
 
+        import ipdb
+
+        ipdb.set_trace()
+
         event_list_len = len(event_list)
         previous_breakpoint = None
         prev_sv_type = None
@@ -819,7 +823,9 @@ class Series:
                     if event.strand1 == "-"
                     else insertion_seq
                 )
+
                 flag, insertion = self.blat.query_insertion(insertion_seq)
+
                 insertion.query_name = read1.query_name
                 if flag:  # only one hit
                     # add first node and insertion node
@@ -863,8 +869,6 @@ class Series:
                             read_rt=read2,
                             lt_mode=insertion_mode,
                             rt_mode=event.mode2,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,

@@ -13,7 +13,7 @@ from Bio import SearchIO
 from loguru import logger
 from pysam import AlignedSegment
 
-from ..core.helper import cigar_validity
+from ..cli.helper import cigar_validity
 from .basicClass import reverse_complement
 from .basicRead import Read
 from .blat import Blat

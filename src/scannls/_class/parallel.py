@@ -8,8 +8,9 @@
 """
 import multiprocessing
 import os
+from collections.abc import Callable
 from concurrent import futures
-from typing import Any, Callable
+from typing import Any
 
 from .type import LoggerType
 

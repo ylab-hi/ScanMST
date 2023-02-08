@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Module contains the main function of the draft scannls."""
 import copy
 import inspect
@@ -298,7 +297,6 @@ def _scan_bam_helper(
         logger = MyLogger(identified_key, logger)
         chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
     else:
-
         chrom_bam_io_object = chain.from_iterable(
             [in_bam_io_object.fetch(contig=key) for key in identified_key]
         )

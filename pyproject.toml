@@ -29,6 +29,8 @@ loguru = "^0.6.0"
 rich = "^12.5.1"
 networkx = "^2.8"
 pybind11 = "^2.10.0"
+matplotlib = "^3.6.3"
+maturin = "^0.14.12"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
@@ -74,6 +76,7 @@ scannls = "scannls.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
 codespell = "^2.2.2"
+ipdb = "^0.13.11"
 
 [tool.mypy]
 strict = false
@@ -108,6 +111,7 @@ extend-ignore = ["ANN001", "D203", "D213",  "UP007", "PGH003","EM102", "EM101", 
   "B905",
   "FBT003",
   "DTZ002",
+  "D401",
 ]
 
 

@@ -1,13 +1,13 @@
-# !/usr/bin/env python
 """SR rescuer.
 
 @Filename:    srRescuer.py
 @author:      Yangyang Li
 @Time:        12/30/21 15:00 PM
 """
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any, Optional
 
-from scannls import cppext
+import rscannls  # type: ignore
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError, ModesNotFoundError
@@ -19,9 +19,9 @@ def is_middle_node(node: Node) -> bool:
     return node.prev_breakpoint is not None and node.next_breakpoint is not None
 
 
-def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
+def make_breakpoint(node: Node, mode: int) -> rscannls.BreakPoint:
     """Make breakpoint."""
-    return cppext.BreakPoint(
+    return rscannls.BreakPoint(
         node.ref_start, node.ref_end, mode, node.is_reverse(), is_middle_node(node)
     )
 
@@ -44,20 +44,16 @@ class SRRescuer:
 
         :param logger: logger
         """
-        options = (
-            cppext.Options()
-            .file(input_bam_file)
-            .mapq(mapq_cutoff)
-            .soft_len(soft_len_cutoff)
-            .mismatch(mismatch_cutoff)
-            .identity(alignment_frac)
-            .min_seq_align_len(10)
+        self.rescuer = rscannls.Rescuer(
+            bam_file=input_bam_file,
+            bam_thread=2,
+            min_mapq=mapq_cutoff,
+            min_soft_len=soft_len_cutoff,
+            min_mismatch=mismatch_cutoff,
+            min_identity=alignment_frac,
+            min_seq_align_len=10,
+            average_read_depth=average_read_depth,
         )
-
-        if average_read_depth is not None:
-            options = options.average_read_depth(average_read_depth)
-
-        self.cppext_rescuer = cppext.Rescuer(options)
 
         self.logger = logger
         self.node_rescued_sr_maximum = node_rescued_sr_maximum
@@ -78,7 +74,7 @@ class SRRescuer:
 
         for node in nodes_in_graph:
             node.original_sr = node.sr
-            self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
+            self.rescuer.reset_names_list(query_names_in_graph_list)
             self.update_sr(
                 node, query_names_in_graph_list, self.node_rescued_sr_maximum
             )
@@ -160,7 +156,7 @@ class SRRescuer:
         mode1, mode2 = current_node.modes
 
         chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
-        current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
+        current_node.next_breakpoint_depth = self.rescuer.count_reads(
             chrom_n, pos_n, pos_n + 1
         )
 
@@ -184,10 +180,11 @@ class SRRescuer:
         ):
             raise ValueError(f"{current_node.query_name} with None value")
 
-        region = cppext.Region(chrom, start - 1, start)
+        region = rscannls.Region(chrom, start - 1, start)
+
         break_point = make_breakpoint(current_node, mode1)
 
-        rescued_sr = self.cppext_rescuer.calculate_sr(
+        rescued_sr = self.rescuer.calculate_sr(
             region,
             break_point,
             query_name_current,
@@ -198,7 +195,7 @@ class SRRescuer:
 
         for next_node in current_node.successors:
             chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
-            next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
+            next_node.prev_breakpoint_depth = self.rescuer.count_reads(
                 chrom_p, pos_p, pos_p + 1
             )
 
@@ -221,9 +218,9 @@ class SRRescuer:
             ):
                 raise ValueError(f"{next_node.query_name} with None value")
 
-            region = cppext.Region(chrom, start - 1, start)
+            region = rscannls.Region(chrom, start - 1, start)
             break_point = make_breakpoint(next_node, mode2)
-            rescued_sr += self.cppext_rescuer.calculate_sr(
+            rescued_sr += self.rescuer.calculate_sr(
                 region,
                 break_point,
                 query_name_next,
