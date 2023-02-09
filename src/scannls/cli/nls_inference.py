@@ -25,7 +25,7 @@ def infer_nls_from_connected_reads(
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
     logger: LoggerType,
-    microinsertion_cutoff: int = 60,
+    microinsertion_cutoff: int = 500,
 ) -> Any:
     """Infer NLS event from connected reads.
 

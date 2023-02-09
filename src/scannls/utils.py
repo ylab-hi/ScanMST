@@ -93,7 +93,6 @@ def get_softclip_length(
     ref_end = read.reference_start + parse_result.ref_match
 
     if mode == Mode.type0:
-
         if parse_result.lt_soft_len > parse_result.rt_soft_len:
             return (
                 parse_result.lt_soft_len,

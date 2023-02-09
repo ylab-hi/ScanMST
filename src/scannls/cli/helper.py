@@ -1346,7 +1346,7 @@ def diff_chrom_same_strand_handler(
     gene_iv,
     motif_required,
     logger,
-    microinsertion_cutoff=20,
+    microinsertion_cutoff,
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")

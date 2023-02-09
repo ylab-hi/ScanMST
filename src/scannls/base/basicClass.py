@@ -793,7 +793,6 @@ class Series:
         previous_breakpoint = None
         prev_sv_type = None
         for index, event in enumerate(event_list):
-
             read1: Read = event.read1(read_chains)
             read2: Read = event.read2(read_chains)
 
@@ -816,7 +815,6 @@ class Series:
             self.logger.trace(f"{read1=} {read2=}")
             # is insertions
             if event.has_insertion():
-
                 insertion_seq = event.insertion_seq1  # pick from the first read
                 insertion_seq = (
                     reverse_complement(insertion_seq)
@@ -929,7 +927,6 @@ class Series:
                         self.add_node(insertion_node)
 
                 else:  # no hits or multiple hits
-
                     self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
                     # only add read1 with insertion info
                     # False means that the insertion type (hit more insertion) are
