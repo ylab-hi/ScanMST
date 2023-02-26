@@ -9,7 +9,7 @@
 from functools import singledispatchmethod
 from typing import IO, Any
 
-from ..basicClass import Node, NovelInsertion, Series
+from ..basicClass import MicroHomology, Node, NovelInsertion, Series
 from ..exception import ExonsNotFoundError
 from ..type import LoggerType
 from .writer import Writer
@@ -167,6 +167,19 @@ def get_gtf_features_from_node(
         raise ExonsNotFoundError(f"{node.query_name}")
 
     exons = node.exons[::-1] if node.strand == "-" else node.exons
+
+    microhomology_sequence = ""
+    if node.insertion_info and not node.insertion_info[0]:
+        insertion = node.insertion_info[1]
+        if isinstance(insertion, MicroHomology):
+            microhomology_sequence += insertion.query_sequence
+
+    # last exon end position needs a correction if there is a microhomology.
+    if node.strand == "+" and exons[-1][0] < exons[-1][1] - len(microhomology_sequence):
+        exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
+    elif node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]:
+        exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
+
 
     node_sr = node.sr
     node_original_sr = node.original_sr
