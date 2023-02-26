@@ -69,6 +69,7 @@ def infer_nls_from_connected_reads(
         read_lt.chrom,
         read_lt.strand,
     )
+
     rt_chrm, rt_strand = (
         read_rt.chrom,
         read_rt.strand,

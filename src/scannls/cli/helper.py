@@ -579,6 +579,7 @@ def obtain_insertion_surrouding_cigarstrings(
 
 def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
     """Obtain the read segment length providing CIGAR string."""
+
     parse_result = cppext.parseCigar(cigar_str)
     cigartuples = parse_result.cigartuples
     read_seg_len = 0
@@ -589,6 +590,7 @@ def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
 
         if op_code in {0, 1, 4}:  # M, I or S
             read_seg_len = read_seg_len + _len
+
     return read_seg_len
 
 
@@ -620,6 +622,8 @@ def insertion2chimeric_alignment(
     :param align_len_threshold: the threshold of the insertion sequence length
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
     """
+
+    # NOTE:  <02-12-23, Yangyang Li>
     read_strand = "-" if read.is_reverse else "+"
     if read_strand == "-":
         insertion_seq = reverse_complement(insertion_seq)
@@ -633,9 +637,11 @@ def insertion2chimeric_alignment(
     left_cigar_str, right_cigar_str = obtain_insertion_surrouding_cigarstrings(
         original_cigar_str, insertion_seq_len
     )
+
     left_cigar_read_seg_len = obtain_read_segment_length_from_cigar_string(
         left_cigar_str
     )
+
     right_cigar_read_seg_len = obtain_read_segment_length_from_cigar_string(
         right_cigar_str
     )
@@ -649,6 +655,7 @@ def insertion2chimeric_alignment(
 
     chimeric_aln_str = ""
     primary_aln_cigarstring = ""
+
     if flag:
         # BLAT unique HSP
         chrom_blat = insertion_info.chrom
@@ -1277,6 +1284,7 @@ def diff_chrom_same_strand_mode21_handler(
         - read_lt.read_match_size
         - read_rt.read_match_size
     )
+
     logger.trace(f"{bp_region_seq_len=}")
 
     if bp_region_seq_len > microinsertion_cutoff:
@@ -1490,6 +1498,7 @@ def obtain_variants_stats(
         '^': 94
         '0': 48
         https://lh3.github.io/2018/03/27/the-history-the-cigar-x-operator-and-the-md-tag
+
     """
     parsed_cigar_result = cppext.parseCigar(cigar_str)
     cigartuples_without_soft: list[int] = parsed_cigar_result.cigartuples_without_soft

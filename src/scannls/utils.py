@@ -1,6 +1,5 @@
 """Useful functions for scannls."""
 import os
-import re
 import secrets
 import shutil
 import subprocess
@@ -12,19 +11,19 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pysam
+import rscannls
 from loguru import logger
-
-from scannls import cppext
+from rscannls import cigarstring2cigartuple  # type: ignore
 
 from .base.exception import ToolNotFoundError
-from .base.type import LoggerType, Mode
+from .base.type import LoggerType
 from .blat import load_fa2bit
 
 __all__ = [
     "external_tool_checking",
     "get_softclip_length",
     "get_longest_insertion_sequence",
-    "cigarstring2cigartuples",
+    "cigarstring2cigartuple",
     "timeit",
     "sleep",
     "find_2bit_file",
@@ -82,6 +81,7 @@ def get_softclip_length(
 
     :param mode: read mode
     :param read: reads from pysam
+
     :return: length of soft-clipped part, sequence of soft-clipped part,
      the connection point of soft-clipped part (left/right),
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
@@ -89,45 +89,9 @@ def get_softclip_length(
     if read.query_sequence is None or read.cigarstring is None:
         raise ValueError(f"{read.query_name}'s query sequence or cigar is None")
 
-    parse_result = cppext.parseCigar(read.cigarstring)
-    ref_end = read.reference_start + parse_result.ref_match
-
-    if mode == Mode.type0:
-        if parse_result.lt_soft_len > parse_result.rt_soft_len:
-            return (
-                parse_result.lt_soft_len,
-                read.query_sequence[: parse_result.lt_soft_len],
-                read.reference_start,
-                2,
-            )
-
-        if parse_result.lt_soft_len < parse_result.rt_soft_len:
-            return (
-                parse_result.rt_soft_len,
-                read.query_sequence[
-                    parse_result.query_len - parse_result.rt_soft_len :
-                ],
-                ref_end,
-                1,
-            )
-        return 0, "", -1, 0
-
-    if mode == Mode.type1:
-        return (
-            parse_result.rt_soft_len,
-            read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
-            ref_end,
-            1,
-        )
-
-    if mode == Mode.type2:
-        return (
-            parse_result.lt_soft_len,
-            read.query_sequence[: parse_result.lt_soft_len],
-            read.reference_start,
-            2,
-        )
-    return 0, "", -1, 0
+    return rscannls.get_softclip_length(
+        read.query_sequence, read.cigarstring, read.reference_start, mode
+    )
 
 
 def timeit(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -191,59 +155,9 @@ def get_longest_insertion_sequence(
     if read.query_sequence is None or read.cigarstring is None:
         raise ValueError(f"{read.query_name}'s query sequence or cigar is None")
 
-    parse_result = cppext.parseCigar(read.cigarstring)
-    ref_start = read.reference_start
-    lt_soft_len = parse_result.lt_soft_len
-
-    cigartuples_without_soft = parse_result.cigartuples_without_soft
-
-    current_pos = ref_start
-    current_len = lt_soft_len
-    insertion_list = []
-    for idx in range(0, len(cigartuples_without_soft), 2):
-        op_code = cigartuples_without_soft[idx]
-        _len = cigartuples_without_soft[idx + 1]
-
-        if op_code == 0:  # M
-            current_pos = current_pos + _len
-            current_len = current_len + _len
-        elif op_code in {2, 3}:  # D or N
-            current_pos = current_pos + _len
-        elif op_code == 1:  # I
-            insertion_list.append((current_pos, current_len, _len))
-            current_len = current_len + _len
-
-    if len(insertion_list) == 0:
-        return 0, "", 0
-
-    # sorted by insertion length
-    # if multiple insertions with the same size, choose the one with smallest reference position
-    ins_ref_pos, ins_read_pos, ins_length = sorted(
-        insertion_list, key=lambda x: x[2], reverse=True
-    )[0]
-    ins_seq = read.query_sequence[ins_read_pos : (ins_read_pos + ins_length)]
-    # update `ins_ref_pos` if insertion has adjacent N (100I500N)
-    pattern = re.compile(re.escape(f"{ins_length}I") + r"(\d+)N")
-
-    if ins_length >= insertion_length_cutoff:
-        mat = pattern.search(read.cigarstring)
-        if mat:
-            ins_ref_pos += int(mat.group(1))
-        return ins_ref_pos, ins_seq, ins_length
-    return 0, "", 0
-
-
-def cigarstring2cigartuples(cigarstring: str) -> list[tuple[int, int]]:
-    """Convert cigarstring to cigartuples.
-
-    :param cigarstring: cigarstring from reads
-    :return: cigartuples is a list of (operation, length) tuples, such as [(0, 30), (1, 20), (4, 5)]
-    """
-    cigar_dict = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5}
-    cigartuples = []
-    _cigartuples = re.findall(r"(\d+)(\w)", cigarstring)
-    for _, (length, operation) in enumerate(_cigartuples):
-        op_code = cigar_dict[operation]
-        _len = int(length)
-        cigartuples.append((op_code, _len))
-    return cigartuples
+    return rscannls.get_longest_insertion_sequence(
+        read.query_sequence,
+        read.cigarstring,
+        read.reference_start,
+        insertion_length_cutoff,
+    )

@@ -322,6 +322,7 @@ class Blat:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)
+
         try:
             blat_result = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
@@ -338,6 +339,7 @@ class Blat:
             ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
                 top_hsp, in_seq_len=len(insert_seq)
             )
+
             dummy_qualities = array.array("B", [40] * len(insert_seq))
             return flag, Insertion(
                 hit_num=1,

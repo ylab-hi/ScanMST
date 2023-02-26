@@ -355,7 +355,6 @@ class ReadsConnector:
                 start_read, read, same_strand, False, match_flag2
             )
         if match_flag2 and condition2:  # may same
-
             read.mode = 1
 
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
@@ -547,7 +546,6 @@ class ReadsConnector:
         self.reads_chain.append(start_read)
         flag = True
         if not self.candidate_nodes:  # []
-
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_mode_judge(start_read, end_read)
             _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
@@ -585,7 +583,7 @@ class ReadsConnector:
 
 
 def detect_read_read_connections_from_cigar(
-    read: AlignedSegment,
+    read: Any,
     mapq_cutoff: int,
     max_allowed_nm: int,
     blat: Blat,
@@ -727,6 +725,8 @@ def detect_read_read_connections_from_cigar(
     except KeyError:
         return noreturn
 
+    import sys
+
     # chimeric alignments for a chimeric read
     # a chimeric read can have multiple chimeric alignments
     chimeric_aln_list = []
@@ -802,15 +802,33 @@ def detect_read_read_connections_from_cigar(
                 )
             )
 
+    print(
+        f"DEBUGPRINT[22]: readConnector.py:814: chimeric_aln_list={chimeric_aln_list}",
+        file=sys.stderr,
+    )
+    print(
+        f"DEBUGPRINT[23]: readConnector.py:815: chimeric_aln={chimeric_aln}",
+        file=sys.stderr,
+    )
+    print(
+        f"DEBUGPRINT[24]: readConnector.py:815: mapq_list={mapq_list}", file=sys.stderr
+    )
+    print(
+        f"DEBUGPRINT[25]: readConnector.py:816: mapq_cutoff={mapq_cutoff}",
+        file=sys.stderr,
+    )
+
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
         max(mapq_list) < mapq_cutoff
     ):
+        print("here1")
         return noreturn
+
     elif is_reverse_transcription_artifacts(chimeric_aln_list):
         logger.debug(f"{chimeric_aln_list=} has reverse transcription artifacts")
         return noreturn
-    else:
 
+    else:
         read_connector = ReadsConnector(
             read_list=chimeric_aln_list, blat=blat, logger=logger
         )

@@ -153,6 +153,13 @@ def parse_splice_graph_for_cliques_par(
                     writers.write_series(series, ind)
 
 
+def get_bam_header(bam_path):
+    import pysam
+
+    bam = pysam.AlignmentFile(bam_path, "rb")
+    return bam.header.as_dict()
+
+
 def cli(options: Union[argparse.Namespace, DefaultOptions]):
     """Cli function."""
     start = time.perf_counter()
@@ -185,7 +192,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_series_list, in_bam_header, avg_cov = scanbam_run(
+        intact_series_list = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
@@ -209,7 +216,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             species=options.species,
         )
 
-        avg_cov = None if not options.bound else avg_cov
+        avg_cov = None
 
         intact_series_list_len = len(intact_series_list)
 
@@ -222,6 +229,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
         clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
         # cliques is generator
         cliques = clique_finder.find_clique()
+
+        in_bam_header = get_bam_header(options.input)
 
         writers = get_writers(options.output, options.ref, in_bam_header, logger)
 

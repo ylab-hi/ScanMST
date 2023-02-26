@@ -785,10 +785,6 @@ class Series:
         """Add event list as Node to self.nodes."""
         event_list = self.order_events_by_trancription_direction(event_list)
 
-        import ipdb
-
-        ipdb.set_trace()
-
         event_list_len = len(event_list)
         previous_breakpoint = None
         prev_sv_type = None

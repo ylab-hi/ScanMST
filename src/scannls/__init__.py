@@ -37,7 +37,7 @@ from .base.type import LoggerType
 from .base.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 from .cli.arg import DefaultOptions
 from .utils import (
-    cigarstring2cigartuples,
+    cigarstring2cigartuple,
     external_tool_checking,
     get_longest_insertion_sequence,
     get_softclip_length,
@@ -56,7 +56,7 @@ __all__ = [
     "detect_read_read_connections_from_cigar",
     "get_softclip_length",
     "get_longest_insertion_sequence",
-    "cigarstring2cigartuples",
+    "cigarstring2cigartuple",
     "SpliceGraph",
     "SpliceType",
     "SRRescuer",

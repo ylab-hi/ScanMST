@@ -44,9 +44,17 @@ class SRRescuer:
 
         :param logger: logger
         """
+
+        #  bam_file: &str,
+        #     min_mapq: usize,
+        #     min_soft_len: usize,
+        #     min_mismatch: usize,
+        #     min_identity: f32,
+        #     min_seq_align_len: usize,
+        #     average_read_depth: Option<usize>,
+        #
         self.rescuer = rscannls.Rescuer(
             bam_file=input_bam_file,
-            bam_thread=2,
             min_mapq=mapq_cutoff,
             min_soft_len=soft_len_cutoff,
             min_mismatch=mismatch_cutoff,
