@@ -12,6 +12,8 @@ import HTSeq
 import pyfaidx
 import pysam
 from pyfaidx import Fasta, FastaNotFoundError
+import rscannls
+from loguru import logger
 
 from .. import (
     Blat,
@@ -183,10 +185,20 @@ class Mrecord:
         # TTTGAGGTTTCTAAATACATTAAAGTTATTTCTTAAGAA;chr1,3847474,-,841S140M994N174M3513N127M4467N309M,60,0; chr1,3479514,+,746S77M221N102M534N13M1D46M1I606M,60,2
         aln_info_list = alignment_info.split(";")
 
+        if len(aln_info_list) < 2:
+            logger.warning(f"Invalid alignment info: {alignment_info}")
+            return None
+
         # chr1, 3479514, +, 746S77M221N102M534N13M1D46M1I606M,60,2
         read_info = aln_info_list.pop().split(",")
 
-        (sequence, is_supplementary, read_name) = aln_info_list.pop(0).split("-")
+        temp = aln_info_list.pop(0).split("-")
+
+        if len(temp) != 3:
+            logger.warning(f"Invalid alignment info: {alignment_info}")
+            return None
+
+        (sequence, is_supplementary, read_name) = temp
 
         record = cls(
             reference_name=read_info[0],
@@ -207,7 +219,7 @@ class Mrecord:
 
 
 def detect_sv_from_cigar_wrapper(
-    alignment_info,
+    read,
     mapq_cutoff,
     max_allowed_nm,
     splice_bin,
@@ -218,8 +230,6 @@ def detect_sv_from_cigar_wrapper(
     blat,
     logger,
 ):
-    read = Mrecord.from_alignment(alignment_info)
-
     return detect_sv_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
@@ -258,10 +268,6 @@ def scanbam_run(
     species,
 ):
     """Main function to run scanbam."""
-
-    import rscannls
-    from loguru import logger
-
     #       bam_path: &str,
     #       long_indel_threshold: usize,
     #       substitutions_threshold: usize,
@@ -312,8 +318,12 @@ def scanbam_run(
     nls_src_forms_list = []
 
     for alignment_info in result:
+        read = Mrecord.from_alignment(alignment_info)
+        if read is None:
+            continue
+
         event_lists, read_chains, num_added_reads = detect_sv_from_cigar_wrapper(
-            alignment_info=alignment_info,
+            read=read,
             mapq_cutoff=mapq_cutoff,
             max_allowed_nm=max_allowed_nm,
             splice_bin=splice_bin,
