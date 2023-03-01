@@ -863,6 +863,8 @@ class Series:
                             read_rt=read2,
                             lt_mode=insertion_mode,
                             rt_mode=event.mode2,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
