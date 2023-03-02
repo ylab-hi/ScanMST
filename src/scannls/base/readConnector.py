@@ -279,7 +279,7 @@ class ReadsConnector:
         :param is_compare_for_ms: is compare for ms
         """
         condition1, condition2 = False, False
-        self.logger.debug(f"{start_read.mode=}, {read.mode=}")
+        self.logger.debug(f"{start_read.mode=}, {read.mode=}, {start_read.query_name=}")
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
         if not is_compare_for_ms:  # one hop
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)

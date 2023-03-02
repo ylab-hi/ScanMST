@@ -182,7 +182,8 @@ class Mrecord:
 
     @classmethod
     def from_alignment(cls, alignment_info):
-        # TTTGAGGTTTCTAAATACATTAAAGTTATTTCTTAAGAA;chr1,3847474,-,841S140M994N174M3513N127M4467N309M,60,0; chr1,3479514,+,746S77M221N102M534N13M1D46M1I606M,60,2
+        # TTTGAGGTTTCTAAATACATTAAAGTTATTTCTTAAGAA-false-name;chr1,3847474,-,841S140M994N174M3513N127M4467N309M,60,0; chr1,3479514,+,746S77M221N102M534N13M1D46M1I606M,60,2
+        logger.warning(f"{alignment_info=}")
         aln_info_list = alignment_info.split(";")
 
         if len(aln_info_list) < 2:
@@ -206,7 +207,7 @@ class Mrecord:
             cigarstring=read_info[3],
             mapping_quality=int(read_info[4]),
             is_reverse=True if read_info[2] == "-" else False,
-            query_sequence=aln_info_list[0],
+            query_sequence=sequence,
         )
 
         record.is_supplementary = False
@@ -214,6 +215,8 @@ class Mrecord:
 
         record.set_tag("SA", ";".join(aln_info_list) + ";")
         record.set_tag("NM", int(read_info[5]))
+
+        logger.debug(f"{record.query_sequence=}")
 
         return record
 
