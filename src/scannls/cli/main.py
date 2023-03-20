@@ -1,16 +1,8 @@
 """Module contains the main function of the draft scannls."""
-from asyncio import threads
-import copy
-import inspect
-import math
-import re
-from itertools import chain
-from pathlib import Path
 from typing import Any
 
 import HTSeq
 import pyfaidx
-import pysam
 from pyfaidx import Fasta, FastaNotFoundError
 import rscannls
 from loguru import logger

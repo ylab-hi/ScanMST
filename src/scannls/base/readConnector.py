@@ -716,8 +716,6 @@ def detect_read_read_connections_from_cigar(
         return is_artifact
 
     noreturn = [], {}, 0  # type: ignore
-    if read.is_supplementary:
-        return noreturn
 
     # if no 'SA' tag was found, read-to-read chain will be empty
     try:
@@ -802,26 +800,9 @@ def detect_read_read_connections_from_cigar(
                 )
             )
 
-    print(
-        f"DEBUGPRINT[22]: readConnector.py:814: chimeric_aln_list={chimeric_aln_list}",
-        file=sys.stderr,
-    )
-    print(
-        f"DEBUGPRINT[23]: readConnector.py:815: chimeric_aln={chimeric_aln}",
-        file=sys.stderr,
-    )
-    print(
-        f"DEBUGPRINT[24]: readConnector.py:815: mapq_list={mapq_list}", file=sys.stderr
-    )
-    print(
-        f"DEBUGPRINT[25]: readConnector.py:816: mapq_cutoff={mapq_cutoff}",
-        file=sys.stderr,
-    )
-
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
         max(mapq_list) < mapq_cutoff
     ):
-        print("here1")
         return noreturn
 
     elif is_reverse_transcription_artifacts(chimeric_aln_list):
