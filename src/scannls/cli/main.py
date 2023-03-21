@@ -174,7 +174,8 @@ class Mrecord:
 
     @classmethod
     def from_alignment(cls, alignment_info):
-        # TTTGAGGTTTCTAAATACATTAAAGTTATTTCTTAAGAA-false-name;chr1,3847474,-,841S140M994N174M3513N127M4467N309M,60,0; chr1,3479514,+,746S77M221N102M534N13M1D46M1I606M,60,2
+        # TCCCTCCTCTTTTACACACACTCTC-false-23_5;chr15,65599929,-,60,300M2092S,0;chr15,65394410,-,60,300S138M545N165M491N414M670N156M3816N141M1404N137M7690N142M700N351M10575N448M,0'
+
         logger.warning(f"{alignment_info=}")
         aln_info_list = alignment_info.split(";")
 

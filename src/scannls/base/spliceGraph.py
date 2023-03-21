@@ -23,6 +23,8 @@ from .mergeCondition import (
 )
 from .srRescuer import SRRescuer
 from .type import LoggerType
+from .plotGraph import export_graph
+from pathlib import Path
 
 
 class SpliceType(Enum):
@@ -83,6 +85,8 @@ class SpliceGraph:
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
 
         self.prune()
+
+        export_graph(self, Path(f"graph_{clique_ind}.adj"))
 
         # trace path
         current_nodes_keys: set[str] = set()
@@ -264,7 +268,6 @@ class SpliceGraph:
             and node2.prev_breakpoint is not None
             and node2.next_breakpoint is not None
         ):  # both are middle nodes
-
             return (
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
                 and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
@@ -331,7 +334,6 @@ class SpliceGraph:
     ) -> None:
         """Check if the current node is added in graph and update a predecessor and successor."""
         if not current_node.is_merged:  # false
-
             current_node.is_in_graph = True  # check if node is in graph
             self.add_node_with_similar_key(current_node)
 
@@ -597,7 +599,6 @@ class SpliceGraph:
         Loser will be rule out.
         """
         for node_list in same_level_node_list:
-
             while node_list:
                 current_node = node_list.pop()
                 for other_node in node_list:

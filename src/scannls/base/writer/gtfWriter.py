@@ -177,9 +177,10 @@ def get_gtf_features_from_node(
     # last exon end position needs a correction if there is a microhomology.
     if node.strand == "+" and exons[-1][0] < exons[-1][1] - len(microhomology_sequence):
         exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
-    elif node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]:
+    elif (
+        node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]
+    ):
         exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
-
 
     node_sr = node.sr
     node_original_sr = node.original_sr

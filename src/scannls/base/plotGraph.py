@@ -10,15 +10,14 @@
 from typing import Any
 
 import networkx as nx
+from pathlib import Path
 
 from .basicClass import Node
 
 
 def get_label_from_node(node: Node) -> str:
     """Get label from node."""
-    return (
-        f"{node.chrom}_{node.ref_start}_{node.ref_end}:{node.sr}{node.is_start_node()}"
-    )
+    return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{node.sr}_{node.is_start_node()}_{node.sv_type}"
 
 
 def plot_graph_helper(
@@ -40,6 +39,20 @@ def plot_graph_helper(
         plot_graph_helper(
             successors, [*path, start_node], nx_graph, labels  # type: ignore
         )
+
+
+def export_graph(graph: Any, file_name: Path) -> None:
+    """Export graph."""
+    g = nx.DiGraph()
+    labels = {}
+    for start_node in graph.get_start_nodes():
+        if not start_node.successors:
+            g.add_node(get_label_from_node(start_node))
+        else:
+            labels.update({start_node: get_label_from_node(start_node)})
+            plot_graph_helper(start_node, [], g, labels)  # type: ignore
+
+    nx.write_adjlist(g, file_name)
 
 
 def plot_graph(graph: Any, figure_name: str, is_matplotlib=True) -> None:
