@@ -19,8 +19,10 @@ from typing import Any
 import psutil
 from Bio import SearchIO
 
-from ..blat import load_gfclient, load_gfserver
-from .basicClass import Insertion, NovelInsertion
+from ..blat import load_gfclient
+from ..blat import load_gfserver
+from .basicClass import Insertion
+from .basicClass import NovelInsertion
 from .type import LoggerType
 
 

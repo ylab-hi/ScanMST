@@ -5,12 +5,13 @@
 @Time:        12/30/21 15:00 PM
 """
 from collections.abc import Iterable
-from typing import Any, Optional
+from typing import Any
 
 import rscannls  # type: ignore
 
 from .basicClass import Node
-from .exception import ExonsNotFoundError, ModesNotFoundError
+from .exception import ExonsNotFoundError
+from .exception import ModesNotFoundError
 from .type import LoggerType
 
 
@@ -38,13 +39,12 @@ class SRRescuer:
         alignment_frac: float,
         node_rescued_sr_maximum: int,
         logger: LoggerType,
-        average_read_depth: Optional[int],
+        average_read_depth: int | None,
     ) -> None:
         """Initialize Rescuer.
 
         :param logger: logger
         """
-
         #  bam_file: &str,
         #     min_mapq: usize,
         #     min_soft_len: usize,
@@ -91,8 +91,8 @@ class SRRescuer:
 
     @staticmethod
     def obtain_region_for_rescue_sr(
-        strand: Optional[str],
-        chrom: Optional[str],
+        strand: str | None,
+        chrom: str | None,
         exons: Any,
         tgt_name: str,
         mode: int,

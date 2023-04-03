@@ -3,33 +3,18 @@ from typing import Any
 
 import HTSeq
 import pyfaidx
-from pyfaidx import Fasta, FastaNotFoundError
 import rscannls
 from loguru import logger
+from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
-from .. import (
-    Blat,
-    Event,
-    MyLogger,
-    ParallelWorker,
-    Series,
-    cigarstring2cigartuple,
-    detect_read_read_connections_from_cigar,
-    get_longest_insertion_sequence,
-    get_softclip_length,
-    reverse_complement,
-)
-
+from .. import Blat
+from .. import detect_read_read_connections_from_cigar
+from .. import Event
+from .. import Series
 from ..base.type import LoggerType
-from .helper import (
-    blat2chimeric_alignment,
-    extract_splice_sites,
-    get_transcriptome_length,
-    insertion2chimeric_alignment,
-    obtain_variants_stats,
-    strand_mode_checker,
-)
-
+from .helper import extract_splice_sites
+from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads
 
 
@@ -174,7 +159,8 @@ class Mrecord:
 
     @classmethod
     def from_alignment(cls, alignment_info):
-        # TCCCTCCTCTTTTACACACACTCTC-false-23_5;chr15,65599929,-,60,300M2092S,0;chr15,65394410,-,60,300S138M545N165M491N414M670N156M3816N141M1404N137M7690N142M700N351M10575N448M,0'
+        # TCCCTCCTCTTTTACACACACTCTC-false-23_5;chr15,65599929,-,60,300M2092S,0;chr15,65394410,
+        # -,60,300S138M545N165M491N414M670N156M3816N141M1404N137M7690N142M700N351M10575N448M,0'
 
         logger.warning(f"{alignment_info=}")
         aln_info_list = alignment_info.split(";")
@@ -199,7 +185,7 @@ class Mrecord:
             reference_start=int(read_info[1]),
             cigarstring=read_info[3],
             mapping_quality=int(read_info[4]),
-            is_reverse=True if read_info[2] == "-" else False,
+            is_reverse=read_info[2] == "-",
             query_sequence=sequence,
         )
 
@@ -268,7 +254,6 @@ def scanbam_run(
     #       long_indel_threshold: usize,
     #       substitutions_threshold: usize,
     #       substitutions_fraction_threshold: f32,
-    #       indels_fraction_threshold: f32
 
     collect_cigar_option = rscannls.CollectCigarOption(
         bam_path=in_bam_path,
@@ -287,7 +272,6 @@ def scanbam_run(
     #       insertion_alignment_diff_theshold: usize,
     #       softclip_length_threshold: usize,
     #       collect_cigar_option: PyCollectCigarOption,
-    #   )
     scan_bam_option = rscannls.ScanBamOption(
         bam_path=in_bam_path,
         fasta_path=ref_genome,

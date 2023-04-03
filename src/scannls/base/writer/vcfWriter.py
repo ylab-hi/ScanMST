@@ -8,20 +8,24 @@
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any, Union
+from typing import Any
+from typing import IO
 
-from pyfaidx import Fasta, FastaNotFoundError
+from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
 from .. import __version__
-from ..basicClass import MicroHomology, Node, NovelInsertion, Series, reverse_complement
-from ..exception import (
-    AnnotationCodeNotFoundError,
-    BreakpointNotFoundError,
-    ExonsNotFoundError,
-    GenesNotFoundError,
-    ModesNotFoundError,
-    SplicingCodeNotFoundError,
-)
+from ..basicClass import MicroHomology
+from ..basicClass import Node
+from ..basicClass import NovelInsertion
+from ..basicClass import reverse_complement
+from ..basicClass import Series
+from ..exception import AnnotationCodeNotFoundError
+from ..exception import BreakpointNotFoundError
+from ..exception import ExonsNotFoundError
+from ..exception import GenesNotFoundError
+from ..exception import ModesNotFoundError
+from ..exception import SplicingCodeNotFoundError
 from ..type import LoggerType
 from .writer import Writer
 
@@ -270,9 +274,7 @@ class VCFWriter(Writer):
         header_lines += self.get_contigs()
 
         for _id in VCFWriter.reserved_info:
-            _number: Union[str, int] = (
-                0 if VCFWriter.reserved_info[_id] == "Flag" else 1
-            )
+            _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
             if _id == "TRANSCRIPT_ID":
                 _number = "."
             header_lines.append(
@@ -380,10 +382,11 @@ def get_vcf_features_from_series(
                 microhomology_sequence += insertion.query_sequence
 
         # correct the breakpoint position in order to obtain a precise "sv_distance"
-        if current_node.strand == "+":
-            _pos1 = _pos1 - len(microhomology_sequence)
-        else:
-            _pos1 = _pos1 + len(microhomology_sequence)
+        _pos1 = (
+            _pos1 - len(microhomology_sequence)
+            if current_node.strand == "+"
+            else _pos1 + len(microhomology_sequence)
+        )
 
         sv_distance = abs(_pos1 - _pos2) if current_node.sv_type != "TRA" else 0
         _dp1 = (

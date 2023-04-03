@@ -12,23 +12,22 @@ import sys
 import tempfile
 import time
 from functools import partial
-from typing import Any, Union
+from typing import Any
 
 from loguru import logger
 
-from .. import (
-    Blat,
-    CliqueFinder,
-    FastaWriter,
-    GTFWriter,
-    LoggerType,
-    MyLogger,
-    ParallelWorker,
-    SpliceGraph,
-    VCFWriter,
-    Writers,
-)
-from ..utils import find_2bit_file, sleep
+from .. import Blat
+from .. import CliqueFinder
+from .. import FastaWriter
+from .. import GTFWriter
+from .. import LoggerType
+from .. import MyLogger
+from .. import ParallelWorker
+from .. import SpliceGraph
+from .. import VCFWriter
+from .. import Writers
+from ..utils import find_2bit_file
+from ..utils import sleep
 from .arg import DefaultOptions
 from .main import scanbam_run
 
@@ -55,10 +54,10 @@ def get_writers(
 def parse_splice_graph_for_cliques_seq(
     cliques: Any,
     writers: Writers,
-    options: Union[DefaultOptions, argparse.Namespace],
+    options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: Union[int, None] = None,
+    average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
     splice_graph = SpliceGraph.create_splice_graph(
@@ -88,9 +87,9 @@ def parse_splice_graph_for_cliques_seq(
 
 def _parse_splice_graph_for_cliques_par(
     cliques: Any,
-    options: Union[DefaultOptions, argparse.Namespace],
+    options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
-    average_read_depth: Union[int, None],
+    average_read_depth: int | None,
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
@@ -121,10 +120,10 @@ def _parse_splice_graph_for_cliques_par(
 def parse_splice_graph_for_cliques_par(
     cliques: Any,
     writers: Writers,
-    options: Union[DefaultOptions, argparse.Namespace],
+    options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: Union[int, None] = None,
+    average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
     parallel_workers = ParallelWorker(
@@ -160,7 +159,7 @@ def get_bam_header(bam_path):
     return bam.header.as_dict()
 
 
-def cli(options: Union[argparse.Namespace, DefaultOptions]):
+def cli(options: argparse.Namespace | DefaultOptions):
     """Cli function."""
     start = time.perf_counter()
     # add logger

@@ -7,15 +7,15 @@
 @Time:        4/18/22 7:51 PM
 """
 from itertools import zip_longest
-from typing import Optional
 
-from .basicClass import BreakPoint, Node
+from .basicClass import BreakPoint
+from .basicClass import Node
 from .exception import ExonsNotFoundError
 
 
 def is_same_breakpoint(
-    breakpoint1: Optional[BreakPoint],
-    breakpoint2: Optional[BreakPoint],
+    breakpoint1: BreakPoint | None,
+    breakpoint2: BreakPoint | None,
     threshold: int,
 ) -> bool:
     """Check if two breakpoints are different.

@@ -6,13 +6,15 @@
 @Time:        1/19/22 7:59 PM
 """
 from itertools import combinations
-from typing import Any, Optional, Union
+from typing import Any
 
 import networkx as nx
 from networkx import find_cliques
 
 from ..utils import timeit
-from .basicClass import BreakPoint, Node, Series
+from .basicClass import BreakPoint
+from .basicClass import Node
+from .basicClass import Series
 from .exception import ExonsNotFoundError
 from .type import LoggerType
 
@@ -54,7 +56,7 @@ class Ruler:
     @staticmethod
     def breakpoints_distance(
         sv_type1: str, sv_type2: str, bp1: BreakPoint, bp2: BreakPoint
-    ) -> Union[float, int]:
+    ) -> float | int:
         """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
 
         :param sv_type1: sv_type of breakpoint1
@@ -175,8 +177,8 @@ class Ruler:
     def __decide_flag(
         left_query_node: Node,
         right_query_node: Node,
-        left_subject_node: Optional[Node],
-        right_subject_node: Optional[Node],
+        left_subject_node: Node | None,
+        right_subject_node: Node | None,
     ) -> Any:
         """Decide the flag.
 

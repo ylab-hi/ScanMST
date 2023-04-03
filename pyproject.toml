@@ -77,6 +77,7 @@ scannls = "scannls.__main__:main"
 [tool.poetry.group.dev.dependencies]
 codespell = "^2.2.2"
 ipdb = "^0.13.11"
+isort = "^5.12.0"
 
 [tool.mypy]
 strict = false
@@ -96,17 +97,20 @@ exclude_dirs = ['tests']
 skips = ["B602", "B404", "B603"]
 
 
+[tool.isort]
+profile = "black"
+
 [tool.ruff]
-line-length = 120
-select = ["F", "E", "W", "C90", "I", "D", "UP", "N", "YTT",
+line-length = 130
+# select = ["F", "E", "W", "C90", "I", "D", "UP", "N", "YTT",
   # "ANN",/
   # "TID"
-  "S", "BLE",
-  # "FBT",
-  "B", "A" , "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLR", "PLW", "RUF"]
+  # "S", "BLE",
+  # "FBT", "PLR",
+  # "B", "A" , "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE",  "PLW", "RUF"]
 # select = ["B","B9","C","D","E","F","N","RST","S","W","C4","SIM","YTT"]
 exclude = ["cppext", "nls_inference.py"]
-extend-ignore = ["ANN001", "D203", "D213",  "UP007", "PGH003","EM102", "EM101", "S101", "PLR2004", "C901",
+ignore = ["ANN001", "D203", "D213",  "UP007", "PGH003","EM102", "EM101", "S101", "PLR2004", "C901",
   "A003",
   "B905",
   "FBT003",

@@ -8,11 +8,17 @@
 """
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any
+from typing import Any
+from typing import IO
 
-from pyfaidx import Fasta, FastaNotFoundError
+from pyfaidx import Fasta
+from pyfaidx import FastaNotFoundError
 
-from ..basicClass import MicroHomology, Node, NovelInsertion, Series, reverse_complement
+from ..basicClass import MicroHomology
+from ..basicClass import Node
+from ..basicClass import NovelInsertion
+from ..basicClass import reverse_complement
+from ..basicClass import Series
 from ..type import LoggerType
 from .writer import Writer
 

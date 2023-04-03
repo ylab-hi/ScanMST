@@ -7,10 +7,10 @@
 @license:     MIT Licence
 @Time:        1/28/22 8:46 PM
 """
+from pathlib import Path
 from typing import Any
 
 import networkx as nx
-from pathlib import Path
 
 from .basicClass import Node
 

@@ -4,11 +4,12 @@ import secrets
 import shutil
 import subprocess
 import time
-from collections.abc import Callable, Generator
+from collections.abc import Callable
+from collections.abc import Generator
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pysam
 import rscannls
@@ -40,7 +41,7 @@ def external_tool_checking(software: list[str], log_handler: LoggerType) -> None
 
 
 def find_2bit_file(
-    fasta_path: str, log_handler: LoggerType, parameter: Optional[list[str]]
+    fasta_path: str, log_handler: LoggerType, parameter: list[str] | None
 ) -> str:
     """Create 2bit file from fasta file.
 

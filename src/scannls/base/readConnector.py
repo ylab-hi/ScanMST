@@ -11,7 +11,6 @@ from typing import Any
 
 from Bio import SearchIO
 from loguru import logger
-from pysam import AlignedSegment
 
 from ..cli.helper import cigar_validity
 from .basicClass import reverse_complement
@@ -722,8 +721,6 @@ def detect_read_read_connections_from_cigar(
         chimeric_aln = read.get_tag("SA")[:-1].split(";")  # type: ignore
     except KeyError:
         return noreturn
-
-    import sys
 
     # chimeric alignments for a chimeric read
     # a chimeric read can have multiple chimeric alignments

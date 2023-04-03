@@ -7,7 +7,7 @@
 @Time:        1/9/22 12:13 PM
 """
 from enum import IntEnum
-from typing import Any, Optional
+from typing import Any
 
 from scannls import cppext
 
@@ -121,7 +121,7 @@ class Read:
         indel_size: int,
         cigartuples_without_soft: list[int],
         query_length: int,
-        query_qualities: Optional[list[int]] = None,
+        query_qualities: list[int] | None = None,
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name

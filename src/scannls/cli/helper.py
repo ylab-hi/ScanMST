@@ -10,7 +10,6 @@ import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import pysam  # type: ignore
 import yaml  # type: ignore
-
 from scannls import cppext
 
 from .. import __PACKAGE_NAME__
@@ -579,7 +578,6 @@ def obtain_insertion_surrouding_cigarstrings(
 
 def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
     """Obtain the read segment length providing CIGAR string."""
-
     parse_result = cppext.parseCigar(cigar_str)
     cigartuples = parse_result.cigartuples
     read_seg_len = 0
@@ -622,7 +620,6 @@ def insertion2chimeric_alignment(
     :param align_len_threshold: the threshold of the insertion sequence length
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
     """
-
     # NOTE:  <02-12-23, Yangyang Li>
     read_strand = "-" if read.is_reverse else "+"
     if read_strand == "-":

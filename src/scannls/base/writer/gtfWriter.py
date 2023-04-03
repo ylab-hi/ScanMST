@@ -7,9 +7,13 @@
 @Time:        1/30/22 6:18 PM
 """
 from functools import singledispatchmethod
-from typing import IO, Any
+from typing import Any
+from typing import IO
 
-from ..basicClass import MicroHomology, Node, NovelInsertion, Series
+from ..basicClass import MicroHomology
+from ..basicClass import Node
+from ..basicClass import NovelInsertion
+from ..basicClass import Series
 from ..exception import ExonsNotFoundError
 from ..type import LoggerType
 from .writer import Writer

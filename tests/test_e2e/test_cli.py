@@ -10,7 +10,9 @@ import os
 from pathlib import Path
 
 import pytest
-from scannls import DefaultOptions, ToolNotFoundError, cli
+from scannls import cli
+from scannls import DefaultOptions
+from scannls import ToolNotFoundError
 
 
 @pytest.mark.parametrize(

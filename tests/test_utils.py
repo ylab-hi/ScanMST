@@ -4,7 +4,8 @@ import shutil
 
 import pytest
 from scannls import ToolNotFoundError
-from scannls.utils import external_tool_checking, get_softclip_length
+from scannls.utils import external_tool_checking
+from scannls.utils import get_softclip_length
 
 
 class FakeRead:

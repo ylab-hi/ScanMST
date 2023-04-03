@@ -5,10 +5,12 @@
 @license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any, Optional
+from typing import Any
+from typing import IO
 
 from ..basicClass import Series
 from ..type import LoggerType
@@ -25,7 +27,7 @@ class Writer(ABC):
         self.file_path = Path(file_path)
         if self.file_path.exists():
             self.logger.warning(f"{self.file_path} exists, will be overwritten.")
-        self.io: Optional[IO] = None
+        self.io: IO | None = None
 
     @abstractmethod
     def write_data(self, data_object: Any, object_id: int):

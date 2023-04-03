@@ -7,10 +7,12 @@
 """
 import pytest
 from loguru import logger
-from scannls import Node, SpliceGraph, SpliceType
+from scannls import Node
+from scannls import SpliceGraph
+from scannls import SpliceType
 
-from .. import assign_value_for_instance
 from . import add_edge_according_order
+from .. import assign_value_for_instance
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -304,6 +306,7 @@ def start_node_with_name_onetwo(graph_for_prun):
     for start_node in graph_for_prun.get_start_nodes():
         if start_node.query_name == "one,two":
             return start_node
+    return None
 
 
 @pytest.fixture(autouse=True)
@@ -312,6 +315,7 @@ def end_node_with_name_onetwo(graph_for_prun):
     for end_node in graph_for_prun.get_end_nodes():
         if end_node.query_name == "one,two":
             return end_node
+    return None
 
 
 @pytest.fixture(autouse=True)

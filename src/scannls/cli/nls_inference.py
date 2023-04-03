@@ -6,12 +6,10 @@ import HTSeq
 import pyfaidx
 
 from ..base.type import LoggerType
-from .helper import (
-    diff_chrom_diff_strand_handler,
-    diff_chrom_same_strand_handler,
-    same_chrom_diff_strand_handler,
-    same_chrom_same_strand_handler,
-)
+from .helper import diff_chrom_diff_strand_handler
+from .helper import diff_chrom_same_strand_handler
+from .helper import same_chrom_diff_strand_handler
+from .helper import same_chrom_same_strand_handler
 
 
 def infer_nls_from_connected_reads(
