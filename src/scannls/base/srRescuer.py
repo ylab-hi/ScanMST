@@ -6,6 +6,7 @@
 """
 from collections.abc import Iterable
 from typing import Any
+from typing import Optional
 
 import rscannls  # type: ignore
 
@@ -39,7 +40,7 @@ class SRRescuer:
         alignment_frac: float,
         node_rescued_sr_maximum: int,
         logger: LoggerType,
-        average_read_depth: int | None,
+        average_read_depth: Optional[int],
     ) -> None:
         """Initialize Rescuer.
 
@@ -91,8 +92,8 @@ class SRRescuer:
 
     @staticmethod
     def obtain_region_for_rescue_sr(
-        strand: str | None,
-        chrom: str | None,
+        strand: Optional[str],
+        chrom: Optional[str],
         exons: Any,
         tgt_name: str,
         mode: int,

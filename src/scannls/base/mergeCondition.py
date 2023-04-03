@@ -2,11 +2,12 @@
 """Merge condition.
 
 @Filename:    mergeCondition.py
-@contact:     li002252@umn.edu
+@contact:     yangyang.li@northwestern.edu
 @license:     MIT Licence
 @Time:        4/18/22 7:51 PM
 """
 from itertools import zip_longest
+from typing import Optional
 
 from .basicClass import BreakPoint
 from .basicClass import Node
@@ -14,8 +15,8 @@ from .exception import ExonsNotFoundError
 
 
 def is_same_breakpoint(
-    breakpoint1: BreakPoint | None,
-    breakpoint2: BreakPoint | None,
+    breakpoint1: Optional[BreakPoint],
+    breakpoint2: Optional[BreakPoint],
     threshold: int,
 ) -> bool:
     """Check if two breakpoints are different.

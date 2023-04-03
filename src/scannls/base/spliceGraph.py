@@ -15,6 +15,7 @@ from enum import auto
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from typing import Optional
 
 from .basicClass import BreakPoint
 from .basicClass import MicroHomology
@@ -127,7 +128,7 @@ class SpliceGraph:
         logger: LoggerType,
         prune_threshold: int,
         node_rescued_sr_maximum: int,
-        average_read_depth: int | None,
+        average_read_depth: Optional[int],
     ) -> "SpliceGraph":
         """Create splice graph."""
         rescuer = SRRescuer(
@@ -201,7 +202,7 @@ class SpliceGraph:
         for node in self:
             node.reset_trace_id()
 
-    def get_node_with_unique_key(self, unique_key: str) -> Node | None:
+    def get_node_with_unique_key(self, unique_key: str) -> Optional[Node]:
         """Get node with unique key.
 
         :param unique_key: unique key
@@ -542,8 +543,8 @@ class SpliceGraph:
 
     @staticmethod
     def _check_can_battle_condition(
-        breakpoint1: BreakPoint | None,
-        breakpoint2: BreakPoint | None,
+        breakpoint1: Optional[BreakPoint],
+        breakpoint2: Optional[BreakPoint],
         threshold: int,
     ) -> bool:
         """Check if two breakpoints are in the threshold.
@@ -782,7 +783,7 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     updated_node.update_sr(current_node.sr)
 
     if updated_node.insertion_info and isinstance(
-        updated_node.insertion_info[1], NovelInsertion | MicroHomology
+        updated_node.insertion_info[1], (NovelInsertion, MicroHomology)
     ):
         # update novel insertion ao or microhomology ao
         updated_node.insertion_info[1].increment_ao()

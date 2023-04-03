@@ -7,6 +7,7 @@
 """
 from itertools import combinations
 from typing import Any
+from typing import Optional
 
 import networkx as nx
 from networkx import find_cliques
@@ -56,7 +57,7 @@ class Ruler:
     @staticmethod
     def breakpoints_distance(
         sv_type1: str, sv_type2: str, bp1: BreakPoint, bp2: BreakPoint
-    ) -> float | int:
+    ) -> Optional[float]:
         """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
 
         :param sv_type1: sv_type of breakpoint1
@@ -177,8 +178,8 @@ class Ruler:
     def __decide_flag(
         left_query_node: Node,
         right_query_node: Node,
-        left_subject_node: Node | None,
-        right_subject_node: Node | None,
+        left_subject_node: Optional[Node],
+        right_subject_node: Optional[Node],
     ) -> Any:
         """Decide the flag.
 

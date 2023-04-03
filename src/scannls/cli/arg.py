@@ -10,6 +10,7 @@
 import argparse
 from dataclasses import dataclass
 from typing import Any
+from typing import Optional
 
 from scannls import __version__
 
@@ -66,7 +67,7 @@ class RichArgParser(argparse.ArgumentParser):
         pattern = re.compile(r"(?P<arg>-{1,2}[-|\w]+)")
         return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
 
-    def _print_message(self, message: str | None, file: Any = None) -> None:
+    def _print_message(self, message: Optional[str], file: Any = None) -> None:
         if message:
             self.console.print(self._color_message(message))
 

@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 from typing import Optional
+from typing import Union
 
 import pyfaidx
 from scannls import cppext
@@ -229,8 +230,8 @@ class BasicNode:
         self.merged_child_nodes: list[Node] = []
         self.merged_parent_nodes: list[Node] = []
 
-        self.next_node_in_series: Node | None = None
-        self.previous_node_in_series: Node | None = None
+        self.next_node_in_series: Optional[Node] = None
+        self.previous_node_in_series: Optional[Node] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
         self.sr: int = 1
@@ -355,7 +356,7 @@ class BreakPoint:
         return self.chrom, self.pos
 
     @classmethod
-    def from_str(cls, breakpoint_str: str | None) -> Optional["BreakPoint"]:
+    def from_str(cls, breakpoint_str: Optional[str]) -> Optional["BreakPoint"]:
         """Create BreakPoint object from string."""
         if breakpoint_str is None:
             return None
@@ -430,18 +431,18 @@ class Node(BasicNode):
 
     def __init__(
         self,
-        prev_bp: str | None = None,
-        next_bp: str | None = None,
-        strand: str | None = None,
-        chrom: str | None = None,
-        ref_start: int | None = None,
-        ref_end: int | None = None,
-        exons: list[Any] | None = None,
-        sv_type: str | None = None,
-        annot: int | None = None,
-        canonical: int | None = None,
-        modes: list[int] | None = None,
-        genes: tuple[str, str] | None = None,
+        prev_bp: Optional[str] = None,
+        next_bp: Optional[str] = None,
+        strand: Optional[str] = None,
+        chrom: Optional[str] = None,
+        ref_start: Optional[int] = None,
+        ref_end: Optional[int] = None,
+        exons: Optional[list[Any]] = None,
+        sv_type: Optional[str] = None,
+        annot: Optional[int] = None,
+        canonical: Optional[int] = None,
+        modes: Optional[list[int]] = None,
+        genes: Optional[tuple[str, str]] = None,
         query_name: str = "",
     ) -> None:
         """Initialize a Node object."""
@@ -451,8 +452,8 @@ class Node(BasicNode):
         self.query_name = query_name
         self.prev_breakpoint = BreakPoint.from_str(prev_bp)
         self.next_breakpoint = BreakPoint.from_str(next_bp)
-        self.prev_breakpoint_depth: int | None = None
-        self.next_breakpoint_depth: int | None = None
+        self.prev_breakpoint_depth: Optional[int] = None
+        self.next_breakpoint_depth: Optional[int] = None
         self.strand = strand
         self.ref_start = ref_start
         self.ref_end = ref_end
@@ -467,7 +468,7 @@ class Node(BasicNode):
         self.insertion_info = None
         self.unique_key = None
         self.is_polya = False
-        self.cigartuples_without_soft: list[int] | None = None
+        self.cigartuples_without_soft: Optional[list[int]] = None
 
     def __hash__(self) -> int:
         """Hash a node."""
@@ -1136,7 +1137,7 @@ class Event:
         self,
         flag: bool,
         new_node: Node,
-        insertion: Insertion | None | MicroHomology,
+        insertion: Union[Insertion, MicroHomology],
         is_update_insertion_info: bool = True,
     ) -> Node:
         """Update the common info the node in the front, and the common info includes.
