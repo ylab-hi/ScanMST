@@ -11,6 +11,7 @@ import typing
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
+from typing import Optional
 
 from pybind11.setup_helpers import build_ext
 from pybind11.setup_helpers import Pybind11Extension
@@ -105,7 +106,7 @@ def change_env(key: str, value: str):
     return decorator
 
 
-def get_files(path: Path | None, suffix: list[str]) -> typing.Iterator[str]:
+def get_files(path: Optional[Path], suffix: list[str]) -> typing.Iterator[str]:
     """Get bindings."""
     if isinstance(path, str):
         path = Path(path)
