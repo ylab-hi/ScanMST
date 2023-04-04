@@ -52,6 +52,62 @@ class SpliceType(Enum):
     backward = auto()
 
 
+class SvType(Enum):
+    TRA = auto()
+    DEL = auto()
+    TDUP = auto()
+    INV = auto()
+    IDUP = auto()
+
+    @classmethod
+    def from_str(cls, s):
+        if s == "TRA":
+            return cls.TRA
+        elif s == "DEL":
+            return cls.DEL
+        elif s == "TDUP":
+            return cls.TDUP
+        elif s == "INV":
+            return cls.INV
+        elif s == "IDUP":
+            return cls.IDUP
+        else:
+            raise ValueError("Invalid SV type: {}".format(s))
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
+
+class SV:
+    def __init__(
+        self, sv_type: SvType, break_point: BreakPoint, break_point_depth: int
+    ):
+        self.sv_type = sv_type
+        self.break_point = break_point
+        self.break_point_depth = break_point_depth
+
+    def __repr__(self):
+        return f"SV({self.sv_type=} {self.break_point=} {self.break_point_depth=})"
+
+
+class Edge:
+    def __init__(self, node1_key: str, node2_key: str, sv: SV):
+        self.node1_key = node1_key
+        self.node2_key = node2_key
+        self.data = sv
+        self.read_ids = []
+
+    @property
+    def key(self):
+        return f"{self.node1_key}-{self.node2_key}"
+
+    def add_read_id(self, read_id: str):
+        self.read_ids.append(read_id)
+
+
 class SpliceGraph:
     """SpliceGraph class is used to trace the path of the splice graph."""
 
@@ -92,6 +148,7 @@ class SpliceGraph:
 
         del series_list  # remove reference to series_list
         self.nodes: dict[str, list[Node]] = self.dict_factory()
+        self.edges: dict[str, Edge] = self.dict_factory()
         # construct splice graph
         self.construct()
         # sr rescuer
