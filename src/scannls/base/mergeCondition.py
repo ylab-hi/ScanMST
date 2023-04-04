@@ -75,7 +75,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
 def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     node1: Node,
     node2: Node,
-    threshold: float = 0.8,
+    threshold: float = 0.5,
 ) -> bool:
     """Check if node1 and node2 can be merged based on overlap info.
 
@@ -116,15 +116,11 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
         )
         if condition:
             overlap_len = node1_last_exon_end - node2_first_exon_start
-            node1_mean_overlap_ratio = overlap_len / (
-                node1_last_exon_end - node1_first_exon_start
-            )
-            node2_mean_overlap_ratio = overlap_len / (
-                node2_last_exon_end - node2_first_exon_start
-            )
-            return (
-                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
-            )
+            union_len = node2_last_exon_end - node1_first_exon_start
+
+            overlap_len / (node1_last_exon_end - node1_first_exon_start)
+            overlap_len / (node2_last_exon_end - node2_first_exon_start)
+            return overlap_len / union_len >= threshold
     else:
         condition = (
             node2_first_exon_start
@@ -134,15 +130,11 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
         )
         if condition:
             overlap_len = node2_last_exon_end - node1_first_exon_start
-            node1_mean_overlap_ratio = overlap_len / (
-                node1_last_exon_end - node1_first_exon_start
-            )
-            node2_mean_overlap_ratio = overlap_len / (
-                node2_last_exon_end - node2_first_exon_start
-            )
-            return (
-                0.5 * (node1_mean_overlap_ratio + node2_mean_overlap_ratio) >= threshold
-            )
+            union_len = node2_last_exon_end - node1_first_exon_start
+
+            overlap_len / (node1_last_exon_end - node1_first_exon_start)
+            overlap_len / (node2_last_exon_end - node2_first_exon_start)
+            return overlap_len / union_len >= threshold
 
     return False
 

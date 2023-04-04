@@ -7,17 +7,54 @@
 """
 from itertools import combinations
 from typing import Any
-from typing import Optional
 
 import networkx as nx
-from networkx import find_cliques
+from networkx import connected_components
 
 from ..utils import timeit
-from .basicClass import BreakPoint
 from .basicClass import Node
 from .basicClass import Series
-from .exception import ExonsNotFoundError
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode,
+)
+from .mergeCondition import (
+    _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
+)
 from .type import LoggerType
+
+
+def middle_node_signature(node: Node) -> str:
+    """Middle node signature using chrom, exons and strand."""
+    chrom = node.chrom
+    exons = node.exons
+    strand = node.strand
+    exons_string = map(lambda x: f"{x[0]}-{x[1]}", exons)
+
+    return f"{chrom}:{';'.join(exons_string)};{strand}"
+
+
+def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
+    node_list1: list[Node], node_list2: list[Node]
+) -> bool:
+    """Check if two node list of middle nodes have shared node or not.
+    :param node_list1:  node_list1
+    :param node_list2:  node_list2
+    :return:  True if two node list have shared node, otherwise False
+    """
+    shared_middle_nodes = set(map(middle_node_signature, node_list1)) & set(
+        map(middle_node_signature, node_list2)
+    )
+
+    return len(shared_middle_nodes) > 0
 
 
 class Ruler:
@@ -26,204 +63,17 @@ class Ruler:
     using longer one as the reference
     """
 
-    def __init__(self, logger: LoggerType) -> None:
+    def __init__(self, logger: LoggerType, prune_threshold: int = 10) -> None:
         """Initialize Ruler.
 
         :param logger: logger
         """
         self.logger = logger
+        self.prune_threshold = prune_threshold
 
     def __repr__(self):
         """Represent Ruler."""
         return f"{self.__class__.__name__}()"
-
-    @staticmethod
-    def obtain_breakpoint_pairs(series: Series) -> list:
-        """Generate breakpoint pairs from a series.
-
-        :param series: a series
-        :type series: Series object
-        :return: a list of breakpoint pairs
-        :rtype: list
-        """
-        breakpoints_pairs = []
-        for idx in range(len(series) - 1):
-            _sv_type = series[idx].sv_type
-            _bp1 = series[idx].next_breakpoint
-            _bp2 = series[idx + 1].prev_breakpoint
-            breakpoints_pairs.append((_sv_type, _bp1, _bp2))
-        return breakpoints_pairs
-
-    @staticmethod
-    def breakpoints_distance(
-        sv_type1: str, sv_type2: str, bp1: BreakPoint, bp2: BreakPoint
-    ) -> Optional[float]:
-        """Calculate breakpoint distance sv_type1,chrA:pos1 VS sv_type2,chrB:pos2.
-
-        :param sv_type1: sv_type of breakpoint1
-        :param sv_type2: sv_type of breakpoint2
-        :param bp1: breakpoint1
-        :param bp2: breakpoint2
-        :return: calculated breakpoint distance
-        """
-        if sv_type1 != sv_type2:
-            return float("inf")
-
-        return abs(bp1.pos - bp2.pos) if bp1.chrom == bp2.chrom else float("inf")
-
-    @staticmethod
-    def first_node_last_node_distance(first_node: Node, last_node: Node) -> float:
-        """Calculate distance between first node of Series A and last node of Series B.
-
-        :param first_node: the first node of Series A
-        :param last_node: the last node of Series B
-        :return: calculated breakpoint distance
-
-        ..note::
-                         [x]-[x]-[x]-[x]
-             [x]-[x]-[x]-[x]
-             * The output distance will be [0, 1]
-        """
-        if first_node.exons is None or last_node.exons is None:
-            raise ExonsNotFoundError(
-                f"{first_node.query_name} or {last_node.query_name}"
-            )
-
-        _ft_strand = first_node.strand
-        _lt_strand = last_node.strand
-
-        if _ft_strand != _lt_strand:
-            return 1.0
-
-        #       [xxxx]-->--
-        # -->--[xxxx]
-        first_node_first_exon_start = first_node.exons[0][0]
-        first_node_last_exon_end = first_node.exons[-1][1]
-        last_node_first_exon_start = last_node.exons[0][0]
-        last_node_last_exon_end = last_node.exons[-1][1]
-
-        if _ft_strand == _lt_strand == "+":
-            if (
-                last_node_first_exon_start
-                <= first_node_first_exon_start
-                < last_node_last_exon_end
-                <= first_node_last_exon_end
-            ):
-                overlapped_len = last_node_last_exon_end - first_node_first_exon_start
-
-                _ft_cov = overlapped_len / (
-                    first_node_last_exon_end - first_node_first_exon_start
-                )
-                _lt_cov = overlapped_len / (
-                    last_node_last_exon_end - last_node_first_exon_start
-                )
-                return 1 - (_ft_cov + _lt_cov) / 2
-
-        #  --<--[xxxx]
-        #         [xxxx]--<--
-        elif (
-            first_node_first_exon_start
-            <= last_node_first_exon_start
-            < first_node_last_exon_end
-            <= last_node_last_exon_end
-        ):
-            overlapped_len = first_node_last_exon_end - last_node_first_exon_start
-
-            _ft_cov = overlapped_len / (
-                first_node_last_exon_end - first_node_first_exon_start
-            )
-            _lt_cov = overlapped_len / (
-                last_node_last_exon_end - last_node_first_exon_start
-            )
-
-            return 1 - (_ft_cov + _lt_cov) / 2
-
-        return 1.0
-
-    @staticmethod
-    def breakpoint_pairs_distance(bp_pair1: list, bp_pair2: list) -> float:
-        """Calculate breakpoint distance.
-
-        :param bp_pair1: breakpoint pair list 1: [(sv_type, bp1, bp2), ...]
-        :param bp_pair2: breakpoint pair list 2: [(sv_type, bp1, bp2), ...]
-        :return: calculated breakpoint distance
-
-        .. note::
-            len(bp_pair1) == len(bp_pair2) should be always true
-            The output distance will be [0, 1]
-        """
-        normalization_factor = 100
-        distance_list = []
-        effect_num_pair = 0
-        for i, j in zip(bp_pair1, bp_pair2):
-            a_sv_type, a_bp1, a_bp2 = i
-            b_sv_type, b_bp1, b_bp2 = j
-            if a_sv_type != "NA" and b_sv_type != "NA":
-                distance_list.extend(
-                    (
-                        Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp1, b_bp1),
-                        Ruler.breakpoints_distance(a_sv_type, b_sv_type, a_bp2, b_bp2),
-                    )
-                )
-
-                effect_num_pair += 1
-
-        ave_distance = (
-            sum(distance_list) / (effect_num_pair * 2) if effect_num_pair > 0 else 100
-        )
-
-        return ave_distance / normalization_factor
-
-    @staticmethod
-    def __decide_flag(
-        left_query_node: Node,
-        right_query_node: Node,
-        left_subject_node: Optional[Node],
-        right_subject_node: Optional[Node],
-    ) -> Any:
-        """Decide the flag.
-
-        :param left_query_node: left query node
-        :param right_query_node: right query node
-        :param left_subject_node: left subject node
-        :param right_subject_node: right subject node
-        :return: flag
-        """
-        if left_subject_node is None and right_subject_node is None:
-            return True
-
-        condtion1 = lambda: (  # noqa: E731
-            (
-                left_query_node.strand == left_subject_node.strand == "+"  # type: ignore
-                and left_query_node.exons[0][0] >= left_subject_node.exons[0][0]  # type: ignore
-            )
-            or (
-                left_query_node.strand == left_subject_node.strand == "-"  # type: ignore
-                and left_query_node.exons[-1][1] <= left_subject_node.exons[-1][1]  # type: ignore
-            )
-        )
-
-        condtion2 = lambda: (  # noqa: E731
-            (
-                right_query_node.strand == right_subject_node.strand == "+"  # type: ignore
-                and right_query_node.exons[-1][1] <= right_subject_node.exons[-1][1]  # type: ignore
-            )
-            or (
-                right_query_node.strand == right_subject_node.strand == "-"  # type: ignore
-                and right_query_node.exons[0][0] >= right_subject_node.exons[0][0]  # type: ignore
-            )
-        )
-
-        if left_subject_node is not None and right_subject_node is not None:
-            return condtion1() and condtion2()
-
-        if left_subject_node is None:
-            return condtion2()
-
-        if right_subject_node is None:
-            return condtion1()
-
-        raise ValueError("Should not be here")
 
     def __call__(self, series_a: Series, series_b: Series) -> float:
         """Call Ruler to calculate the distance between two series.
@@ -240,64 +90,63 @@ class Ruler:
         """
         if len(series_a) < len(series_b):
             series_a, series_b = series_b, series_a
-        series_a_bp_pair = Ruler.obtain_breakpoint_pairs(series_a)
-        series_b_bp_pair = Ruler.obtain_breakpoint_pairs(series_b)
 
-        calculated_distance_list = []
+        head_node_a = series_a[0]
+        head_node_b = series_b[0]
 
-        """
-        ref:           [x]-[x]-[x]-[x]
-        query: [x]-[x]-[x]
-        """
-        distance = Ruler.first_node_last_node_distance(series_a[0], series_b[-1])
-        calculated_distance_list.append(distance)
+        tail_node_a = series_a[-1]
+        tail_node_b = series_b[-1]
 
-        """
-        ref:     [O]-[x]-[x]-[x]-[x]-[O]
-        query1:  [x]-[x]-[x]
-        query2:      [x]-[x]-[x]
-        query3:          [x]-[x]-[x]
-        query4:              [x]-[x]-[x]
-        """
-        sliding_window_size = len(series_b_bp_pair)
-        for _ in range(sliding_window_size - 1):
-            _dummy_bp = "chrN:0"
-            series_a_bp_pair.insert(0, ("NA", _dummy_bp, _dummy_bp))
-            series_a_bp_pair.append(("NA", _dummy_bp, _dummy_bp))
+        middle_nodes_a = series_a[1:-1]
+        middle_nodes_b = series_b[1:-1]
+        connection = False
 
-        for i in range(len(series_a_bp_pair) - sliding_window_size + 1):
-            _subject_bp_pair = series_a_bp_pair[i : i + sliding_window_size]
-            left_query_node = series_b[0]
-            right_query_node = series_b[-1]
-
-            left_subject_node = (
-                series_a[i + 1 - sliding_window_size]
-                if i >= sliding_window_size
-                else None
+        if (
+            _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
+                head_node_a, head_node_b, self.prune_threshold
             )
+            or _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
+                tail_node_a, tail_node_b, self.prune_threshold
+            )
+            or _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+                head_node_a, tail_node_b
+            )
+            or _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+                head_node_b, tail_node_a
+            )
+            or _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
+                middle_nodes_a, middle_nodes_b
+            )
+        ):
+            connection = True
 
-            right_subject_node = None
-            if (
-                0
-                <= i
-                < len(series_a_bp_pair) - sliding_window_size + 1 - sliding_window_size
-            ):
-                right_subject_node = series_a[i + 1]
+        if not connection:
+            for _middle_node_b in middle_nodes_b:
+                if _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
+                    head_node_a, _middle_node_b
+                ):
+                    connection = True
+                    break
+                if _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+                    tail_node_a, _middle_node_b
+                ):
+                    connection = True
+                    break
 
-            if Ruler.__decide_flag(
-                left_query_node, right_query_node, left_subject_node, right_subject_node
-            ):
-                distance = Ruler.breakpoint_pairs_distance(
-                    series_b_bp_pair, _subject_bp_pair
-                )
-                calculated_distance_list.append(distance)
-        """
-         ref:    [x]-[x]-[x]-[x]
-         query:              [x]-[x]-[x]
-        """
-        distance = Ruler.first_node_last_node_distance(series_b[0], series_a[-1])
-        calculated_distance_list.append(distance)
-        return min(calculated_distance_list) if calculated_distance_list else 1.0
+            if not connection:
+                for _middle_node_a in middle_nodes_a:
+                    if _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
+                        head_node_b, _middle_node_a
+                    ):
+                        connection = True
+                        break
+                    if _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+                        tail_node_b, _middle_node_a
+                    ):
+                        connection = True
+                        break
+
+        return 0.0 if connection else 1.0
 
 
 class CliqueFinder:
@@ -409,5 +258,5 @@ class CliqueFinder:
         """
         self._create_graph_for_series()
 
-        for clique_index in find_cliques(self.graph):
+        for clique_index in connected_components(self.graph):
             yield (self.intact_series_list[i] for i in clique_index)
