@@ -33,7 +33,7 @@ pybind11 = "^2.10.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
-coverage = { extras = ["toml"], version = "^6.4" }
+coverage = { extras = ["toml"], version = "^7.2" }
 safety = "^2.1.1"
 mypy = "^0.991"
 typeguard = "^2.12.1"
@@ -45,7 +45,7 @@ flake8 = "^5.0.4"
 black = "^23.3"
 bandit = "^1.7.3"
 flake8-bandit = ">=4.1"
-flake8-bugbear = "^22.9.11"
+flake8-bugbear = "^23.3.12"
 flake8-docstrings = "^1.6.0"
 flake8-rst-docstrings = "^0.3.0"
 pep8-naming = "^0.13.2"
