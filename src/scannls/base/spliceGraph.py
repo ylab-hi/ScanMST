@@ -1,9 +1,7 @@
-# !/usr/bin/env python
 """Splice Graph.
 
 @Author:      YangyangLi
 @Filename:    spliceGraph.py
-@license:     MIT Licence
 @Time:        12/15/21 10:42 AM
 """
 import copy
@@ -42,6 +40,7 @@ from .srRescuer import SRRescuer
 from .type import LoggerType
 
 
+# NOTE: may be removed in the future  <04-17-23, Yangyang Li>
 class SpliceType(Enum):
     """Splice Type.
 
@@ -52,7 +51,7 @@ class SpliceType(Enum):
     backward = auto()
 
 
-class SvType(Enum):
+class VariationType(Enum):
     TRA = auto()
     DEL = auto()
     TDUP = auto()
@@ -81,20 +80,34 @@ class SvType(Enum):
         return self.name
 
 
-class SV:
+class Variation:
     def __init__(
-        self, sv_type: SvType, break_point: BreakPoint, break_point_depth: int
+        self, types: VariationType, break_point: BreakPoint, break_point_depth: int
     ):
-        self.sv_type = sv_type
+        self.types = types
         self.break_point = break_point
         self.break_point_depth = break_point_depth
 
     def __repr__(self):
-        return f"SV({self.sv_type=} {self.break_point=} {self.break_point_depth=})"
+        return f"Variation({self.types=} {self.break_point=} {self.break_point_depth=})"
 
 
 class Edge:
-    def __init__(self, node1_key: str, node2_key: str, sv: SV):
+    def __init__(self, node1_key: str, node2_key: str, sv: Variation) -> None:
+        """
+        Initializes a new instance of the Edge class.
+
+        Args:
+            node1_key (str): The key of the first node connected by the edge.
+            node2_key (str): The key of the second node connected by the edge.
+            sv (Variation): The data associated with the edge.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         self.node1_key = node1_key
         self.node2_key = node2_key
         self.data = sv
@@ -104,8 +117,25 @@ class Edge:
     def key(self):
         return f"{self.node1_key}-{self.node2_key}"
 
+    @staticmethod
+    def create_key_from_node(node1: Node, node2: Node) -> str:
+        if node1.unique_key is None and node2.unique_key is None:
+            raise ValueError("Both nodes have no unique key")
+        return f"{node1.unique_key}-{node2.unique_key}"
+
     def add_read_id(self, read_id: str):
         self.read_ids.append(read_id)
+
+    @classmethod
+    def from_nodes(cls, node1: Node, node2: Node, types: Variation):
+        if node1.unique_key is None and node2.unique_key is None:
+            raise ValueError("Both nodes have no unique key")
+        return cls(node1.unique_key, node2.unique_key, types)
+
+    @classmethod
+    def from_key(cls, edge_key: str, types: Variation):
+        node1_key, node2_key = edge_key.split("-")
+        return cls(node1_key, node2_key, types)
 
 
 class SpliceGraph:
@@ -152,11 +182,11 @@ class SpliceGraph:
         # construct splice graph
         self.construct()
         # sr rescuer
-        self.rescuer(self)
+        # self.rescuer(self)
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
 
-        self.prune()
+        # self.prune()
 
         export_graph(self, Path(f"graph_{clique_ind}.adj"))
 
@@ -175,7 +205,7 @@ class SpliceGraph:
                 )
 
     @classmethod
-    def create_splice_graph(
+    def create_graph(
         cls,
         input_bam: str,
         mapq: int,
@@ -200,6 +230,19 @@ class SpliceGraph:
         )
 
         return cls(logger, rescuer, prune_threshold)
+
+    def add_edge(self, node1: Node, node2: Node):
+        """Add edge from node1 -> node2"""
+        edge_key = Edge.create_key_from_node(node1, node2)
+
+        if self.edges.get(edge_key) is None:
+            var = Variation(
+                VariationType.from_str(node1.sv_type),
+                node1.next_breakpoint,
+                node1.next_breakpoint_depth,
+            )
+
+            self.edges[edge_key] = Edge.from_key(edge_key, var)
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in a graph.
@@ -296,9 +339,11 @@ class SpliceGraph:
             return False
 
         condition = (
+            # WARN:sv type does not belong to node <04-17-23, Yangyang Li yangyang.li@northwestern.edu>
             node1.sv_type == node2.sv_type
             and _check_insertion_conditions_for_compare(node1, node2)
         )
+
         if not condition:
             if (
                 node1.next_breakpoint is None and node2.prev_breakpoint is None
@@ -312,6 +357,7 @@ class SpliceGraph:
                 return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
                     node1, node2
                 )
+
         # condition is TRUE
         if (
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
@@ -344,6 +390,7 @@ class SpliceGraph:
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
                 and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
             )
+
         # swap node1 and node2 to check if they can be merged again
         return False
 
@@ -356,12 +403,13 @@ class SpliceGraph:
         :param node2: node2
         :return:
         """
-        flag1 = SpliceGraph._compare_is_merged_helper(node1, node2, threshold)
-        if flag1:
-            return flag1
-        flag2 = SpliceGraph._compare_is_merged_helper(node2, node1, threshold)
-        if flag2:
-            return flag2
+
+        if SpliceGraph._compare_is_merged_helper(node1, node2, threshold):
+            return True
+
+        if SpliceGraph._compare_is_merged_helper(node2, node1, threshold):
+            return True
+
         return False
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
@@ -382,6 +430,7 @@ class SpliceGraph:
             ):
                 current_node.is_merged = True
 
+                # TODO: change update strategy <04-17-23, Yangyang Li>
                 update_exon_coord_sr_svtype_breakpoints_name_mode(
                     similar_node_in_graph, current_node
                 )
@@ -395,7 +444,7 @@ class SpliceGraph:
                 # keeps in mind the next node in current series is not processed yet!!!!
                 # a -> b and b <- a
                 similar_node_in_graph.add_predecessor(
-                    current_node.previous_node_in_series
+                    current_node.previous_node_in_series, self
                 )
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
@@ -405,7 +454,7 @@ class SpliceGraph:
         merged_nodes_pool: set[Node],
     ) -> None:
         """Check if the current node is added in graph and update a predecessor and successor."""
-        if not current_node.is_merged:  # false
+        if not current_node.is_merged:
             current_node.is_in_graph = True  # check if node is in graph
             self.add_node_with_similar_key(current_node)
 
@@ -440,12 +489,18 @@ class SpliceGraph:
             # iterate all nodes in series
             for index, current_node in enumerate(series):
                 self.logger.trace(f"{current_node=}")
+
                 # add information about next and previous node in series to current node
                 current_node.update_next_and_previous_node_in_series(index, series)
+
                 # initialize and get unique key of current node and set node.unique_key
                 # if not set when you reach node.unique_key, will return None
                 _ = current_node.get_unique_key()
-                # get a similar key(chrom and intron) of current node
+
+                # get node identity mid, tail, head
+                current_node.update_identity()
+
+                # get a similar key(chrom and first intron) of current node
                 similar_key = current_node.similar_key
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
                     current_node, similar_key, merged_nodes_pool
@@ -454,6 +509,7 @@ class SpliceGraph:
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
                     current_node, similar_key, merged_nodes_pool
                 )
+
                 current_node.clear_next_and_previous_node_in_series()
 
     def _trace_forward(
@@ -804,6 +860,7 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
     :return: None
     """
     updated_node.exons, current_node.exons = current_node.exons, updated_node.exons
+
     updated_node._introns, current_node.exons = (
         current_node._introns,
         updated_node._introns,

@@ -114,12 +114,10 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
             < node1_last_exon_end
             <= node2_last_exon_end
         )
+
         if condition:
             overlap_len = node1_last_exon_end - node2_first_exon_start
             union_len = node2_last_exon_end - node1_first_exon_start
-
-            overlap_len / (node1_last_exon_end - node1_first_exon_start)
-            overlap_len / (node2_last_exon_end - node2_first_exon_start)
             return overlap_len / union_len >= threshold
     else:
         condition = (
@@ -131,9 +129,6 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
         if condition:
             overlap_len = node2_last_exon_end - node1_first_exon_start
             union_len = node2_last_exon_end - node1_first_exon_start
-
-            overlap_len / (node1_last_exon_end - node1_first_exon_start)
-            overlap_len / (node2_last_exon_end - node2_first_exon_start)
             return overlap_len / union_len >= threshold
 
     return False

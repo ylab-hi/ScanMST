@@ -8,6 +8,8 @@ from collections import Counter
 from collections.abc import Iterable
 from collections.abc import Iterator
 from dataclasses import dataclass
+from enum import auto
+from enum import Enum
 from typing import Any
 from typing import Optional
 from typing import Union
@@ -283,27 +285,33 @@ class BasicNode:
         """Return True if Insertion object has successor."""
         return bool(self.successors)
 
-    def add_successor_from_list(self, successors) -> None:
+    def add_successor_from_list(self, successors, graph=None) -> None:
         """Add successor from list of Insertion object."""
         for successor in successors:
-            self.add_successor(successor)
+            self.add_successor(successor, graph)
 
-    def add_predecessor_from_list(self, predecessors) -> None:
+    def add_predecessor_from_list(self, predecessors, graph=None) -> None:
         """Add predecessor from list of Insertion object."""
         for predecessor in predecessors:
-            self.add_predecessor(predecessor)
+            self.add_predecessor(predecessor, graph)
 
-    def _add_successor(self, successor) -> None:
+    def _add_successor(self, successor, graph=None) -> None:
         """Helper function to add successor to Insertion object."""
         self.successors.append(successor)
-        successor.add_predecessor(self)
+        if graph is not None:
+            graph.add_edge(self, successor)
 
-    def _add_predecessor(self, predecessor) -> None:
+        successor.add_predecessor(self, graph)
+
+    def _add_predecessor(self, predecessor, graph=None) -> None:
         """Helper function to add predecessor to Insertion object."""
         self.predecessors.append(predecessor)
-        predecessor.add_successor(self)
+        if graph is not None:
+            graph.add_edge(predecessor, self)
 
-    def add_successor(self, successor) -> None:
+        predecessor.add_successor(self, graph)
+
+    def add_successor(self, successor, graph=None) -> None:
         """Add successor to Insertion object."""
         if successor is not None and successor not in self.successors:
             if successor.is_in_graph:
@@ -311,16 +319,16 @@ class BasicNode:
             else:
                 self.add_successor_from_list(successor.merged_parent_nodes)
 
-    def add_predecessor(self, predecessor) -> None:
+    def add_predecessor(self, predecessor, graph=None) -> None:
         """Node must be in the graph if the function is called.
 
         :param predecessor: predecessor of Insertion object
         """
         if predecessor is not None and predecessor not in self.predecessors:
             if predecessor.is_in_graph:
-                self._add_predecessor(predecessor)
+                self._add_predecessor(predecessor, graph)
             else:
-                self.add_predecessor_from_list(predecessor.merged_parent_nodes)
+                self.add_predecessor_from_list(predecessor.merged_parent_nodes, graph)
 
     def update_next_and_previous_node_in_series(
         self, index: int, series: "Series"
@@ -362,6 +370,34 @@ class BreakPoint:
             return None
         chrom, pos = breakpoint_str.split(":")
         return cls(chrom, int(pos))
+
+
+class NodeIdentity(Enum):
+    HEAD = auto()
+    TAIL = auto()
+    MID = auto()
+
+    @classmethod
+    def from_str(cls, s) -> "NodeIdentity":
+        if s == "HEAD":
+            return cls.HEAD
+        elif s == "TAIL":
+            return cls.TAIL
+        elif s == "MID":
+            return cls.MID
+        else:
+            raise ValueError("Invalid value for NodeIdentity: {}".format(s))
+
+    @classmethod
+    def from_node(cls, node: "Node") -> "NodeIdentity":
+        if node.prev_breakpoint is not None and node.next_breakpoint is not None:
+            return cls.MID
+        elif node.prev_breakpoint is None:
+            return cls.HEAD
+        elif node.next_breakpoint is None:
+            return cls.TAIL
+        else:
+            raise ValueError("Invalid node identity: {}".format(node))
 
 
 class Node(BasicNode):
@@ -426,6 +462,7 @@ class Node(BasicNode):
         "is_polya",
         "_exon_repr",
         "cigartuples_without_soft",
+        "identity",
         *BasicNode.__slots__,
     )
 
@@ -466,9 +503,10 @@ class Node(BasicNode):
         self.annotation_code = annot
         self.splicing_code = canonical
         self.insertion_info = None
-        self.unique_key = None
+        self.unique_key: Optional[str] = None
         self.is_polya = False
         self.cigartuples_without_soft: Optional[list[int]] = None
+        self.identity: dict[str, NodeIdentity] = {}
 
     def __hash__(self) -> int:
         """Hash a node."""
@@ -551,6 +589,9 @@ class Node(BasicNode):
 
         self.unique_key = key
         return key
+
+    def update_identity(self):
+        self.identity[self.query_name] = NodeIdentity.from_node(self)
 
     def get_breakpoint_depth_pos(self, mode: int, direc: str) -> tuple[str, Any]:
         """Get update breakpoint depth and position of a node."""
@@ -786,6 +827,9 @@ class Series:
         motif_required,
     ) -> None:
         """Add event list as Node to self.nodes."""
+        if self.logger is None:
+            raise ValueError("Logger is not initialized")
+
         event_list = self.order_events_by_trancription_direction(event_list)
 
         event_list_len = len(event_list)

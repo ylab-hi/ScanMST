@@ -62,7 +62,7 @@ def parse_splice_graph_for_cliques_seq(
     average_read_depth: Optional[int] = None,
 ) -> None:
     """Parse splice graph for cliques."""
-    splice_graph = SpliceGraph.create_splice_graph(
+    splice_graph = SpliceGraph.create_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -98,7 +98,7 @@ def _parse_splice_graph_for_cliques_par(
 
     logger = MyLogger(f"PID-{os.getpid()}", logger)  # type: ignore
 
-    splice_graph = SpliceGraph.create_splice_graph(
+    splice_graph = SpliceGraph.create_graph(
         options.input,
         options.mapq,
         options.soft_len,
