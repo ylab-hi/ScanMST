@@ -1,5 +1,5 @@
-# !/usr/bin/env python
 """Merge condition.
+# !/usr/bin/env python
 
 @Filename:    mergeCondition.py
 @contact:     yangyang.li@northwestern.edu
@@ -7,35 +7,9 @@
 @Time:        4/18/22 7:51 PM
 """
 from itertools import zip_longest
-from typing import Optional
 
-from .basicClass import BreakPoint
 from .basicClass import Node
 from .exception import ExonsNotFoundError
-
-
-def is_same_breakpoint(
-    breakpoint1: Optional[BreakPoint],
-    breakpoint2: Optional[BreakPoint],
-    threshold: int,
-) -> bool:
-    """Check if two breakpoints are different.
-
-    :param breakpoint1:  breakpoint1
-    :param breakpoint2:  breakpoint2
-    :param threshold:  threshold for checking if two breakpoints are different
-    :return:  True if two breakpoints are different, otherwise False
-    """
-    if breakpoint1 is None or breakpoint2 is None:
-        raise ValueError("breakpoint1 or breakpoint2 is None")
-
-    if breakpoint1 == breakpoint2:
-        return True
-
-    if breakpoint1.chrom != breakpoint2.chrom:
-        return False
-
-    return abs(breakpoint1.pos - breakpoint2.pos) <= threshold
 
 
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
@@ -51,9 +25,6 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         node2:    []-[]
 
     """
-    if not is_same_breakpoint(node1.next_breakpoint, node2.next_breakpoint, threshold):
-        return False
-
     # no introns and breakpoints are same
     if not node1.introns and not node2.introns:
         return True
@@ -157,13 +128,6 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 
     # limit all introns
     if node1.introns != node2.introns:
-        return False
-
-    same_breakpoint = is_same_breakpoint(
-        node1.prev_breakpoint, node2.prev_breakpoint, threshold
-    )
-
-    if not same_breakpoint:
         return False
 
     node1_first_exon_start = node1.exons[0][0]

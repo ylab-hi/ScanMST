@@ -1,5 +1,4 @@
-"""Splice Graph.
-
+"""
 @Author:      YangyangLi
 @Filename:    spliceGraph.py
 @Time:        12/15/21 10:42 AM
@@ -91,9 +90,19 @@ class Variation:
     def __repr__(self):
         return f"Variation({self.types=} {self.break_point=} {self.break_point_depth=})"
 
+    @staticmethod
+    def equals(
+        variation1: "Variation", variation2: "Variation", threshold: int
+    ) -> bool:
+        return variation1.types == variation2.types and BreakPoint.equals(
+            variation1.break_point, variation2.break_point, threshold
+        )
+
 
 class Edge:
-    def __init__(self, node1_key: str, node2_key: str, sv: Variation) -> None:
+    def __init__(
+        self, node1_key: str, node2_key: str, variation: Variation, insertion: Any
+    ) -> None:
         """
         Initializes a new instance of the Edge class.
 
@@ -108,14 +117,28 @@ class Edge:
         Raises:
             None
         """
+        self.data = {}
+        self.read_ids = []
+        self.sr = 0
+
         self.node1_key = node1_key
         self.node2_key = node2_key
-        self.data = sv
-        self.read_ids = []
+
+        self.data[variation.__class__.__name__] = variation
+        self.data["insertion"] = insertion
 
     @property
     def key(self):
         return f"{self.node1_key}-{self.node2_key}"
+
+    @property
+    def insertion(self):
+        return self.data["insertion"]
+
+    @property
+    def variation(self):
+        """The foo property."""
+        return self.data["variation"]
 
     @staticmethod
     def create_key_from_node(node1: Node, node2: Node) -> str:
@@ -127,15 +150,33 @@ class Edge:
         self.read_ids.append(read_id)
 
     @classmethod
-    def from_nodes(cls, node1: Node, node2: Node, types: Variation):
+    def from_nodes(
+        cls,
+        node1: Node,
+        node2: Node,
+        types: Variation,
+        insertion,
+    ):
         if node1.unique_key is None and node2.unique_key is None:
             raise ValueError("Both nodes have no unique key")
-        return cls(node1.unique_key, node2.unique_key, types)
+        return cls(node1.unique_key, node2.unique_key, types, insertion)
 
     @classmethod
-    def from_key(cls, edge_key: str, types: Variation):
+    def from_key(cls, edge_key: str, types: Variation, insertion):
         node1_key, node2_key = edge_key.split("-")
-        return cls(node1_key, node2_key, types)
+        return cls(node1_key, node2_key, types, insertion)
+
+    @staticmethod
+    def equals(edge1: "Edge", edge2: "Edge", break_point_threshold: int) -> bool:
+        return (
+            edge1.key == edge2.key
+            and Variation.equals(
+                edge1.variation, edge2.variation, break_point_threshold
+            )
+            and _check_insertion_conditions_for_compare_insertion(
+                edge1.insertion, edge2.insertion
+            )
+        )
 
 
 class SpliceGraph:
@@ -178,7 +219,9 @@ class SpliceGraph:
 
         del series_list  # remove reference to series_list
         self.nodes: dict[str, list[Node]] = self.dict_factory()
-        self.edges: dict[str, Edge] = self.dict_factory()
+
+        self.edges: dict[str, list[Edge]] = defaultdict(list)
+
         # construct splice graph
         self.construct()
         # sr rescuer
@@ -235,14 +278,15 @@ class SpliceGraph:
         """Add edge from node1 -> node2"""
         edge_key = Edge.create_key_from_node(node1, node2)
 
-        if self.edges.get(edge_key) is None:
-            var = Variation(
-                VariationType.from_str(node1.sv_type),
-                node1.next_breakpoint,
-                node1.next_breakpoint_depth,
-            )
+        var = Variation(
+            VariationType.from_str(node1.sv_type),
+            node1.next_breakpoint,
+            node1.next_breakpoint_depth,
+        )
+        edge = Edge.from_key(edge_key, var, node1.insertion_info)
 
-            self.edges[edge_key] = Edge.from_key(edge_key, var)
+        if self.edges.get(edge_key) is None or edge not in self.edges[edge_key]:
+            self.edges[edge_key].append(edge)
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in a graph.
@@ -338,53 +382,47 @@ class SpliceGraph:
         if node1.strand != node2.strand:
             return False
 
-        condition = (
-            # WARN:sv type does not belong to node <04-17-23, Yangyang Li yangyang.li@northwestern.edu>
-            node1.sv_type == node2.sv_type
-            and _check_insertion_conditions_for_compare(node1, node2)
-        )
+        node1_self_identity = node1.self_identity()
+        node2_self_identity = node2.self_identity()
 
-        if not condition:
-            if (
-                node1.next_breakpoint is None and node2.prev_breakpoint is None
-            ):  # node1 is end node, node2 is start node
-                return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-                    node1, node2
-                )
-            elif (
-                node1.next_breakpoint is None and node2.next_breakpoint is not None
-            ):  # node1 is end node, node2 is middle node
-                return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-                    node1, node2
-                )
-
-        # condition is TRUE
         if (
-            node1.prev_breakpoint is None and node2.prev_breakpoint is None
+            node1_self_identity.is_tail() and node2_self_identity.is_head()
+        ):  # node1 is end node, node2 is start node
+            return (
+                _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+                    node1, node2
+                )
+            )
+        elif (
+            node1_self_identity.is_tail() and node2_self_identity.is_middle()
+        ):  # node1 is end node, node2 is middle node
+            return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+                node1, node2
+            )
+
+        elif (
+            node1_self_identity.is_head() and node2_self_identity.is_head()
         ):  # both are start nodes
             return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
                 node1, node2, threshold
             )
 
         elif (
-            node1.next_breakpoint is None and node2.next_breakpoint is None
+            node1_self_identity.is_tail() and node2_self_identity.is_tail()
         ):  # both are end nodes  # check first exon start
             return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
                 node1, node2, threshold
             )
 
         elif (
-            node1.prev_breakpoint is None and node2.prev_breakpoint is not None
+            node1_self_identity.is_head() and node2_self_identity.is_middle()
         ):  # node1 is start node, node2 is middle node
             return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
                 node1, node2
             )
 
         elif (
-            node1.prev_breakpoint is not None
-            and node1.next_breakpoint is not None
-            and node2.prev_breakpoint is not None
-            and node2.next_breakpoint is not None
+            node1_self_identity.is_middle() and node2_self_identity.is_middle()
         ):  # both are middle nodes
             return (
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
@@ -816,7 +854,6 @@ class SpliceGraph:
                         successor, [*path, start_node], group_paths, nodes_keys
                     )
             else:
-                # successor be [] or None
                 self._trace_forward_record_node_unique_keys(
                     successors,  # type: ignore
                     [*path, start_node],
@@ -837,35 +874,6 @@ def update_exon_coord_sr_svtype_breakpoints_name_mode(
     if updated_node.exons is None or current_node.exons is None:
         raise ValueError(f"{updated_node} or {current_node} has no exons")
 
-    # merge condition is true with same number of exons
-    if len(updated_node.exons) < len(current_node.exons):
-        _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
-            updated_node, current_node
-        )
-    else:
-        _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-            updated_node, current_node
-        )
-
-
-def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
-    updated_node: Node, current_node: Node
-) -> None:
-    """Update exon coordinates of the updated node based on the current node.
-
-    Two nodes with different number of exons
-
-    :param updated_node: node has been inserted into graph
-    :param current_node: node has not been inserted into graph
-    :return: None
-    """
-    updated_node.exons, current_node.exons = current_node.exons, updated_node.exons
-
-    updated_node._introns, current_node.exons = (
-        current_node._introns,
-        updated_node._introns,
-    )
-
     _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
         updated_node, current_node
     )
@@ -882,10 +890,12 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     :param current_node: node has not been inserted into graph
     :return: None
     """
+
     # update exon coordinates
     updated_node.ref_start = min(  # type: ignore
         updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
     )
+
     updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
     updated_node.ref_end = max(  # type: ignore
@@ -906,32 +916,27 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
         updated_node,
         current_node,
         (
-            "sv_type",
-            "prev_sv_type",
             "splicing_code",
             "annotation_code",
             "genes",
-            "prev_breakpoint",
-            "next_breakpoint",
             "modes",
         ),
     )
-    # update query name
+
+    # TODO: change to add update indentity
     updated_node.query_name += "," + current_node.query_name
 
 
-def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
-    """Check if node1 and node2 can be merged based on insertion info."""
-    flag = True
-    insertion_info1 = node1.insertion_info
-    insertion_info2 = node2.insertion_info
+def _check_insertion_conditions_for_compare_insertion(
+    insertion_info1, insertion_info2
+) -> bool:
     if insertion_info1 is None and insertion_info2 is None:
-        # When None = None
-        return flag
+        return True
+
     elif insertion_info1 is not None and insertion_info2 is not None:
         if insertion_info1[0] and insertion_info2[0]:
             # 1 hit insertion that is added in the series
-            return flag
+            return True
 
         if not insertion_info1[0] and not insertion_info2[0]:
             if (
@@ -942,13 +947,24 @@ def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
                     == insertion_info2[1].query_sequence
                 )
             ):
-                return flag
+                return True
+
             elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
                 insertion_info2[1], MicroHomology
             ):
                 return True
 
     return False
+
+
+def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
+    """Check if node1 and node2 can be merged based on insertion info."""
+    insertion_info1 = node1.insertion_info
+    insertion_info2 = node2.insertion_info
+
+    return _check_insertion_conditions_for_compare_insertion(
+        insertion_info1, insertion_info2
+    )
 
 
 def update_node_with_other_node(

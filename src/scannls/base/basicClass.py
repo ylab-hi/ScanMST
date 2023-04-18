@@ -371,6 +371,29 @@ class BreakPoint:
         chrom, pos = breakpoint_str.split(":")
         return cls(chrom, int(pos))
 
+    @staticmethod
+    def equals(
+        breakpoint1: Optional["BreakPoint"],
+        breakpoint2: Optional["BreakPoint"],
+        threshold: int,
+    ) -> bool:
+        """Check if two breakpoints are different.
+        :param breakpoint1:  breakpoint1
+        :param breakpoint2:  breakpoint2
+        :param threshold:  threshold for checking if two breakpoints are different
+        :return:  True if two breakpoints are different, otherwise False
+        """
+        if breakpoint1 is None or breakpoint2 is None:
+            raise ValueError("breakpoint1 or breakpoint2 is None")
+
+        if breakpoint1.chrom != breakpoint2.chrom:
+            return False
+
+        if breakpoint1 == breakpoint2:
+            return True
+
+        return abs(breakpoint1.pos - breakpoint2.pos) <= threshold
+
 
 class NodeIdentity(Enum):
     HEAD = auto()
@@ -398,6 +421,15 @@ class NodeIdentity(Enum):
             return cls.TAIL
         else:
             raise ValueError("Invalid node identity: {}".format(node))
+
+    def is_head(self) -> bool:
+        return self == NodeIdentity.HEAD
+
+    def is_tail(self) -> bool:
+        return self == NodeIdentity.TAIL
+
+    def is_mid(self) -> bool:
+        return self == NodeIdentity.MID
 
 
 class Node(BasicNode):
@@ -508,6 +540,13 @@ class Node(BasicNode):
         self.cigartuples_without_soft: Optional[list[int]] = None
         self.identity: dict[str, NodeIdentity] = {}
 
+        if (
+            self.query_name != ""
+            and self.prev_breakpoint is not None
+            and self.next_breakpoint is not None
+        ):
+            self.identity[self.query_name] = NodeIdentity.from_node(self)
+
     def __hash__(self) -> int:
         """Hash a node."""
         return (
@@ -529,6 +568,10 @@ class Node(BasicNode):
             f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
         )
+
+    def self_indentiy(self) -> NodeIdentity:
+        assert self.query_name != ""
+        return self.identity[self.query_name]
 
     @classmethod
     def create_nodes(cls, number):
