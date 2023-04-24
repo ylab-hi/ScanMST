@@ -285,50 +285,53 @@ class BasicNode:
         """Return True if Insertion object has successor."""
         return bool(self.successors)
 
-    def add_successor_from_list(self, successors, graph=None) -> None:
+    def add_successor_from_list(self, successors, graph, edge_data) -> None:
         """Add successor from list of Insertion object."""
         for successor in successors:
-            self.add_successor(successor, graph)
+            self.add_successor(successor, graph, edge_data)
 
-    def add_predecessor_from_list(self, predecessors, graph=None) -> None:
+    def add_predecessor_from_list(self, predecessors, graph, edge_data) -> None:
         """Add predecessor from list of Insertion object."""
         for predecessor in predecessors:
-            self.add_predecessor(predecessor, graph)
+            self.add_predecessor(predecessor, graph, edge_data)
 
-    def _add_successor(self, successor, graph=None) -> None:
+    def _add_successor(self, successor, graph, edge_data) -> None:
         """Helper function to add successor to Insertion object."""
         self.successors.append(successor)
+
         if graph is not None:
-            graph.add_edge(self, successor)
+            graph.add_edge(self, successor, edge_data)
 
-        successor.add_predecessor(self, graph)
+        successor.add_predecessor(self, graph, edge_data)
 
-    def _add_predecessor(self, predecessor, graph=None) -> None:
+    def _add_predecessor(self, predecessor, graph, edge_data) -> None:
         """Helper function to add predecessor to Insertion object."""
         self.predecessors.append(predecessor)
-        if graph is not None:
-            graph.add_edge(predecessor, self)
 
         predecessor.add_successor(self, graph)
 
-    def add_successor(self, successor, graph=None) -> None:
+    def add_successor(self, successor, graph=None, edge_data=None) -> None:
         """Add successor to Insertion object."""
         if successor is not None and successor not in self.successors:
             if successor.is_in_graph:
-                self._add_successor(successor)
+                self._add_successor(successor, graph, edge_data)
             else:
-                self.add_successor_from_list(successor.merged_parent_nodes)
+                self.add_successor_from_list(
+                    successor.merged_parent_nodes, graph, edge_data
+                )
 
-    def add_predecessor(self, predecessor, graph=None) -> None:
+    def add_predecessor(self, predecessor, graph=None, edge_data=None) -> None:
         """Node must be in the graph if the function is called.
 
         :param predecessor: predecessor of Insertion object
         """
         if predecessor is not None and predecessor not in self.predecessors:
             if predecessor.is_in_graph:
-                self._add_predecessor(predecessor, graph)
+                self._add_predecessor(predecessor, graph, edge_data)
             else:
-                self.add_predecessor_from_list(predecessor.merged_parent_nodes, graph)
+                self.add_predecessor_from_list(
+                    predecessor.merged_parent_nodes, graph, edge_data
+                )
 
     def update_next_and_previous_node_in_series(
         self, index: int, series: "Series"
@@ -495,6 +498,7 @@ class Node(BasicNode):
         "_exon_repr",
         "cigartuples_without_soft",
         "identity",
+        "read_names",
         *BasicNode.__slots__,
     )
 
@@ -539,6 +543,7 @@ class Node(BasicNode):
         self.is_polya = False
         self.cigartuples_without_soft: Optional[list[int]] = None
         self.identity: dict[str, NodeIdentity] = {}
+        self.read_names = [self.query_name]
 
         if (
             self.query_name != ""
@@ -592,8 +597,11 @@ class Node(BasicNode):
     @property
     def introns(self):
         """Get introns of a node."""
+
         if self._introns is not None:
             return self._introns
+
+        assert self.exons is not None
 
         if len(self.exons) <= 1:
             return []
