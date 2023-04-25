@@ -14,10 +14,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 from typing import Optional
+from typing import Union
 
 from .basicClass import BreakPoint
 from .basicClass import MicroHomology
 from .basicClass import Node
+from .basicClass import NodeIdentity
 from .basicClass import NovelInsertion
 from .basicClass import Series
 from .mergeCondition import (
@@ -326,6 +328,49 @@ class SpliceGraph:
         if not is_merged:
             self.edges[edge.key].append(edge)
 
+    def find_edges(self, node1: Node, node2: Node):
+        edge_key = Edge.create_key_from_node(node1, node2)
+        if self.edges.get(edge_key) is None:
+            raise KeyError(f"Edge {edge_key} not found in splice graph.")
+        else:
+            return self.edges[edge_key]
+
+    @staticmethod
+    def get_node_identity_base_edge(edge: Edge, node: Node) -> list[NodeIdentity]:
+        result = []
+        for read_id in edge.read_ids:
+            result.append(node.identity[read_id])
+        return result
+
+    @staticmethod
+    def determine_edge(previous_edge_node_identity, next_edge_node_identity) -> bool:
+        return not (
+            NodeIdentity.MID in previous_edge_node_identity
+            and NodeIdentity.MID in next_edge_node_identity
+        )
+
+    def get_possible_edges(
+        self, current_path: list[Union[Node, Edge]], current_node: Node, successor: Node
+    ) -> list[Edge]:
+        if not current_path:
+            return self.find_edges(current_node, successor)
+
+        previous_edge = current_path[-1]
+        assert isinstance(previous_edge, Edge)
+
+        previous_edge_node_identity = self.get_node_identity_base_edge(
+            previous_edge, current_node
+        )
+
+        possible_edges = []
+
+        for edge in self.find_edges(current_node, successor):
+            edge_node_identity = self.get_node_identity_base_edge(edge, current_node)
+            if self.determine_edge(previous_edge_node_identity, edge_node_identity):
+                possible_edges.append(edge)
+
+        return possible_edges
+
     def __contains__(self, node: Node) -> bool:
         """Check if node is in a graph.
 
@@ -572,6 +617,49 @@ class SpliceGraph:
 
                 current_node.clear_next_and_previous_node_in_series()
 
+    def _trace_forward2(
+        self,
+        start_node: Node,
+        trace_id: int,
+        path: list[Union[Node, Edge]],
+        group_paths: list[list[Union[Node, Edge]]],
+    ) -> None:
+        """Helper function to trace through graph and find all paths.
+
+        .. seealso::
+            :func:`SpliceGraph.trace`
+        """
+        if start_node in path:
+            self.logger.warning(
+                f"A circle is found in the graph {start_node} in {path}"
+            )
+
+        if not start_node or start_node in path:
+            # successor be [] or None
+            group_paths.append(path)
+
+        else:
+            if successors := start_node.successors:
+                for successor in successors:
+                    successor.set_trace_id(trace_id)
+
+                    # successor.set_harmoic_mean_sr(successor.sr)
+                    for edge in self.get_possible_edges(path, start_node, successor):
+                        self._trace_forward2(
+                            successor,
+                            trace_id + 1,
+                            [*path, start_node, edge],
+                            group_paths,
+                        )
+            else:
+                # successor be [] or None
+                self._trace_forward2(
+                    successors,  # type: ignore
+                    trace_id + 1,
+                    [*path, start_node],
+                    group_paths,
+                )
+
     def _trace_forward(
         self,
         start_node: Node,
@@ -651,7 +739,7 @@ class SpliceGraph:
         if direction == SpliceType.forward:
             for start_node in self.get_start_nodes():
                 start_node.set_trace_id(1)
-                start_node.set_harmoic_mean_sr(start_node.sr)
+                # start_node.set_harmoic_mean_sr(start_node.sr)
                 self._trace_forward(start_node, 2, [], [])
             return
         elif direction == SpliceType.backward:
@@ -663,6 +751,7 @@ class SpliceGraph:
 
         raise ValueError(f"{direction=} is not a valid direction[forward, backward]")
 
+    # TODO: change possible path <04-24-23, Yangyang Li yangyang.li@northwestern.edu>
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
         result_series_list = []
@@ -673,7 +762,7 @@ class SpliceGraph:
         for start_node in self.get_start_nodes():
             start_node.set_trace_id(1)
             group_paths: Any = []
-            self._trace_forward(start_node, 2, [], group_paths)
+            self._trace_forward2(start_node, 2, [], group_paths)
             result_series_list.extend(group_paths)
 
         return result_series_list
@@ -695,8 +784,8 @@ class SpliceGraph:
         Loser is out, and its sr, successors, predecessors are added to the winner.
         """
         winner.update_sr(loser.sr)
-        winner.add_successor_from_list(loser.successors)
-        winner.add_predecessor_from_list(loser.predecessors)
+        winner.add_successor_from_list(loser.successors, None, None)
+        winner.add_predecessor_from_list(loser.predecessors, None, None)
         update_node_with_other_node(
             winner,
             loser,

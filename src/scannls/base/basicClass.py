@@ -15,6 +15,7 @@ from typing import Optional
 from typing import Union
 
 import pyfaidx
+from loguru import logger
 from scannls import cppext
 
 from ..cli.helper import cigar_validity
@@ -774,6 +775,27 @@ class Series:
                 nodes_keys.add(key)
             series_instance.add_node(node)
         series_instance.disable_blat_logger()  # support parallel processing
+        return series_instance
+
+    @classmethod
+    def create_path_from_node_edge_list(
+        cls,
+        node_edge_list,
+    ):
+        series_instance = cls(None, logger)
+
+        for index in range(0, len(node_edge_list) - 1, 2):
+            current_node: Node = node_edge_list[index]
+            current_edge = node_edge_list[index + 1]
+
+            current_node.insertion_info = current_edge.insertion
+            current_node.sr = current_edge.sr
+            current_node.next_breakpoint = current_edge.variation.break_point
+            current_node.sv_type = str(current_edge.variation.types)
+            series_instance.add_node(current_node)
+
+        series_instance.add_node(node_edge_list[-1])
+
         return series_instance
 
     def __getitem__(self, index: int) -> Node:

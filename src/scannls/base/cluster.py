@@ -149,7 +149,7 @@ class Ruler:
         return 0.0 if connection else 1.0
 
 
-class CliqueFinder:
+class ClusterFinder:
     """Find cliques in a graph based on series level.
 
      which will help to construct splice graph base on nodes level in the future.
@@ -260,3 +260,6 @@ class CliqueFinder:
 
         for clique_index in connected_components(self.graph):
             yield (self.intact_series_list[i] for i in clique_index)
+
+
+# TODO: add duplication reduction and series mergement <04-24-23, Yangyang Li yangyang.li@northwestern.edu>
