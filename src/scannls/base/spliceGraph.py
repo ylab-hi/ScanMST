@@ -11,7 +11,6 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import auto
 from enum import Enum
-from pathlib import Path
 from typing import Any
 from typing import Optional
 from typing import Union
@@ -37,7 +36,7 @@ from .mergeCondition import (
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
-from .plotGraph import export_graph
+from .plotGraph import plot_graph
 from .srRescuer import SRRescuer
 from .type import LoggerType
 
@@ -99,6 +98,7 @@ class Variation:
         next_breakpoint_depth = (
             0 if node.next_breakpoint_depth is None else node.next_breakpoint_depth
         )
+
         return cls(
             VariationType.from_str(node.sv_type),
             node.next_breakpoint,
@@ -141,6 +141,11 @@ class Edge:
         self.node1_key = node1_key
         self.node2_key = node2_key
         self.edge_data = edge_data
+
+    def __repr__(self) -> str:
+        return (
+            f"Edge(variation={self.variation}, sr={self.sr}, read_ids={self.read_ids})"
+        )
 
     @property
     def key(self):
@@ -237,7 +242,7 @@ class SpliceGraph:
         self,
         series_list: Iterable[Series],
         clique_ind: int,
-        is_plot: bool = False,
+        is_plot: bool = True,
         is_check_circle: bool = False,
     ) -> Iterable[Series]:
         """Find a specific path based on splice graph.
@@ -269,7 +274,10 @@ class SpliceGraph:
 
         # self.prune()
 
-        export_graph(self, Path(f"graph_{clique_ind}.adj"))
+        # export_graph(self, Path(f"graph_{clique_ind}.adj"))
+
+        if is_plot:
+            plot_graph(self, f"_{clique_ind}", False)
 
         # trace path
         current_nodes_keys: set[str] = set()
@@ -337,18 +345,24 @@ class SpliceGraph:
             return self.edges[edge_key]
 
     @staticmethod
-    def get_node_identity_base_edge(edge: Edge, node: Node) -> list[NodeIdentity]:
-        result = []
+    def get_node_identity_base_edge(
+        edge: Edge, node: Node
+    ) -> dict[NodeIdentity, list[str]]:
+        result = defaultdict(list)
         for read_id in edge.read_ids:
-            result.append(node.identity[read_id])
+            result[node.identity[read_id]].append(read_id)
         return result
 
     @staticmethod
     def determine_edge(previous_edge_node_identity, next_edge_node_identity) -> bool:
-        return not (
-            NodeIdentity.MID in previous_edge_node_identity
-            and NodeIdentity.MID in next_edge_node_identity
-        )
+        previous_edge_read_id_mid = set(previous_edge_node_identity[NodeIdentity.MID])
+        next_edge_read_id_mid = set(next_edge_node_identity[NodeIdentity.MID])
+
+        if not previous_edge_read_id_mid and not next_edge_read_id_mid:
+            # two mid from different reads
+            return len(previous_edge_node_identity & next_edge_node_identity) > 0
+
+        return True
 
     def get_possible_edges(
         self, current_path: list[Union[Node, Edge]], current_node: Node, successor: Node
@@ -638,6 +652,10 @@ class SpliceGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
+
+        # import ipdb
+        # ipdb.set_trace()
+
         if start_node in path:
             self.logger.warning(
                 f"A circle is found in the graph {start_node} in {path}"
