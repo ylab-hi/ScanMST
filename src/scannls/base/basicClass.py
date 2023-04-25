@@ -300,7 +300,7 @@ class BasicNode:
         """Helper function to add successor to Insertion object."""
         self.successors.append(successor)
 
-        if graph is not None:
+        if graph is not None and edge_data is not None:
             graph.add_edge(self, successor, edge_data)
 
         successor.add_predecessor(self, graph, edge_data)
@@ -309,7 +309,7 @@ class BasicNode:
         """Helper function to add predecessor to Insertion object."""
         self.predecessors.append(predecessor)
 
-        predecessor.add_successor(self, graph)
+        predecessor.add_successor(self, graph, edge_data)
 
     def add_successor(self, successor, graph=None, edge_data=None) -> None:
         """Add successor to Insertion object."""
@@ -575,7 +575,8 @@ class Node(BasicNode):
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
         )
 
-    def self_indentiy(self) -> NodeIdentity:
+    @property
+    def self_identity(self) -> NodeIdentity:
         assert self.query_name != ""
         return self.identity[self.query_name]
 

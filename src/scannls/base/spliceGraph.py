@@ -96,11 +96,13 @@ class Variation:
     @classmethod
     def from_node(cls, node: Node):
         assert node.next_breakpoint is not None
-        assert node.next_breakpoint_depth is not None
+        next_breakpoint_depth = (
+            0 if node.next_breakpoint_depth is None else node.next_breakpoint_depth
+        )
         return cls(
             VariationType.from_str(node.sv_type),
             node.next_breakpoint,
-            node.next_breakpoint_depth,
+            next_breakpoint_depth,
         )
 
     @staticmethod
@@ -304,7 +306,6 @@ class SpliceGraph:
             mismatch,
             alignment_fraction,
             node_rescued_sr_maximum,
-            logger,
             average_read_depth,
         )
 
@@ -465,8 +466,8 @@ class SpliceGraph:
         if node1.strand != node2.strand:
             return False
 
-        node1_self_identity = node1.self_identity()
-        node2_self_identity = node2.self_identity()
+        node1_self_identity: NodeIdentity = node1.self_identity
+        node2_self_identity: NodeIdentity = node2.self_identity
         if (
             node1_self_identity.is_tail() and node2_self_identity.is_head()
         ):  # node1 is end node, node2 is start node
@@ -476,7 +477,7 @@ class SpliceGraph:
                 )
             )
         elif (
-            node1_self_identity.is_tail() and node2_self_identity.is_middle()
+            node1_self_identity.is_tail() and node2_self_identity.is_mid()
         ):  # node1 is end node, node2 is middle node
             return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
                 node1, node2
@@ -486,7 +487,7 @@ class SpliceGraph:
             node1_self_identity.is_head() and node2_self_identity.is_head()
         ):  # both are start nodes
             return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-                node1, node2
+                node1, node2, threshold
             )
 
         elif (
@@ -497,14 +498,14 @@ class SpliceGraph:
             )
 
         elif (
-            node1_self_identity.is_head() and node2_self_identity.is_middle()
+            node1_self_identity.is_head() and node2_self_identity.is_mid()
         ):  # node1 is start node, node2 is middle node
             return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
                 node1, node2
             )
 
         elif (
-            node1_self_identity.is_middle() and node2_self_identity.is_middle()
+            node1_self_identity.is_mid() and node2_self_identity.is_mid()
         ):  # both are middle nodes
             return (
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
@@ -557,11 +558,14 @@ class SpliceGraph:
                 # only consider nodes that have been processed: previous node in current series
                 # keeps in mind the next node in current series is not processed yet!!!!
                 # a -> b and b <- a
-                assert current_node.previous_node_in_series is not None
+                edge_data = (
+                    EdgeData.from_node(current_node.previous_node_in_series)
+                    if current_node.previous_node_in_series is not None
+                    else None
+                )
+
                 similar_node_in_graph.add_predecessor(
-                    current_node.previous_node_in_series,
-                    self,
-                    EdgeData.from_node(current_node.previous_node_in_series),
+                    current_node.previous_node_in_series, self, edge_data
                 )
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
@@ -577,11 +581,16 @@ class SpliceGraph:
 
             # only consider nodes that have been processed: previous node in series
             # keeps in mind the next node in series is not processed yet!!!!
-            assert current_node.previous_node_in_series is not None
+            edge_data = (
+                EdgeData.from_node(current_node.previous_node_in_series)
+                if current_node.previous_node_in_series is not None
+                else None
+            )
+
             current_node.add_predecessor(
                 current_node.previous_node_in_series,
                 self,
-                EdgeData.from_node(current_node.previous_node_in_series),
+                edge_data,
             )
 
     def construct(self) -> None:
@@ -1025,7 +1034,7 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     )
 
     updated_node.read_names.append(current_node.query_name)
-    updated_node.identity[current_node.query_name] = current_node.self_identity()
+    updated_node.identity[current_node.query_name] = current_node.self_identity
 
 
 def _check_insertion_conditions_for_compare_insertion(

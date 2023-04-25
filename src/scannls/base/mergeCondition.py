@@ -13,7 +13,7 @@ from .exception import ExonsNotFoundError
 
 
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-    node1: Node, node2: Node
+    node1: Node, node2: Node, threshold: int
 ) -> bool:
     """Check if both head nodes can be merged.
 

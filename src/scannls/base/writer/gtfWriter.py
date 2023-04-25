@@ -10,6 +10,8 @@ from functools import singledispatchmethod
 from typing import Any
 from typing import IO
 
+from loguru import logger
+
 from ..basicClass import MicroHomology
 from ..basicClass import Node
 from ..basicClass import NovelInsertion
@@ -50,7 +52,7 @@ class GTFWriter(Writer):
     def formatter(self, fields: list[str], delimiter: str = "\t") -> str:
         """Formatter for writing data."""
         if fields is None or len(fields) != GTFWriter.num_fields:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 9."
             )
         return delimiter.join(fields) + "\n"
@@ -58,7 +60,7 @@ class GTFWriter(Writer):
     def open(self, mode: str = "w") -> IO:
         """Open file."""
         if self.is_opened:
-            self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
+            logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = self.file_path.open(mode)
         if hasattr(self, "write_header"):
             self.write_header()  # type: ignore
@@ -67,7 +69,7 @@ class GTFWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
-            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
+            logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -76,7 +78,7 @@ class GTFWriter(Writer):
         if self.is_opened:
             self.io.write(line)  # type: ignore
         else:
-            self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
+            logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
     def write_data(self, data_object: Any, object_id: int) -> None:  # type: ignore
@@ -93,7 +95,7 @@ class GTFWriter(Writer):
         :return:
         """
         if len(data_object.nodes) == 0:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
             )
         for node_gtf_feature in get_nodes_gtf_features_from_series(

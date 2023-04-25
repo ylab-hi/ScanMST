@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 
+from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
@@ -42,7 +43,7 @@ class FastaWriter(Writer):
     def formatter(self, seq_id: str, sequence: str) -> str:
         """Formatter for writing data."""
         if sequence == "":
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: Sequence ID or sequence is empty."
             )
         return f">{seq_id:0>6}\n{sequence}\n"
@@ -50,7 +51,7 @@ class FastaWriter(Writer):
     def open(self, mode: str = "w") -> IO:
         """Open file."""
         if self.is_opened:
-            self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
+            logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = self.file_path.open(mode)
         if hasattr(self, "write_header"):
             self.write_header()  # type: ignore
@@ -59,7 +60,7 @@ class FastaWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
-            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
+            logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -69,7 +70,7 @@ class FastaWriter(Writer):
             self.id += 1
             self.io.write(line)  # type: ignore
         else:
-            self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
+            logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
     def write_data(self, data_object: Any, object_id: int):  # type: ignore
@@ -82,7 +83,7 @@ class FastaWriter(Writer):
     def _(self, data_object: Series, object_id: int = -1):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
             )
         sequence, node_length_str = get_nodes_sequence_from_series(

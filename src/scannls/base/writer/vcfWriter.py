@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 
+from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
@@ -151,7 +152,7 @@ class VCFWriter(Writer):
     def formatter(self, fields: list[str], delimiter: str = "\t") -> str:
         """Formatter for writing data."""
         if fields is None or len(fields) != VCFWriter.num_fields:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 10."
             )
         return delimiter.join(fields) + "\n"
@@ -159,7 +160,7 @@ class VCFWriter(Writer):
     def open(self, mode: str = "w") -> IO:
         """Open file."""
         if self.is_opened:
-            self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
+            logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = self.file_path.open(mode)  # add asyncio support
         if hasattr(self, "write_header"):
             self.write_header()
@@ -169,7 +170,7 @@ class VCFWriter(Writer):
         """Close file."""
         if self.is_opened:
             self.write_data_helper()
-            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
+            logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -178,7 +179,7 @@ class VCFWriter(Writer):
         if self.is_opened:
             self.io.write(line)  # type: ignore
         else:
-            self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
+            logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     def write_header(self) -> None:
         """Write header to VCF file."""
@@ -206,7 +207,7 @@ class VCFWriter(Writer):
             self.clique_id = clique_id
 
         if len(data_object.nodes) == 0:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {clique_id} Series."
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2

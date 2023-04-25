@@ -1,29 +1,30 @@
+# !/usr/bin/env python
 """SR rescuer.
 
 @Filename:    srRescuer.py
 @author:      Yangyang Li
 @Time:        12/30/21 15:00 PM
 """
-from collections.abc import Iterable
 from typing import Any
+from typing import Iterable
 from typing import Optional
 
-import rscannls  # type: ignore
+from loguru import logger
+from scannls import cppext
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
-from .type import LoggerType
 
 
 def is_middle_node(node: Node) -> bool:
     """Check if the node is middle node."""
-    return node.prev_breakpoint is not None and node.next_breakpoint is not None
+    return node.predecessors and node.surcessors
 
 
-def make_breakpoint(node: Node, mode: int) -> rscannls.BreakPoint:
+def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
     """Make breakpoint."""
-    return rscannls.BreakPoint(
+    return cppext.BreakPoint(
         node.ref_start, node.ref_end, mode, node.is_reverse(), is_middle_node(node)
     )
 
@@ -39,32 +40,26 @@ class SRRescuer:
         mismatch_cutoff: int,
         alignment_frac: float,
         node_rescued_sr_maximum: int,
-        logger: LoggerType,
         average_read_depth: Optional[int],
     ) -> None:
         """Initialize Rescuer.
 
         :param logger: logger
         """
-        #  bam_file: &str,
-        #     min_mapq: usize,
-        #     min_soft_len: usize,
-        #     min_mismatch: usize,
-        #     min_identity: f32,
-        #     min_seq_align_len: usize,
-        #     average_read_depth: Option<usize>,
-        #
-        self.rescuer = rscannls.Rescuer(
-            bam_file=input_bam_file,
-            min_mapq=mapq_cutoff,
-            min_soft_len=soft_len_cutoff,
-            min_mismatch=mismatch_cutoff,
-            min_identity=alignment_frac,
-            min_seq_align_len=10,
-            average_read_depth=average_read_depth,
+        options = (
+            cppext.Options()
+            .file(input_bam_file)
+            .mapq(mapq_cutoff)
+            .soft_len(soft_len_cutoff)
+            .mismatch(mismatch_cutoff)
+            .identity(alignment_frac)
+            .min_seq_align_len(10)
         )
 
-        self.logger = logger
+        if average_read_depth is not None:
+            options = options.average_read_depth(average_read_depth)
+
+        self.cppext_rescuer = cppext.Rescuer(options)
         self.node_rescued_sr_maximum = node_rescued_sr_maximum
 
     def __call__(self, nodes_in_graph: Iterable[Node]) -> None:
@@ -83,7 +78,7 @@ class SRRescuer:
 
         for node in nodes_in_graph:
             node.original_sr = node.sr
-            self.rescuer.reset_names_list(query_names_in_graph_list)
+            self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
             self.update_sr(
                 node, query_names_in_graph_list, self.node_rescued_sr_maximum
             )
@@ -165,7 +160,7 @@ class SRRescuer:
         mode1, mode2 = current_node.modes
 
         chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
-        current_node.next_breakpoint_depth = self.rescuer.count_reads(
+        current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
             chrom_n, pos_n, pos_n + 1
         )
 
@@ -175,7 +170,7 @@ class SRRescuer:
             current_node, mode1, "next_breakpoint"
         )
 
-        self.logger.trace(
+        logger.trace(
             f"{chrom=} {start=} {mode1=}  {current_node.strand=} {current_node.ref_start=} "
             f"{current_node.ref_end=} {is_middle_node(current_node)} "
             f"{current_node.cigartuples_without_soft=} {query_name_current=} "
@@ -189,22 +184,21 @@ class SRRescuer:
         ):
             raise ValueError(f"{current_node.query_name} with None value")
 
-        region = rscannls.Region(chrom, start - 1, start)
-
+        region = cppext.Region(chrom, start - 1, start)
         break_point = make_breakpoint(current_node, mode1)
 
-        rescued_sr = self.rescuer.calculate_sr(
+        rescued_sr = self.cppext_rescuer.calculate_sr(
             region,
             break_point,
             query_name_current,
             current_node.cigartuples_without_soft,
         )
 
-        self.logger.trace(f"current {rescued_sr=}")
+        logger.trace(f"current {rescued_sr=}")
 
         for next_node in current_node.successors:
             chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
-            next_node.prev_breakpoint_depth = self.rescuer.count_reads(
+            next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
                 chrom_p, pos_p, pos_p + 1
             )
 
@@ -214,7 +208,7 @@ class SRRescuer:
                 next_node, mode2, "prev_breakpoint"
             )
 
-            self.logger.trace(
+            logger.trace(
                 f"{chrom=} {start=} {mode2=} {next_node.strand=} {next_node.ref_start=} {next_node.ref_end=} "
                 f"{is_middle_node(next_node)} "
                 f"{next_node.cigartuples_without_soft=} {query_name_next=}"
@@ -227,22 +221,20 @@ class SRRescuer:
             ):
                 raise ValueError(f"{next_node.query_name} with None value")
 
-            region = rscannls.Region(chrom, start - 1, start)
+            region = cppext.Region(chrom, start - 1, start)
             break_point = make_breakpoint(next_node, mode2)
-            rescued_sr += self.rescuer.calculate_sr(
+            rescued_sr += self.cppext_rescuer.calculate_sr(
                 region,
                 break_point,
                 query_name_next,
                 next_node.cigartuples_without_soft,
             )
 
-            self.logger.trace(f"successors {rescued_sr=}")
+            logger.trace(f"successors {rescued_sr=}")
             if rescued_sr > node_rescued_sr_maximum:
-                self.logger.trace(
-                    f"rescued SR has reached the higher bound, {rescued_sr=}"
-                )
+                logger.trace(f"rescued SR has reached the higher bound, {rescued_sr=}")
                 break
 
-        self.logger.trace(f"final {rescued_sr=}")
+        logger.trace(f"final {rescued_sr=}")
         if rescued_sr > 0:
             current_node.update_sr(rescued_sr)

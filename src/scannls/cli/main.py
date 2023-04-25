@@ -362,7 +362,7 @@ def _scan_bam_helper(
                 if (
                     len(updated_chimeric_alns)
                     == 0 | len(updated_chimeric_alns)
-                    != chimeric_alns
+                    != len(chimeric_alns)
                 ):
                     read.set_tag("SA", None)
 
