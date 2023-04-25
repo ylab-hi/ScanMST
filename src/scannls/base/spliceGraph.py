@@ -272,8 +272,8 @@ class SpliceGraph:
         # trace path
         current_nodes_keys: set[str] = set()
         for node_list in self.trace():
-            yield Series.create_series_from_node_list(
-                node_list, self.logger, current_nodes_keys, is_add_key=False
+            yield Series.create_path_from_node_edge_list(
+                node_list,
             )
 
         if is_check_circle:

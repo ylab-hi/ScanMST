@@ -19,16 +19,15 @@ from ..basicClass import Node
 from ..basicClass import NovelInsertion
 from ..basicClass import reverse_complement
 from ..basicClass import Series
-from ..type import LoggerType
 from .writer import Writer
 
 
 class FastaWriter(Writer):
     """Writer for Fasta files."""
 
-    def __init__(self, file_path: str, reference: str, logger: LoggerType) -> None:
+    def __init__(self, file_path: str, reference: str) -> None:
         """Initialize FastaWriter object."""
-        super().__init__(file_path, logger)
+        super().__init__(file_path)
         self.reference = Path(reference)
         if not self.reference.exists():
             raise FastaNotFoundError(f"{self.reference} does not exist.")

@@ -37,16 +37,14 @@ def get_writers(
     output_prefix: str,
     ref_path: str,
     bam_header: Any,
-    logger: LoggerType,
 ) -> Writers:
     """Get writers."""
-    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, logger)
-    gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
+    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path)
+    gtf_writer = GTFWriter(f"{output_prefix}.gtf")
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
         ref_path,
         bam_header,
-        logger,
     )
 
     return Writers((fasta_writer, gtf_writer, vcf_writer))
@@ -175,7 +173,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     tmp_dir = tempfile.TemporaryDirectory()
     # find 2bit file
     if options.two_bit is None:
-        options.two_bit = find_2bit_file(options.ref, logger)
+        options.two_bit = find_2bit_file(options.ref)
     blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
     if options.sleep:
@@ -219,13 +217,11 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         logger.info(f"Total Series: {intact_series_list_len}")
 
-        clique_finder = ClusterFinder(
-            intact_series_list, intact_series_list_len, logger
-        )
+        clique_finder = ClusterFinder(intact_series_list, intact_series_list_len)
         # cliques is generator
-        cliques = clique_finder.find_clique()
+        cliques = clique_finder.find_cluster()
 
-        writers = get_writers(options.output, options.ref, in_bam_header, logger)
+        writers = get_writers(options.output, options.ref, in_bam_header)
 
         parse_splice_graph_for_cliques = (
             parse_splice_graph_for_cliques_seq

@@ -795,7 +795,7 @@ class Series:
             series_instance.add_node(current_node)
 
         series_instance.add_node(node_edge_list[-1])
-
+        series_instance.disable_blat_logger()  # support parallel processing
         return series_instance
 
     def __getitem__(self, index: int) -> Node:

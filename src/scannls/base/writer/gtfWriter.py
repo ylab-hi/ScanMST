@@ -15,7 +15,6 @@ from ..basicClass import Node
 from ..basicClass import NovelInsertion
 from ..basicClass import Series
 from ..exception import ExonsNotFoundError
-from ..type import LoggerType
 from .writer import Writer
 
 
@@ -38,9 +37,9 @@ class GTFWriter(Writer):
 
     num_fields: int = 9
 
-    def __init__(self, file_path: str, logger: LoggerType) -> None:
+    def __init__(self, file_path: str) -> None:
         """Initialize GTFWriter object."""
-        super().__init__(file_path, logger)
+        super().__init__(file_path)
         self.id = 1
 
     @property

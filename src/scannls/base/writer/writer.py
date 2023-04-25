@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import Any
 from typing import IO
 
+from loguru import logger
+
 from ..basicClass import Series
-from ..type import LoggerType
 
 # todo: add asyncio support
 
@@ -21,12 +22,11 @@ from ..type import LoggerType
 class Writer(ABC):
     """Abstract class for writing object to file."""
 
-    def __init__(self, file_path: str, logger: LoggerType) -> None:
+    def __init__(self, file_path: str) -> None:
         """Initialize Writer object."""
-        self.logger = logger
         self.file_path = Path(file_path)
         if self.file_path.exists():
-            self.logger.warning(f"{self.file_path} exists, will be overwritten.")
+            logger.warning(f"{self.file_path} exists, will be overwritten.")
         self.io: IO | None = None
 
     @abstractmethod

@@ -29,7 +29,6 @@ from .mergeCondition import (
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
-from .type import LoggerType
 
 
 def middle_node_signature(node: Node) -> str:
@@ -63,12 +62,11 @@ class Ruler:
     using longer one as the reference
     """
 
-    def __init__(self, logger: LoggerType, prune_threshold: int = 10) -> None:
+    def __init__(self, prune_threshold: int = 10) -> None:
         """Initialize Ruler.
 
         :param logger: logger
         """
-        self.logger = logger
         self.prune_threshold = prune_threshold
 
     def __repr__(self):
@@ -172,11 +170,10 @@ class ClusterFinder:
         self,
         intact_series_list: Any,
         intact_series_list_len: int,
-        logger: LoggerType,
         threshold: float = 0.2,
     ) -> None:
         """Initialize CliqueFinder."""
-        self.ruler = Ruler(logger)
+        self.ruler = Ruler()
         self.intact_series_list_len = intact_series_list_len
         self.intact_series_list = intact_series_list
         self.distance_dict: dict[tuple[int, int], float] = {}
@@ -242,7 +239,7 @@ class ClusterFinder:
             self.graph.add_node(ind_y)
 
     @timeit
-    def find_clique(self) -> Any:
+    def find_cluster(self) -> Any:
         """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
 
         :return:  every clique in graph as a iterator (List[Series])

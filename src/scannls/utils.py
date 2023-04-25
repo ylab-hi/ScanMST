@@ -42,9 +42,7 @@ def external_tool_checking(software: list[str], log_handler: LoggerType) -> None
         log_handler.success(f"Checking for {tool} found ")
 
 
-def find_2bit_file(
-    fasta_path: str, log_handler: LoggerType, parameter: Optional[list[str]]
-) -> str:
+def find_2bit_file(fasta_path: str, parameter: Optional[list[str]] = None) -> str:
     """Create 2bit file from fasta file.
 
      fa2bit usage:
@@ -60,9 +58,10 @@ def find_2bit_file(
     """
     if parameter is None:
         parameter = []
+
     bit_file = Path(fasta_path).with_suffix(".2bit")
     if not bit_file.exists():
-        log_handler.info(f"{bit_file.as_posix()} Not Found Creating...")
+        logger.info(f"{bit_file.as_posix()} Not Found Creating...")
         subprocess.check_call(
             [load_fa2bit(), " ".join(parameter), fasta_path, bit_file.as_posix()]
         )

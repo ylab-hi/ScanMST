@@ -26,7 +26,6 @@ from ..exception import ExonsNotFoundError
 from ..exception import GenesNotFoundError
 from ..exception import ModesNotFoundError
 from ..exception import SplicingCodeNotFoundError
-from ..type import LoggerType
 from .writer import Writer
 
 
@@ -131,10 +130,9 @@ class VCFWriter(Writer):
         file_path: str,
         reference: str,
         bam_header: dict[str, Any],
-        logger: LoggerType,
     ) -> None:
         """Initialize VCFWriter object."""
-        super().__init__(file_path, logger)
+        super().__init__(file_path)
         self.reference = Path(reference)
         if not self.reference.exists():
             raise FastaNotFoundError

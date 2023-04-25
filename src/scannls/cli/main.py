@@ -574,6 +574,7 @@ def scanbam_run(
     logger.info(f" Processing {contigs=}")
     # get running mode
     running_mode = "normal" if parallel == 1 else "parallel"
+
     # get current local namespace
     self_local_namespace = copy.copy(locals())
     # get the keyword arguments for the _scan_bam_helper function
