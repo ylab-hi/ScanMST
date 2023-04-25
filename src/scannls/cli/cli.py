@@ -174,7 +174,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     # find 2bit file
     if options.two_bit is None:
         options.two_bit = find_2bit_file(options.ref)
-    blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
+    blat = Blat(options.two_bit, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
     if options.sleep:
         sleep(options.input)

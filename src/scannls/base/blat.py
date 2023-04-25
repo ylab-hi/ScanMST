@@ -18,12 +18,12 @@ from typing import Any
 
 import psutil
 from Bio import SearchIO
+from loguru import logger
 
 from ..blat import load_gfclient
 from ..blat import load_gfserver
 from .basicClass import Insertion
 from .basicClass import NovelInsertion
-from .type import LoggerType
 
 
 class Blat:
@@ -61,7 +61,6 @@ class Blat:
     def __init__(
         self,
         ref_2bit: str,
-        logger: LoggerType,
         port: int,
         output_dir: str,
         fix_log_file=None,
@@ -74,7 +73,6 @@ class Blat:
         self.ran_id = secrets.randbits(42)
         self.is_start_server = is_start_server
         self.is_stop_server = False
-        self.logger = logger
         self.fix_log_file = fix_log_file
         self.handle_process = None
         self.gfserver = load_gfserver()
@@ -117,7 +115,7 @@ class Blat:
             )
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
-        self.logger.debug("check if the server starts by reading the log file")
+        logger.debug("check if the server starts by reading the log file")
         with this_lock, open(self.log_file_path) as f:
             return any("Server ready" in line for line in f)
 
@@ -142,7 +140,7 @@ class Blat:
         :return: the list of process of blat server
         """
         result = []
-        self.logger.debug("searching server service")
+        logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
             with contextlib.suppress(psutil.NoSuchProcess):
                 if "gfServer".lower() == proc.name().lower() and proc.cmdline():
@@ -166,27 +164,27 @@ class Blat:
         where gfServer gfClient and hg38.2bit located.
         """
         self.is_start_server = True
-        self.logger.debug(f"start server service{self.is_start_server=}")
+        logger.debug(f"start server service{self.is_start_server=}")
         cwd = Path.cwd().absolute()
-        self.logger.debug(Path.cwd().as_posix())
+        logger.debug(Path.cwd().as_posix())
 
         # change to use_blat directory
         os.chdir(self.ref_dir)
-        self.logger.trace(f"{self.ref_dir=}")
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{self.ref_dir=}")
+        logger.trace(f"{Path().cwd()}")
 
         cmd = (
             f"{self.gfserver} -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
         )
-        self.logger.trace(f"{cmd=}")
+        logger.trace(f"{cmd=}")
         self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
         if self.handle_process is None:
             raise ValueError("handle process is None")
         self.handle_process.start()
-        self.logger.debug("starting server service")
+        logger.debug("starting server service")
         os.chdir(cwd)
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{Path().cwd()}")
 
     def start_server(self) -> None:
         """Function for starting the server service, if the server is not running.
@@ -202,9 +200,9 @@ class Blat:
     def stop_server(self) -> None:
         """Function for stopping the server service, if the server is running."""
         # self open then self close
-        self.logger.trace(f"{self.is_start_server=}")
+        logger.trace(f"{self.is_start_server=}")
         if self.is_start_server:
-            self.logger.info("Stopping  server service")
+            logger.info("Stopping  server service")
 
             for proc in self._search_processing():
                 proc.kill()
@@ -220,7 +218,7 @@ class Blat:
         :param in_seq: sequence of softclipped segment
         :return: the path for PSL file
         """
-        self.logger.debug("querying the sequence")
+        logger.debug("querying the sequence")
         ran_id = secrets.randbits(42)
         in_fasta = os.path.join(self.output_dir, f"{ran_id}.fasta")
         with open(in_fasta, "w", buffering=1) as fasta_file:
@@ -230,21 +228,21 @@ class Blat:
         out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
 
         cwd = Path.cwd().absolute()
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{Path().cwd()}")
 
         os.chdir(self.ref_dir)
-        self.logger.trace(f"{self.ref_dir=}")
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{self.ref_dir=}")
+        logger.trace(f"{Path().cwd()}")
         cmd = (
             f"{self.gfclient} -minScore=20 -minIdentity={mini_identity} localhost {self.port} . "
             f"{in_fasta} {out_psl}"
         )
-        self.logger.trace(f"{cmd=}")
+        logger.trace(f"{cmd=}")
         subprocess.check_call(
             cmd, stderr=subprocess.STDOUT, shell=True, stdout=subprocess.DEVNULL
         )
         os.chdir(cwd)
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{Path().cwd()}")
         self._remove(in_fasta)
 
         return out_psl
@@ -404,7 +402,7 @@ class Blat:
         try:
             blat = SearchIO.read(psl_file, "blat-psl")
         except ValueError:
-            self.logger.warning(f"No Blat hit found {in_seq[:10]}...")
+            logger.warning(f"No Blat hit found {in_seq[:10]}...")
             return None, None
         else:
             hsps = blat.hsps

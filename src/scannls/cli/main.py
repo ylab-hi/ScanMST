@@ -304,9 +304,7 @@ def _scan_bam_helper(
     logger.trace(f"{identified_key=} start")
 
     blat_log_file, blat_is_start_server = blat_info
-    blat = Blat(
-        two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server, lock
-    )
+    blat = Blat(two_bit, port, tmp_dir, blat_log_file, blat_is_start_server, lock)
 
     nls_src_forms_list = []
 
@@ -322,10 +320,6 @@ def _scan_bam_helper(
             and not read.is_unmapped
             and not read.is_supplementary
         ):
-            import ipdb
-
-            ipdb.set_trace()
-
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
