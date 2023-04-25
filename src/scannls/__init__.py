@@ -18,7 +18,7 @@ from .base.basicClass import (
 )
 from .base.basicRead import Read
 from .base.blat import Blat
-from .base.cliqueFinder import CliqueFinder
+from .base.cluster import ClusterFinder
 from .base.exception import (
     BreakpointNotFoundError,
     ModesNotEqualError,
@@ -37,7 +37,7 @@ from .base.type import LoggerType
 from .base.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 from .cli.arg import DefaultOptions
 from .utils import (
-    cigarstring2cigartuple,
+    cigarstring2cigartuples,
     external_tool_checking,
     get_longest_insertion_sequence,
     get_softclip_length,
@@ -56,11 +56,11 @@ __all__ = [
     "detect_read_read_connections_from_cigar",
     "get_softclip_length",
     "get_longest_insertion_sequence",
-    "cigarstring2cigartuple",
+    "cigarstring2cigartuples",
     "SpliceGraph",
     "SpliceType",
     "SRRescuer",
-    "CliqueFinder",
+    "ClusterFinder",
     "FastaWriter",
     "GTFWriter",
     "VCFWriter",
@@ -74,7 +74,6 @@ __all__ = [
     "NovelInsertion",
     "MicroHomology",
     "Insertion",
-    "core",
     "cppext",
     "check_end_node_is_ploya",
     "DefaultOptions",

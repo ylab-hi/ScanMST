@@ -1,24 +1,162 @@
 """Module contains the main function of the draft scannls."""
+import copy
+import inspect
+import math
+import re
+from itertools import chain
+from pathlib import Path
 from typing import Any
 
 import HTSeq
 import pyfaidx
-import rscannls
-from loguru import logger
+import pysam
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from .. import Blat
+from .. import cigarstring2cigartuples
 from .. import detect_read_read_connections_from_cigar
 from .. import Event
+from .. import get_longest_insertion_sequence
+from .. import get_softclip_length
+from .. import MyLogger
+from .. import ParallelWorker
+from .. import reverse_complement
 from .. import Series
 from ..base.type import LoggerType
+from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
+from .helper import get_transcriptome_length
+from .helper import insertion2chimeric_alignment
+from .helper import obtain_variants_stats
 from .helper import strand_mode_checker
 from .nls_inference import infer_nls_from_connected_reads
 
 
-def get_genome_fasta(ref_genome):
+class BamScanner:
+    """BcamScanner scan the bam file and output the result to a file."""
+
+    def __init__(
+        self,
+        input_bam,
+        mapq_cutoff,
+        ref_genome,
+        gtf,
+        splice_in,
+        blat,
+        logger,
+        motif_required,
+        max_allowed_nm,
+        min_soft_seg_len,
+        blat_ident_pct_cutoff,
+        long_indel_length,
+        substitutions_num,
+        substitutions_fraction,
+        indels_fraction,
+    ) -> None:
+        """Initialize the class."""
+        self.in_bam_path = input_bam
+        self.in_bam = pysam.AlignmentFile(input_bam, "rb")
+
+        self.bam_chrom_info = {}
+
+        self.mapq_cutoff = mapq_cutoff
+
+        self.ref_genome = (
+            ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        )
+
+        self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
+
+        self.splice_bin = splice_in
+        self.blat = blat
+        self.logger = logger
+        self.motif_required = motif_required
+        self.max_allowed_nm = max_allowed_nm
+        self.min_soft_seg_len = min_soft_seg_len
+        self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
+
+        self.pat_left_s = re.compile(r"^(\d+)S")
+        self.pat_right_s = re.compile(r"(\d+)S$")
+        self.header = self._get_bam_header()
+        self.total_length = 0
+
+        self.long_indel_length = long_indel_length
+        self.substitutions_num = substitutions_num
+        self.substitutions_fraction = substitutions_fraction
+        self.indels_fraction = indels_fraction
+        self.representative_alignments_new_cigar = {}
+
+    def _check_bam_sort(self, header) -> bool:
+        """Check if the bam file is sorted."""
+        try:
+            return header["HD"]["SO"] == "coordinate"
+        except KeyError:
+            raise RuntimeError(f"Bam file {self.in_bam} is not sorted") from KeyError
+
+    def _count_chrom_info(self, read):
+        """Count the chrom and the chrom start and the chrom end."""
+        if read.reference_name in self.bam_chrom_info:
+            if read.reference_end > self.bam_chrom_info[read.reference_name][1]:
+                self.bam_chrom_info[read.reference_name][1] = read.reference_end
+        else:
+            self.bam_chrom_info[read.reference_name] = [
+                read.reference_start,
+                read.reference_end,
+            ]
+
+    def _get_bam_header(self):
+        """Get bam header."""
+        header = self.in_bam.header.as_dict()
+        self._check_bam_sort(header)
+        return header
+
+    def iter_bam(self):
+        """Iterate the bam file."""
+        # supplementary alignment cigarstring extraction
+        # key: read.query_name + left S + right S
+        # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
+        # "--MD" need to be used, MD tag store information about SNVs and DELs
+        self.logger.info("Iter bam file and Extracting supplementary alignments")
+
+        for read in self.in_bam.fetch():
+            self._count_chrom_info(read)
+            self.total_length += read.query_length
+            if read.is_supplementary:
+                sup_aln_cigar = read.cigarstring
+                left_mat = self.pat_left_s.search(sup_aln_cigar)
+                right_mat = self.pat_right_s.search(sup_aln_cigar)
+
+                l_s_len = left_mat.group(1) if left_mat else ""
+                r_s_len = right_mat.group(1) if right_mat else ""
+
+                nm = read.get_tag("NM")
+                md_tag = read.get_tag("MD")
+                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                    sup_aln_cigar, md_tag, self.long_indel_length
+                )
+
+                subs_fraction = 0 if nm == 0 else num_of_subs / nm
+                if (
+                    not (
+                        num_of_subs > self.substitutions_num
+                        and subs_fraction > self.substitutions_fraction
+                    )
+                    and ins_fraction <= self.indels_fraction
+                    and del_fraction <= self.indels_fraction
+                ):
+                    self.representative_alignments_new_cigar[
+                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
+                    ] = sup_aln_cigar
+                else:
+                    self.logger.trace(
+                        f"{read.query_name=} does not pass the substitutions/indel cutoff. "
+                        f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}"
+                    )
+        return self.representative_alignments_new_cigar
+
+
+def _get_genome_fasta(ref_genome):
     """Get the genome fasta file."""
     try:
         return Fasta(str(ref_genome), sequence_always_upper=True)
@@ -28,7 +166,7 @@ def get_genome_fasta(ref_genome):
         ) from FastaNotFoundError
 
 
-def get_cvg_gene_iv(gtf, splice_bin):
+def _get_cvg_gene_iv(gtf, splice_bin):
     """Get the gene coverage interval.
 
     :param gtf: gtf file
@@ -42,7 +180,7 @@ def get_cvg_gene_iv(gtf, splice_bin):
 
 def detect_sv_from_cigar(
     *,
-    read: Any,
+    read: pysam.AlignedSegment,
     mapq_cutoff: int,
     max_allowed_nm: int,
     splice_bin: int,
@@ -83,7 +221,6 @@ def detect_sv_from_cigar(
         logger=logger,
     )
 
-    logger.trace(f"{read_chains=}")
     event_list: list[Event] = []
 
     if read_chains:
@@ -125,105 +262,255 @@ def detect_sv_from_cigar(
     return event_list, read_chains, num_added_reads
 
 
-class Mrecord:
-    def __init__(
-        self,
-        reference_name,
-        reference_start,
-        cigarstring,
-        mapping_quality,
-        is_reverse,
-        query_sequence,
-    ):
-        self.reference_name = reference_name
-        self.reference_start = reference_start
-        self.cigarstring = cigarstring
-        self.mapping_quality = mapping_quality
-        self.is_reverse = is_reverse
-        self.query_sequence = query_sequence
-        self.tags = {}
-        self.query_qualities = None
-        self.is_supplementary = None
-        self.query_name = None
+def _scan_bam_helper(
+    identified_key,
+    lock,
+    *,
+    running_mode,
+    two_bit,
+    port,
+    tmp_dir,
+    blat_info,
+    in_bam_path,
+    ref_genome,
+    gtf,
+    mapq_cutoff,
+    representative_alignments_new_cigar,
+    max_allowed_nm,
+    min_soft_seg_len,
+    blat_ident_pct_cutoff,
+    splice_bin,
+    motif_required,
+    long_indel_length,
+    substitutions_num,
+    substitutions_fraction,
+    indels_fraction,
+):
+    """Scan BAM file and write output to file."""
+    from loguru import logger
 
-    def __str__(self):
-        return f"{self.reference_start=} {self.cigarstring=} {self.is_reverse=} {self.is_supplementary=} {self.tags['SA']}"
+    genome_fasta = _get_genome_fasta(ref_genome)
+    cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
+    in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
-    __repr__ = __str__  # for debugging
-
-    def set_tag(self, key, value):
-        self.tags[key] = value
-
-    def get_tag(self, key):
-        return self.tags[key]
-
-    @classmethod
-    def from_alignment(cls, alignment_info):
-        # TCCCTCCTCTTTTACACACACTCTC-false-23_5;chr15,65599929,-,60,300M2092S,0;chr15,65394410,
-        # -,60,300S138M545N165M491N414M670N156M3816N141M1404N137M7690N142M700N351M10575N448M,0'
-
-        logger.warning(f"{alignment_info=}")
-        aln_info_list = alignment_info.split(";")
-
-        if len(aln_info_list) < 2:
-            logger.warning(f"Invalid alignment info: {alignment_info}")
-            return None
-
-        # chr1, 3479514, +, 746S77M221N102M534N13M1D46M1I606M,60,2
-        read_info = aln_info_list.pop().split(",")
-
-        temp = aln_info_list.pop(0).split("-")
-
-        if len(temp) != 3:
-            logger.warning(f"Invalid alignment info: {alignment_info}")
-            return None
-
-        (sequence, is_supplementary, read_name) = temp
-
-        record = cls(
-            reference_name=read_info[0],
-            reference_start=int(read_info[1]),
-            cigarstring=read_info[3],
-            mapping_quality=int(read_info[4]),
-            is_reverse=read_info[2] == "-",
-            query_sequence=sequence,
+    if running_mode == "parallel":
+        logger = MyLogger(identified_key, logger)
+        chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
+    else:
+        chrom_bam_io_object = chain.from_iterable(
+            [in_bam_io_object.fetch(contig=key) for key in identified_key]
         )
 
-        record.is_supplementary = False
-        record.query_name = read_name
+    logger.trace(f"{identified_key=} start")
 
-        record.set_tag("SA", ";".join(aln_info_list) + ";")
-        record.set_tag("NM", int(read_info[5]))
-
-        logger.debug(f"{record.query_sequence=}")
-
-        return record
-
-
-def detect_sv_from_cigar_wrapper(
-    read,
-    mapq_cutoff,
-    max_allowed_nm,
-    splice_bin,
-    genome_fasta,
-    cvg,
-    gene_iv,
-    motif_required,
-    blat,
-    logger,
-):
-    return detect_sv_from_cigar(
-        read=read,
-        mapq_cutoff=mapq_cutoff,
-        max_allowed_nm=max_allowed_nm,
-        splice_bin=splice_bin,
-        genome_fasta=genome_fasta,
-        cvg=cvg,
-        gene_iv=gene_iv,
-        motif_required=motif_required,
-        blat=blat,
-        logger=logger,
+    blat_log_file, blat_is_start_server = blat_info
+    blat = Blat(
+        two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server, lock
     )
+
+    nls_src_forms_list = []
+
+    pat_left_s = re.compile(r"^(\d+)S")
+    pat_right_s = re.compile(r"(\d+)S$")
+
+    # update SA tags and iterate the BAM file
+    for read in chrom_bam_io_object:
+        if (
+            read.mapq >= mapq_cutoff
+            and not read.is_secondary
+            and not read.has_tag("XA")
+            and not read.is_unmapped
+            and not read.is_supplementary
+        ):
+            import ipdb
+
+            ipdb.set_trace()
+
+            # update SA tag of representative alignments (START)
+            if read.has_tag("SA"):
+                logger.trace(
+                    f"Pre-checking: {read.query_name= } has SA; supplementary read: "
+                    f"{read.is_supplementary}"
+                )
+
+                updated_chimeric_alns = []
+                chimeric_alns = read.get_tag("SA")[:-1].split(";")
+
+                # one representative alignment could have multiple corresponding
+                # supplementary alignments
+                for _aln in chimeric_alns:
+                    (
+                        chr_sa,
+                        pos_sa,
+                        strand_sa,
+                        __cigar_sa,
+                        mapq_sa,
+                        nm_sa,
+                    ) = _aln.split(",")
+
+                    left_mat = pat_left_s.search(__cigar_sa)
+                    right_mat = pat_right_s.search(__cigar_sa)
+
+                    l_s_len = left_mat.group(1) if left_mat else ""
+                    r_s_len = right_mat.group(1) if right_mat else ""
+
+                    tgt_key = f"{read.qname}\t{l_s_len}\t{r_s_len}"
+
+                    if tgt_key in representative_alignments_new_cigar:
+                        updated_cigar = representative_alignments_new_cigar[tgt_key]
+                        # discard supplementary alignments with too many mismatches
+                        # supplementary alignments with lower MAPQ is allowed
+                        if not (int(nm_sa) > max_allowed_nm):
+                            updated_chimeric_alns.append(
+                                f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}"
+                            )
+
+                if (
+                    len(updated_chimeric_alns)
+                    == 0 | len(updated_chimeric_alns)
+                    != chimeric_alns
+                ):
+                    read.set_tag("SA", None)
+
+                # remove SA tags of representative alignments with too much mismatches
+                # update SA tag of representative alignments (END)
+
+            # Detect novel chimeric alignments for reads with long softclipped segment
+            # but without SA tags using BLAT
+            elif not read.has_tag("SA"):
+                read_strand = "-" if read.is_reverse else "+"
+                read_ori_nm = read.get_tag("NM")
+                read_length = int(read.query_length)
+                _, _soft_seq, _, read_mode = get_softclip_length(read, mode=0)
+                ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
+
+                soft_seq_ori = (
+                    reverse_complement(_soft_seq) if read.is_reverse else _soft_seq
+                )
+
+                if (
+                    read_mode in {1, 2}
+                    and soft_seq_ori
+                    and len(soft_seq_ori) >= min_soft_seg_len
+                ):
+                    chimeric_aln_str = blat2chimeric_alignment(
+                        soft_seq_ori,
+                        read_length,
+                        read_strand,
+                        read_mode,
+                        blat,
+                        mapq_cutoff,
+                        max_allowed_nm,
+                        blat_ident_pct_cutoff,
+                    )
+
+                    if chimeric_aln_str:
+                        logger.trace(
+                            f"Pre-checking: {read.query_name= } "
+                            f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it "
+                            f"has one SA tag "
+                        )
+                        read.set_tag("SA", chimeric_aln_str)
+
+                # _anno:annotated exon boundary (0/1/2); _can: canonical_or_not(1/0);
+                # Detect novel chimeric alignments for reads with long insertion (I)
+                # but without SA tags using BLAT
+                elif ins_ref_pos > 0:
+                    (
+                        primary_aln_cigarstring,
+                        chimeric_aln_str,
+                    ) = insertion2chimeric_alignment(
+                        read,
+                        ins_ref_pos,
+                        ins_seq,
+                        read_length,
+                        read_strand,
+                        max_allowed_nm,
+                        blat,
+                        blat_ident_pct_cutoff,
+                    )
+
+                    if primary_aln_cigarstring:
+                        logger.trace(
+                            f"Pre-checking: {read.query_name= } "
+                            f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag"
+                        )
+
+                        read.cigarstring = primary_aln_cigarstring
+                        read.cigartuples = cigarstring2cigartuples(
+                            primary_aln_cigarstring
+                        )
+                        read.reference_start = ins_ref_pos
+                        read.set_tag("NM", read_ori_nm - ins_len)
+                        read.set_tag("SA", chimeric_aln_str)
+
+            # select reads with SA tags (original or newly-added), ignore supplementary alignment
+            if read.has_tag("SA"):
+                logger.trace(
+                    f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}"
+                )
+
+                nm = read.get_tag("NM")
+
+                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                    read.cigarstring, read.get_tag("MD"), long_indel_length
+                )
+
+                subs_fraction = 0 if nm == 0 else num_of_subs / nm
+
+                if (
+                    not (
+                        num_of_subs > substitutions_num
+                        and subs_fraction > substitutions_fraction
+                    )
+                    and ins_fraction <= indels_fraction
+                    and del_fraction <= indels_fraction
+                ):
+                    event_lists, read_chains, num_added_reads = detect_sv_from_cigar(
+                        read=read,
+                        mapq_cutoff=mapq_cutoff,
+                        max_allowed_nm=max_allowed_nm,
+                        splice_bin=splice_bin,
+                        genome_fasta=genome_fasta,
+                        cvg=cvg,
+                        gene_iv=gene_iv,
+                        motif_required=motif_required,
+                        blat=blat,
+                        logger=logger,
+                    )
+
+                    logger.trace(f"{read_chains=}")
+
+                    nls_event_list = []
+                    for event in event_lists:
+                        if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
+                            nls_event_list.append(event)
+
+                    if nls_event_list:
+                        series = Series(blat=blat, logger=logger)
+                        logger.debug(f"{nls_event_list=}")
+                        series.init(
+                            nls_event_list,
+                            read_chains,
+                            splice_bin,
+                            genome_fasta,
+                            cvg,
+                            gene_iv,
+                            motif_required,
+                        )
+                        series.disable_blat_logger()
+                        if not series.is_all_type_del():
+                            nls_src_forms_list.append(series)
+                            logger.trace(f"{series=}")
+                else:
+                    logger.trace(
+                        f"{read.query_name= } does not pass the substitutions/indel cutoff. "
+                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}"
+                    )
+    logger.debug(f"Total Series: {nls_src_forms_list}")
+    logger.complete()
+    in_bam_io_object.close()
+    return nls_src_forms_list
 
 
 def scanbam_run(
@@ -250,91 +537,64 @@ def scanbam_run(
     species,
 ):
     """Main function to run scanbam."""
-    #       bam_path: &str,
-    #       long_indel_threshold: usize,
-    #       substitutions_threshold: usize,
-    #       substitutions_fraction_threshold: f32,
-
-    collect_cigar_option = rscannls.CollectCigarOption(
-        bam_path=in_bam_path,
-        long_indel_threshold=long_indel_length,
-        substitutions_threshold=substitutions_num,
-        substitutions_fraction_threshold=substitutions_fraction,
-        indels_fraction_threshold=indels_fraction,
-    )
-    # bam_path: &str,
-    #       fasta_path: &str,
-    #       gtf_path: &str,
-    #       threads: usize,
-    #       mapping_quality_threshold: usize,
-    #       max_allowed_nm: usize,
-    #       insertion_length_threshold: usize,
-    #       insertion_alignment_diff_theshold: usize,
-    #       softclip_length_threshold: usize,
-    #       collect_cigar_option: PyCollectCigarOption,
-    scan_bam_option = rscannls.ScanBamOption(
-        bam_path=in_bam_path,
-        fasta_path=ref_genome,
-        gtf_path=gtf,
-        threads=parallel,
-        mapping_quality_threshold=mapq_cutoff,
+    bam_scanner = BamScanner(
+        input_bam=Path(in_bam_path),
+        mapq_cutoff=mapq_cutoff,
+        ref_genome=Path(ref_genome),
+        gtf=Path(gtf),
+        splice_in=splice_bin,
+        blat=blat,
+        logger=logger,
+        motif_required=motif_required,
         max_allowed_nm=max_allowed_nm,
-        insertion_length_threshold=50,
-        insertion_alignment_diff_theshold=5,
-        softclip_length_threshold=min_soft_seg_len,
-        collect_cigar_option=collect_cigar_option,
+        min_soft_seg_len=min_soft_seg_len,
+        blat_ident_pct_cutoff=blat_ident_pct_cutoff,
+        long_indel_length=long_indel_length,
+        substitutions_num=substitutions_num,
+        substitutions_fraction=substitutions_fraction,
+        indels_fraction=indels_fraction,
     )
+    # iterate over all read of the bam file
+    representative_alignments_new_cigar = bam_scanner.iter_bam()
 
-    result = rscannls.scan_bam(scan_bam_option)
+    avg_cov = math.ceil(bam_scanner.total_length / get_transcriptome_length(species))
 
-    genome_fasta = get_genome_fasta(ref_genome)
-    cvg, gene_iv = get_cvg_gene_iv(gtf, splice_bin)
-    blat_log_file, blat_is_start_server = blat_info
-
-    blat = Blat(
-        two_bit, logger, port, tmp_dir, blat_log_file, blat_is_start_server, None
+    num_chimeric_reads = len(representative_alignments_new_cigar)
+    logger.info(
+        f"species: {species}, Reads coverage: {avg_cov:.2f}, Number of chimeric reads: {num_chimeric_reads}"
     )
+    # get the chromosome name we want to scan
 
-    nls_src_forms_list = []
+    contigs = [
+        contig
+        for contig in bam_scanner.bam_chrom_info
+        if "_" not in contig and "M" not in contig
+    ]
 
-    for alignment_info in result:
-        read = Mrecord.from_alignment(alignment_info)
-        if read is None:
-            continue
+    logger.info(f" Processing {contigs=}")
+    # get running mode
+    running_mode = "normal" if parallel == 1 else "parallel"
+    # get current local namespace
+    self_local_namespace = copy.copy(locals())
+    # get the keyword arguments for the _scan_bam_helper function
+    keyword_parameters_dict = {
+        key: self_local_namespace[key]
+        for key, value in inspect.signature(_scan_bam_helper).parameters.items()
+        if value.kind.name == "KEYWORD_ONLY"
+    }
 
-        event_lists, read_chains, num_added_reads = detect_sv_from_cigar_wrapper(
-            read=read,
-            mapq_cutoff=mapq_cutoff,
-            max_allowed_nm=max_allowed_nm,
-            splice_bin=splice_bin,
-            genome_fasta=genome_fasta,
-            cvg=cvg,
-            gene_iv=gene_iv,
-            motif_required=motif_required,
-            blat=blat,
-            logger=logger,
-        )
+    intact_series_list = []
 
-        nls_event_list = []
-        for event in event_lists:
-            if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
-                nls_event_list.append(event)
+    if parallel == 1:
+        intact_series_list = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
 
-        if nls_event_list:
-            series = Series(blat=blat, logger=logger)
-            logger.debug(f"{nls_event_list=}")
-            series.init(
-                nls_event_list,
-                read_chains,
-                splice_bin,
-                genome_fasta,
-                cvg,
-                gene_iv,
-                motif_required,
-            )
-            series.disable_blat_logger()
-            if not series.is_all_type_del():
-                nls_src_forms_list.append(series)
-                logger.trace(f"{series=}")
+    else:
+        parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
+        result = parallel_worker.run(*contigs, **keyword_parameters_dict)
 
-    return nls_src_forms_list
+        for contig in contigs:
+            contig_series_list = result[contig]
+            intact_series_list.extend(contig_series_list)
+
+    bam_scanner.in_bam.close()
+    return intact_series_list, bam_scanner.header, avg_cov

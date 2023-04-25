@@ -13,13 +13,12 @@ import tempfile
 import time
 from functools import partial
 from typing import Any
-from typing import Optional
 from typing import Union
 
 from loguru import logger
 
 from .. import Blat
-from .. import CliqueFinder
+from .. import ClusterFinder
 from .. import FastaWriter
 from .. import GTFWriter
 from .. import LoggerType
@@ -59,10 +58,10 @@ def parse_splice_graph_for_cliques_seq(
     options: Union[DefaultOptions, argparse.Namespace],
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: Optional[int] = None,
+    average_read_depth: Union[int, None] = None,
 ) -> None:
     """Parse splice graph for cliques."""
-    splice_graph = SpliceGraph.create_graph(
+    splice_graph = SpliceGraph.create_splice_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -91,14 +90,14 @@ def _parse_splice_graph_for_cliques_par(
     cliques: Any,
     options: Union[DefaultOptions, argparse.Namespace],
     node_rescued_sr_maximum: int,
-    average_read_depth: Optional[int],
+    average_read_depth: Union[int, None],
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
 
     logger = MyLogger(f"PID-{os.getpid()}", logger)  # type: ignore
 
-    splice_graph = SpliceGraph.create_graph(
+    splice_graph = SpliceGraph.create_splice_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -125,7 +124,7 @@ def parse_splice_graph_for_cliques_par(
     options: Union[DefaultOptions, argparse.Namespace],
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: Optional[int] = None,
+    average_read_depth: Union[int, None] = None,
 ) -> None:
     """Parse splice graph for cliques."""
     parallel_workers = ParallelWorker(
@@ -152,13 +151,6 @@ def parse_splice_graph_for_cliques_par(
                 if series.is_all_node_sr_higher_than_threshold(options.support_reads):
                     logger.debug(f"Output Clique{ind}: {series}")
                     writers.write_series(series, ind)
-
-
-def get_bam_header(bam_path):
-    import pysam
-
-    bam = pysam.AlignmentFile(bam_path, "rb")
-    return bam.header.as_dict()
 
 
 def cli(options: Union[argparse.Namespace, DefaultOptions]):
@@ -193,7 +185,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_series_list = scanbam_run(
+        intact_series_list, in_bam_header, avg_cov = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
@@ -217,7 +209,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             species=options.species,
         )
 
-        avg_cov = None
+        avg_cov = None if not options.bound else avg_cov
 
         intact_series_list_len = len(intact_series_list)
 
@@ -227,11 +219,11 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         logger.info(f"Total Series: {intact_series_list_len}")
 
-        clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
+        clique_finder = ClusterFinder(
+            intact_series_list, intact_series_list_len, logger
+        )
         # cliques is generator
         cliques = clique_finder.find_clique()
-
-        in_bam_header = get_bam_header(options.input)
 
         writers = get_writers(options.output, options.ref, in_bam_header, logger)
 
