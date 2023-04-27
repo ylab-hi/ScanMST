@@ -23,7 +23,6 @@ from ..cli.nls_inference import infer_nls_from_connected_reads
 from .basicRead import Read
 from .exception import ReadNotFoundError
 from .type import EventType
-from .type import LoggerType
 
 
 class NovelInsertion:
@@ -735,12 +734,11 @@ class Series:
         "--21": True,
     }
 
-    def __init__(self, blat: Any, logger: LoggerType) -> None:
+    def __init__(self, blat: Any) -> None:
         """Initialize a Series object."""
         self.nodes: list[Node] = []
         self.is_in_graph = False
         self.blat = blat
-        self.logger = logger
         self.id = -1
 
     def add_node(self, node: Node) -> None:
@@ -765,12 +763,11 @@ class Series:
     def create_series_from_node_list(
         cls,
         node_list: list[Node],
-        logger: LoggerType,
         nodes_keys: set[str],
         is_add_key: bool = True,
     ) -> "Series":
         """Create a series from a list of nodes."""
-        series_instance = cls(None, logger)
+        series_instance = cls(None)
         for node in node_list:
             if is_add_key and (key := node.unique_key) is not None:
                 nodes_keys.add(key)
@@ -783,7 +780,7 @@ class Series:
         cls,
         node_edge_list,
     ):
-        series_instance = cls(None, logger)
+        series_instance = cls(None)
 
         for index in range(0, len(node_edge_list) - 1, 2):
             current_node: Node = node_edge_list[index]
@@ -831,7 +828,7 @@ class Series:
 
     def disable_blat_logger(self) -> None:
         """Disable blat logger."""
-        self.blat, self.logger = None, None  # type: ignore
+        self.blat = None  # type: ignore
 
     @property
     def unique_key(self) -> str:
@@ -901,9 +898,6 @@ class Series:
         motif_required,
     ) -> None:
         """Add event list as Node to self.nodes."""
-        if self.logger is None:
-            raise ValueError("Logger is not initialized")
-
         event_list = self.order_events_by_trancription_direction(event_list)
 
         event_list_len = len(event_list)
@@ -929,7 +923,7 @@ class Series:
 
             previous_breakpoint = event.bp2
             prev_sv_type = event.sv_type
-            self.logger.trace(f"{read1=} {read2=}")
+            logger.trace(f"{read1=} {read2=}")
             # is insertions
             if event.has_insertion():
                 insertion_seq = event.insertion_seq1  # pick from the first read
@@ -950,13 +944,13 @@ class Series:
                     insertion.update_cigarstring_sms(
                         read1.sms, source_s=source_s, source_strand=event.strand1
                     )
-                    self.logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
+                    logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
                     insertion_mode = (
                         (2 if event.mode1 == 1 else 1)
                         if event.strand1 == insertion.strand
                         else event.mode1
                     )
-                    self.logger.trace("nls reference for read1 and insertion")
+                    logger.trace("nls reference for read1 and insertion")
                     read1_insertion_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=read1,
@@ -968,7 +962,6 @@ class Series:
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            logger=self.logger,
                         )
                     )
                     # get type of insertion between insertion node and second node
@@ -978,7 +971,7 @@ class Series:
                         else event.mode2
                     )
 
-                    self.logger.trace("nls reference for read2 and insertion")
+                    logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = Event(
                         infer_nls_from_connected_reads(
                             read_lt=insertion,
@@ -990,7 +983,6 @@ class Series:
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            logger=self.logger,
                         )
                     )
 
@@ -1042,12 +1034,12 @@ class Series:
                             insertion.cigartuples_without_soft
                         )
 
-                        self.logger.trace(f"Add Insertion {insertion_node=} to Series")
+                        logger.trace(f"Add Insertion {insertion_node=} to Series")
 
                         self.add_node(insertion_node)
 
                 else:  # no hits or multiple hits
-                    self.logger.trace(f"Add Novel Insertion {insertion=} to read1")
+                    logger.trace(f"Add Novel Insertion {insertion=} to read1")
                     # only add read1 with insertion info
                     # False means that the insertion type (hit more insertion) are
                     # not added in series
@@ -1058,7 +1050,7 @@ class Series:
                 # add read 1 with on insertion
                 microhomology = MicroHomology(event.insertion_seq1)
 
-                self.logger.trace(f"Add MicroHomology {microhomology=} to read1")
+                logger.trace(f"Add MicroHomology {microhomology=} to read1")
                 if event.strand1 == "-":
                     microhomology.reverse_completement_query()
 

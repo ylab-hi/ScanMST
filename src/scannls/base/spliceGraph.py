@@ -36,7 +36,7 @@ from .mergeCondition import (
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
-from .plotGraph import export_graph, plot_graph
+from .plotGraph import plot_graph
 from .srRescuer import SRRescuer
 from .type import LoggerType
 
@@ -508,7 +508,7 @@ class SpliceGraph:
             node1_self_identity.is_tail() and node2_self_identity.is_tail()
         ):  # both are end nodes  # check first exon start
             return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-                node1, node2
+                node1, node2, threshold
             )
 
         elif (

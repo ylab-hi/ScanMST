@@ -5,6 +5,7 @@
 @license:     MIT Licence
 @Time:        1/19/22 7:59 PM
 """
+from collections import defaultdict
 from itertools import combinations
 from typing import Any
 
@@ -95,8 +96,8 @@ class Ruler:
         tail_node_a = series_a[-1]
         tail_node_b = series_b[-1]
 
-        middle_nodes_a = series_a[1:-1]
-        middle_nodes_b = series_b[1:-1]
+        middle_nodes_a: list[Node] = series_a[1:-1]
+        middle_nodes_b: list[Node] = series_b[1:-1]
         connection = False
 
         if (
@@ -258,5 +259,62 @@ class ClusterFinder:
         for clique_index in connected_components(self.graph):
             yield (self.intact_series_list[i] for i in clique_index)
 
+    def find_cluster_index(self):
+        """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
 
-# TODO: add duplication reduction and series mergement <04-24-23, Yangyang Li yangyang.li@northwestern.edu>
+        :return:  every clique in graph as a iterator (List[int])
+        """
+        self._create_graph_for_series()
+        yield from connected_components(self.graph)
+
+    @staticmethod
+    def create_merge_key(node: Node):
+        introns = node.introns
+        introns_key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
+        chrom = node.chrom
+        sv_type = node.sv_type
+        return f"{chrom}_{sv_type}_{introns_key}"
+
+    @staticmethod
+    def create_sort_key_for_node(node: Node):
+        return middle_node_signature(node)
+
+    @staticmethod
+    def creat_sort_key_for_series(series: Series):
+        return (
+            len(series),
+            *[ClusterFinder.create_sort_key_for_node(node) for node in series],
+        )
+
+    @staticmethod
+    def sort_cluster(cluster):
+        return sorted(
+            cluster,
+            key=lambda x: ClusterFinder.creat_sort_key_for_series(x),
+        )
+
+    def creat_merge_indexs(self, cluster):
+        result = defaultdict(list)
+        for series in cluster:
+            for node in series:
+                result[node].append(self.create_merge_key(node))
+        return result
+
+    def merge_cluster(self):
+        for cluster_index in self.find_cluster_index():
+            series_list = [self.intact_series_list[i] for i in cluster_index]
+            sorted_series = self.sort_cluster(series_list)
+            self.creat_merge_indexs(sorted_series)
+
+    @staticmethod
+    def _merge_cluster(slected_series: Node, series_list, result, merge_keys):
+        if not series_list:
+            return result
+
+        for series in series_list:
+            if merge_keys[series]:
+                pass
+
+    @staticmethod
+    def merge_series(node1, node2):
+        pass

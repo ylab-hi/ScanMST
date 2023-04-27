@@ -106,7 +106,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
 
 
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-    node1: Node, node2: Node
+    node1: Node, node2: Node, threshold: float
 ) -> bool:
     """Check if two end nodes can be merged or not.
 
