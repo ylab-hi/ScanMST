@@ -36,7 +36,7 @@ from .mergeCondition import (
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
-from .plotGraph import plot_graph
+from .plotGraph import export_graph, plot_graph
 from .srRescuer import SRRescuer
 from .type import LoggerType
 
