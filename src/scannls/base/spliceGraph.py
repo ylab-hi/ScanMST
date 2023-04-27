@@ -640,7 +640,7 @@ class SpliceGraph:
 
                 current_node.clear_next_and_previous_node_in_series()
 
-    def _trace_forward2(
+    def _trace_forward(
         self,
         start_node: Node,
         trace_id: int,
@@ -652,9 +652,6 @@ class SpliceGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-
-        # import ipdb
-        # ipdb.set_trace()
 
         if start_node in path:
             self.logger.warning(
@@ -672,48 +669,12 @@ class SpliceGraph:
 
                     # successor.set_harmoic_mean_sr(successor.sr)
                     for edge in self.get_possible_edges(path, start_node, successor):
-                        self._trace_forward2(
+                        self._trace_forward(
                             successor,
                             trace_id + 1,
                             [*path, start_node, edge],
                             group_paths,
                         )
-            else:
-                # successor be [] or None
-                self._trace_forward2(
-                    successors,  # type: ignore
-                    trace_id + 1,
-                    [*path, start_node],
-                    group_paths,
-                )
-
-    def _trace_forward(
-        self,
-        start_node: Node,
-        trace_id: int,
-        path: list[Node],
-        group_paths: list[list[Node]],
-    ) -> None:
-        """Helper function to trace through graph and find all paths.
-
-        .. seealso::
-            :func:`SpliceGraph.trace`
-        """
-        if start_node in path:
-            self.logger.warning(
-                f"A circle is found in the graph {start_node} in {path}"
-            )
-
-        if not start_node or start_node in path:
-            group_paths.append(path)
-        else:
-            if successors := start_node.successors:
-                for successor in successors:
-                    successor.set_trace_id(trace_id)
-                    successor.set_harmoic_mean_sr(successor.sr)
-                    self._trace_forward(
-                        successor, trace_id + 1, [*path, start_node], group_paths
-                    )
             else:
                 # successor be [] or None
                 self._trace_forward(
@@ -736,17 +697,22 @@ class SpliceGraph:
             :func:`SpliceGraph.trace`
         """
         if not end_node or end_node in path:
+            # successor be [] or None
             group_paths.append(path)
         else:
-            if predecessors := end_node.predecessors:
+            if predecessors := end_node.successors:
                 for predecessor in predecessors:
                     predecessor.set_trace_id(trace_id)
-                    predecessor.set_harmoic_mean_sr(predecessor.sr)
-                    self._trace_backward(
-                        predecessor, trace_id + 1, [*path, end_node], group_paths
-                    )
+                    # successor.set_harmoic_mean_sr(successor.sr)
+                    for edge in self.get_possible_edges(path, end_node, predecessor):
+                        self._trace_backward(
+                            predecessor,
+                            trace_id + 1,
+                            [*path, end_node, edge],
+                            group_paths,
+                        )
             else:
-                # predecessor be [] or None
+                # successor be [] or None
                 self._trace_backward(
                     predecessors,  # type: ignore
                     trace_id + 1,
@@ -778,7 +744,6 @@ class SpliceGraph:
 
         raise ValueError(f"{direction=} is not a valid direction[forward, backward]")
 
-    # TODO: change possible path <04-24-23, Yangyang Li yangyang.li@northwestern.edu>
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
         result_series_list = []
@@ -789,7 +754,7 @@ class SpliceGraph:
         for start_node in self.get_start_nodes():
             start_node.set_trace_id(1)
             group_paths: Any = []
-            self._trace_forward2(start_node, 2, [], group_paths)
+            self._trace_forward(start_node, 2, [], group_paths)
             result_series_list.extend(group_paths)
 
         return result_series_list
