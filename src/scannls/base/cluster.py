@@ -5,7 +5,6 @@
 @license:     MIT Licence
 @Time:        1/19/22 7:59 PM
 """
-from collections import defaultdict
 from itertools import combinations
 from typing import Any
 
@@ -13,6 +12,7 @@ import networkx as nx
 from networkx import connected_components
 
 from ..utils import timeit
+from .basicClass import BreakPoint
 from .basicClass import Node
 from .basicClass import Series
 from .mergeCondition import (
@@ -30,6 +30,7 @@ from .mergeCondition import (
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
+from .mergeCondition import MergeCondition
 
 
 def middle_node_signature(node: Node) -> str:
@@ -96,8 +97,8 @@ class Ruler:
         tail_node_a = series_a[-1]
         tail_node_b = series_b[-1]
 
-        middle_nodes_a: list[Node] = series_a[1:-1]
-        middle_nodes_b: list[Node] = series_b[1:-1]
+        middle_nodes_a: list[Node] = series_a[1:-1]  # type: ignore
+        middle_nodes_b: list[Node] = series_b[1:-1]  # type: ignore
         connection = False
 
         if (
@@ -267,54 +268,124 @@ class ClusterFinder:
         self._create_graph_for_series()
         yield from connected_components(self.graph)
 
-    @staticmethod
-    def create_merge_key(node: Node):
-        introns = node.introns
-        introns_key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
-        chrom = node.chrom
-        sv_type = node.sv_type
-        return f"{chrom}_{sv_type}_{introns_key}"
+    def creat_merge_indexs(self, cluster) -> dict[int, list[str]]:
+        result = {}
 
-    @staticmethod
-    def create_sort_key_for_node(node: Node):
-        return middle_node_signature(node)
-
-    @staticmethod
-    def creat_sort_key_for_series(series: Series):
-        return (
-            len(series),
-            *[ClusterFinder.create_sort_key_for_node(node) for node in series],
-        )
-
-    @staticmethod
-    def sort_cluster(cluster):
-        return sorted(
-            cluster,
-            key=lambda x: ClusterFinder.creat_sort_key_for_series(x),
-        )
-
-    def creat_merge_indexs(self, cluster):
-        result = defaultdict(list)
         for series in cluster:
+            nodes_key = []
             for node in series:
-                result[node].append(self.create_merge_key(node))
+                nodes_key.append(create_merge_key_for_node(node))
+
+            result[series.id] = nodes_key
+
         return result
+
+    @staticmethod
+    def check_merge(
+        series1: Series, series2: Series, merge_keys: dict[int, list[str]]
+    ) -> bool:
+        """Check if series1 can merge series2."""
+        series1_nodes_key = merge_keys[series1.id]
+        series2_nodes_key = merge_keys[series2.id]
+
+        if len(merge_keys[series1.id]) == len(merge_keys[series2.id]):
+            return False
+        elif len(merge_keys[series1.id]) > len(merge_keys[series2.id]):
+            if set(series2_nodes_key).issubset(set(series1_nodes_key)):
+                start_index = series1_nodes_key.index(series2_nodes_key[0])
+                if merge_same_len_node_list(series1[start_index:], series2, 1):  # type: ignore
+                    return True
+
+        raise ValueError("series1 is shorter than series2")
 
     def merge_cluster(self):
         for cluster_index in self.find_cluster_index():
-            series_list = [self.intact_series_list[i] for i in cluster_index]
-            sorted_series = self.sort_cluster(series_list)
+            series_list = []
+            for i in cluster_index:
+                current_series = self.intact_series_list[i]
+                current_series.id = i
+                series_list.append(current_series)
+
+            sorted_series = sort_cluster(series_list)
+
             self.creat_merge_indexs(sorted_series)
 
     @staticmethod
-    def _merge_cluster(slected_series: Node, series_list, result, merge_keys):
+    def _merge_cluster(slected_series: Series, series_list, result, merge_keys):
         if not series_list:
             return result
 
         for series in series_list:
-            if merge_keys[series]:
+            if merge_keys[series.id] in merge_keys[slected_series.id]:
                 pass
 
-    @staticmethod
-    def merge_series(node1, node2):
-        pass
+
+def merge_series(series1, series2, start_index):
+    pass
+
+
+def merge_same_len_node_list(series1: list[Node], series2: list[Node], threashold: int):
+    """seires1 is equal than series2 and series1 merge series2.
+
+    orignial s1: [ ] - [ ] - [ ] - [ ]
+    s2:                [ ] - [ ] - [ ]
+
+    """
+    assert len(series1) == len(series2)
+
+    merge_comdition = MergeCondition(threashold)
+
+    for node1, node2 in zip(series1, series2):
+        if node1.self_identity.is_head() and node2.self_identity.is_head():
+            return BreakPoint.equal(
+                node1.next_breakpoint, node2.next_breakpoint, threashold
+            ) and merge_comdition.head2head(node1, node2)
+
+        elif node1.self_identity.is_mid() and node2.self_identity.is_head():
+            return BreakPoint.equal(
+                node1.next_breakpoint, node2.next_breakpoint, threashold
+            ) and merge_comdition.mid2head(node1, node2)
+
+        elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
+            return BreakPoint.equal(
+                node1.next_breakpoint, node2.next_breakpoint, threashold
+            ) and merge_comdition.mid2mid(node1, node2)
+
+        elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
+            return merge_comdition.mid2tail(node1, node2)
+
+        elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
+            return merge_comdition.tail2tail(node1, node2)
+
+        else:
+            raise ValueError("invalid node identity")
+
+
+def create_merge_key_for_node(node: Node):
+    introns = node.introns
+    introns_key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
+    chrom = node.chrom
+    sv_type = node.sv_type
+    return f"{chrom}_{sv_type}_{introns_key}"
+
+
+def create_merge_key_for_series(nodes_key: list[str]):
+    return "_".join(nodes_key)
+
+
+def create_sort_key_for_node(node: Node):
+    return middle_node_signature(node)
+
+
+def creat_sort_key_for_series(series: Series):
+    return (
+        len(series),
+        *[create_sort_key_for_node(node) for node in series],
+    )
+
+
+def sort_cluster(cluster):
+    return sorted(
+        cluster,
+        key=lambda x: creat_sort_key_for_series(x),
+    )

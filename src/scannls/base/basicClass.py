@@ -375,7 +375,7 @@ class BreakPoint:
         return cls(chrom, int(pos))
 
     @staticmethod
-    def equals(
+    def equal(
         breakpoint1: Optional["BreakPoint"],
         breakpoint2: Optional["BreakPoint"],
         threshold: int,
@@ -577,6 +577,10 @@ class Node(BasicNode):
     @property
     def self_identity(self) -> NodeIdentity:
         assert self.query_name != ""
+
+        if self.query_name not in self.identity:
+            self.identity[self.query_name] = NodeIdentity.from_node(self)
+
         return self.identity[self.query_name]
 
     @classmethod
@@ -740,6 +744,7 @@ class Series:
         self.is_in_graph = False
         self.blat = blat
         self.id = -1
+        self.merge_factor = 1
 
     def add_node(self, node: Node) -> None:
         """Add a node to the series."""

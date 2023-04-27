@@ -109,7 +109,7 @@ class Variation:
     def is_merged(
         variation1: "Variation", variation2: "Variation", threshold: int
     ) -> bool:
-        return variation1.types == variation2.types and BreakPoint.equals(
+        return variation1.types == variation2.types and BreakPoint.equal(
             variation1.break_point, variation2.break_point, threshold
         )
 

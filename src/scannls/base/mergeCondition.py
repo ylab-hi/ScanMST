@@ -12,6 +12,73 @@ from .basicClass import Node
 from .exception import ExonsNotFoundError
 
 
+class MergeCondition:
+    def __init__(self, threshold: int):
+        self.threshold = threshold
+
+    def head2head(self, node1: Node, node2: Node) -> bool:
+        return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
+            node1, node2, self.threshold
+        )
+
+    def head2tail(self, node1: Node, node2: Node) -> bool:
+        return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+            node1, node2, self.threshold
+        )
+
+    def head2mid(self, node1: Node, node2: Node) -> bool:
+        return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
+            node1, node2
+        )
+
+    def mid2head(self, node1: Node, node2: Node) -> bool:
+        return self.head2mid(node2, node1)
+
+    def mid2mid(self, node1: Node, node2: Node) -> bool:
+        return (
+            node1.exons[0][0] == node2.exons[0][0]  # type: ignore
+            and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
+        )
+
+    def mid2tail(self, node1: Node, node2: Node) -> bool:
+        return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+            node2, node1
+        )
+
+    def tail2head(self, node1: Node, node2: Node) -> bool:
+        return self.head2tail(node2, node1)
+
+    def tail2mid(self, node1: Node, node2: Node) -> bool:
+        return self.mid2tail(node2, node1)
+
+    def tail2tail(self, node1: Node, node2: Node) -> bool:
+        return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
+            node1, node2, self.threshold
+        )
+
+    def is_merged(self, node1: Node, node2: Node) -> bool:
+        if node1.self_identity.is_head() and node2.self_identity.is_head():
+            return self.head2head(node1, node2)
+        elif node1.self_identity.is_head() and node2.self_identity.is_tail():
+            return self.head2tail(node1, node2)
+        elif node1.self_identity.is_head() and node2.self_identity.is_mid():
+            return self.head2mid(node1, node2)
+        elif node1.self_identity.is_mid() and node2.self_identity.is_head():
+            return self.mid2head(node1, node2)
+        elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
+            return self.mid2mid(node1, node2)
+        elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
+            return self.mid2tail(node1, node2)
+        elif node1.self_identity.is_tail() and node2.self_identity.is_head():
+            return self.tail2head(node1, node2)
+        elif node1.self_identity.is_tail() and node2.self_identity.is_mid():
+            return self.tail2mid(node1, node2)
+        elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
+            return self.tail2tail(node1, node2)
+        else:
+            raise ValueError("Invalid node identity")
+
+
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     node1: Node, node2: Node, threshold: int
 ) -> bool:
