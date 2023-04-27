@@ -688,8 +688,8 @@ class SpliceGraph:
         self,
         end_node: Node,
         trace_id: int,
-        path: list[Node],
-        group_paths: list[list[Node]],
+        path: list[Union[Node, Edge]],
+        group_paths: list[list[Union[Node, Edge]]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
