@@ -171,6 +171,15 @@ class Edge:
         ):
             self.edge_data.insertion[1].increment_ao()
 
+    def get_nodes(self, graph: "SpliceGraph"):
+        node1 = graph.get_node_with_unique_key(self.node1_key)
+        node2 = graph.get_node_with_unique_key(self.node2_key)
+
+        if node1 is None or node2 is None:
+            raise ValueError("Node not found due to edge is invalidated")
+
+        return node1, node2
+
     @classmethod
     def from_nodes(
         cls,

@@ -142,6 +142,7 @@ class SRRescuer:
 
         if tag_name == "prev_breakpoint":
             return node.chrom, pre_pos, next_pos
+
         return node.chrom, next_pos, pre_pos
 
     def update_sr(
@@ -160,6 +161,7 @@ class SRRescuer:
         mode1, mode2 = current_node.modes
 
         chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
+
         current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
             chrom_n, pos_n, pos_n + 1
         )

@@ -9,7 +9,6 @@ from itertools import combinations
 from typing import Any
 
 import networkx as nx
-from loguru import logger
 from networkx import connected_components
 
 from ..utils import timeit
@@ -297,7 +296,6 @@ class ClusterFinder:
 
         for current_series in series_list:
             if ClusterFinder.check_merge(slected_series, current_series, merge_keys):
-                logger.warning("merge one series")
                 series_list.remove(current_series)
 
         result.append(slected_series)
