@@ -228,7 +228,7 @@ class SpliceGraph:
         self,
         series_list: Iterable[Series],
         clique_ind: int,
-        is_plot: bool = True,
+        is_plot: bool = False,
         is_check_circle: bool = False,
     ) -> Iterable[Series]:
         """Find a specific path based on splice graph.

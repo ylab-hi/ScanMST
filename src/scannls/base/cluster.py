@@ -283,7 +283,7 @@ class ClusterFinder:
             ClusterFinder._merge_cluster(sorted_series, new_cluster, merge_keys)
             yield sort_cluster(
                 new_cluster,
-                key=lambda x: create_sort_key_by_merge_factor(x),
+                key=lambda x: create_sort_key_by_merge_factor(x),  # type: ignore
                 reverse=True,
             )
 
