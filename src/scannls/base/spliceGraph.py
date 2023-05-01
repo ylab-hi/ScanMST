@@ -253,6 +253,7 @@ class SpliceGraph:
 
         # construct splice graph
         self.construct()
+
         # sr rescuer
         # self.rescuer(self)
 

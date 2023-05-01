@@ -3,7 +3,6 @@
 
 @Filename:    plotGraph.py
 @Author:      YangyangLi
-@contact:     li002252@umn.edu
 @license:     MIT Licence
 @Time:        1/28/22 8:46 PM
 """

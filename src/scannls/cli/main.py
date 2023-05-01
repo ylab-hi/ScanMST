@@ -249,7 +249,6 @@ def detect_sv_from_cigar(
                     cvg=cvg,
                     gene_iv=gene_iv,
                     motif_required=motif_required,
-                    logger=logger,
                 )
             )
 
@@ -481,7 +480,7 @@ def _scan_bam_helper(
                             nls_event_list.append(event)
 
                     if nls_event_list:
-                        series = Series(blat=blat, logger=logger)
+                        series = Series(blat=blat)
                         logger.debug(f"{nls_event_list=}")
                         series.init(
                             nls_event_list,

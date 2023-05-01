@@ -74,7 +74,7 @@ def parse_splice_graph_for_cliques_seq(
     with writers.open() as _:
         for ind, clique in enumerate(cliques, 1):
             logger.debug(f"processing clique {ind}")
-            for series in splice_graph(clique, ind, is_plot=False):
+            for series in splice_graph(clique, ind):
                 if len(series) == 1:
                     logger.warning(
                         f"Single Series {ind}: {series}{series[0].query_name}"
@@ -110,7 +110,7 @@ def _parse_splice_graph_for_cliques_par(
     result_series = []
     for ind, clique in enumerate(cliques, 1):
         series_list = []
-        for series in splice_graph(clique, ind, is_plot=False):
+        for series in splice_graph(clique, ind):
             series_list.append(series)
         result_series.append(series_list)
     return result_series
