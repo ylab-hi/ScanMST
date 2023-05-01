@@ -156,14 +156,26 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     start = time.perf_counter()
     # add logger
     logger.remove()
-    logger.add(
-        sys.stdout,
-        level=options.log.upper(),
-        enqueue=True,
-        colorize=True,
-        backtrace=False,
-        diagnose=True,
-    )
+    if options.log.upper() == "INFO":
+        info_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+        logger.add(
+            sys.stdout,
+            level=options.log.upper(),
+            format=info_format,
+            enqueue=True,
+            colorize=True,
+            backtrace=False,
+            diagnose=True,
+        )
+    else:
+        logger.add(
+            sys.stdout,
+            level=options.log.upper(),
+            enqueue=True,
+            colorize=True,
+            backtrace=False,
+            diagnose=True,
+        )
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
@@ -217,9 +229,10 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         logger.info(f"Total Series: {intact_series_list_len}")
 
-        clique_finder = ClusterFinder(intact_series_list, intact_series_list_len)
+        cluster_finder = ClusterFinder(intact_series_list, intact_series_list_len)
         # cliques is generator
-        cliques = clique_finder.find_cluster()
+        # clusters = cluster_finder.find_cluster()
+        clusters = cluster_finder.merge_cluster()
 
         writers = get_writers(options.output, options.ref, in_bam_header)
 
@@ -231,7 +244,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         node_rescued_sr_max = 100
         parse_splice_graph_for_cliques(
-            cliques, writers, options, node_rescued_sr_max, logger, avg_cov
+            clusters, writers, options, node_rescued_sr_max, logger, avg_cov
         )
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
