@@ -93,7 +93,7 @@ class MergeCondition:
             node1, node2, self.threshold
         )
 
-    def is_merged(self, node1: Node, node2: Node) -> bool:
+    def merged(self, node1: Node, node2: Node) -> bool:
         if node1.self_identity.is_head() and node2.self_identity.is_head():
             return self.head2head(node1, node2)
         elif node1.self_identity.is_head() and node2.self_identity.is_tail():

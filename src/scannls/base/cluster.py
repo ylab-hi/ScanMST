@@ -15,21 +15,6 @@ from ..utils import timeit
 from .basicClass import BreakPoint
 from .basicClass import Node
 from .basicClass import Series
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
-)
 from .mergeCondition import MergeCondition
 
 
@@ -100,20 +85,13 @@ class Ruler:
         middle_nodes_a: list[Node] = series_a[1:-1]  # type: ignore
         middle_nodes_b: list[Node] = series_b[1:-1]  # type: ignore
         connection = False
+        merge_condition: MergeCondition = MergeCondition(self.prune_threshold)
 
         if (
-            _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-                head_node_a, head_node_b, self.prune_threshold
-            )
-            or _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-                tail_node_a, tail_node_b, self.prune_threshold
-            )
-            or _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-                head_node_a, tail_node_b
-            )
-            or _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-                head_node_b, tail_node_a
-            )
+            merge_condition.head2head(head_node_a, head_node_b)
+            or merge_condition.tail2tail(tail_node_a, tail_node_b)
+            or merge_condition.head2tail(head_node_a, tail_node_b)
+            or merge_condition.head2tail(head_node_b, tail_node_a)
             or _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
                 middle_nodes_a, middle_nodes_b
             )
@@ -122,27 +100,19 @@ class Ruler:
 
         if not connection:
             for _middle_node_b in middle_nodes_b:
-                if _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-                    head_node_a, _middle_node_b
-                ):
+                if merge_condition.head2mid(head_node_a, _middle_node_b):
                     connection = True
                     break
-                if _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-                    tail_node_a, _middle_node_b
-                ):
+                if merge_condition.tail2mid(tail_node_a, _middle_node_b):
                     connection = True
                     break
 
             if not connection:
                 for _middle_node_a in middle_nodes_a:
-                    if _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-                        head_node_b, _middle_node_a
-                    ):
+                    if merge_condition.head2mid(head_node_a, _middle_node_a):
                         connection = True
                         break
-                    if _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-                        tail_node_b, _middle_node_a
-                    ):
+                    if merge_condition.tail2mid(tail_node_b, _middle_node_a):
                         connection = True
                         break
 

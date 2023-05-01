@@ -21,21 +21,7 @@ from .basicClass import Node
 from .basicClass import NodeIdentity
 from .basicClass import NovelInsertion
 from .basicClass import Series
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode,
-)
-from .mergeCondition import (
-    _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
-)
+from .mergeCondition import MergeCondition
 from .plotGraph import plot_graph
 from .srRescuer import SRRescuer
 from .type import LoggerType
@@ -482,49 +468,35 @@ class SpliceGraph:
 
         node1_self_identity: NodeIdentity = node1.self_identity
         node2_self_identity: NodeIdentity = node2.self_identity
+        merge_condition = MergeCondition(threshold)
         if (
             node1_self_identity.is_tail() and node2_self_identity.is_head()
         ):  # node1 is end node, node2 is start node
-            return (
-                _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-                    node1, node2
-                )
-            )
+            return merge_condition.head2tail(node1, node2)
         elif (
             node1_self_identity.is_tail() and node2_self_identity.is_mid()
         ):  # node1 is end node, node2 is middle node
-            return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-                node1, node2
-            )
+            return merge_condition.tail2tail(node1, node2)
 
         elif (
             node1_self_identity.is_head() and node2_self_identity.is_head()
         ):  # both are start nodes
-            return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-                node1, node2, threshold
-            )
+            return merge_condition.head2head(node1, node2)
 
         elif (
             node1_self_identity.is_tail() and node2_self_identity.is_tail()
         ):  # both are end nodes  # check first exon start
-            return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-                node1, node2, threshold
-            )
+            return merge_condition.tail2tail(node1, node2)
 
         elif (
             node1_self_identity.is_head() and node2_self_identity.is_mid()
         ):  # node1 is start node, node2 is middle node
-            return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-                node1, node2
-            )
+            return merge_condition.head2mid(node1, node2)
 
         elif (
             node1_self_identity.is_mid() and node2_self_identity.is_mid()
         ):  # both are middle nodes
-            return (
-                node1.exons[0][0] == node2.exons[0][0]  # type: ignore
-                and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
-            )
+            return merge_condition.mid2mid(node1, node2)
 
         # swap node1 and node2 to check if they can be merged again
         return False
