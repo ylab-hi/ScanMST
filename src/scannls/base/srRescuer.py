@@ -17,6 +17,9 @@ from .exception import ExonsNotFoundError
 from .exception import ModesNotFoundError
 
 
+# TODO: Rescure sr based on edge <05-01-23, Yangyang Li yangyang.li@northwestern.edu>
+
+
 def is_middle_node(node: Node) -> bool:
     """Check if the node is middle node."""
     return node.predecessors and node.surcessors
