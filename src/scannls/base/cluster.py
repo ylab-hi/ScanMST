@@ -281,22 +281,23 @@ class ClusterFinder:
         return result
 
     @staticmethod
-    def check_merge(
-        series1: Series, series2: Series, merge_keys: dict[int, list[str]]
-    ) -> bool:
+    def check_merge(series1: Series, series2: Series, merge_keys: dict[int, list[str]]):
         """Check if series1 can merge series2."""
         series1_nodes_key = merge_keys[series1.id]
         series2_nodes_key = merge_keys[series2.id]
 
         if len(merge_keys[series1.id]) == len(merge_keys[series2.id]):
+            # reduce duplication
             return False
         elif len(merge_keys[series1.id]) > len(merge_keys[series2.id]):
             if set(series2_nodes_key).issubset(set(series1_nodes_key)):
                 start_index = series1_nodes_key.index(series2_nodes_key[0])
                 if merge_same_len_node_list(series1[start_index:], series2, 1):  # type: ignore
+                    merge_series(series1, series2, start_index)  # type: ignore
+                    series1.merge_factor += 1
                     return True
-
-        raise ValueError("series1 is shorter than series2")
+        else:
+            raise ValueError("series1 is shorter than series2")
 
     def merge_cluster(self):
         for cluster_index in self.find_cluster_index():
@@ -307,21 +308,48 @@ class ClusterFinder:
                 series_list.append(current_series)
 
             sorted_series = sort_cluster(series_list)
-
-            self.creat_merge_indexs(sorted_series)
+            merge_keys = self.creat_merge_indexs(sorted_series)
+            new_cluster = []
+            ClusterFinder._merge_cluster(sorted_series, new_cluster, merge_keys)
+            yield sort_cluster(
+                new_cluster,
+                key=lambda x: create_sort_key_by_merge_factor(x),
+                reverse=True,
+            )
 
     @staticmethod
-    def _merge_cluster(slected_series: Series, series_list, result, merge_keys):
+    def _merge_cluster(series_list, result, merge_keys):
         if not series_list:
             return result
 
-        for series in series_list:
-            if merge_keys[series.id] in merge_keys[slected_series.id]:
-                pass
+        slected_series = series_list.pop()
+
+        for current_series in series_list:
+            if ClusterFinder.check_merge(slected_series, current_series, merge_keys):
+                series_list.remove(current_series)
+
+        result.append(slected_series)
+
+        ClusterFinder._merge_cluster(series_list, result, merge_keys)
 
 
-def merge_series(series1, series2, start_index):
-    pass
+def merge_series(series1: list[Node], series2: list[Node], start_index: int):
+    assert len(series1[start_index:]) == len(series2)
+    for updated_node, current_node in zip(series1[start_index:], series2):
+        # update exon coordinates
+        updated_node.ref_start = min(  # type: ignore
+            updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
+        )
+
+        updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
+
+        updated_node.ref_end = max(  # type: ignore
+            updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
+        )
+
+        updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
+
+        updated_node.sr += current_node.sr
 
 
 def merge_same_len_node_list(series1: list[Node], series2: list[Node], threashold: int):
@@ -333,29 +361,29 @@ def merge_same_len_node_list(series1: list[Node], series2: list[Node], threashol
     """
     assert len(series1) == len(series2)
 
-    merge_comdition = MergeCondition(threashold)
+    merge_condition = MergeCondition(threashold)
 
     for node1, node2 in zip(series1, series2):
         if node1.self_identity.is_head() and node2.self_identity.is_head():
             return BreakPoint.equal(
                 node1.next_breakpoint, node2.next_breakpoint, threashold
-            ) and merge_comdition.head2head(node1, node2)
+            ) and merge_condition.head2head(node1, node2)
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_head():
             return BreakPoint.equal(
                 node1.next_breakpoint, node2.next_breakpoint, threashold
-            ) and merge_comdition.mid2head(node1, node2)
+            ) and merge_condition.mid2head(node1, node2)
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
             return BreakPoint.equal(
                 node1.next_breakpoint, node2.next_breakpoint, threashold
-            ) and merge_comdition.mid2mid(node1, node2)
+            ) and merge_condition.mid2mid(node1, node2)
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
-            return merge_comdition.mid2tail(node1, node2)
+            return merge_condition.mid2tail(node1, node2)
 
         elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
-            return merge_comdition.tail2tail(node1, node2)
+            return merge_condition.tail2tail(node1, node2)
 
         else:
             raise ValueError("invalid node identity")
@@ -384,8 +412,17 @@ def creat_sort_key_for_series(series: Series):
     )
 
 
-def sort_cluster(cluster):
+def create_sort_key_by_merge_factor(series: Series):
+    return (
+        len(series),
+        series.merge_factor,
+        *[create_sort_key_for_node(node) for node in series],
+    )
+
+
+def sort_cluster(cluster, key=lambda x: creat_sort_key_for_series(x), reverse=False):
     return sorted(
         cluster,
-        key=lambda x: creat_sort_key_for_series(x),
+        key=key,
+        reverse=reverse,
     )

@@ -6,10 +6,47 @@
 @license:     MIT Licence
 @Time:        4/18/22 7:51 PM
 """
+from enum import auto
+from enum import Enum
 from itertools import zip_longest
 
 from .basicClass import Node
 from .exception import ExonsNotFoundError
+
+
+class MergeConditionMode(Enum):
+    head2head = auto()
+    head2mid = auto()
+    head2tail = auto()
+    mid2head = auto()
+    mid2mid = auto()
+    mid2tail = auto()
+    tail2head = auto()
+    tail2mid = auto()
+    tail2tail = auto()
+
+    @classmethod
+    def get_mode(cls, node1: Node, node2: Node) -> "MergeConditionMode":
+        if node1.self_identity.is_head() and node2.self_identity.is_head():
+            return cls.head2head
+        elif node1.self_identity.is_head() and node2.self_identity.is_tail():
+            return cls.head2tail
+        elif node1.self_identity.is_head() and node2.self_identity.is_mid():
+            return cls.head2mid
+        elif node1.self_identity.is_mid() and node2.self_identity.is_head():
+            return cls.mid2head
+        elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
+            return cls.mid2mid
+        elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
+            return cls.mid2tail
+        elif node1.self_identity.is_tail() and node2.self_identity.is_head():
+            return cls.tail2head
+        elif node1.self_identity.is_tail() and node2.self_identity.is_mid():
+            return cls.tail2mid
+        elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
+            return cls.tail2tail
+        else:
+            raise ValueError("Invalid node identity")
 
 
 class MergeCondition:

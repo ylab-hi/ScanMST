@@ -619,7 +619,6 @@ def insertion2chimeric_alignment(
     :param align_len_threshold: the threshold of the insertion sequence length
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
     """
-    # NOTE:  <02-12-23, Yangyang Li>
     read_strand = "-" if read.is_reverse else "+"
     if read_strand == "-":
         insertion_seq = reverse_complement(insertion_seq)
