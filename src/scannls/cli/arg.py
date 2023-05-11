@@ -5,6 +5,7 @@ import argparse
 from dataclasses import dataclass
 from typing import Any
 from typing import Optional
+from typing import Tuple
 
 from scannls import __version__
 
@@ -27,7 +28,7 @@ class DefaultOptions:
     bound: bool = True
     log: str = "info"
     species: str = "human"
-    species_choices: tuple[str, ...] = ("human", "mouse")
+    species_choices: Tuple[str, ...] = ("human", "mouse")
     parallel: int = 1
     port: int = 88888
     min_soft_seg_len: int = 200
@@ -198,6 +199,7 @@ def parse_args() -> argparse.ArgumentParser:
         "--rt-switching-filter",
         action="store",
         dest="rt_switching_filter_len",
+        type=int,
         default=DefaultOptions.rt_switching_filter_len,
         help="Set RT switching filter (default length: %(default)s)",
     )
