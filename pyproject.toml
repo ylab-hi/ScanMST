@@ -28,8 +28,8 @@ pyfaidx = "^0.7.1"
 psutil = "^5.9.1"
 loguru = "^0.6.0"
 rich = "^13.3.3"
-networkx = "^3.1"
-pybind11 = "^2.10.0"
+networkx = "^3.0"
+pybind11 = "^2.10.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
