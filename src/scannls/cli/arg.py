@@ -1,12 +1,6 @@
 # !/usr/bin/env python
-"""Parse command line arguments.
+"""Parse command line arguments."""
 
-@Filename:    arg.py
-@Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        3/25/22 9:01 AM
-"""
 import argparse
 from dataclasses import dataclass
 from typing import Any
@@ -47,6 +41,11 @@ class DefaultOptions:
     substitutions_num: int = 10
     substitutions_fraction: float = 0.1
     indel_fraction: float = 0.1
+    circular_rna: str = "remove"
+    circular_rna_choices: Tuple[str, ...] = ("remove", "keep", "extract")
+    # junctions within one annotated exon filter
+    exon_filter: bool = True
+    rt_switching_filter_len: int = 10
 
 
 class RichArgParser(argparse.ArgumentParser):
@@ -86,8 +85,8 @@ def parse_args() -> argparse.ArgumentParser:
         description="[red]scannls[/] :rocket: Nonlinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
-        #     """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
-        #     University of Minnesota, 2022"""
+        #     """Authors: TingYou Wang and Yangyang Li,
+        #     Northwestern University, 2023"""
         # ),
         formatter_class=RichHelpFormatter,
     )
@@ -179,7 +178,29 @@ def parse_args() -> argparse.ArgumentParser:
         choices=DefaultOptions.species_choices,
         default=DefaultOptions.species,
     )
+    parser.add_argument(
+        "--circular-rna-filter",
+        action="store",
+        dest="circular_rna",
+        help="The way of dealing with circular RNAs (default: %(default)s)",
+        choices=DefaultOptions.circular_rna_choices,
+        default=DefaultOptions.circular_rna,
+    )
+    parser.add_argument(
+        "--off-exon-filter",
+        action="store_false",
+        dest="exon_filter",
+        default=DefaultOptions.exon_filter,
+        help="Turn on exon filter (default: %(default)s)",
+    )
 
+    parser.add_argument(
+        "--rt-switching-filter",
+        action="store",
+        dest="rt_switching_filter_len",
+        default=DefaultOptions.rt_switching_filter_len,
+        help="Set RT switching filter (default length: %(default)s)",
+    )
     parser.add_argument(
         "--ncan",
         action="store_true",

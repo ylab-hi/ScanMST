@@ -798,7 +798,7 @@ def detect_read_read_connections_from_cigar(
             )
 
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
-        max(mapq_list) < mapq_cutoff
+        min(mapq_list) < mapq_cutoff
     ):
         return noreturn
 

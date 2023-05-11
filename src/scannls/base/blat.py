@@ -366,6 +366,9 @@ class Blat:
     @staticmethod
     def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float) -> int:
         """Function is used to calculate map quality of the insertion.
+        We adapted the way of calculation in TopHat.
+        reference: 1) https://www.biostars.org/p/69773/
+                   2) https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/v
 
         :param hsps: the list of hsp after aligning the insertion sequence
         :param in_seq_len: the length of the input sequence

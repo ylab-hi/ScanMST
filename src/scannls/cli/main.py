@@ -23,6 +23,9 @@ from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
+from ..base.filters import ExonFilter
+from ..base.filters import CircRNAFilter
+from ..base.filters import RTSwitchingFilter
 from ..base.type import LoggerType
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
@@ -284,12 +287,17 @@ def _scan_bam_helper(
     substitutions_num,
     substitutions_fraction,
     indels_fraction,
+    circular_rna,
+    exon_filter,
+    rt_switching_filter_len,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
 
     genome_fasta = _get_genome_fasta(ref_genome)
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
+    exon_filter = ExonFilter(gtf, 10, logger)
+    rt_switching_filter = RTSwitchingFilter(rt_switching_filter_len, logger)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
     if running_mode == "parallel":
@@ -310,6 +318,8 @@ def _scan_bam_helper(
     pat_left_s = re.compile(r"^(\d+)S")
     pat_right_s = re.compile(r"(\d+)S$")
 
+    # Circular RNA filter
+    circ_rna_filter = CircRNAFilter(gtf, 10, logger)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
         if (
@@ -476,8 +486,23 @@ def _scan_bam_helper(
 
                     nls_event_list = []
                     for event in event_lists:
-                        if event.sv_type in {"TDUP", "INV", "TRA", "DEL", "IDUP"}:
-                            nls_event_list.append(event)
+                        if event.sv_type in {
+                            "TDUP",
+                            "INV",
+                            "TRA",
+                            "DEL",
+                            "IDUP",
+                        }:
+                            if exon_filter:
+                                if not exon_filter.is_breakpoints_in_same_exon(
+                                    event
+                                ) and not rt_switching_filter.is_from_rt_switching(
+                                    event
+                                ):
+                                    nls_event_list.append(event)
+                            else:
+                                if not rt_switching_filter.is_from_rt_switching(event):
+                                    nls_event_list.append(event)
 
                     if nls_event_list:
                         series = Series(blat=blat)
@@ -493,8 +518,17 @@ def _scan_bam_helper(
                         )
                         series.disable_blat_logger()
                         if not series.is_all_type_del():
-                            nls_src_forms_list.append(series)
-                            logger.trace(f"{series=}")
+                            if circular_rna == "remove":
+                                if not circ_rna_filter.is_circRNA(series):
+                                    nls_src_forms_list.append(series)
+                                    logger.trace(f"{series=}")
+                            elif circular_rna == "extract":
+                                if circ_rna_filter.is_circRNA(series):
+                                    nls_src_forms_list.append(series)
+                                    logger.trace(f"extracted circular RNA: {series=}")
+                            else:
+                                nls_src_forms_list.append(series)
+                                logger.trace(f"{series=}")
                 else:
                     logger.trace(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "
@@ -528,6 +562,9 @@ def scanbam_run(
     substitutions_fraction,
     indels_fraction,
     species,
+    circular_rna,
+    exon_filter,
+    rt_switching_filter_len,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(

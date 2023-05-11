@@ -1,7 +1,7 @@
 # !/usr/bin/env python
 """Find cliques in a graph.
 
-@Filename:    cliqueFinder.py
+@Filename:    cluster.py
 @license:     MIT Licence
 @Time:        1/19/22 7:59 PM
 """
@@ -129,7 +129,7 @@ class ClusterFinder:
     :param threshold: threshold to determine whether two series are connected
 
     .. note::
-        :function: `networkx.algorithms.clique.find_cliques` is used to find cliques.
+        :function: `networkx.algorithms.components.connected.connected_components` is used to find clusters.
 
     :Example:
 
@@ -212,7 +212,7 @@ class ClusterFinder:
 
     @timeit
     def find_cluster(self) -> Any:
-        """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
+        """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
         :return:  every clique in graph as a iterator (List[Series])
 
@@ -231,7 +231,7 @@ class ClusterFinder:
             yield (self.intact_series_list[i] for i in clique_index)
 
     def find_cluster_index(self):
-        """Find clique in graph with help of :func:`networkx.algorithms.clique.find_clique`.
+        """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
         :return:  every clique in graph as a iterator (List[int])
         """

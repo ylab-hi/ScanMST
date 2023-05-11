@@ -1177,6 +1177,16 @@ class Event:
         return str(self.bp2.split(":")[0])
 
     @property
+    def junction_pos1(self) -> int:
+        """Return junction position of read1."""
+        return int(self.bp1.split(":")[1])
+
+    @property
+    def junction_pos2(self) -> int:
+        """Return junction position of read2."""
+        return int(self.bp2.split(":")[1])
+
+    @property
     def insertion_seq1(self) -> str:
         """Return the insertion sequence of read1."""
         return str(self.insertion_info[0][1:])
@@ -1207,6 +1217,14 @@ class Event:
     def has_microhomology(self) -> bool:
         """Return True if the event has microhomology."""
         return bool(self.insertion_info[0].startswith("-"))
+
+    @property
+    def insertion_microhomology_len(self) -> int:
+        """Return the length of insertion or microhomology."""
+        if self.has_insertion() or self.has_microhomology():
+            return len(self.insertion_info[0]) - 1
+        else:
+            return 0
 
     def is_same_strand(self) -> bool:
         """Return True if the event is same strand."""

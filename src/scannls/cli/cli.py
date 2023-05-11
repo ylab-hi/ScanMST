@@ -217,6 +217,9 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             substitutions_fraction=options.substitutions_fraction,
             indels_fraction=options.indel_fraction,
             species=options.species,
+            circular_rna=options.circular_rna,
+            exon_filter=options.exon_filter,
+            rt_switching_filter_len=options.rt_switching_filter_len,
         )
 
         avg_cov = None if not options.bound else avg_cov
