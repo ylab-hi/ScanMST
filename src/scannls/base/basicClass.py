@@ -698,14 +698,14 @@ class Series:
     >>> from loguru import logger
     >>> series = Series(blat=None, logger=logger)
     >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',
-    ... chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[[7706250,7708250]],sv_type='TDUP'))
+    ... chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[(7706250,7708250)],sv_type='TDUP'))
     >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',
-    ... chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]], sv_type='TRA'))
+    ... chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'))
     >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',
-    ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]],
+    ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)],
     ... sv_type='TDUP'))
     >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',
-    ... chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[[15777169,15777589]],
+    ... chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[(15777169,15777589)],
     ... sv_type=None))
     >>> series
     Series(
@@ -716,10 +716,10 @@ class Series:
 
     >>> series_with_novel_insertion = Series(blat=None, logger=logger)
     >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',
-    ... strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[[7701656, 7702552]],
+    ... strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)],
     ... sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1,
     ... query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',
-    ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[[15872815,15876678]],
+    ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)],
     ... sv_type=None)]
     Series(
             >>> series_with_novel_insertion

@@ -223,11 +223,11 @@ class Read:
             if op_code in {CigarCode.Match, CigarCode.Del}:  # M, D
                 current_pos = current_pos + _len
             elif op_code == CigarCode.Ref_skip:  # N
-                exons.append([start_pos, current_pos])
+                exons.append((start_pos, current_pos))
                 current_pos = current_pos + _len
                 start_pos = current_pos
 
-        exons.append([start_pos, current_pos])
+        exons.append((start_pos, current_pos))
 
         introns = []
         # No 'N' in the cigar
@@ -238,7 +238,7 @@ class Read:
             _positions.sort()
             _positions.pop(0)
             _positions.pop(-1)
-            introns = [[x, y] for x, y in zip(_positions[::2], _positions[1::2])]
+            introns = [(x, y) for x, y in zip(_positions[::2], _positions[1::2])]
         return exons, introns
 
     def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
