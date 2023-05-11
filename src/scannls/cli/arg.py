@@ -38,7 +38,7 @@ class DefaultOptions:
     mismatch: int = 3
     alignment_fraction: float = 0.8
     long_indel_length: int = 5
-    substitutions_num: int = 10
+    substitutions_num: int = 20
     substitutions_fraction: float = 0.1
     indel_fraction: float = 0.1
     circular_rna: str = "remove"
