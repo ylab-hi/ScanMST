@@ -9,6 +9,7 @@ from itertools import combinations
 from typing import Any
 
 import networkx as nx
+from loguru import logger
 from networkx import connected_components
 
 from ..utils import timeit
@@ -23,7 +24,7 @@ def middle_node_signature(node: Node) -> str:
     chrom = node.chrom
     exons = node.exons
     strand = node.strand
-    exons_string = map(lambda x: f"{x[0]}-{x[1]}", exons)
+    exons_string = map(lambda x: f"{x[0]}-{x[1]}", exons)  # type: ignore
 
     return f"{chrom}:{';'.join(exons_string)};{strand}"
 
@@ -259,8 +260,9 @@ class ClusterFinder:
         if len(merge_keys[series1.id]) == len(merge_keys[series2.id]):
             # reduce duplication
             return False
+
         elif len(merge_keys[series1.id]) > len(merge_keys[series2.id]):
-            if set(series2_nodes_key).issubset(set(series1_nodes_key)):
+            if " ".join(series2_nodes_key) in " ".join(series1_nodes_key):
                 start_index = series1_nodes_key.index(series2_nodes_key[0])
                 if merge_same_len_node_list(series1[start_index:], series2, 1):  # type: ignore
                     merge_series(series1, series2, start_index)  # type: ignore
@@ -278,6 +280,8 @@ class ClusterFinder:
                 series_list.append(current_series)
 
             sorted_series = sort_cluster(series_list)
+            logger.debug(f"sorted_series:{len(sorted_series)} {sorted_series}")
+
             merge_keys = self.creat_merge_indexs(sorted_series)
             new_cluster = []
             ClusterFinder._merge_cluster(sorted_series, new_cluster, merge_keys)
@@ -329,25 +333,40 @@ def merge_same_len_node_list(series1: list[Node], series2: list[Node], threashol
     s2:                [ ] - [ ] - [ ]
 
     """
+    logger.debug(f"merge : series1:{series1}")
+    logger.debug(f"merge: series2:{series2}")
     assert len(series1) == len(series2)
 
     merge_condition = MergeCondition(threashold)
 
     for node1, node2 in zip(series1, series2):
+        is_same_svtype = node1.sv_type == node2.sv_type
         if node1.self_identity.is_head() and node2.self_identity.is_head():
-            return BreakPoint.equal(
-                node1.next_breakpoint, node2.next_breakpoint, threashold
-            ) and merge_condition.head2head(node1, node2)
+            return (
+                is_same_svtype
+                and BreakPoint.equal(
+                    node1.next_breakpoint, node2.next_breakpoint, threashold
+                )
+                and merge_condition.head2head(node1, node2)
+            )
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_head():
-            return BreakPoint.equal(
-                node1.next_breakpoint, node2.next_breakpoint, threashold
-            ) and merge_condition.mid2head(node1, node2)
+            return (
+                is_same_svtype
+                and BreakPoint.equal(
+                    node1.next_breakpoint, node2.next_breakpoint, threashold
+                )
+                and merge_condition.mid2head(node1, node2)
+            )
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
-            return BreakPoint.equal(
-                node1.next_breakpoint, node2.next_breakpoint, threashold
-            ) and merge_condition.mid2mid(node1, node2)
+            return (
+                is_same_svtype
+                and BreakPoint.equal(
+                    node1.next_breakpoint, node2.next_breakpoint, threashold
+                )
+                and merge_condition.mid2mid(node1, node2)
+            )
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
             return merge_condition.mid2tail(node1, node2)
@@ -363,8 +382,7 @@ def create_merge_key_for_node(node: Node):
     introns = node.introns
     introns_key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
     chrom = node.chrom
-    sv_type = node.sv_type
-    return f"{chrom}_{sv_type}_{introns_key}"
+    return f"{chrom}_{introns_key}"
 
 
 def create_merge_key_for_series(nodes_key: list[str]):

@@ -22,7 +22,7 @@ from .exception import ModesNotFoundError
 
 def is_middle_node(node: Node) -> bool:
     """Check if the node is middle node."""
-    return node.predecessors and node.surcessors
+    return node.predecessors and node.successors
 
 
 def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
