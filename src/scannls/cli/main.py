@@ -23,8 +23,8 @@ from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
 from .. import Series
-from ..base.filters import ExonFilter
 from ..base.filters import CircRNAFilter
+from ..base.filters import ExonFilter
 from ..base.filters import RTSwitchingFilter
 from ..base.type import LoggerType
 from .helper import blat2chimeric_alignment

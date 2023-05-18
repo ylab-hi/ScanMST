@@ -326,7 +326,9 @@ def merge_series(series1: list[Node], series2: list[Node], start_index: int):
         updated_node.sr += current_node.sr
 
 
-def merge_same_len_node_list(series1: list[Node], series2: list[Node], threashold: int):
+def merge_same_len_node_list(
+    series1: list[Node], series2: list[Node], threashold: int
+) -> bool:
     """seires1 is equal than series2 and series1 merge series2.
 
     orignial s1: [ ] - [ ] - [ ] - [ ]
@@ -339,43 +341,57 @@ def merge_same_len_node_list(series1: list[Node], series2: list[Node], threashol
 
     merge_condition = MergeCondition(threashold)
 
+    flag = True
+
     for node1, node2 in zip(series1, series2):
         is_same_svtype = node1.sv_type == node2.sv_type
         if node1.self_identity.is_head() and node2.self_identity.is_head():
-            return (
+            if not (
                 is_same_svtype
                 and BreakPoint.equal(
                     node1.next_breakpoint, node2.next_breakpoint, threashold
                 )
                 and merge_condition.head2head(node1, node2)
-            )
+            ):
+                flag = False
+                break
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_head():
-            return (
+            if not (
                 is_same_svtype
                 and BreakPoint.equal(
                     node1.next_breakpoint, node2.next_breakpoint, threashold
                 )
                 and merge_condition.mid2head(node1, node2)
-            )
+            ):
+                flag = False
+                break
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
-            return (
+            if not (
                 is_same_svtype
                 and BreakPoint.equal(
                     node1.next_breakpoint, node2.next_breakpoint, threashold
                 )
                 and merge_condition.mid2mid(node1, node2)
-            )
+            ):
+                flag = False
+                break
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
-            return merge_condition.mid2tail(node1, node2)
+            if not merge_condition.mid2tail(node1, node2):
+                flag = False
+                break
 
         elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
-            return merge_condition.tail2tail(node1, node2)
+            if not merge_condition.tail2tail(node1, node2):
+                flag = False
+                break
 
         else:
             raise ValueError("invalid node identity")
+
+        return flag
 
 
 def create_merge_key_for_node(node: Node):
