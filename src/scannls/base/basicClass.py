@@ -630,6 +630,14 @@ class Node(BasicNode):
         key = f"{chosen_intron[0]}-{chosen_intron[1]}" if chosen_intron else "None"
         return f"{self.chrom}_{key}"
 
+    @property
+    def length(self) -> int:
+        """Get total length of exon of a node."""
+        total_len = 0
+        for i, j in self.exons:
+            total_len += j - i
+        return total_len
+
     def get_unique_key(self):
         """Get unique key of a node."""
         introns = self.introns
@@ -755,6 +763,10 @@ class Series:
         return all(
             node.sv_type == "DEL" for node in self.nodes if node.sv_type is not None
         )
+
+    def is_minimum_node_length_larger_than_thresohold(self, threshold: int = 10) -> bool:
+        """Check if minimum length of all nodes in the series > threshold."""
+        return min(_node.length for _node in self.nodes) > threshold
 
     def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
         """Check if all nodes in the series have sr > threshold."""
