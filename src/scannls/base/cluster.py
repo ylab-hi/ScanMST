@@ -252,22 +252,39 @@ class ClusterFinder:
         return result
 
     @staticmethod
+    def check_if_two_series_merge(
+        series1: Series, series2: Series, merge_keys: dict[int, list[str]]
+    ):
+        series_2_nodes_key = "".join(merge_keys[series2.id])
+        for start_index in range(0, len(series1) - len(series2)):
+            series_1_nodes_key = "".join(
+                merge_keys[series1.id][start_index : start_index + len(series2)]
+            )
+            if series_1_nodes_key == series_2_nodes_key:
+                if merge_same_len_node_list(series1[start_index : start_index + len(series2)], series2, 1):  # type: ignore
+                    return True, start_index
+
+        return False, None
+
+    @staticmethod
     def check_merge(series1: Series, series2: Series, merge_keys: dict[int, list[str]]):
         """Check if series1 can merge series2."""
-        series1_nodes_key = merge_keys[series1.id]
-        series2_nodes_key = merge_keys[series2.id]
-
         if len(merge_keys[series1.id]) == len(merge_keys[series2.id]):
             # reduce duplication
             return False
 
         elif len(merge_keys[series1.id]) > len(merge_keys[series2.id]):
-            if " ".join(series2_nodes_key) in " ".join(series1_nodes_key):
-                start_index = series1_nodes_key.index(series2_nodes_key[0])
-                if merge_same_len_node_list(series1[start_index:], series2, 1):  # type: ignore
-                    merge_series(series1, series2, start_index)  # type: ignore
-                    series1.merge_factor += 1
-                    return True
+            merged, start_index = ClusterFinder.check_if_two_series_merge(
+                series1, series2, merge_keys
+            )
+
+            if merged:
+                merge_series(series1, series2, start_index)  # type: ignore
+                series1.merge_factor += 1
+                return True
+
+            return False
+
         else:
             raise ValueError("series1 is shorter than series2")
 
@@ -391,13 +408,14 @@ def merge_same_len_node_list(
         else:
             raise ValueError("invalid node identity")
 
-        return flag
+    return flag
 
 
 def create_merge_key_for_node(node: Node):
     introns = node.introns
     introns_key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
     chrom = node.chrom
+
     return f"{chrom}_{introns_key}"
 
 
