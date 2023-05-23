@@ -300,7 +300,7 @@ class ClusterFinder:
 
     @staticmethod
     def _merge_cluster(series_list, result, merge_keys):
-        while not series_list:
+        while series_list:
             slected_series = series_list.pop()
 
             for current_series in series_list:
