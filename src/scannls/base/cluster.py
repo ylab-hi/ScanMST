@@ -262,9 +262,10 @@ class ClusterFinder:
             )
             if series_1_nodes_key == series_2_nodes_key:
                 if merge_same_len_node_list(series1[start_index : start_index + len(series2)], series2, 1):  # type: ignore
-                    return True, start_index
-
-        return False, None
+                    merge_series(series1, series2, start_index)  # type: ignore
+                    series1.merge_factor += 1
+                    return True
+        return False
 
     @staticmethod
     def check_merge(series1: Series, series2: Series, merge_keys: dict[int, list[str]]):
@@ -272,19 +273,8 @@ class ClusterFinder:
         if len(merge_keys[series1.id]) == len(merge_keys[series2.id]):
             # reduce duplication
             return False
-
         elif len(merge_keys[series1.id]) > len(merge_keys[series2.id]):
-            merged, start_index = ClusterFinder.check_if_two_series_merge(
-                series1, series2, merge_keys
-            )
-
-            if merged:
-                merge_series(series1, series2, start_index)  # type: ignore
-                series1.merge_factor += 1
-                return True
-
-            return False
-
+            return ClusterFinder.check_if_two_series_merge(series1, series2, merge_keys)
         else:
             raise ValueError("series1 is shorter than series2")
 
