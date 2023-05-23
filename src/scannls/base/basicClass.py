@@ -764,7 +764,7 @@ class Series:
             node.sv_type == "DEL" for node in self.nodes if node.sv_type is not None
         )
 
-    def is_minimum_node_length_larger_than_thresohold(
+    def is_minimum_node_length_larger_than_threshold(
         self, threshold: int = 10
     ) -> bool:
         """Check if minimum length of all nodes in the series > threshold."""

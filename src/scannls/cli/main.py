@@ -519,7 +519,7 @@ def _scan_bam_helper(
                         series.disable_blat_logger()
                         if (
                             not series.is_all_type_del()
-                            and series.is_minimum_node_length_larger_than_thresohold()
+                            and series.is_minimum_node_length_larger_than_threshold()
                         ):
                             if circular_rna == "remove":
                                 if not circ_rna_filter.is_circRNA(series):
