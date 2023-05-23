@@ -300,18 +300,17 @@ class ClusterFinder:
 
     @staticmethod
     def _merge_cluster(series_list, result, merge_keys):
-        if not series_list:
-            return result
+        while not series_list:
+            slected_series = series_list.pop()
 
-        slected_series = series_list.pop()
+            for current_series in series_list:
+                if ClusterFinder.check_merge(
+                    slected_series, current_series, merge_keys
+                ):
+                    series_list.remove(current_series)
 
-        for current_series in series_list:
-            if ClusterFinder.check_merge(slected_series, current_series, merge_keys):
-                series_list.remove(current_series)
-
-        result.append(slected_series)
-
-        ClusterFinder._merge_cluster(series_list, result, merge_keys)
+            result.append(slected_series)
+        return result
 
 
 def merge_series(series1: list[Node], series2: list[Node], start_index: int):
