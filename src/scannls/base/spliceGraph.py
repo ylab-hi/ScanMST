@@ -355,8 +355,8 @@ class SpliceGraph:
         next_edge_read_id_mid = set(next_edge_node_identity[NodeIdentity.MID])
 
         if not previous_edge_read_id_mid and not next_edge_read_id_mid:
-            # two mid from different reads
-            return len(previous_edge_node_identity & next_edge_node_identity) > 0
+            # check two mid from different reads
+            return len(previous_edge_read_id_mid & next_edge_read_id_mid) > 0
 
         return True
 
