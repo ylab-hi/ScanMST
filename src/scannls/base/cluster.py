@@ -256,15 +256,18 @@ class ClusterFinder:
         series1: Series, series2: Series, merge_keys: dict[int, list[str]]
     ):
         series_2_nodes_key = "".join(merge_keys[series2.id])
-        for start_index in range(0, len(series1) - len(series2)):
+
+        for start_index in range(0, len(series1) - len(series2) + 1):
             series_1_nodes_key = "".join(
                 merge_keys[series1.id][start_index : start_index + len(series2)]
             )
+
             if series_1_nodes_key == series_2_nodes_key:
                 if merge_same_len_node_list(series1[start_index : start_index + len(series2)], series2, 1):  # type: ignore
                     merge_series(series1, series2, start_index)  # type: ignore
                     series1.merge_factor += 1
                     return True
+
         return False
 
     @staticmethod
@@ -314,8 +317,9 @@ class ClusterFinder:
 
 
 def merge_series(series1: list[Node], series2: list[Node], start_index: int):
-    assert len(series1[start_index:]) == len(series2)
-    for updated_node, current_node in zip(series1[start_index:], series2):
+    for updated_node, current_node in zip(
+        series1[start_index : start_index + len(series2)], series2
+    ):
         # update exon coordinates
         updated_node.ref_start = min(  # type: ignore
             updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
