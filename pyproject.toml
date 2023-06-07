@@ -26,13 +26,13 @@ pysam = "0.19.0"
 HTSeq = "^2.0.2"
 pyfaidx = "^0.7.1"
 psutil = "^5.9.5"
-loguru = "^0.6.0"
+loguru = "^0.7.0"
 rich = "^13.3.5"
 networkx = "^3.0"
 pybind11 = "^2.10.4"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.1.2"
+pytest = "^7.3.1"
 coverage = { extras = ["toml"], version = "^7.2" }
 safety = "^2.1.1"
 mypy = "^1.3"
