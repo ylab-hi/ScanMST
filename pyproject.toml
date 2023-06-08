@@ -27,7 +27,7 @@ HTSeq = "^2.0.2"
 pyfaidx = "^0.7.1"
 psutil = "^5.9.5"
 loguru = "^0.7.0"
-rich = "^13.3.5"
+rich = "^13.4.1"
 networkx = "^3.0"
 pybind11 = "^2.10.4"
 
