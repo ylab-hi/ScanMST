@@ -804,6 +804,8 @@ class Series:
             current_node: Node = node_edge_list[index]
             current_edge = node_edge_list[index + 1]
 
+            assert isinstance(current_node, Node)
+
             current_node.insertion_info = current_edge.insertion
             current_node.sr = current_edge.sr
             current_node.next_breakpoint = current_edge.variation.break_point
