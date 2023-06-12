@@ -164,6 +164,7 @@ class Edge:
             self.edge_data.read_ids.append(read_id)
 
     def updated(self, other: "Edge"):
+        # WARN:  Do not update variation with break point <06-12-23>
         self.edge_data.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
         if self.edge_data.insertion and isinstance(
@@ -479,10 +480,15 @@ class SpliceGraph:
         node1_self_identity: NodeIdentity = node1.self_identity
         node2_self_identity: NodeIdentity = node2.self_identity
         merge_condition = MergeCondition(threshold)
+        import ipdb
+
+        ipdb.set_trace()
+
         if (
             node1_self_identity.is_tail() and node2_self_identity.is_head()
         ):  # node1 is end node, node2 is start node
             return merge_condition.head2tail(node1, node2)
+
         elif (
             node1_self_identity.is_tail() and node2_self_identity.is_mid()
         ):  # node1 is end node, node2 is middle node
@@ -544,6 +550,10 @@ class SpliceGraph:
                 similar_node_in_graph, current_node, self.prune_threshold
             ):
                 current_node.is_merged = True
+
+                self.logger.warning(
+                    f"merging node {similar_node_in_graph} and {current_node})"
+                )
 
                 update_exon_coord_name_mode(similar_node_in_graph, current_node)
 

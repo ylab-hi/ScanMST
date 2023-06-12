@@ -633,6 +633,7 @@ class Node(BasicNode):
     @property
     def length(self) -> int:
         """Get total length of exon of a node."""
+        assert self.exons is not None
         total_len = 0
         for i, j in self.exons:
             total_len += j - i
@@ -647,7 +648,7 @@ class Node(BasicNode):
         key = f"{self.chrom}-{key}-{self.sv_type}-{self.prev_breakpoint}-{self.next_breakpoint}"
 
         if self.insertion_info is not None:
-            _, insertion_type = self.insertion_info
+            _, insertion_type = self.insertion_info  # type: ignore
             if insertion_type.__class__.__name__ in ("NovelInsertion", "MicroHomology"):
                 key = f"{insertion_type.query_sequence}-{key}"
 

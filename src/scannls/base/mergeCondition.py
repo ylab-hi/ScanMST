@@ -129,7 +129,14 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         node2:    []-[]
 
     """
-    # no introns and breakpoints are same
+    # NOTE: Do not compare breakporint here <06-08-23, Yangyang Li>
+    assert node1.ref_end is not None
+    assert node2.ref_end is not None
+
+    if abs(node1.ref_end - node2.ref_end) > threshold:
+        return False
+
+    # no introns
     if not node1.introns and not node2.introns:
         return True
 
@@ -139,7 +146,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         else zip_longest(node1.introns[::-1], node2.introns[::-1])
     )
 
-    # have introns and breakpoints are same
+    # have introns
     for node1_intron, node2_intron in introns_group:
         if node1_intron != node2_intron:
             return node1_intron is None or node2_intron is None
@@ -233,6 +240,10 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     # limit all introns
     if node1.introns != node2.introns:
         return False
+
+    # assert node1.ref_start is not None and node2.ref_start is not None
+    # if abs(node1.ref_start - node2.ref_start) > threshold:
+    #     return False
 
     node1_first_exon_start = node1.exons[0][0]
     node1_last_exon_end = node1.exons[-1][1]

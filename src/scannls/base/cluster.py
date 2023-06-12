@@ -334,6 +334,9 @@ def merge_series(series1: list[Node], series2: list[Node], start_index: int):
         updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
 
         updated_node.sr += current_node.sr
+        # NOTE: Update break point <Yangyang Li>
+        updated_node.prev_breakpoint = current_node.prev_breakpoint
+        updated_node.next_breakpoint = current_node.next_breakpoint
 
 
 def merge_same_len_node_list(
