@@ -480,9 +480,6 @@ class SpliceGraph:
         node1_self_identity: NodeIdentity = node1.self_identity
         node2_self_identity: NodeIdentity = node2.self_identity
         merge_condition = MergeCondition(threshold)
-        import ipdb
-
-        ipdb.set_trace()
 
         if (
             node1_self_identity.is_tail() and node2_self_identity.is_head()
