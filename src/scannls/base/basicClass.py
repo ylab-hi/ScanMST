@@ -803,9 +803,8 @@ class Series:
 
         for index in range(0, len(node_edge_list) - 1, 2):
             current_node: Node = node_edge_list[index]
-            current_edge = node_edge_list[index + 1]
-
             assert isinstance(current_node, Node)
+            current_edge = node_edge_list[index + 1]
 
             current_node.insertion_info = current_edge.insertion
             current_node.sr = current_edge.sr
@@ -813,6 +812,7 @@ class Series:
             current_node.sv_type = str(current_edge.variation.types)
             series_instance.add_node(current_node)
 
+        assert isinstance(node_edge_list[-1], Node)
         series_instance.add_node(node_edge_list[-1])
         series_instance.disable_blat_logger()  # support parallel processing
         return series_instance

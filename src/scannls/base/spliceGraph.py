@@ -277,18 +277,18 @@ class SpliceGraph:
             plot_graph(self, f"_{clique_ind}", False)
 
         # trace path
-        current_nodes_keys: set[str] = set()
         for node_list in self.trace():
             yield Series.create_path_from_node_edge_list(
                 node_list,
             )
 
-        if is_check_circle:
-            # check circle in graph
-            for node_list in self.check_circle_in_graph(current_nodes_keys):
-                yield Series.create_series_from_node_list(
-                    node_list, self.logger, set(), is_add_key=False
-                )
+        # current_nodes_keys: set[str] = set()
+        # if is_check_circle:
+        #     # check circle in graph
+        #     for node_list in self.check_circle_in_graph(current_nodes_keys):
+        #         yield Series.create_series_from_node_list(
+        #             node_list, self.logger, set(), is_add_key=False
+        #         )
 
     @classmethod
     def create_graph(
