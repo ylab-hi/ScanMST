@@ -649,6 +649,7 @@ class SpliceGraph:
 
         if not start_node or start_node in path:
             # successor be [] or None
+            assert isinstance(path[-1], Node)
             group_paths.append(path)
 
         else:
