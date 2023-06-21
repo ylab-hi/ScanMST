@@ -374,6 +374,8 @@ def _scan_bam_helper(
                     != len(chimeric_alns)
                 ):
                     read.set_tag("SA", None)
+                else:
+                    read.set_tag("SA", "{};".format(";".join(updated_chimeric_alns)))
 
                 # remove SA tags of representative alignments with too much mismatches
                 # update SA tag of representative alignments (END)
