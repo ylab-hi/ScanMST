@@ -630,7 +630,7 @@ def detect_read_read_connections_from_cigar(
              pos_sa, mapq_sa and nm_sa are integral variables now.
         """
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = in_str.split(",")
-        pos_sa = int(pos_sa)  # type: ignore
+        pos_sa = int(pos_sa) - 1  # type: ignore
         mapq_sa = int(mapq_sa)  # type: ignore
         nm_sa = int(nm_sa)  # type: ignore
         return chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
