@@ -167,7 +167,7 @@ class Read:
         :return: representation of the read
         """
         return (
-            f"Read({self.chrom}, {self.ref_start}, {self.ref_end}, "
+            f"Read({self.chrom}, {self.ref_start}, {self.ref_end}, {self.cigartuples_without_soft},"
             f"{self.strand}, {self.mapq}, {self.nm})"
         )
 
