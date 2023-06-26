@@ -117,7 +117,8 @@ class Ruler:
                         connection = True
                         break
 
-        return 0.0 if connection else 1.0
+        return 0.0
+        # return 0.0 if connection else 1.0
 
 
 class ClusterFinder:
@@ -402,7 +403,9 @@ def merge_same_len_node_list(
                 break
 
         else:
-            raise ValueError("invalid node identity")
+            raise ValueError(
+                f"invalid node identity {node1.self_identity=} {node2.self_identity=}"
+            )
 
     return flag
 

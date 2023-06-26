@@ -578,10 +578,9 @@ class Node(BasicNode):
     def self_identity(self) -> NodeIdentity:
         assert self.query_name != ""
 
-        # if self.query_name not in self.identity:
-        #     self.identity[self.query_name] = NodeIdentity.from_node(self)
+        if self.query_name not in self.identity:
+            self.identity[self.query_name] = NodeIdentity.from_node(self)
 
-        self.identity[self.query_name] = NodeIdentity.from_node(self)
         return self.identity[self.query_name]
 
     @classmethod
