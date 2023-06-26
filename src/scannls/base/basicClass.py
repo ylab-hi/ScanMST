@@ -237,7 +237,7 @@ class BasicNode:
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
         self.sr: int = 1
-        self.original_sr: int = -1
+        self.original_sr: int = 1
         self.harmonic_mean_sr: float = 1
 
     def __eq__(self, other) -> bool:
@@ -808,6 +808,7 @@ class Series:
 
             current_node.insertion_info = current_edge.insertion
             current_node.sr = current_edge.sr
+            current_node.original_sr = current_edge.sr
             current_node.next_breakpoint = current_edge.variation.break_point
             current_node.sv_type = str(current_edge.variation.types)
             series_instance.add_node(current_node)
