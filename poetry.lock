@@ -338,12 +338,12 @@ types = ["chardet (>=5.1.0)", "mypy", "pytest", "pytest-cov", "pytest-dependency
 
 [[package]]
 name = "cohesion"
-version = "1.0.0"
+version = "1.1.0"
 description = "A tool for measuring Python class cohesion."
 optional = false
 python-versions = "*"
 files = [
-    {file = "cohesion-1.0.0-py2.py3-none-any.whl", hash = "sha256:a33a526eb8922c7dbfef19257b3532d16e6246c4ece3ab3b492b290d9d3f2d4b"},
+    {file = "cohesion-1.1.0-py2.py3-none-any.whl", hash = "sha256:2ab1534d936428c61385e973c30cbd0381796401ad1083a5bf08562a9de9fee6"},
 ]
 
 [[package]]
@@ -2228,4 +2228,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "3aa3995d6b7392193b3f662e3355d624e2bceb78dccd5eb75d84d14660a83bc0"
+content-hash = "4150f1f52655c49d6fa894f9b708a648d3bd002a1fbd760c4ffa970754f3511a"
