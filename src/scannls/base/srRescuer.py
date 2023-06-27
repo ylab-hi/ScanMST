@@ -12,9 +12,9 @@ from typing import Optional
 from loguru import logger
 from scannls import cppext
 
-from .basicClass import Node
-from .exception import ExonsNotFoundError
-from .exception import ModesNotFoundError
+from ..exception import ExonsNotFoundError
+from ..exception import ModesNotFoundError
+from ..graph import Node
 
 
 # TODO: Rescure sr based on edge <05-01-23, Yangyang Li yangyang.li@northwestern.edu>

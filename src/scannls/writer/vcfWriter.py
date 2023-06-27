@@ -16,11 +16,11 @@ from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
 from .. import __version__
-from ..basicClass import MicroHomology
-from ..basicClass import Node
-from ..basicClass import NovelInsertion
-from ..basicClass import reverse_complement
-from ..basicClass import Series
+from ..base.basicClass import MicroHomology
+from ..graph import Node
+from ..base.basicClass import NovelInsertion
+from ..base.basicClass import reverse_complement
+from ..base.basicClass import Series
 from ..exception import AnnotationCodeNotFoundError
 from ..exception import BreakpointNotFoundError
 from ..exception import ExonsNotFoundError

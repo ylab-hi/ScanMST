@@ -8,217 +8,23 @@ import types
 from collections import defaultdict
 from collections.abc import Iterable
 from collections.abc import Iterator
-from dataclasses import dataclass
-from enum import auto
 from enum import Enum
 from typing import Any
 from typing import Optional
 from typing import Union
 
-from .basicClass import BreakPoint
-from .basicClass import MicroHomology
-from .basicClass import Node
-from .basicClass import NodeIdentity
-from .basicClass import NovelInsertion
-from .basicClass import Series
-from .mergeCondition import MergeCondition
+from ..base.basicClass import BreakPoint
+from ..base.basicClass import MicroHomology, NovelInsertion
+from .basicGraph import Node
+from .basicGraph import NodeIdentity
+from ..base.basicClass import Series
+from ..base.mergeCondition import MergeCondition
 from .plotGraph import plot_graph
-from .srRescuer import SRRescuer
-from .type import LoggerType
+from ..base.srRescuer import SRRescuer
+from ..base.type import LoggerType
 
 
-# NOTE: may be removed in the future  <04-17-23, Yangyang Li>
-class SpliceType(Enum):
-    """Splice Type.
-
-    used in prune
-    """
-
-    forward = auto()
-    backward = auto()
-
-
-class VariationType(Enum):
-    TRA = auto()
-    DEL = auto()
-    TDUP = auto()
-    INV = auto()
-    IDUP = auto()
-
-    @classmethod
-    def from_str(cls, s):
-        if s == "TRA":
-            return cls.TRA
-        elif s == "DEL":
-            return cls.DEL
-        elif s == "TDUP":
-            return cls.TDUP
-        elif s == "INV":
-            return cls.INV
-        elif s == "IDUP":
-            return cls.IDUP
-        else:
-            raise ValueError("Invalid SV type: {}".format(s))
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
-
-
-class Variation:
-    def __init__(
-        self, types: VariationType, break_point: BreakPoint, break_point_depth: int
-    ):
-        self.types = types
-        self.break_point = break_point
-        self.break_point_depth = break_point_depth
-
-    def __repr__(self):
-        return f"Variation({self.types=} {self.break_point=} {self.break_point_depth=})"
-
-    @classmethod
-    def from_node(cls, node: Node):
-        assert node.next_breakpoint is not None
-        next_breakpoint_depth = (
-            0 if node.next_breakpoint_depth is None else node.next_breakpoint_depth
-        )
-
-        return cls(
-            VariationType.from_str(node.sv_type),
-            node.next_breakpoint,
-            next_breakpoint_depth,
-        )
-
-    @staticmethod
-    def is_merged(
-        variation1: "Variation", variation2: "Variation", threshold: int
-    ) -> bool:
-        return variation1.types == variation2.types and BreakPoint.equal(
-            variation1.break_point, variation2.break_point, threshold
-        )
-
-
-@dataclass
-class EdgeData:
-    variation: Variation
-    sr: int
-    insertion: Any
-    read_ids: list[str]
-
-    @classmethod
-    def from_node(cls, node: Node):
-        return cls(
-            Variation.from_node(node), node.sr, node.insertion_info, [node.query_name]
-        )
-
-
-class Edge:
-    def __init__(self, node1_key: str, node2_key: str, edge_data: EdgeData) -> None:
-        """
-        Initializes a new instance of the Edge class.
-
-        Args:
-            node1_key (str): The key of the first node connected by the edge.
-            node2_key (str): The key of the second node connected by the edge.
-            sv (Variation): The data associated with the edge.
-        """
-        self.node1_key = node1_key
-        self.node2_key = node2_key
-        self.edge_data = edge_data
-
-    def __repr__(self) -> str:
-        return (
-            f"Edge(variation={self.variation}, sr={self.sr}, read_ids={self.read_ids})"
-        )
-
-    @property
-    def key(self):
-        return f"{self.node1_key}-{self.node2_key}"
-
-    @property
-    def insertion(self):
-        return self.edge_data.insertion
-
-    @property
-    def variation(self):
-        return self.edge_data.variation
-
-    @property
-    def sr(self):
-        return self.edge_data.sr
-
-    @property
-    def read_ids(self):
-        return self.edge_data.read_ids
-
-    @staticmethod
-    def create_key_from_node(node1: Node, node2: Node) -> str:
-        if node1.unique_key is None and node2.unique_key is None:
-            raise ValueError("Both nodes have no unique key")
-        return f"{node1.unique_key}-{node2.unique_key}"
-
-    def add_read_id(self, read_id: str):
-        if read_id not in self.edge_data.read_ids:
-            self.edge_data.read_ids.append(read_id)
-
-    def updated(self, other: "Edge"):
-        # WARN:  Do not update variation with break point <06-12-23>
-        self.edge_data.sr += other.sr
-        self.edge_data.read_ids.extend(other.read_ids)
-        if self.edge_data.insertion and isinstance(
-            self.edge_data.insertion[1], (NovelInsertion, MicroHomology)
-        ):
-            self.edge_data.insertion[1].increment_ao()
-
-    def get_nodes(self, graph: "SpliceGraph"):
-        node1 = graph.get_node_with_unique_key(self.node1_key)
-        node2 = graph.get_node_with_unique_key(self.node2_key)
-
-        if node1 is None or node2 is None:
-            raise ValueError("Node not found due to edge is invalidated")
-
-        return node1, node2
-
-    @classmethod
-    def from_nodes(
-        cls,
-        node1: Node,
-        node2: Node,
-        edge_data: Optional[EdgeData],
-    ):
-        assert node1.unique_key is not None
-        assert node2.unique_key is not None
-
-        if edge_data is None:
-            edge_data = EdgeData.from_node(node1)
-
-        return cls(node1.unique_key, node2.unique_key, edge_data)
-
-    @classmethod
-    def from_node_key(
-        cls,
-        node1_key: str,
-        node2_key: str,
-        edge_data: EdgeData,
-    ):
-        return cls(node1_key, node2_key, edge_data)
-
-    @staticmethod
-    def is_merged(edge1: "Edge", edge2: "Edge", break_point_threshold: int) -> bool:
-        return (
-            edge1.key == edge2.key
-            and Variation.is_merged(
-                edge1.variation, edge2.variation, break_point_threshold
-            )
-            and _check_insertion_conditions_for_compare_insertion(
-                edge1.insertion, edge2.insertion
-            )
-        )
-
-
-class SpliceGraph:
+class NLGraph:
     """SpliceGraph class is used to trace the path of the splice graph."""
 
     dict_factory = dict
@@ -230,8 +36,8 @@ class SpliceGraph:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.prune_threshold = prune_threshold
-        self.dict_factory = SpliceGraph.dict_factory  # type: ignore
-        self.list_factory = SpliceGraph.list_factory  # type: ignore
+        self.dict_factory = NLGraph.dict_factory  # type: ignore
+        self.list_factory = NLGraph.list_factory  # type: ignore
         self.rescuer = rescuer
 
     def __call__(
@@ -302,7 +108,7 @@ class SpliceGraph:
         prune_threshold: int,
         node_rescued_sr_maximum: int,
         average_read_depth: Optional[int],
-    ) -> "SpliceGraph":
+    ) -> "NLGraph":
         """Create splice graph."""
         rescuer = SRRescuer(
             input_bam,
@@ -525,10 +331,10 @@ class SpliceGraph:
         """
 
         # NOTE: may not swap order <04-24-23, Yangyang Li>
-        if SpliceGraph._compare_is_merged_helper(node1, node2, threshold):
+        if NLGraph._compare_is_merged_helper(node1, node2, threshold):
             return True
 
-        if SpliceGraph._compare_is_merged_helper(node2, node1, threshold):
+        if NLGraph._compare_is_merged_helper(node2, node1, threshold):
             return True
 
         return False
@@ -543,7 +349,7 @@ class SpliceGraph:
         # iterate all similar nodes in the graph
         for similar_node_in_graph in similar_nodes_in_graph:
             # check if the current node is merged into a similar node in the graph
-            if SpliceGraph._compare_is_merged(
+            if NLGraph._compare_is_merged(
                 similar_node_in_graph, current_node, self.prune_threshold
             ):
                 current_node.is_merged = True
@@ -811,18 +617,18 @@ class SpliceGraph:
             return False
 
         if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:
-            return SpliceGraph._check_can_battle_condition(
+            return NLGraph._check_can_battle_condition(
                 node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
             )
 
         if node_a.next_breakpoint is None and node_b.next_breakpoint is None:
-            return SpliceGraph._check_can_battle_condition(
+            return NLGraph._check_can_battle_condition(
                 node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
             )
 
-        return SpliceGraph._check_can_battle_condition(
+        return NLGraph._check_can_battle_condition(
             node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
-        ) and SpliceGraph._check_can_battle_condition(
+        ) and NLGraph._check_can_battle_condition(
             node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
         )
 

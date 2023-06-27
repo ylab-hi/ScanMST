@@ -15,11 +15,10 @@ from loguru import logger
 from pyfaidx import Fasta
 from pyfaidx import FastaNotFoundError
 
-from ..basicClass import MicroHomology
-from ..basicClass import Node
-from ..basicClass import NovelInsertion
-from ..basicClass import reverse_complement
-from ..basicClass import Series
+from ..base.basicClass import MicroHomology, NovelInsertion
+from ..graph import Node
+from ..base.basicClass import reverse_complement
+from ..base.basicClass import Series
 from .writer import Writer
 
 

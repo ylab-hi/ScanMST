@@ -14,7 +14,7 @@ from typing import IO
 
 from loguru import logger
 
-from ..basicClass import Series
+from ..base.basicClass import Series
 
 # todo: add asyncio support
 

@@ -11,7 +11,7 @@ from typing import Any
 
 import networkx as nx
 
-from .basicClass import Node
+from ..base.basicClass import Node
 
 
 def get_label_from_node(node: Node) -> str:

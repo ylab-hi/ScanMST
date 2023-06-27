@@ -10,8 +10,8 @@ from enum import auto
 from enum import Enum
 from itertools import zip_longest
 
+from ..exception import ExonsNotFoundError
 from .basicClass import Node
-from .exception import ExonsNotFoundError
 
 
 class MergeConditionMode(Enum):

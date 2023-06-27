@@ -17,10 +17,10 @@ import pysam
 from loguru import logger
 from scannls import cppext
 
-from .base.exception import ToolNotFoundError
 from .base.type import LoggerType
 from .base.type import Mode
 from .blat import load_fa2bit
+from .exception import ToolNotFoundError
 
 __all__ = [
     "external_tool_checking",

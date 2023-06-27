@@ -12,10 +12,9 @@ from typing import IO
 
 from loguru import logger
 
-from ..basicClass import MicroHomology
-from ..basicClass import Node
-from ..basicClass import NovelInsertion
-from ..basicClass import Series
+from ..base.basicClass import MicroHomology, NovelInsertion
+from ..graph import Node
+from ..base.basicClass import Series
 from ..exception import ExonsNotFoundError
 from .writer import Writer
 

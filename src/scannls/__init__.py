@@ -19,7 +19,7 @@ from .base.basicClass import (
 from .base.basicRead import Read
 from .base.blat import Blat
 from .base.cluster import ClusterFinder
-from .base.exception import (
+from .exception import (
     BreakpointNotFoundError,
     ModesNotEqualError,
     ReadNotFoundError,
@@ -31,10 +31,11 @@ from .base.readConnector import (
     ReadsConnector,
     detect_read_read_connections_from_cigar,
 )
-from .base.spliceGraph import SpliceGraph, SpliceType
+from .graph import NLGraph
+from .graph import SpliceType
 from .base.srRescuer import SRRescuer
 from .base.type import LoggerType
-from .base.writer import FastaWriter, GTFWriter, VCFWriter, Writers
+from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 from .cli.arg import DefaultOptions
 from .utils import (
     cigarstring2cigartuples,
@@ -57,7 +58,7 @@ __all__ = [
     "get_softclip_length",
     "get_longest_insertion_sequence",
     "cigarstring2cigartuples",
-    "SpliceGraph",
+    "NLGraph",
     "SpliceType",
     "SRRescuer",
     "ClusterFinder",
