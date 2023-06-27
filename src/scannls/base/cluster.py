@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Find cliques in a graph.
 
 @Filename:    cluster.py

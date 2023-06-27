@@ -71,7 +71,7 @@ def parse_splice_graph_for_cliques_seq(
         average_read_depth,
     )
 
-    with writers.open() as _:
+    with writers.open():
         for ind, clique in enumerate(cliques, 1):
             logger.debug(f"processing clique {ind}")
             for series in splice_graph(clique, ind):
@@ -234,7 +234,6 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         cluster_finder = ClusterFinder(intact_series_list, intact_series_list_len)
         # cliques is generator
-        # clusters = cluster_finder.find_cluster()
         clusters = cluster_finder.merge_cluster()
 
         writers = get_writers(options.output, options.ref, in_bam_header)
@@ -247,7 +246,12 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         node_rescued_sr_max = 100
         parse_splice_graph_for_cliques(
-            clusters, writers, options, node_rescued_sr_max, logger, avg_cov
+            clusters,
+            writers,
+            options,
+            node_rescued_sr_max,
+            logger,  # type: ignore
+            avg_cov,
         )
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
