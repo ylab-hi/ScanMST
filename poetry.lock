@@ -1446,16 +1446,17 @@ toml = ["tomli (>=1.2.3)"]
 
 [[package]]
 name = "pyfaidx"
-version = "0.7.1"
+version = "0.7.2.1"
 description = "pyfaidx: efficient pythonic random access to fasta subsequences"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 files = [
-    {file = "pyfaidx-0.7.1.tar.gz", hash = "sha256:3977632b7fd29049f8b11035d7e9dea0e2c5da9c235f982b4c3fae06ff1fa23f"},
+    {file = "pyfaidx-0.7.2.1-py3-none-any.whl", hash = "sha256:eee13d35bb5f2aa65932a9ad9dd74fa695aefe6e0baafc5836cfa869a7695acc"},
+    {file = "pyfaidx-0.7.2.1.tar.gz", hash = "sha256:30f0d20a9e3d53353fb20eb69b7e22e6f01a53ed4f21b3e17dd408f0be5051a0"},
 ]
 
 [package.dependencies]
-setuptools = ">=0.7"
+setuptools = "*"
 six = "*"
 
 [[package]]
@@ -2228,4 +2229,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "e03d32008def6487bb104b24687cb2c224cba4f3bac60de839fe5e22d2030fd3"
+content-hash = "2b00ab7205a09455a6c1465a8446ca3ac0cc07bdf704cd7dfb85e1ee4ccc9ccc"
