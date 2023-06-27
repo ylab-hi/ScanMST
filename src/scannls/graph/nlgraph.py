@@ -14,14 +14,17 @@ from typing import Optional
 from typing import Union
 
 from ..base.basicClass import BreakPoint
-from ..base.basicClass import MicroHomology, NovelInsertion
-from .basicGraph import Node
-from .basicGraph import NodeIdentity
 from ..base.basicClass import Series
 from ..base.mergeCondition import MergeCondition
-from .plotGraph import plot_graph
 from ..base.srRescuer import SRRescuer
 from ..base.type import LoggerType
+from .basicGraph import Edge
+from .basicGraph import EdgeData
+from .basicGraph import Node
+from .basicGraph import NodeIdentity
+from .basicGraph import SpliceType
+from .basicGraph import update_node_with_other_node
+from .plotGraph import plot_graph
 
 
 class NLGraph:
@@ -814,55 +817,3 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
 
     updated_node.read_names.append(current_node.query_name)
     updated_node.identity[current_node.query_name] = current_node.self_identity
-
-
-def _check_insertion_conditions_for_compare_insertion(
-    insertion_info1, insertion_info2
-) -> bool:
-    if insertion_info1 is None and insertion_info2 is None:
-        return True
-
-    elif insertion_info1 is not None and insertion_info2 is not None:
-        if insertion_info1[0] and insertion_info2[0]:
-            # 1 hit insertion that is added in the series
-            return True
-
-        if not insertion_info1[0] and not insertion_info2[0]:
-            if (
-                isinstance(insertion_info1[1], NovelInsertion)
-                and isinstance(insertion_info2[1], NovelInsertion)
-                and (
-                    insertion_info1[1].query_sequence
-                    == insertion_info2[1].query_sequence
-                )
-            ):
-                return True
-
-            elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
-                insertion_info2[1], MicroHomology
-            ):
-                return True
-
-    return False
-
-
-def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
-    """Check if node1 and node2 can be merged based on insertion info."""
-    insertion_info1 = node1.insertion_info
-    insertion_info2 = node2.insertion_info
-
-    return _check_insertion_conditions_for_compare_insertion(
-        insertion_info1, insertion_info2
-    )
-
-
-def update_node_with_other_node(
-    node: Node, other_node: Node, features: Iterable[str]
-) -> None:
-    """Update node with another node.
-
-    if current feature of node is None, then use another node's feature.
-    """
-    for feature in features:
-        if getattr(node, feature) is None:
-            setattr(node, feature, getattr(other_node, feature))

@@ -17,7 +17,6 @@ from pyfaidx import FastaNotFoundError
 
 from .. import __version__
 from ..base.basicClass import MicroHomology
-from ..graph import Node
 from ..base.basicClass import NovelInsertion
 from ..base.basicClass import reverse_complement
 from ..base.basicClass import Series
@@ -27,6 +26,7 @@ from ..exception import ExonsNotFoundError
 from ..exception import GenesNotFoundError
 from ..exception import ModesNotFoundError
 from ..exception import SplicingCodeNotFoundError
+from ..graph import Node
 from .writer import Writer
 
 

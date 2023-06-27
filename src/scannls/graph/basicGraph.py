@@ -1,8 +1,13 @@
-from typing import Optional, Any
+from dataclasses import dataclass
 from enum import auto
 from enum import Enum
-from dataclasses import dataclass
-from ..base.basicClass import NovelInsertion, MicroHomology
+from typing import Any
+from typing import Iterable
+from typing import Optional
+
+from ..base.basicClass import BreakPoint
+from ..base.basicClass import MicroHomology
+from ..base.basicClass import NovelInsertion
 
 
 class BasicNode:
@@ -615,3 +620,55 @@ class Edge:
                 edge1.insertion, edge2.insertion
             )
         )
+
+
+def _check_insertion_conditions_for_compare_insertion(
+    insertion_info1, insertion_info2
+) -> bool:
+    if insertion_info1 is None and insertion_info2 is None:
+        return True
+
+    elif insertion_info1 is not None and insertion_info2 is not None:
+        if insertion_info1[0] and insertion_info2[0]:
+            # 1 hit insertion that is added in the series
+            return True
+
+        if not insertion_info1[0] and not insertion_info2[0]:
+            if (
+                isinstance(insertion_info1[1], NovelInsertion)
+                and isinstance(insertion_info2[1], NovelInsertion)
+                and (
+                    insertion_info1[1].query_sequence
+                    == insertion_info2[1].query_sequence
+                )
+            ):
+                return True
+
+            elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
+                insertion_info2[1], MicroHomology
+            ):
+                return True
+
+    return False
+
+
+def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
+    """Check if node1 and node2 can be merged based on insertion info."""
+    insertion_info1 = node1.insertion_info
+    insertion_info2 = node2.insertion_info
+
+    return _check_insertion_conditions_for_compare_insertion(
+        insertion_info1, insertion_info2
+    )
+
+
+def update_node_with_other_node(
+    node: Node, other_node: Node, features: Iterable[str]
+) -> None:
+    """Update node with another node.
+
+    if current feature of node is None, then use another node's feature.
+    """
+    for feature in features:
+        if getattr(node, feature) is None:
+            setattr(node, feature, getattr(other_node, feature))

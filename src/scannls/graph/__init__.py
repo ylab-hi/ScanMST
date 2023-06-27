@@ -1,15 +1,11 @@
-from .basicGraph import (
-    Node,
-    BasicNode,
-    NodeIdentity,
-    SpliceType,
-    VariationType,
-    Variation,
-    EdgeData,
-    Edge,
-)
-
-
+from .basicGraph import BasicNode
+from .basicGraph import Edge
+from .basicGraph import EdgeData
+from .basicGraph import Node
+from .basicGraph import NodeIdentity
+from .basicGraph import SpliceType
+from .basicGraph import Variation
+from .basicGraph import VariationType
 from .nlgraph import NLGraph
 
 
