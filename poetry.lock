@@ -814,20 +814,20 @@ test = ["objgraph", "psutil"]
 
 [[package]]
 name = "htseq"
-version = "2.0.2"
+version = "2.0.3"
 description = "A framework to process and analyze data from high-throughput sequencing (HTS) assays"
 optional = false
 python-versions = "*"
 files = [
-    {file = "HTSeq-2.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:446ce2c8c81ab1a40d9f2d64d72badd0a28b30336dc7425d4751799131bd4d50"},
-    {file = "HTSeq-2.0.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:37982e4c1d29570d55d7b81ae5bb17b0fbff15649e642f8df76d76432fe40381"},
-    {file = "HTSeq-2.0.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:4a9e52e70386f3b367fd133bb7fbd8f1d71e44a1cd713c51ab4f3f96efe12b96"},
-    {file = "HTSeq-2.0.2-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ccd6979865725bde9a7626967c0380ce1c687da3d4a238ec0c516d41e6ad8145"},
-    {file = "HTSeq-2.0.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:90f2dcf82efb5963a2210c7f7ab59d7b3bf233dfc4358bee489df02eec53097c"},
-    {file = "HTSeq-2.0.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d0eee9212860da1e69a7160afa59bcb346d8a12365e55dcdab44b8b611be15e6"},
-    {file = "HTSeq-2.0.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:285959096b5079d7ce53089bb7d1d022ccfd1d4549e70af4823facd8adc34480"},
-    {file = "HTSeq-2.0.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5d0ed34096d33aa73a351bb9434ecedeb2873a18a15bf98b368d2821fdd89827"},
-    {file = "HTSeq-2.0.2.tar.gz", hash = "sha256:e2c7442d6ff3f97293cfa0da276576f0996eae0a66eb3c2006332ef198f7ea09"},
+    {file = "HTSeq-2.0.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:03972ffc34034c8cbdf5587c9a21e5770a12855479807c7cfe54fe20023c095f"},
+    {file = "HTSeq-2.0.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:073f1243e54e902cfe2ca02655946803c506b496792a72e1784402572889c80a"},
+    {file = "HTSeq-2.0.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:700a0453aafd4a03171b2161e7ef1d14d54a77d424f5027ce1ecad0756b04a81"},
+    {file = "HTSeq-2.0.3-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fd6e92a4c16898fb9c9c17fd7a93e0aefe0a0be9c0992175b38fb139c76d3cb2"},
+    {file = "HTSeq-2.0.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:5865e07d96abfdd36702171001ece846454f764671357b81702bb1bf082b33a3"},
+    {file = "HTSeq-2.0.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1446f538bcc305859e92b0fc362f5dbe9f7ffe7f495389496fb89f52d52f823f"},
+    {file = "HTSeq-2.0.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:0affcc9f3881bd17725f76a1525f723c58b9ea359009cc0b4b2db1f731f82ed2"},
+    {file = "HTSeq-2.0.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0c73bccacafee1407ad8c87518af71918593f726279e09f11eefe1d6210ec3bf"},
+    {file = "HTSeq-2.0.3.tar.gz", hash = "sha256:c7e7eb29bdc44e80d2d68e3599fa8a8f1d9d6475624dcf1b9644285a8a9c0fac"},
 ]
 
 [package.dependencies]
@@ -1211,23 +1211,23 @@ setuptools = "*"
 
 [[package]]
 name = "nox"
-version = "2022.11.21"
+version = "2023.4.22"
 description = "Flexible test automation."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "nox-2022.11.21-py3-none-any.whl", hash = "sha256:0e41a990e290e274cb205a976c4c97ee3c5234441a8132c8c3fd9ea3c22149eb"},
-    {file = "nox-2022.11.21.tar.gz", hash = "sha256:e21c31de0711d1274ca585a2c5fde36b1aa962005ba8e9322bf5eeed16dcd684"},
+    {file = "nox-2023.4.22-py3-none-any.whl", hash = "sha256:0b1adc619c58ab4fa57d6ab2e7823fe47a32e70202f287d78474adcc7bda1891"},
+    {file = "nox-2023.4.22.tar.gz", hash = "sha256:46c0560b0dc609d7d967dc99e22cb463d3c4caf54a5fda735d6c11b5177e3a9f"},
 ]
 
 [package.dependencies]
-argcomplete = ">=1.9.4,<3.0"
+argcomplete = ">=1.9.4,<4.0"
 colorlog = ">=2.6.1,<7.0.0"
 packaging = ">=20.9"
 virtualenv = ">=14"
 
 [package.extras]
-tox-to-nox = ["jinja2", "tox"]
+tox-to-nox = ["jinja2", "tox (<4)"]
 
 [[package]]
 name = "numpy"
@@ -1446,16 +1446,17 @@ toml = ["tomli (>=1.2.3)"]
 
 [[package]]
 name = "pyfaidx"
-version = "0.7.1"
+version = "0.7.2.1"
 description = "pyfaidx: efficient pythonic random access to fasta subsequences"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 files = [
-    {file = "pyfaidx-0.7.1.tar.gz", hash = "sha256:3977632b7fd29049f8b11035d7e9dea0e2c5da9c235f982b4c3fae06ff1fa23f"},
+    {file = "pyfaidx-0.7.2.1-py3-none-any.whl", hash = "sha256:eee13d35bb5f2aa65932a9ad9dd74fa695aefe6e0baafc5836cfa869a7695acc"},
+    {file = "pyfaidx-0.7.2.1.tar.gz", hash = "sha256:30f0d20a9e3d53353fb20eb69b7e22e6f01a53ed4f21b3e17dd408f0be5051a0"},
 ]
 
 [package.dependencies]
-setuptools = ">=0.7"
+setuptools = "*"
 six = "*"
 
 [[package]]
