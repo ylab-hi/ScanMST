@@ -559,13 +559,13 @@ pyflakes = ">=2.5.0,<2.6.0"
 
 [[package]]
 name = "flake8-2020"
-version = "1.7.0"
+version = "1.8.1"
 description = "flake8 plugin which checks for misuse of `sys.version` or `sys.version_info`"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "flake8_2020-1.7.0-py2.py3-none-any.whl", hash = "sha256:e3e89e2fd4077c66ac8b8739e2af7c791258ba4023037e401f825284435c7dbb"},
-    {file = "flake8_2020-1.7.0.tar.gz", hash = "sha256:9342902563a7d0b0233128c395be1372b8a3e8072805931639760bfe8a3935f9"},
+    {file = "flake8_2020-1.8.1-py2.py3-none-any.whl", hash = "sha256:59b6b8ac01cde10ef11b31a2c9aa15b4509d828ae115ee5be34464b9e4de4ea6"},
+    {file = "flake8_2020-1.8.1.tar.gz", hash = "sha256:094ea95e8b614c3bd123fd4f007be28ec117ca57a6169903d4baaabe78e3e590"},
 ]
 
 [package.dependencies]
@@ -2229,4 +2229,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "25d947c827adf1437132f84bd43bcc41aa85e6e64a92bb5bf5e949845d8e917e"
+content-hash = "fa349de5778f54e39604771c7f36a42290b640badb3c307c0ed4ad7bcb987933"
