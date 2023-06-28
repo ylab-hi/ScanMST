@@ -1,18 +1,19 @@
 # !/usr/bin/env python
 """Filters based on breakpoints or circurlarRNAs.
 """
+
+from typing import List
+from typing import Set
+from typing import Optional
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List
-from typing import Optional
-from typing import Set
 
 import HTSeq
 
-from .basicClass import Event
-from .basicClass import Node
-from .basicClass import Series
 from .type import LoggerType
+from .basicClass import Event
+from .basicClass import Series
+from .basicClass import Node
 
 
 @dataclass
@@ -96,7 +97,7 @@ def _extract_annotated_exons(
     trx_to_exon = defaultdict(list)
 
     for feature in gtf_file:
-        feature.attr.get("gene_name") or feature.attr.get("gene")
+        gene_name = feature.attr.get("gene_name") or feature.attr.get("gene")
 
         if feature.type == "exon":
             trx_id = feature.attr["transcript_id"]
@@ -161,8 +162,12 @@ class CircRNAFilter:
                 nodes[0].sv_type == "TDUP"
                 and (
                     (
-                        set(nodes[0].introns).issuperset(set(nodes[1].introns))
-                        or set(nodes[0].introns).issubset(set(nodes[1].introns))
+                        len(nodes[0].introns) > 0
+                        and len(nodes[1].introns) > 0
+                        and (
+                            set(nodes[0].introns).issuperset(set(nodes[1].introns))
+                            or set(nodes[0].introns).issubset(set(nodes[1].introns))
+                        )
                     )
                     or (
                         set(nodes[0].exons).issuperset(set(nodes[1].exons))
@@ -192,7 +197,13 @@ class CircRNAFilter:
                 if _id == 1:
                     if (
                         set(current_node.exons).issubset(set(next_node.exons))
-                        or set(current_node.introns).issubset(set(next_node.introns))
+                        or (
+                            len(current_node.introns) > 0
+                            and len(next_node.introns) > 0
+                            and set(current_node.introns).issubset(
+                                set(next_node.introns)
+                            )
+                        )
                         or current_node.ref_start == next_node.ref_start
                         or current_node.ref_end == next_node.ref_end
                     ) and self.is_megaexon_superpose_with_annotated_exons(next_node):
@@ -201,7 +212,13 @@ class CircRNAFilter:
                 elif _id == num_of_hops:
                     if (
                         set(current_node.exons).issuperset(set(next_node.exons))
-                        or set(current_node.introns).issuperset(set(next_node.introns))
+                        or (
+                            len(current_node.introns) > 0
+                            and len(next_node.introns) > 0
+                            and set(current_node.introns).issuperset(
+                                set(next_node.introns)
+                            )
+                        )
                         or current_node.ref_start == next_node.ref_start
                         or current_node.ref_end == next_node.ref_end
                     ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
