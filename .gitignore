@@ -34,3 +34,4 @@ profile/
 *.o
 *.so
 main.cpp
+neovide*

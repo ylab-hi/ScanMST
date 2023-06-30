@@ -19,7 +19,6 @@ from .. import __version__
 from ..base.basicClass import MicroHomology
 from ..base.basicClass import NovelInsertion
 from ..base.basicClass import reverse_complement
-from ..base.basicClass import Series
 from ..exception import AnnotationCodeNotFoundError
 from ..exception import BreakpointNotFoundError
 from ..exception import ExonsNotFoundError
@@ -193,7 +192,7 @@ class VCFWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: Series, clique_id: int) -> None:
+    def _(self, data_object: Path, clique_id: int) -> None:
         """Write Series to VCF file.
 
         :param data_object: Series to write to file.
@@ -337,7 +336,7 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 
 
 def get_vcf_features_from_series(
-    series: Series,
+    series: Path,
     series_id: int,
     reference_io: Fasta,
 ) -> Any:

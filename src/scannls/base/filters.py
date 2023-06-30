@@ -10,10 +10,9 @@ from dataclasses import dataclass
 
 import HTSeq
 
-from .type import LoggerType
+from ..graph import NLPath, Node
 from .basicClass import Event
-from .basicClass import Series
-from .basicClass import Node
+from .type import LoggerType
 
 
 @dataclass
@@ -153,7 +152,7 @@ class CircRNAFilter:
             gtf_file, boundary_size, shrink=False, consider_strand=True
         )
 
-    def is_circRNA(self, series: Series) -> bool:
+    def is_circRNA(self, series: NLPath) -> bool:
         nodes = series.nodes
         # one-hop event
         if len(nodes) == 2:

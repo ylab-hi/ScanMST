@@ -9,19 +9,19 @@
 import copy
 
 import pytest
-from scannls import Series
+from scannls import Path
 
 
 @pytest.fixture()
 def empty_series(fake_logger, fake_blat):
     """Empty Series fixture."""
-    return Series(blat=fake_blat, logger=fake_logger)
+    return Path(blat=fake_blat, logger=fake_logger)
 
 
 @pytest.fixture()
 def series(nodes, fake_logger, fake_blat):
     """Series fixture."""
-    series = Series(blat=fake_blat, logger=fake_logger)
+    series = Path(blat=fake_blat, logger=fake_logger)
     for node in nodes:
         series.add_node(node)
     return series
@@ -53,7 +53,7 @@ class TestSeries:
 
     def test_create_series_from_node_list(self, nodes, fake_logger):
         """Test create series from node list."""
-        series_instance = Series.create_series_from_node_list(
+        series_instance = Path.create_series_from_node_list(
             nodes, fake_logger, set(), False
         )
         assert len(series_instance) == len(nodes)
@@ -71,13 +71,13 @@ class TestSeries:
     def test_reorder_event(self, event):
         """Test reorder event."""
         original_event = copy.deepcopy(event)
-        Series.reorder_event(event)
+        Path.reorder_event(event)
         assert event.mode1 == original_event.mode2
 
     def test_order_events_by_trancription_direction(self, event):
         """Test order events by trancription direction."""
         original_event = copy.deepcopy(event)
-        result = Series.order_events_by_trancription_direction([event])
+        result = Path.order_events_by_trancription_direction([event])
         assert len(result) == 1
         assert result[0].mode1 == original_event.mode2
 

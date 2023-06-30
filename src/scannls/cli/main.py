@@ -22,11 +22,11 @@ from .. import get_softclip_length
 from .. import MyLogger
 from .. import ParallelWorker
 from .. import reverse_complement
-from .. import Series
 from ..base.filters import CircRNAFilter
 from ..base.filters import ExonFilter
 from ..base.filters import RTSwitchingFilter
 from ..base.type import LoggerType
+from ..graph.basicGraph import NLPath
 from .helper import blat2chimeric_alignment
 from .helper import extract_splice_sites
 from .helper import get_transcriptome_length
@@ -507,33 +507,32 @@ def _scan_bam_helper(
                                     nls_event_list.append(event)
 
                     if nls_event_list:
-                        series = Series(blat=blat)
                         logger.debug(f"{nls_event_list=}")
-                        series.init(
-                            nls_event_list,
-                            read_chains,
-                            splice_bin,
-                            genome_fasta,
-                            cvg,
-                            gene_iv,
-                            motif_required,
+                        nlpath = NLPath.new(
+                            events=nls_event_list,
+                            read_chains=read_chains,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                            blat=blat,
                         )
-                        series.disable_blat_logger()
                         if (
-                            not series.is_all_type_del()
-                            and series.is_minimum_node_length_larger_than_threshold()
+                            not nlpath.is_all_type_del()
+                            and nlpath.is_minimum_node_length_larger_than_threshold()
                         ):
                             if circular_rna == "remove":
-                                if not circ_rna_filter.is_circRNA(series):
-                                    nls_src_forms_list.append(series)
-                                    logger.trace(f"{series=}")
+                                if not circ_rna_filter.is_circRNA(nlpath):
+                                    nls_src_forms_list.append(nlpath)
+                                    logger.trace(f"{nlpath=}")
                             elif circular_rna == "extract":
-                                if circ_rna_filter.is_circRNA(series):
-                                    nls_src_forms_list.append(series)
-                                    logger.trace(f"extracted circular RNA: {series=}")
+                                if circ_rna_filter.is_circRNA(nlpath):
+                                    nls_src_forms_list.append(nlpath)
+                                    logger.trace(f"extracted circular RNA: {nlpath=}")
                             else:
-                                nls_src_forms_list.append(series)
-                                logger.trace(f"{series=}")
+                                nls_src_forms_list.append(nlpath)
+                                logger.trace(f"{nlpath=}")
                 else:
                     logger.trace(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "

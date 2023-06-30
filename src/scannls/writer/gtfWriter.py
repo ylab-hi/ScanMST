@@ -14,8 +14,8 @@ from loguru import logger
 
 from ..base.basicClass import MicroHomology
 from ..base.basicClass import NovelInsertion
-from ..base.basicClass import Series
 from ..exception import ExonsNotFoundError
+from ..graph import NLPath
 from ..graph import Node
 from .writer import Writer
 
@@ -88,7 +88,7 @@ class GTFWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: Series, object_id: int) -> None:
+    def _(self, data_object: NLPath, object_id: int) -> None:
         """Write Series to GTF file.
 
         :param data_object:
@@ -106,7 +106,7 @@ class GTFWriter(Writer):
 
 
 def get_nodes_gtf_features_from_series(
-    series: Series, series_id: int
+    series: NLPath, series_id: int
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 

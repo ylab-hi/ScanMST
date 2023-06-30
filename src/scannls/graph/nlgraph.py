@@ -14,12 +14,12 @@ from typing import Optional
 from typing import Union
 
 from ..base.basicClass import BreakPoint
-from ..base.basicClass import Series
 from ..base.mergeCondition import MergeCondition
 from ..base.srRescuer import SRRescuer
 from ..base.type import LoggerType
 from .basicGraph import Edge
 from .basicGraph import EdgeData
+from .basicGraph import NLPath
 from .basicGraph import Node
 from .basicGraph import NodeIdentity
 from .basicGraph import SpliceType
@@ -45,11 +45,11 @@ class NLGraph:
 
     def __call__(
         self,
-        series_list: Iterable[Series],
+        nlpath_list: Iterable[NLPath],
         clique_ind: int,
         is_plot: bool = False,
         is_check_circle: bool = False,
-    ) -> Iterable[Series]:
+    ) -> Iterable[NLPath]:
         """Find a specific path based on splice graph.
 
         :param series_list: series list
@@ -60,12 +60,12 @@ class NLGraph:
         >>> splice_graph = SpliceGraph(logger)
         >>> splice_graph(series_list)
         """
-        if isinstance(series_list, types.GeneratorType):
-            series_list = list(series_list)
+        if isinstance(nlpath_list, types.GeneratorType):
+            nlpath_list = list(nlpath_list)
 
-        self.series_list = copy.deepcopy(series_list)
+        self.series_list = copy.deepcopy(nlpath_list)
 
-        del series_list  # remove reference to series_list
+        del nlpath_list  # remove reference to series_list
         self.nodes: dict[str, list[Node]] = self.dict_factory()
 
         self.edges: dict[str, list[Edge]] = defaultdict(list)
@@ -87,7 +87,7 @@ class NLGraph:
 
         # trace path
         for node_list in self.trace():
-            yield Series.create_path_from_node_edge_list(
+            yield NLPath.create_path_from_node_edge_list(
                 node_list,
             )
 
@@ -125,7 +125,7 @@ class NLGraph:
 
         return cls(logger, rescuer, prune_threshold)
 
-    def add_edge(self, node1: Node, node2: Node, edge_data=None):
+    def add_edge(self, node1: Node, node2: Node, edge_data):
         """Add edge from node1 -> node2"""
         edge = Edge.from_nodes(node1, node2, edge_data)
 
@@ -156,7 +156,7 @@ class NLGraph:
     ) -> dict[NodeIdentity, list[str]]:
         result = defaultdict(list)
         for read_id in edge.read_ids:
-            result[node.identity[read_id]].append(read_id)
+            result[node.identities[read_id]].append(read_id)
         return result
 
     @staticmethod
@@ -285,6 +285,9 @@ class NLGraph:
         """
         if node1.strand != node2.strand:
             return False
+
+        assert node1.self_identity is not None
+        assert node2.self_identity is not None
 
         node1_self_identity: NodeIdentity = node1.self_identity
         node2_self_identity: NodeIdentity = node2.self_identity
@@ -420,10 +423,10 @@ class NLGraph:
 
                 # initialize and get unique key of current node and set node.unique_key
                 # if not set when you reach node.unique_key, will return None
-                _ = current_node.get_unique_key()
+                # _ = current_node.get_unique_key()
 
                 # get node identity mid, tail, head
-                current_node.update_identity()
+                # current_node.update_identity()
 
                 # get a similar key(chrom and first intron) of current node
                 similar_key = current_node.similar_key
@@ -613,6 +616,8 @@ class NLGraph:
     def check_can_battle(self, node_a: Node, node_b: Node) -> bool:
         """Check if two nodes can battle."""
         self.logger.trace(f"{node_a=}\n{node_b=}")
+
+        # WARN: prev_sv_type is already deleted <06-28-23>
         if node_a.prev_sv_type != node_b.prev_sv_type:
             return False
 
@@ -816,4 +821,4 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     )
 
     updated_node.read_names.append(current_node.query_name)
-    updated_node.identity[current_node.query_name] = current_node.self_identity
+    updated_node.identities[current_node.query_name] = current_node.self_identity

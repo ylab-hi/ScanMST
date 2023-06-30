@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """FastaWriter class.
 
 @Filename:    fastaWriter.py
@@ -18,7 +17,6 @@ from pyfaidx import FastaNotFoundError
 from ..base.basicClass import MicroHomology
 from ..base.basicClass import NovelInsertion
 from ..base.basicClass import reverse_complement
-from ..base.basicClass import Series
 from ..graph import Node
 from .writer import Writer
 
@@ -80,7 +78,7 @@ class FastaWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: Series, object_id: int = -1):
+    def _(self, data_object: Path, object_id: int = -1):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
             logger.warning(
@@ -94,7 +92,7 @@ class FastaWriter(Writer):
 
 
 def get_nodes_sequence_from_series(
-    series: Series, reference_io: Fasta
+    series: Path, reference_io: Fasta
 ) -> tuple[str, str]:
     """Get sequence of nodes of series.
 

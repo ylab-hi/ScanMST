@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Init file for scannls package."""
 __version__ = "0.0.1"
 __PACKAGE_NAME__ = "scannls"
@@ -10,10 +9,7 @@ from .base.basicClass import (
     Event,
     Insertion,
     MicroHomology,
-    Node,
     NovelInsertion,
-    Series,
-    check_end_node_is_ploya,
     reverse_complement,
 )
 from .base.basicRead import Read
@@ -48,8 +44,6 @@ __all__ = [
     "Read",
     "Event",
     "reverse_complement",
-    "Series",
-    "Node",
     "Blat",
     "MyLogger",
     "ParallelWorker",
@@ -76,7 +70,6 @@ __all__ = [
     "MicroHomology",
     "Insertion",
     "cppext",
-    "check_end_node_is_ploya",
     "DefaultOptions",
     "blat",
 ]

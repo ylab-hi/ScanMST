@@ -1,3 +1,5 @@
+from collections import Counter
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import auto
 from enum import Enum
@@ -5,13 +7,20 @@ from typing import Any
 from typing import Iterable
 from typing import Optional
 
+import pyfaidx
+from loguru import logger
+
 from ..base.basicClass import BreakPoint
+from ..base.basicClass import Event
 from ..base.basicClass import MicroHomology
 from ..base.basicClass import NovelInsertion
+from ..base.basicClass import reverse_complement
+from ..base.basicRead import Read
+from ..cli.nls_inference import infer_nls_from_connected_reads
 
 
 class BasicNode:
-    """BasicNode is used to represent nodes in the splice graph."""
+    """BasicNode is used to represent nodes in the nlgraph."""
 
     __slots__ = (
         # parent class: basic node fields
@@ -171,17 +180,6 @@ class NodeIdentity(Enum):
         else:
             raise ValueError("Invalid value for NodeIdentity: {}".format(s))
 
-    @classmethod
-    def from_node(cls, node: "Node") -> "NodeIdentity":
-        if node.prev_breakpoint is not None and node.next_breakpoint is not None:
-            return cls.MID
-        elif node.prev_breakpoint is None:
-            return cls.HEAD
-        elif node.next_breakpoint is None:
-            return cls.TAIL
-        else:
-            raise ValueError("Invalid node identity: {}".format(node))
-
     def is_head(self) -> bool:
         return self == NodeIdentity.HEAD
 
@@ -261,93 +259,64 @@ class Node(BasicNode):
 
     def __init__(
         self,
-        prev_bp: Optional[str] = None,
-        next_bp: Optional[str] = None,
-        strand: Optional[str] = None,
-        chrom: Optional[str] = None,
-        ref_start: Optional[int] = None,
-        ref_end: Optional[int] = None,
+        query_name: str,
+        chrom: str,
+        strand: str,
+        ref_start: int,
+        ref_end: int,
         exons: Optional[list[Any]] = None,
-        sv_type: Optional[str] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
         modes: Optional[list[int]] = None,
         genes: Optional[tuple[str, str]] = None,
-        query_name: str = "",
+        cigartuples_without_soft: Optional[list[int]] = None,
+        identity: Optional[NodeIdentity] = None,
     ) -> None:
         """Initialize a Node object."""
         super().__init__()  # initialize BasicNode object
-        self._introns = None
-        self.chrom = chrom
         self.query_name = query_name
-        self.prev_breakpoint = BreakPoint.from_str(prev_bp)
-        self.next_breakpoint = BreakPoint.from_str(next_bp)
-        self.prev_breakpoint_depth: Optional[int] = None
-        self.next_breakpoint_depth: Optional[int] = None
+        self.chrom = chrom
         self.strand = strand
         self.ref_start = ref_start
         self.ref_end = ref_end
+
         self.exons = exons
+        self._introns = None
         self._exon_repr = ""
-        self.sv_type = sv_type
-        self.prev_sv_type = None
+
         self.modes = modes
         self.genes = genes
+
         self.annotation_code = annot
         self.splicing_code = canonical
-        self.insertion_info = None
-        self.unique_key: Optional[str] = None
+        self._unique_key: Optional[str] = None
         self.is_polya = False
-        self.cigartuples_without_soft: Optional[list[int]] = None
-        self.identity: dict[str, NodeIdentity] = {}
+        self.cigartuples_without_soft = cigartuples_without_soft
+        self.identities: dict[str, NodeIdentity] = {}
         self.read_names = [self.query_name]
 
-        if (
-            self.query_name != ""
-            and self.prev_breakpoint is not None
-            and self.next_breakpoint is not None
-        ):
-            self.identity[self.query_name] = NodeIdentity.from_node(self)
+        # NOTE: maybe unused <06-29-23, Yangyang Li>
+        self.insertion_info = None
 
-    def __hash__(self) -> int:
-        """Hash a node."""
-        return (
-            hash(self.chrom)
-            ^ hash(self.ref_start)
-            ^ hash(self.ref_end)
-            ^ hash(self.sv_type)
-            ^ hash(self.prev_breakpoint)
-            ^ hash(self.next_breakpoint)
-            ^ hash(self.strand)
-        )
+        if self.query_name != "" and identity is not None:
+            self.identities[self.query_name] = identity
 
     def __repr__(self) -> str:
         """Get a string representation of a node."""
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{self.exons_repr}, {self.prev_sv_type}, {self.sv_type}, "
-            f"{self.prev_breakpoint}|DP:{self.prev_breakpoint_depth}, "
-            f"{self.next_breakpoint}|DP:{self.next_breakpoint_depth}, modes={self.modes}, "
+            f"{self.exons_repr},"
+            f"modes={self.modes}, "
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
         )
 
     @property
-    def self_identity(self) -> NodeIdentity:
-        assert self.query_name != ""
+    def self_identity(self) -> Optional[NodeIdentity]:
+        return self.identities.get(self.query_name, None)
 
-        if self.query_name not in self.identity:
-            self.identity[self.query_name] = NodeIdentity.from_node(self)
-
-        return self.identity[self.query_name]
-
-    @classmethod
-    def create_nodes(cls, number):
-        """Create a list of nodes.
-
-        :param number: number of nodes to create
-        :return: list of nodes
-        """
-        return [cls() for _ in range(number)]
+    @self_identity.setter
+    def self_identity(self, identity: NodeIdentity) -> None:
+        self.identities[self.query_name] = identity
 
     @property
     def exons_repr(self) -> str:
@@ -388,7 +357,7 @@ class Node(BasicNode):
         return f"{self.chrom}_{key}"
 
     @property
-    def length(self) -> int:
+    def exons_length(self) -> int:
         """Get total length of exon of a node."""
         assert self.exons is not None
         total_len = 0
@@ -396,40 +365,31 @@ class Node(BasicNode):
             total_len += j - i
         return total_len
 
-    def get_unique_key(self):
-        """Get unique key of a node."""
-        introns = self.introns
+    @property
+    def unique_key(self) -> str:
+        if self._unique_key is None:
+            introns = self.introns
+            key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
+            key = f"{self.chrom}-{key}-{self.ref_start}-{self.ref_end}"
+            self._unique_key = key
 
-        key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
+        return self._unique_key
 
-        key = f"{self.chrom}-{key}-{self.sv_type}-{self.prev_breakpoint}-{self.next_breakpoint}"
+    # NOTE: used in  rescue sr. Now use edge info to rescue sr <Yangyang Li yangyang.li@northwestern.edu>
 
-        if self.insertion_info is not None:
-            _, insertion_type = self.insertion_info  # type: ignore
-            if insertion_type.__class__.__name__ in ("NovelInsertion", "MicroHomology"):
-                key = f"{insertion_type.query_sequence}-{key}"
-
-        self.unique_key = key
-        return key
-
-    def update_identity(self):
-        self.identity[self.query_name] = NodeIdentity.from_node(self)
-
-    def get_breakpoint_depth_pos(self, mode: int, direc: str) -> tuple[str, Any]:
-        """Get update breakpoint depth and position of a node."""
-        break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
-        if break_point is not None:
-            chrom, pos = break_point.to_tuple()
-            if mode == 1:
-                pos -= 1
-            return chrom, pos
-        return " ", 1
+    # def get_breakpoint_depth_pos(self, mode: int, direc: str) -> tuple[str, Any]:
+    #     """Get update breakpoint depth and position of a node."""
+    #     break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
+    #     if break_point is not None:
+    #         chrom, pos = break_point.to_tuple()
+    #         if mode == 1:
+    #             pos -= 1
+    #         return chrom, pos
+    #     return " ", 1
 
     def is_reverse(self) -> bool:
         """Check if a node is reverse."""
         return self.strand == "-"
-
-    # NOTE: may be removed in the future  <04-17-23, Yangyang Li>
 
 
 class SpliceType(Enum):
@@ -471,71 +431,41 @@ class VariationType(Enum):
         return self.name
 
 
-class Variation:
-    def __init__(
-        self, types: VariationType, break_point: BreakPoint, break_point_depth: int
-    ):
-        self.types = types
-        self.break_point = break_point
-        self.break_point_depth = break_point_depth
-
-    def __repr__(self):
-        return f"Variation({self.types=} {self.break_point=} {self.break_point_depth=})"
-
-    @classmethod
-    def from_node(cls, node: Node):
-        assert node.next_breakpoint is not None
-        next_breakpoint_depth = (
-            0 if node.next_breakpoint_depth is None else node.next_breakpoint_depth
-        )
-
-        return cls(
-            VariationType.from_str(node.sv_type),
-            node.next_breakpoint,
-            next_breakpoint_depth,
-        )
-
-    @staticmethod
-    def is_merged(
-        variation1: "Variation", variation2: "Variation", threshold: int
-    ) -> bool:
-        return variation1.types == variation2.types and BreakPoint.equal(
-            variation1.break_point, variation2.break_point, threshold
-        )
-
-
 @dataclass
 class EdgeData:
-    variation: Variation
+    variantion_type: VariationType
+    break_point1: BreakPoint
+    break_point2: BreakPoint
     sr: int
-    insertion: Any
     read_ids: list[str]
+    insertion_info: Optional[Any] = None
 
     @classmethod
-    def from_node(cls, node: Node):
+    def from_event(cls, event: Event, read_id: str) -> "EdgeData":
         return cls(
-            Variation.from_node(node), node.sr, node.insertion_info, [node.query_name]
+            variantion_type=VariationType.from_str(event.sv_type),
+            break_point1=BreakPoint.from_str(event.bp1),
+            break_point2=BreakPoint.from_str(event.bp2),
+            sr=1,
+            read_ids=[read_id],
         )
 
 
 class Edge:
     def __init__(self, node1_key: str, node2_key: str, edge_data: EdgeData) -> None:
-        """
-        Initializes a new instance of the Edge class.
+        """Initializes a new instance of the Edge class.
 
         Args:
             node1_key (str): The key of the first node connected by the edge.
             node2_key (str): The key of the second node connected by the edge.
-            sv (Variation): The data associated with the edge.
+            edge_data (EdgeData): The data of the edge.
         """
         self.node1_key = node1_key
         self.node2_key = node2_key
         self.edge_data = edge_data
 
     def __repr__(self) -> str:
-        return (
-            f"Edge(variation={self.variation}, sr={self.sr}, read_ids={self.read_ids})"
-        )
+        return f"Edge(key={self.key}, data={self.edge_data})"
 
     @property
     def key(self):
@@ -543,11 +473,11 @@ class Edge:
 
     @property
     def insertion(self):
-        return self.edge_data.insertion
+        return self.edge_data.insertion_info
 
     @property
-    def variation(self):
-        return self.edge_data.variation
+    def variation_type(self):
+        return self.edge_data.variantion_type
 
     @property
     def sr(self):
@@ -559,8 +489,6 @@ class Edge:
 
     @staticmethod
     def create_key_from_node(node1: Node, node2: Node) -> str:
-        if node1.unique_key is None and node2.unique_key is None:
-            raise ValueError("Both nodes have no unique key")
         return f"{node1.unique_key}-{node2.unique_key}"
 
     def add_read_id(self, read_id: str):
@@ -571,10 +499,10 @@ class Edge:
         # WARN:  Do not update variation with break point <06-12-23>
         self.edge_data.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
-        if self.edge_data.insertion and isinstance(
-            self.edge_data.insertion[1], (NovelInsertion, MicroHomology)
+        if self.edge_data.insertion_info and isinstance(
+            self.edge_data.insertion_info[1], (NovelInsertion, MicroHomology)
         ):
-            self.edge_data.insertion[1].increment_ao()
+            self.edge_data.insertion_info[1].increment_ao()
 
     def get_nodes(self, graph):
         node1 = graph.get_node_with_unique_key(self.node1_key)
@@ -590,36 +518,495 @@ class Edge:
         cls,
         node1: Node,
         node2: Node,
-        edge_data: Optional[EdgeData],
-    ):
-        assert node1.unique_key is not None
-        assert node2.unique_key is not None
-
-        if edge_data is None:
-            edge_data = EdgeData.from_node(node1)
-
-        return cls(node1.unique_key, node2.unique_key, edge_data)
-
-    @classmethod
-    def from_node_key(
-        cls,
-        node1_key: str,
-        node2_key: str,
         edge_data: EdgeData,
     ):
-        return cls(node1_key, node2_key, edge_data)
+        return cls(node1.unique_key, node2.unique_key, edge_data)
 
     @staticmethod
     def is_merged(edge1: "Edge", edge2: "Edge", break_point_threshold: int) -> bool:
-        return (
-            edge1.key == edge2.key
-            and Variation.is_merged(
-                edge1.variation, edge2.variation, break_point_threshold
-            )
-            and _check_insertion_conditions_for_compare_insertion(
-                edge1.insertion, edge2.insertion
-            )
+        # TODO: reimplement  <Yangyang Li>
+        raise NotImplementedError
+
+        # return (
+        #     edge1.key == edge2.key
+        #     and Variation.is_merged(
+        #         edge1.variation, edge2.variation, break_point_threshold
+        #     )
+        #     and _check_insertion_conditions_for_compare_insertion(
+        #         edge1.insertion, edge2.insertion
+        #     )
+        # )
+
+
+class NLPath:
+    """Construct a sequence of Nodes for storing information of connected breakpoints.
+
+    :param nodes: sequence of Nodes
+    :type nodes: list
+    :param assemblied: The series is from assembly of reads (True) or a single read (False)
+    :type assemblied: bool or None
+
+    .. note::
+        [('TDUP', 0, 1, ('chr17:7708250', 'chr17:7701656', 1, 2), ('+', '+'),
+         ['INTERGENIC', 'INTERGENIC']),
+
+        ('TRA', 0, 1, ('chr17:7702552', 'chr1:15872815', 1, 2), ('+', '+'),
+        ['INTERGENIC', 'INTERGENIC']),
+
+        ('TDUP', 0, 1, ('chr1:15876678', 'chr1:15777169', 1, 2), ('+', '+'),
+        ['INTERGENIC', 'INTERGENIC'])]
+
+        Node(TDUP, None, chr17:7708250, +);Node(TRA, chr17:7701656, chr17:7702552, +)
+        Node(TDUP, chr1:15872815, chr1:15876678, +);Node(None, chr1:15777169, None, +)
+
+
+                         bp1               bp2  bp3                bp4
+                ---------|------    -------|----|------    --------|---------
+                       Node1                 Node2                Node3
+    prev_breakpoint:   None                 bp2                   bp4
+    next_breakpoint:    bp1                 bp3                   None
+    sv_type:        TDUP/INV/TRA        TDUP/INV/TRA              None
+
+    :Example:
+
+    >>> from loguru import logger
+    >>> series = Series(blat=None, logger=logger)
+    >>> series.add_node(Node(prev_bp=None,next_bp='chr17:7708250',strand='+',
+    ... chrom='chr17',ref_start=7706250,ref_end=7708250,exons=[(7706250,7708250)],sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr17:7701656',next_bp='chr17:7702552',strand='+',
+    ... chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)], sv_type='TRA'))
+    >>> series.add_node(Node(prev_bp='chr1:15872815',next_bp='chr1:15876678',strand='+',
+    ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)],
+    ... sv_type='TDUP'))
+    >>> series.add_node(Node(prev_bp='chr1:15777169',next_bp=None,strand='+',
+    ... chrom='chr1',ref_start=15777169,ref_end=15777589,exons=[(15777169,15777589)],
+    ... sv_type=None))
+    >>> series
+    Series(
+        Node(chr17:7706250-7708250:+, 7706250-7708250, TDUP, None, chr17:7708250)
+        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, chr17:7701656, chr17:7702552)
+        Node(chr1:15872815-15876678:+, 15872815-15876678, TDUP, chr1:15872815, chr1:15876678)
+        Node(chr1:15777169-15777589:+, 15777169-15777589, None, chr1:15777169, None) )
+
+    >>> series_with_novel_insertion = Series(blat=None, logger=logger)
+    >>> series_with_novel_insertion.nodes = [ Node(prev_bp=None,next_bp='chr17:7702552',
+    ... strand='+',chrom='chr17',ref_start=7701656,ref_end=7702552,exons=[(7701656, 7702552)],
+    ... sv_type='TRA', insertion_info=(False, NovelInsertion(hit_num=1,
+    ... query_sequence='ATCGATCG'))), Node(prev_bp='chr1:15872815',next_bp=None,strand='+',
+    ... chrom='chr1',ref_start=15872815,ref_end=15876678,exons=[(15872815,15876678)],
+    ... sv_type=None)]
+    >>> series_with_novel_insertion
+    Series(
+        Node(chr17:7701656-7702552:+, 7701656-7702552, TRA, None, chr17:7702552)
+        Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
+    """
+
+    reorder_conditions_dict = {
+        "+-11": True,
+        "+-22": False,
+        "-+11": False,
+        "-+22": True,
+        "++12": True,
+        "++21": False,
+        "--12": False,
+        "--21": True,
+    }
+
+    def __init__(self, nodes=[], edges={}) -> None:
+        """Initialize a nlpath object."""
+        self.nodes: list[Node] = nodes
+        self.edges: dict[str, Edge] = edges
+
+        self.id = -1
+        self.merge_factor = 1
+
+    def add_edge(self, nodes: Node, noded: Node, edge: Optional[Edge] = None) -> None:
+        """Add edge to the path."""
+
+        if nodes not in self.nodes:
+            self.nodes.append(nodes)
+
+        if noded not in self.nodes:
+            self.nodes.append(noded)
+
+        if edge is not None:
+            self.edges[edge.key] = edge
+
+    def only_add_edge(self, nodes: Node, noded: Node, edge: Edge) -> None:
+        key = Edge.create_key_from_node(nodes, noded)
+        if key not in self.edges:
+            self.edges[key] = edge
+
+    def get_edge(self, nodes: Node, noded: Node) -> Optional[Edge]:
+        key = Edge.create_key_from_node(nodes, noded)
+        return self.edges.get(key)
+
+    def is_all_type_del(self) -> bool:
+        """Check if sv_type of all nodes in the series are DEL."""
+        return all(
+            edge.variation_type == VariationType.DEL for edge in self.edges.values()
         )
+
+    def is_minimum_node_length_larger_than_threshold(self, threshold: int = 10) -> bool:
+        """Check if minimum length of all nodes in the series > threshold."""
+        return min(_node.exons_length for _node in self.nodes) > threshold
+
+    def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
+        """Check if all nodes in the series have sr > threshold."""
+        return all(node.sr >= threshold for node in self.nodes[:-1])
+
+    def get_sr_sum_for_all_node(self) -> int:
+        """Get sum of sr for all nodes in the series."""
+        return sum(node.sr for node in self.nodes)
+
+    def __getitem__(self, index: int) -> Node:
+        """Return the event at the given index."""
+        return self.nodes[index]
+
+    def __hash__(self) -> int:
+        """Return the hash of the event."""
+        return hash(";".join(map(str, self.nodes)))
+
+    def __len__(self) -> int:
+        """Return the number of events."""
+        return len(self.nodes)
+
+    def __lt__(self, other: Any) -> bool:
+        """Return True if the event is less than the other event."""
+        return len(self.nodes) < len(other.nodes)
+
+    def __repr__(self) -> str:
+        """Return the string representation of the event."""
+        _repr = "\nSeries("
+        space = " " * 4
+        for n in self.nodes:
+            _repr += f"\n{space}{n!r}"
+
+        _repr += ")"
+        return _repr
+
+    def __iter__(self) -> Iterator[Node]:
+        """Return an iterator over the events."""
+        yield from self.nodes
+
+    @property
+    def unique_key(self) -> str:
+        """Return the unique key of the event."""
+        return "".join([node.unique_key for node in self.nodes])
+
+    @staticmethod
+    def reorder_event(evt: Event):
+        """Order breakpoint pairs following the transcription direction using.
+
+        information of reads 'mode' and 'strand'
+        +1;-1 => up;down
+        +2;-2 => down;up
+        """
+        is_bp1_upstream = NLPath.reorder_conditions_dict.get(
+            f"{evt.strand1}{evt.strand2}{evt.mode1}{evt.mode2}", None
+        )
+
+        if not is_bp1_upstream:
+            evt.reverse()
+
+        return evt
+
+    @staticmethod
+    def order_events_by_trancription_direction(event_list: list[Event]):
+        """Construct breakpoints order following transcription direction.
+
+         for multiple-hop events or one-hop events
+                bp1                bp2   bp3               bp4
+        ---------|------    -------|----|------    --------|---------
+              Node1      |         Node2        |        Node3
+                       event1                 event2
+        ..note ::
+               requirements
+               * the read where `breakpoint2` of event1 habors and
+               the read where `breakpoint1` of event2 habors should be the identical
+        """
+        is_reversed = False
+        output_event_list: list[Event] = []
+        for index, evt in enumerate(event_list):
+            parsed_evt = NLPath.reorder_event(evt)
+
+            if index == 1:
+                last_event = output_event_list[-1]
+                if not (
+                    last_event.chrom2 == parsed_evt.chrom1
+                    and last_event.strand2 == parsed_evt.strand1
+                    and last_event.read2_ref_start == parsed_evt.read1_ref_start
+                    and last_event.read2_ref_end == parsed_evt.read1_ref_end
+                ):
+                    is_reversed = True
+
+            output_event_list.append(parsed_evt)
+        if is_reversed:
+            output_event_list = output_event_list[::-1]
+
+        return output_event_list
+
+    @classmethod
+    def from_nodes_and_edges_data(cls, nodes, edges_data):
+        instance = cls(nodes=nodes)
+
+        for idx in range(len(nodes) - 1):
+            edge = Edge.from_nodes(nodes[idx], nodes[idx + 1], edges_data[idx])
+            instance.edges[edge.key] = edge
+
+        return instance
+
+    @classmethod
+    def new(
+        cls,
+        events: list[Event],
+        read_chains,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        gene_iv,
+        motif_required,
+        blat,
+    ) -> "NLPath":
+        """Create a nlpath from a list of events."""
+        events = NLPath.order_events_by_trancription_direction(events)
+
+        edges_data: list[EdgeData] = []
+        nodes = []
+
+        events_len = len(events)
+
+        for index, event in enumerate(events):
+            read1: Read = event.read1(read_chains)
+            read2: Read = event.read2(read_chains)
+
+            read1_node: Node = Node(
+                query_name=read1.query_name,
+                chrom=event.chrom1,
+                strand=event.strand1,
+                ref_start=event.read1_ref_start,
+                ref_end=event.read1_ref_end,
+                exons=event.read1_exons,  # type: ignore
+                cigartuples_without_soft=read1.cigartuples_without_soft,
+                identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
+            )
+
+            edge_data = EdgeData.from_event(event, read_id=read1.query_name)
+
+            logger.trace(f"{read1=} {read2=}")
+
+            # is insertions
+            if event.has_insertion():
+                insertion_seq = event.insertion_seq1  # pick from the first read
+                insertion_seq = (
+                    reverse_complement(insertion_seq)
+                    if event.strand1 == "-"
+                    else insertion_seq
+                )
+
+                flag, insertion = blat.query_insertion(insertion_seq)
+
+                insertion.query_name = read1.query_name
+                if flag:  # only one hit
+                    # add first node and insertion node
+                    source_s = event.source_s1
+
+                    # get type of insertion between first node and insertion node
+                    insertion.update_cigarstring_sms(
+                        read1.sms, source_s=source_s, source_strand=event.strand1
+                    )
+                    logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
+                    insertion_mode = (
+                        (2 if event.mode1 == 1 else 1)
+                        if event.strand1 == insertion.strand
+                        else event.mode1
+                    )
+                    logger.trace("nls reference for read1 and insertion")
+                    read1_insertion_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=read1,
+                            read_rt=insertion,
+                            lt_mode=event.mode1,
+                            rt_mode=insertion_mode,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                        )
+                    )
+                    # get type of insertion between insertion node and second node
+                    insertion_mode = (
+                        (2 if event.mode2 == 1 else 1)
+                        if insertion.strand == read2.strand
+                        else event.mode2
+                    )
+
+                    logger.trace("nls reference for read2 and insertion")
+                    insertion_read2_event = Event(
+                        infer_nls_from_connected_reads(
+                            read_lt=insertion,
+                            read_rt=read2,
+                            lt_mode=insertion_mode,
+                            rt_mode=event.mode2,
+                            splice_bin=splice_bin,
+                            genome_fasta=genome_fasta,
+                            cvg=cvg,
+                            gene_iv=gene_iv,
+                            motif_required=motif_required,
+                        )
+                    )
+
+                    if (
+                        read1_insertion_event.is_type_na()
+                        or insertion_read2_event.is_type_na()
+                    ):
+                        # only add read1, False means that the insertion type (hit 1 insertion)
+                        # are not added in series
+                        event.update_node_info(read1_node)
+
+                        nodes.append(read1_node)
+
+                        edge_data.insertion_info = (False, insertion)
+                        edges_data.append(edge_data)
+
+                    else:
+                        # add read1 and insertion
+                        # True means that the insertion type(hit 1 insertion) are added in series
+                        read1_insertion_event.update_node_info(read1_node)
+
+                        # change prev sv type for next node or Insertion
+                        # prev_sv_type = read1_node.sv_type
+                        nodes.append(read1_node)
+                        edge_data.insertion_info = (True, insertion)
+                        edges_data.append(edge_data)
+
+                        #  creat node for insertion
+                        insertion_node = Node(
+                            query_name=insertion.query_name,
+                            chrom=insertion.chrom,
+                            strand=insertion.strand,
+                            ref_start=insertion.ref_start,
+                            ref_end=insertion.ref_end,
+                            cigartuples_without_soft=insertion.cigartuples_without_soft,
+                            identity=NodeIdentity.MID,
+                        )
+
+                        (
+                            insertion_node.exons,
+                            insertion_node._introns,
+                        ) = insertion.get_exons_and_introns()
+
+                        insertion_read2_event.update_insertion_node_info(insertion_node)
+
+                        (
+                            edge_prev_breakpoint,
+                            edge_next_breakpoint,
+                        ) = BreakPoint.from_node(insertion_node)
+
+                        insertion_edge_data = EdgeData(
+                            variantion_type=VariationType.from_str(
+                                insertion_read2_event.sv_type
+                            ),
+                            break_point1=edge_prev_breakpoint,
+                            break_point2=edge_next_breakpoint,
+                            sr=1,
+                            read_ids=[insertion.query_name],
+                        )
+
+                        logger.trace(f"Add Insertion {insertion_node=} to Series")
+
+                        nodes.append(insertion_node)
+                        edges_data.append(insertion_edge_data)
+
+                else:  # no hits or multiple hits
+                    logger.trace(f"Add Novel Insertion {insertion=} to read1")
+                    # only add read1 with insertion info
+                    # False means that the insertion type (hit more insertion) are
+                    # not added in series
+                    event.update_node_info(read1_node)
+
+                    nodes.append(read1_node)
+                    edge_data.insertion_info = (False, insertion)
+                    edges_data.append(edge_data)
+
+            # no insertion and has microhomology
+            elif event.has_microhomology():
+                # add read 1 with on insertion
+                microhomology = MicroHomology(event.insertion_seq1)
+
+                logger.trace(f"Add MicroHomology {microhomology=} to read1")
+                if event.strand1 == "-":
+                    microhomology.reverse_completement_query()
+
+                event.update_node_info(read1_node)
+                nodes.append(read1_node)
+                edge_data.insertion_info = (False, microhomology)
+                edges_data.append(edge_data)
+
+            else:
+                event.update_node_info(read1_node)
+                nodes.append(read1_node)
+                edges_data.append(edge_data)
+
+            # add final node
+            if index == events_len - 1:
+                final_node = Node(
+                    query_name=read2.query_name,
+                    chrom=event.chrom2,
+                    strand=event.strand2,
+                    ref_start=event.read2_ref_start,
+                    ref_end=event.read2_ref_end,
+                    exons=event.read2_exons,  # type: ignore
+                    cigartuples_without_soft=read2.cigartuples_without_soft,
+                    identity=NodeIdentity.TAIL,
+                )
+                check_end_node_is_ploya(final_node, genome_fasta)
+
+                nodes.append(final_node)
+
+        return cls.from_nodes_and_edges_data(nodes, edges_data)
+
+
+def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
+    """Check if node1 and node2 can be merged based on insertion info."""
+    insertion_info1 = node1.insertion_info
+    insertion_info2 = node2.insertion_info
+
+    return _check_insertion_conditions_for_compare_insertion(
+        insertion_info1, insertion_info2
+    )
+
+
+def update_node_with_other_node(
+    node: Node, other_node: Node, features: Iterable[str]
+) -> None:
+    """Update node with another node.
+
+    if current feature of node is None, then use another node's feature.
+    """
+    for feature in features:
+        if getattr(node, feature) is None:
+            setattr(node, feature, getattr(other_node, feature))
+
+
+def check_end_node_is_ploya(
+    node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.7, length: int = 20
+) -> None:
+    """Check whether the node is bona fide polyA or internal priming events."""
+    if node.ref_end is None or node.ref_start is None:
+        raise SystemExit(f"{node} has no start or end position")
+
+    if node.strand == "+":
+        seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
+    else:
+        seq = genome_fasta[node.chrom][
+            node.ref_start - length : node.ref_start
+        ].reverse.complement.seq
+
+    counter: dict[str, int] = Counter(seq)
+    if counter["A"] <= ratio * len(seq):
+        node.is_polya = True
 
 
 def _check_insertion_conditions_for_compare_insertion(
@@ -650,25 +1037,3 @@ def _check_insertion_conditions_for_compare_insertion(
                 return True
 
     return False
-
-
-def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
-    """Check if node1 and node2 can be merged based on insertion info."""
-    insertion_info1 = node1.insertion_info
-    insertion_info2 = node2.insertion_info
-
-    return _check_insertion_conditions_for_compare_insertion(
-        insertion_info1, insertion_info2
-    )
-
-
-def update_node_with_other_node(
-    node: Node, other_node: Node, features: Iterable[str]
-) -> None:
-    """Update node with another node.
-
-    if current feature of node is None, then use another node's feature.
-    """
-    for feature in features:
-        if getattr(node, feature) is None:
-            setattr(node, feature, getattr(other_node, feature))

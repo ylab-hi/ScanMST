@@ -11,10 +11,10 @@ import networkx as nx
 from loguru import logger
 from networkx import connected_components
 
+from ..graph import NLPath
+from ..graph import Node
 from ..utils import timeit
 from .basicClass import BreakPoint
-from .basicClass import Node
-from .basicClass import Series
 from .mergeCondition import MergeCondition
 
 
@@ -60,7 +60,7 @@ class Ruler:
         """Represent Ruler."""
         return f"{self.__class__.__name__}()"
 
-    def __call__(self, series_a: Series, series_b: Series) -> float:
+    def __call__(self, nlpath_a: NLPath, nlpath_b: NLPath) -> float:
         """Call Ruler to calculate the distance between two series.
 
         :param series_a: series a
@@ -73,17 +73,17 @@ class Ruler:
         >>> ruler(series_a, series_b)
         0.5
         """
-        if len(series_a) < len(series_b):
-            series_a, series_b = series_b, series_a
+        if len(nlpath_a) < len(nlpath_b):
+            nlpath_a, nlpath_b = nlpath_b, nlpath_a
 
-        head_node_a = series_a[0]
-        head_node_b = series_b[0]
+        head_node_a = nlpath_a[0]
+        head_node_b = nlpath_b[0]
 
-        tail_node_a = series_a[-1]
-        tail_node_b = series_b[-1]
+        tail_node_a = nlpath_a[-1]
+        tail_node_b = nlpath_b[-1]
 
-        middle_nodes_a: list[Node] = series_a[1:-1]  # type: ignore
-        middle_nodes_b: list[Node] = series_b[1:-1]  # type: ignore
+        middle_nodes_a: list[Node] = nlpath_a[1:-1]  # type: ignore
+        middle_nodes_b: list[Node] = nlpath_b[1:-1]  # type: ignore
         connection = False
         merge_condition: MergeCondition = MergeCondition(self.prune_threshold)
 
@@ -141,17 +141,16 @@ class ClusterFinder:
 
     def __init__(
         self,
-        intact_series_list: Any,
-        intact_series_list_len: int,
+        intact_nlpaths: list[NLPath],
         threshold: float = 0.2,
     ) -> None:
         """Initialize CliqueFinder."""
         self.ruler = Ruler()
-        self.intact_series_list_len = intact_series_list_len
-        self.intact_series_list = intact_series_list
-        self.distance_dict: dict[tuple[int, int], float] = {}
-        self.graph = nx.Graph()
+        self.intact_nlpaths = intact_nlpaths
+        self.intact_nlpaths_len = len(intact_nlpaths)
         self.threshold = threshold
+        self.distance_dict: dict[tuple[int, int], float] = {}
+        self._graph = nx.Graph()
 
     def _calculate_distance(self, x: int, y: int) -> float:
         """Calculate distance between two series. If distance has been calculated before.
@@ -159,19 +158,19 @@ class ClusterFinder:
         return True and distance value. Otherwise, calculate distance and return False and
         distance value.
 
-        :param x: series x
-        :param y: series y
+        :param x: nlpath x
+        :param y: nlpath y
         :return: is_calculated, distance value
         """
-        return self.ruler(self.intact_series_list[x], self.intact_series_list[y])
+        return self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
 
     def _add_edge_between_two_series(self, x: int, y: int) -> None:
         """Add edge between two series according to the distance between them.
 
         if the distance is less than threshold, add edge. Otherwise, do nothing.
 
-        :param x: series x
-        :param y: series y
+        :param x: nlpath x
+        :param y: nlpath y
         :return: None
 
         .. note::
@@ -180,14 +179,14 @@ class ClusterFinder:
             should be connected in graph.
         """
         if self._calculate_distance(x, y) < self.threshold:
-            self.graph.add_edge(x, y)
-            if not self.intact_series_list[x].is_in_graph:
-                self.intact_series_list[x].is_in_graph = True
+            self._graph.add_edge(x, y)
+            if not self.intact_nlpaths[x].is_in_graph:
+                self.intact_nlpaths[x].is_in_graph = True
 
-            if not self.intact_series_list[y].is_in_graph:
-                self.intact_series_list[y].is_in_graph = True
+            if not self.intact_nlpaths[y].is_in_graph:
+                self.intact_nlpaths[y].is_in_graph = True
 
-    def _create_graph_for_series(self) -> None:
+    def _create_graph_for_nlpath(self) -> None:
         """Create graph for all series in intact_series_list.
 
         add edge between two series in terms of the distance value
@@ -197,19 +196,19 @@ class ClusterFinder:
         last_x = 0
         ind_x, ind_y = 0, 0
 
-        for ind_x, ind_y in combinations(range(self.intact_series_list_len), 2):
+        for ind_x, ind_y in combinations(range(self.intact_nlpaths_len), 2):
             self._add_edge_between_two_series(ind_x, ind_y)
             if last_x != ind_x:
-                if not self.intact_series_list[last_x].is_in_graph:
-                    self.graph.add_node(last_x)
+                if not self.intact_nlpaths[last_x].is_in_graph:
+                    self._graph.add_node(last_x)
                 last_x = ind_x
 
         # solve last two node
-        if not self.intact_series_list[ind_x].is_in_graph:
-            self.graph.add_node(last_x)
+        if not self.intact_nlpaths[ind_x].is_in_graph:
+            self._graph.add_node(last_x)
 
-        if not self.intact_series_list[ind_y].is_in_graph:
-            self.graph.add_node(ind_y)
+        if not self.intact_nlpaths[ind_y].is_in_graph:
+            self._graph.add_node(ind_y)
 
     @timeit
     def find_cluster(self) -> Any:
@@ -226,18 +225,18 @@ class ClusterFinder:
         ...     for series_list in clique:
         ...         assert isinstance(series_list, Series)
         """
-        self._create_graph_for_series()
+        self._create_graph_for_nlpath()
 
-        for clique_index in connected_components(self.graph):
-            yield (self.intact_series_list[i] for i in clique_index)
+        for clique_index in connected_components(self._graph):
+            yield (self.intact_nlpaths[i] for i in clique_index)
 
     def find_cluster_index(self):
         """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
         :return:  every clique in graph as a iterator (List[int])
         """
-        self._create_graph_for_series()
-        yield from connected_components(self.graph)
+        self._create_graph_for_nlpath()
+        yield from connected_components(self._graph)
 
     def creat_merge_indexs(self, cluster) -> dict[int, list[str]]:
         result = {}
@@ -253,31 +252,31 @@ class ClusterFinder:
 
     @staticmethod
     def check_if_two_series_merge(
-        series1: Series, series2: Series, merge_keys: dict[int, list[str]]
+        path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]
     ):
-        series_2_nodes_key = "".join(merge_keys[series2.id])
+        series_2_nodes_key = "".join(merge_keys[path2.id])
 
-        for start_index in range(0, len(series1) - len(series2) + 1):
+        for start_index in range(0, len(path1) - len(path2) + 1):
             series_1_nodes_key = "".join(
-                merge_keys[series1.id][start_index : start_index + len(series2)]
+                merge_keys[path1.id][start_index : start_index + len(path2)]
             )
 
             if series_1_nodes_key == series_2_nodes_key:
-                if merge_same_len_node_list(series1[start_index : start_index + len(series2)], series2, 1):  # type: ignore
-                    merge_series(series1, series2, start_index)  # type: ignore
-                    series1.merge_factor += 1
+                if merge_same_len_node_list(path1[start_index : start_index + len(path2)], path2, 1):  # type: ignore
+                    merge_nlpath(path1, path2, start_index)  # type: ignore
+                    path1.merge_factor += 1
                     return True
 
         return False
 
     @staticmethod
-    def check_merge(series1: Series, series2: Series, merge_keys: dict[int, list[str]]):
+    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]):
         """Check if series1 can merge series2."""
-        if len(merge_keys[series1.id]) == len(merge_keys[series2.id]):
+        if len(merge_keys[path1.id]) == len(merge_keys[path2.id]):
             # reduce duplication
             return False
-        elif len(merge_keys[series1.id]) > len(merge_keys[series2.id]):
-            return ClusterFinder.check_if_two_series_merge(series1, series2, merge_keys)
+        elif len(merge_keys[path1.id]) > len(merge_keys[path2.id]):
+            return ClusterFinder.check_if_two_series_merge(path1, path2, merge_keys)
         else:
             raise ValueError("series1 is shorter than series2")
 
@@ -285,7 +284,7 @@ class ClusterFinder:
         for cluster_index in self.find_cluster_index():
             series_list = []
             for i in cluster_index:
-                current_series = self.intact_series_list[i]
+                current_series = self.intact_nlpaths[i]
                 current_series.id = i
                 series_list.append(current_series)
 
@@ -316,31 +315,29 @@ class ClusterFinder:
         return result
 
 
-def merge_series(series1: list[Node], series2: list[Node], start_index: int):
-    for updated_node, current_node in zip(
-        series1[start_index : start_index + len(series2)], series2
+def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
+    for idx, (updated_node, current_node) in enumerate(
+        zip(path1[start_index : start_index + len(path2)], path2)  # type: ignore
     ):
         # update exon coordinates
         updated_node.ref_start = min(  # type: ignore
             updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
         )
-
         updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
         updated_node.ref_end = max(  # type: ignore
             updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
         )
-
         updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
 
-        updated_node.sr += current_node.sr
         # NOTE: Update break point <Yangyang Li>
-        updated_node.prev_breakpoint = current_node.prev_breakpoint
-        updated_node.next_breakpoint = current_node.next_breakpoint
+        # updated_node.sr += current_node.sr
+        # updated_node.prev_breakpoint = current_node.prev_breakpoint
+        # updated_node.next_breakpoint = current_node.next_breakpoint
 
 
 def merge_same_len_node_list(
-    series1: list[Node], series2: list[Node], threashold: int
+    path1: NLPath, path2: NLPath, start_index: int, threashold: int
 ) -> bool:
     """seires1 is equal than series2 and series1 merge series2.
 
@@ -348,16 +345,23 @@ def merge_same_len_node_list(
     s2:                [ ] - [ ] - [ ]
 
     """
-    logger.debug(f"merge : series1:{series1}")
-    logger.debug(f"merge: series2:{series2}")
-    assert len(series1) == len(series2)
+    logger.debug(f"merge: series1:{path1}")
+    logger.debug(f"merge: series2:{path2}")
+    assert len(path1) == len(path2)
 
     merge_condition = MergeCondition(threashold)
 
     flag = True
+    for idx, (node1, node2) in enumerate(
+        zip(path1[start_index : start_index + len(path2)], path2)  # type: ignore
+    ):
+        node1_edge = path1.get_edge(node1, path1[start_index + idx])
+        node2_edge = path2.get_edge(node2, path2[idx])
+        assert node1_edge is not None, f"{node1} {path1[start_index + idx]}"
+        assert node2_edge is not None, f"{node2} {path2[idx]}"
 
-    for node1, node2 in zip(series1, series2):
-        is_same_svtype = node1.sv_type == node2.sv_type
+        is_same_svtype = node1_edge.variation_type == node2_edge.variation_type
+
         if node1.self_identity.is_head() and node2.self_identity.is_head():
             if not (
                 is_same_svtype
@@ -425,14 +429,14 @@ def create_sort_key_for_node(node: Node):
     return middle_node_signature(node)
 
 
-def creat_sort_key_for_series(series: Series):
+def creat_sort_key_for_series(series: NLPath):
     return (
         len(series),
         *[create_sort_key_for_node(node) for node in series],
     )
 
 
-def create_sort_key_by_merge_factor(series: Series):
+def create_sort_key_by_merge_factor(series: NLPath):
     return (
         len(series),
         series.merge_factor,

@@ -8,13 +8,12 @@
 from abc import ABC
 from abc import abstractmethod
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any
 from typing import IO
 
 from loguru import logger
 
-from ..base.basicClass import Series
+from ..graph.basicGraph import NLPath
 
 # todo: add asyncio support
 
@@ -24,7 +23,7 @@ class Writer(ABC):
 
     def __init__(self, file_path: str) -> None:
         """Initialize Writer object."""
-        self.file_path = Path(file_path)
+        self.file_path = NLPath(file_path)
         if self.file_path.exists():
             logger.warning(f"{self.file_path} exists, will be overwritten.")
         self.io: IO | None = None
@@ -62,7 +61,7 @@ class Writers:
         """Init writers."""
         self.writers_list = writers
 
-    def write_series(self, series: Series, clique_id: int) -> None:
+    def write_series(self, series: NLPath, clique_id: int) -> None:
         """Write series.
 
         .. note::

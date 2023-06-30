@@ -195,7 +195,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_series_list, in_bam_header, avg_cov = scanbam_run(
+        intact_nlpaths, in_bam_header, avg_cov = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
@@ -224,15 +224,15 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
 
         avg_cov = None if not options.bound else avg_cov
 
-        intact_series_list_len = len(intact_series_list)
+        intact_nlpaths_len = len(intact_nlpaths)
 
-        if intact_series_list_len == 0:
+        if intact_nlpaths_len == 0:
             logger.warning("No valid series found")
             raise SystemExit
 
-        logger.info(f"Total Series: {intact_series_list_len}")
+        logger.info(f"Total Series: {intact_nlpaths_len}")
 
-        cluster_finder = ClusterFinder(intact_series_list, intact_series_list_len)
+        cluster_finder = ClusterFinder(intact_nlpaths)
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
