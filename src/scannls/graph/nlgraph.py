@@ -1,6 +1,6 @@
 """
 @Author:      YangyangLi
-@Filename:    spliceGraph.py
+@Filename:    nlgraph.py
 @Time:        12/15/21 10:42 AM
 """
 import copy
@@ -18,7 +18,6 @@ from ..base.mergeCondition import MergeCondition
 from ..base.srRescuer import SRRescuer
 from ..base.type import LoggerType
 from .basicGraph import Edge
-from .basicGraph import EdgeData
 from .basicGraph import NLPath
 from .basicGraph import Node
 from .basicGraph import NodeIdentity
@@ -63,7 +62,7 @@ class NLGraph:
         if isinstance(nlpath_list, types.GeneratorType):
             nlpath_list = list(nlpath_list)
 
-        self.series_list = copy.deepcopy(nlpath_list)
+        self.nlpaths = copy.deepcopy(nlpath_list)
 
         del nlpath_list  # remove reference to series_list
         self.nodes: dict[str, list[Node]] = self.dict_factory()
@@ -135,7 +134,11 @@ class NLGraph:
 
         is_merged = False
         for current_edge in self.edges[edge.key]:
-            if Edge.is_merged(edge, current_edge, self.prune_threshold):
+            if current_edge.is_merged(
+                edge,
+                compared_break_point=True,
+                break_point_threshold=self.prune_threshold,
+            ):
                 current_edge.updated(edge)
                 is_merged = True
                 break
@@ -373,14 +376,15 @@ class NLGraph:
                 # only consider nodes that have been processed: previous node in current series
                 # keeps in mind the next node in current series is not processed yet!!!!
                 # a -> b and b <- a
+
                 edge_data = (
-                    EdgeData.from_node(current_node.previous_node_in_series)
-                    if current_node.previous_node_in_series is not None
+                    current_node.previous_edge_in_nlapth.edge_data
+                    if current_node.previous_edge_in_nlapth is not None
                     else None
                 )
 
                 similar_node_in_graph.add_predecessor(
-                    current_node.previous_node_in_series, self, edge_data
+                    current_node.previous_node_in_nlpath, self, edge_data
                 )
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
@@ -396,14 +400,15 @@ class NLGraph:
 
             # only consider nodes that have been processed: previous node in series
             # keeps in mind the next node in series is not processed yet!!!!
+
             edge_data = (
-                EdgeData.from_node(current_node.previous_node_in_series)
-                if current_node.previous_node_in_series is not None
+                current_node.previous_edge_in_nlapth.edge_data
+                if current_node.previous_edge_in_nlapth is not None
                 else None
             )
 
             current_node.add_predecessor(
-                current_node.previous_node_in_series,
+                current_node.previous_node_in_nlpath,
                 self,
                 edge_data,
             )
@@ -412,14 +417,14 @@ class NLGraph:
         """Main function to construct graph."""
         # iterate all series
         merged_nodes_pool: set[Node] = set()
-        self.logger.debug(f"Input Clique {self.series_list=}")
-        for series in self.series_list:
+        self.logger.debug(f"Input Clique {self.nlpaths=}")
+        for nlpath in self.nlpaths:
             # iterate all nodes in series
-            for index, current_node in enumerate(series):
+            for index, current_node in enumerate(nlpath):
                 self.logger.trace(f"{current_node=}")
 
                 # add information about next and previous node in series to current node
-                current_node.update_next_and_previous_node_in_series(index, series)
+                current_node.update_next_and_previous_node_in_nlpath(index, nlpath)
 
                 # initialize and get unique key of current node and set node.unique_key
                 # if not set when you reach node.unique_key, will return None
@@ -821,4 +826,5 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     )
 
     updated_node.read_names.append(current_node.query_name)
+    assert current_node.self_identity is not None
     updated_node.identities[current_node.query_name] = current_node.self_identity

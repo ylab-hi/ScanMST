@@ -28,8 +28,9 @@ class BasicNode:
         "predecessors",
         "merged_child_nodes",
         "merged_parent_nodes",
-        "next_node_in_series",
-        "previous_node_in_series",
+        "next_node_in_nlpath",
+        "previous_node_in_nlpath",
+        "previous_edge_in_nlapth",
         "is_merged",
         "is_in_graph",
         "is_traced",
@@ -47,8 +48,9 @@ class BasicNode:
         self.merged_child_nodes: list[Node] = []
         self.merged_parent_nodes: list[Node] = []
 
-        self.next_node_in_series: Optional[Node] = None
-        self.previous_node_in_series: Optional[Node] = None
+        self.next_node_in_nlpath: Optional[Node] = None
+        self.previous_node_in_nlpath: Optional[Node] = None
+        self.previous_edge_in_nlapth: Optional[Edge] = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
         self.sr: int = 1
@@ -148,20 +150,26 @@ class BasicNode:
                     predecessor.merged_parent_nodes, graph, edge_data
                 )
 
-    def update_next_and_previous_node_in_series(self, index: int, series) -> None:
+    def update_next_and_previous_node_in_nlpath(self, index: int, nlpath) -> None:
         """Update next and previous node in series."""
         if index == 0:
-            self.next_node_in_series = series[index + 1]
-        elif index == len(series) - 1:
-            self.previous_node_in_series = series[index - 1]
+            self.next_node_in_nlpath = nlpath[index + 1]
+        elif index == len(nlpath) - 1:
+            self.previous_node_in_nlpath = nlpath[index - 1]
+            self.previous_edge_in_nlapth = nlpath.edges[
+                Edge.create_key_from_node(nlpath[index - 1], self)
+            ]
         else:
-            self.next_node_in_series = series[index + 1]
-            self.previous_node_in_series = series[index - 1]
+            self.next_node_in_nlpath = nlpath[index + 1]
+            self.previous_node_in_nlpath = nlpath[index - 1]
+            self.previous_edge_in_nlapth = nlpath.edges[
+                Edge.create_key_from_node(nlpath[index - 1], self)
+            ]
 
     def clear_next_and_previous_node_in_series(self) -> None:
         """Clear next and previous node in series."""
-        self.next_node_in_series = None
-        self.previous_node_in_series = None
+        self.next_node_in_nlpath = None
+        self.previous_node_in_nlpath = None
 
 
 class NodeIdentity(Enum):
@@ -537,8 +545,11 @@ class Edge:
             self.edge_data.read_ids.append(read_id)
 
     def updated(self, other: "Edge"):
-        # WARN:  Do not update variation with break point <06-12-23>
-        self.edge_data.sr += other.sr
+        # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
+        self.break_point1 = other.break_point1
+        self.break_point2 = other.break_point2
+
+        self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
         if self.edge_data.insertion_info and isinstance(
             self.edge_data.insertion_info[1], (NovelInsertion, MicroHomology)
@@ -795,6 +806,27 @@ class NLPath:
             output_event_list = output_event_list[::-1]
 
         return output_event_list
+
+    @classmethod
+    def create_path_from_node_edge_list(cls, node_edges):
+        """Create a path from a list of nodes and edges.
+
+        Args:
+            node_edges: list of nodes and edges
+        """
+        instance = cls()
+
+        for idx in range(len(node_edges), 2):
+            node_edges[idx].next_node = node_edges[idx + 1].node
+            current_node = node_edges[idx]
+
+            assert isinstance(current_node, Node)
+            instance.nodes.append(current_node)
+
+            if idx < len(node_edges) - 1:
+                current_edge = node_edges[idx + 1]
+                instance.edges[current_edge.key] = current_edge
+        return instance
 
     @classmethod
     def from_nodes_and_edges_data(cls, nodes, edges_data):
