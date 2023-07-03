@@ -229,10 +229,9 @@ class BreakPoint:
 
         return prev_breakpoint, next_breakpoint
 
-    @staticmethod
     def equal(
-        breakpoint1: Optional["BreakPoint"],
-        breakpoint2: Optional["BreakPoint"],
+        self,
+        other: "BreakPoint",
         threshold: int,
     ) -> bool:
         """Check if two breakpoints are different.
@@ -241,16 +240,11 @@ class BreakPoint:
         :param threshold:  threshold for checking if two breakpoints are different
         :return:  True if two breakpoints are different, otherwise False
         """
-        if breakpoint1 is None or breakpoint2 is None:
-            raise ValueError("breakpoint1 or breakpoint2 is None")
 
-        if breakpoint1.chrom != breakpoint2.chrom:
+        if self.chrom != other.chrom:
             return False
 
-        if breakpoint1 == breakpoint2:
-            return True
-
-        return abs(breakpoint1.pos - breakpoint2.pos) <= threshold
+        return abs(self.pos - other.pos) <= threshold
 
 
 class Event:

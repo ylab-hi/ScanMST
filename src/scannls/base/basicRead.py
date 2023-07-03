@@ -5,11 +5,24 @@
 @contact:     yangyang.li@northwestern.edu
 @Time:        1/9/22 12:13 PM
 """
+from enum import Enum
 from enum import IntEnum
 from typing import Any
 from typing import Optional
 
 from scannls import cppext
+
+
+class Strand(Enum):
+    """Strand."""
+
+    Forward = "+"
+    Reverse = "-"
+
+    def is_reverse(self):
+        """Check if the strand is reverse."""
+        return self == Strand.Reverse
+
 
 # // #define BAM_CMATCH      0
 # // #define BAM_CINS        1

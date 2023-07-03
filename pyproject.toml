@@ -119,6 +119,12 @@ ignore = ["ANN001", "D203", "D213",  "UP007", "PGH003","EM102", "EM101", "S101",
 ]
 
 
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "pep440"
+version_provider = "poetry"
+major_version_zero = true
 [build-system]
 requires = ["pybind11>2.9.1", "poetry-core>=1.0.0", "setuptools>=40.6.0"]
 build-backend = "poetry.core.masonry.api"

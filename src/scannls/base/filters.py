@@ -1,16 +1,16 @@
 # !/usr/bin/env python
 """Filters based on breakpoints or circurlarRNAs.
 """
-
-from typing import List
-from typing import Set
-from typing import Optional
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import List
+from typing import Optional
+from typing import Set
 
 import HTSeq
 
-from ..graph import NLPath, Node
+from ..graph import NLPath
+from ..graph import Node
 from .basicClass import Event
 from .type import LoggerType
 
@@ -96,7 +96,7 @@ def _extract_annotated_exons(
     trx_to_exon = defaultdict(list)
 
     for feature in gtf_file:
-        gene_name = feature.attr.get("gene_name") or feature.attr.get("gene")
+        feature.attr.get("gene_name") or feature.attr.get("gene")
 
         if feature.type == "exon":
             trx_id = feature.attr["transcript_id"]

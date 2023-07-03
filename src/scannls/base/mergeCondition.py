@@ -11,7 +11,7 @@ from enum import Enum
 from itertools import zip_longest
 
 from ..exception import ExonsNotFoundError
-from .basicClass import Node
+from ..graph import Node
 
 
 class MergeConditionMode(Enum):
@@ -27,23 +27,28 @@ class MergeConditionMode(Enum):
 
     @classmethod
     def get_mode(cls, node1: Node, node2: Node) -> "MergeConditionMode":
-        if node1.self_identity.is_head() and node2.self_identity.is_head():
+        node1_self_identity = node1.self_identity
+        node2_self_identity = node2.self_identity
+        assert node1_self_identity is not None, "Node1 self identity is None"
+        assert node2_self_identity is not None, "Node2 self identity is None"
+
+        if node1_self_identity.is_head() and node2_self_identity.is_head():
             return cls.head2head
-        elif node1.self_identity.is_head() and node2.self_identity.is_tail():
+        elif node1_self_identity.is_head() and node2_self_identity.is_tail():
             return cls.head2tail
-        elif node1.self_identity.is_head() and node2.self_identity.is_mid():
+        elif node1_self_identity.is_head() and node2_self_identity.is_mid():
             return cls.head2mid
-        elif node1.self_identity.is_mid() and node2.self_identity.is_head():
+        elif node1_self_identity.is_mid() and node2_self_identity.is_head():
             return cls.mid2head
-        elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
+        elif node1_self_identity.is_mid() and node2_self_identity.is_mid():
             return cls.mid2mid
-        elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
+        elif node1_self_identity.is_mid() and node2_self_identity.is_tail():
             return cls.mid2tail
-        elif node1.self_identity.is_tail() and node2.self_identity.is_head():
+        elif node1_self_identity.is_tail() and node2_self_identity.is_head():
             return cls.tail2head
-        elif node1.self_identity.is_tail() and node2.self_identity.is_mid():
+        elif node1_self_identity.is_tail() and node2_self_identity.is_mid():
             return cls.tail2mid
-        elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
+        elif node1_self_identity.is_tail() and node2_self_identity.is_tail():
             return cls.tail2tail
         else:
             raise ValueError("Invalid node identity")
@@ -129,9 +134,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         node2:    []-[]
 
     """
-    # NOTE: Do not compare breakporint here <06-08-23, Yangyang Li>
-    assert node1.ref_end is not None
-    assert node2.ref_end is not None
+    # WARN: Do not compare ref start <06-08-23, Yangyang Li>
 
     if abs(node1.ref_end - node2.ref_end) > threshold:
         return False
@@ -241,10 +244,6 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     if node1.introns != node2.introns:
         return False
 
-    # assert node1.ref_start is not None and node2.ref_start is not None
-    # if abs(node1.ref_start - node2.ref_start) > threshold:
-    #     return False
-
     node1_first_exon_start = node1.exons[0][0]
     node1_last_exon_end = node1.exons[-1][1]
     node2_first_exon_start = node2.exons[0][0]
@@ -312,8 +311,12 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
     if node1.introns != node2.introns:
         return False
 
+    # WARN: first exon start = ref start, last exon end = ref end <06-30-23, Yangyang Li>
+    # we save same value in different variable in which it is diffficult to change them at same time
+
     node1_first_exon_start = node1.exons[0][0]
     node1_last_exon_end = node1.exons[-1][1]
+
     node2_first_exon_start = node2.exons[0][0]
     node2_last_exon_end = node2.exons[-1][1]
 

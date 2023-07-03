@@ -11,12 +11,14 @@ from typing import Any
 
 import networkx as nx
 
-from ..base.basicClass import Node
+from . import Node
 
 
 def get_label_from_node(node: Node) -> str:
     """Get label from node."""
-    return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{node.sr}_{node.is_start_node()}_{node.sv_type}"
+    return (
+        f"{node.chrom}_{node.ref_start}_{node.ref_end}_{node.sr}_{node.is_start_node()}"
+    )
 
 
 def plot_graph_helper(

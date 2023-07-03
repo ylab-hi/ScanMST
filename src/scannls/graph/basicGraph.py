@@ -248,7 +248,7 @@ class Node(BasicNode):
         "annotation_code",
         "splicing_code",
         "insertion_info",
-        "unique_key",
+        "_unique_key",
         "is_polya",
         "_exon_repr",
         "cigartuples_without_soft",
@@ -450,6 +450,27 @@ class EdgeData:
             read_ids=[read_id],
         )
 
+    def equal(
+        self,
+        other: "EdgeData",
+        compared_break_point: bool,
+        break_point_threshold: int,
+    ):
+        """Check if two edges are equal."""
+        flag = (
+            self.variantion_type == self.variantion_type
+            and _check_insertion_conditions_for_compare_insertion(
+                self.insertion_info, other.insertion_info
+            )
+        )
+
+        if compared_break_point:
+            flag = self.break_point1.equal(
+                other.break_point1, break_point_threshold
+            ) and self.break_point2.equal(other.break_point2, break_point_threshold)
+
+        return flag
+
 
 class Edge:
     def __init__(self, node1_key: str, node2_key: str, edge_data: EdgeData) -> None:
@@ -472,7 +493,23 @@ class Edge:
         return f"{self.node1_key}-{self.node2_key}"
 
     @property
-    def insertion(self):
+    def break_point1(self):
+        return self.edge_data.break_point1
+
+    @break_point1.setter
+    def break_point1(self, value: BreakPoint):
+        self.edge_data.break_point1 = value
+
+    @property
+    def break_point2(self):
+        return self.edge_data.break_point2
+
+    @break_point2.setter
+    def break_point2(self, value: BreakPoint):
+        self.edge_data.break_point2 = value
+
+    @property
+    def insertion_info(self):
         return self.edge_data.insertion_info
 
     @property
@@ -482,6 +519,10 @@ class Edge:
     @property
     def sr(self):
         return self.edge_data.sr
+
+    @sr.setter
+    def sr(self, value):
+        self.edge_data.sr = value
 
     @property
     def read_ids(self):
@@ -522,20 +563,16 @@ class Edge:
     ):
         return cls(node1.unique_key, node2.unique_key, edge_data)
 
-    @staticmethod
-    def is_merged(edge1: "Edge", edge2: "Edge", break_point_threshold: int) -> bool:
-        # TODO: reimplement  <Yangyang Li>
-        raise NotImplementedError
-
-        # return (
-        #     edge1.key == edge2.key
-        #     and Variation.is_merged(
-        #         edge1.variation, edge2.variation, break_point_threshold
-        #     )
-        #     and _check_insertion_conditions_for_compare_insertion(
-        #         edge1.insertion, edge2.insertion
-        #     )
-        # )
+    def is_merged(
+        self,
+        other_edge: "Edge",
+        compared_break_point: bool = True,
+        break_point_threshold: int = 10,
+    ) -> bool:
+        """Check if two edges are merged."""
+        return self.edge_data.equal(
+            other_edge.edge_data, compared_break_point, break_point_threshold
+        )
 
 
 class NLPath:
@@ -617,6 +654,7 @@ class NLPath:
         self.nodes: list[Node] = nodes
         self.edges: dict[str, Edge] = edges
 
+        self.is_in_graph = False
         self.id = -1
         self.merge_factor = 1
 
@@ -637,9 +675,21 @@ class NLPath:
         if key not in self.edges:
             self.edges[key] = edge
 
-    def get_edge(self, nodes: Node, noded: Node) -> Optional[Edge]:
-        key = Edge.create_key_from_node(nodes, noded)
-        return self.edges.get(key)
+    def get_edge(
+        self, nodes: Node, noded: Optional[Node] = None, nodes_idx: Optional[int] = None
+    ) -> Optional[Edge]:
+        """Get edge from the path."""
+        if noded is not None:
+            key = Edge.create_key_from_node(nodes, noded)
+            return self.edges.get(key)
+
+        if nodes_idx is None:
+            nodes_idx = self.nodes.index(nodes)
+
+        if nodes_idx < len(self.nodes) - 1:
+            return self.edges.get(
+                Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1])
+            )
 
     def is_all_type_del(self) -> bool:
         """Check if sv_type of all nodes in the series are DEL."""
@@ -655,9 +705,9 @@ class NLPath:
         """Check if all nodes in the series have sr > threshold."""
         return all(node.sr >= threshold for node in self.nodes[:-1])
 
-    def get_sr_sum_for_all_node(self) -> int:
+    def get_sr_sum(self) -> int:
         """Get sum of sr for all nodes in the series."""
-        return sum(node.sr for node in self.nodes)
+        return sum(edge.sr for edge in self.edges.values())
 
     def __getitem__(self, index: int) -> Node:
         """Return the event at the given index."""
@@ -875,8 +925,6 @@ class NLPath:
                         # True means that the insertion type(hit 1 insertion) are added in series
                         read1_insertion_event.update_node_info(read1_node)
 
-                        # change prev sv type for next node or Insertion
-                        # prev_sv_type = read1_node.sv_type
                         nodes.append(read1_node)
                         edge_data.insertion_info = (True, insertion)
                         edges_data.append(edge_data)
@@ -966,16 +1014,6 @@ class NLPath:
                 nodes.append(final_node)
 
         return cls.from_nodes_and_edges_data(nodes, edges_data)
-
-
-def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
-    """Check if node1 and node2 can be merged based on insertion info."""
-    insertion_info1 = node1.insertion_info
-    insertion_info2 = node2.insertion_info
-
-    return _check_insertion_conditions_for_compare_insertion(
-        insertion_info1, insertion_info2
-    )
 
 
 def update_node_with_other_node(
