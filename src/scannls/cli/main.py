@@ -506,7 +506,12 @@ def _scan_bam_helper(
                                 if not rt_switching_filter.is_from_rt_switching(event):
                                     nls_event_list.append(event)
 
-                    if nls_event_list:
+                    # num of alignment segments should be equal to the number of hops + 1
+                    # after exon, RT switching and other filtering, the condition may be not satisfied.
+                    if len(nls_event_list) > 0 and (
+                        len(nls_event_list)
+                        == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads
+                    ):
                         logger.debug(f"{nls_event_list=}")
                         nlpath = NLPath.new(
                             events=nls_event_list,
