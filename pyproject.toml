@@ -2,7 +2,7 @@
 name = "scannls"
 version = "0.0.1"
 description = "ScanNLS"
-authors = ["Ting-You Wang <tywang@umn.edu>", "Yangyang Li <li002252@umn.edu>"]
+authors = ["Yangyang Li <yangyang.li@northwestern.edu>", "Ting-You Wang <tingyou.wang@northwestern.edu>", ]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/ylab-hi/ScanNLS"
@@ -125,6 +125,7 @@ tag_format = "$version"
 version_scheme = "pep440"
 version_provider = "poetry"
 major_version_zero = true
+
 [build-system]
-requires = ["pybind11>2.9.1", "poetry-core>=1.0.0", "setuptools>=40.6.0"]
+requires = ["pybind11>2.9.1", "poetry-core>=1.6.0", "setuptools>=68.0.0"]
 build-backend = "poetry.core.masonry.api"
