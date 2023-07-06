@@ -50,7 +50,7 @@ flake8-docstrings = "^1.6.0"
 flake8-rst-docstrings = "^0.3.0"
 pep8-naming = "^0.13.2"
 darglint = "^1.8.0"
-reorder-python-imports = "^3.8.2"
+reorder-python-imports = "^3.10.0"
 pre-commit-hooks = "^4.3.0"
 sphinx-rtd-theme = "^1.2.2"
 sphinx-click = "^4.3.0"
@@ -74,7 +74,7 @@ script = "build.py"
 scannls = "scannls.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
-codespell = "^2.2.4"
+codespell = "^2.2.5"
 
 [tool.mypy]
 strict = false
