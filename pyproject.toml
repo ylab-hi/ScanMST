@@ -74,7 +74,7 @@ script = "build.py"
 scannls = "scannls.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
-codespell = "^2.2.4"
+codespell = "^2.2.5"
 
 [tool.mypy]
 strict = false
