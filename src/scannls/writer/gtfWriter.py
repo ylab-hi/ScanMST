@@ -9,8 +9,10 @@
 from functools import singledispatchmethod
 from typing import Any
 from typing import IO
+from typing import List
 
 from loguru import logger
+import copy
 
 from ..base.basicClass import MicroHomology
 from ..base.basicClass import NovelInsertion
@@ -172,6 +174,7 @@ def get_gtf_features_from_node(
         raise ExonsNotFoundError(f"{node.query_name}")
 
     exons = node.exons[::-1] if node.strand == "-" else node.exons
+    copy_exons = copy.deepcopy(exons)
 
     microhomology_sequence = ""
     if node.insertion_info and not node.insertion_info[0]:
@@ -181,18 +184,18 @@ def get_gtf_features_from_node(
 
     # last exon end position needs a correction if there is a microhomology.
     if node.strand == "+" and exons[-1][0] < exons[-1][1] - len(microhomology_sequence):
-        exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
+        copy_exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
     elif (
         node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]
     ):
-        exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
+        copy_exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
 
     node_sr = node.sr
     node_original_sr = node.original_sr
 
     nodes_gtf_features = []
 
-    for index, (start, end) in enumerate(exons, 1):
+    for index, (start, end) in enumerate(copy_exons, 1):
         info = [
             f'transcript_id "{series_id:0>6}"; '
             f'mega_exon_id "{node_id:0>3}"; '
