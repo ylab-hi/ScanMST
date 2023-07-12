@@ -167,6 +167,7 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
         )
         updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
+        # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
         updated_node.ref_end = max(  # type: ignore
             updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
         )

@@ -1,9 +1,7 @@
 """Merge condition.
-# !/usr/bin/env python
 
 @Filename:    mergeCondition.py
 @contact:     yangyang.li@northwestern.edu
-@license:     MIT Licence
 @Time:        4/18/22 7:51 PM
 """
 from enum import auto
@@ -99,23 +97,28 @@ class MergeCondition:
         )
 
     def merged(self, node1: Node, node2: Node) -> bool:
-        if node1.self_identity.is_head() and node2.self_identity.is_head():
+        node1_self_identity = node1.self_identity
+        node2_self_identity = node2.self_identity
+        assert node1_self_identity is not None, "Node1 self identity is None"
+        assert node2_self_identity is not None, "Node2 self identity is None"
+
+        if node1_self_identity.is_head() and node2_self_identity.is_head():
             return self.head2head(node1, node2)
-        elif node1.self_identity.is_head() and node2.self_identity.is_tail():
+        elif node1_self_identity.is_head() and node2_self_identity.is_tail():
             return self.head2tail(node1, node2)
-        elif node1.self_identity.is_head() and node2.self_identity.is_mid():
+        elif node1_self_identity.is_head() and node2_self_identity.is_mid():
             return self.head2mid(node1, node2)
-        elif node1.self_identity.is_mid() and node2.self_identity.is_head():
+        elif node1_self_identity.is_mid() and node2_self_identity.is_head():
             return self.mid2head(node1, node2)
-        elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
+        elif node1_self_identity.is_mid() and node2_self_identity.is_mid():
             return self.mid2mid(node1, node2)
-        elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
+        elif node1_self_identity.is_mid() and node2_self_identity.is_tail():
             return self.mid2tail(node1, node2)
-        elif node1.self_identity.is_tail() and node2.self_identity.is_head():
+        elif node1_self_identity.is_tail() and node2_self_identity.is_head():
             return self.tail2head(node1, node2)
-        elif node1.self_identity.is_tail() and node2.self_identity.is_mid():
+        elif node1_self_identity.is_tail() and node2_self_identity.is_mid():
             return self.tail2mid(node1, node2)
-        elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
+        elif node1_self_identity.is_tail() and node2_self_identity.is_tail():
             return self.tail2tail(node1, node2)
         else:
             raise ValueError("Invalid node identity")
