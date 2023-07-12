@@ -298,6 +298,7 @@ def splicing_confirmation(
     splice_bin: int,
     genome_fasta: pyfaidx.Fasta,
     cvg: HTSeq.GenomicArrayOfSets,
+    *,
     motif_required: bool = True,
 ) -> tuple[bool, int, int]:
     """Judge whether the breakpoints are NLS events or not.
@@ -784,6 +785,7 @@ def same_chrom_same_strand_mode21_handler(
     motif_required,
     logger,
     microinsertion_cutoff=20,
+    *,
     is_reverse=False,
 ):
     """Same chrom same strand mode 21 handler."""
@@ -844,7 +846,7 @@ def same_chrom_same_strand_mode21_handler(
                 splice_bin,
                 genome_fasta,
                 cvg,
-                motif_required,
+                motif_required=motif_required,
             )
             _genes = gene_annotation(lt_chrm, del_start, lt_chrm, del_end, gene_iv)
             # 1 => 2
@@ -889,7 +891,7 @@ def same_chrom_same_strand_mode21_handler(
                 splice_bin,
                 genome_fasta,
                 cvg,
-                motif_required,
+                motif_required=motif_required,
             )
             _genes = gene_annotation(
                 chrm_start, junc_start, chrm_end, junc_end, gene_iv
@@ -966,7 +968,7 @@ def same_chrom_same_strand_mode21_handler(
                     splice_bin,
                     genome_fasta,
                     cvg,
-                    motif_required,
+                    motif_required=motif_required,
                 )
                 _genes = gene_annotation(
                     chrm_start, junc_start, chrm_end, junc_end, gene_iv
@@ -1047,7 +1049,8 @@ def same_chrom_same_strand_handler(
             logger,
             microinsertion_cutoff,
         )
-    elif lt_mode == 1 and rt_mode == 2:
+
+    if lt_mode == 1 and rt_mode == 2:
         return same_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1144,7 +1147,7 @@ def same_chrom_diff_strand_handler(
             splice_bin,
             genome_fasta,
             cvg,
-            motif_required,
+            motif_required=motif_required,
         )
         strands = (read_lt.strand, read_rt.strand)
         lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
@@ -1264,6 +1267,7 @@ def diff_chrom_same_strand_mode21_handler(
     motif_required,
     logger,
     microinsertion_cutoff=20,
+    *,
     is_reverse=False,
 ):
     """Different chrom same stand mode 21 handler."""
@@ -1303,7 +1307,7 @@ def diff_chrom_same_strand_mode21_handler(
         splice_bin,
         genome_fasta,
         cvg,
-        motif_required,
+        motif_required=motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
     if is_reverse:
@@ -1370,7 +1374,8 @@ def diff_chrom_same_strand_handler(
             logger,
             microinsertion_cutoff,
         )
-    elif lt_mode == 1 and rt_mode == 2:
+
+    if lt_mode == 1 and rt_mode == 2:
         return diff_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1458,7 +1463,7 @@ def diff_chrom_diff_strand_handler(
         splice_bin,
         genome_fasta,
         cvg,
-        motif_required,
+        motif_required=motif_required,
     )
     _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
     if _nls:

@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Filters based on breakpoints or circurlarRNAs."""
 from collections import defaultdict
 from dataclasses import dataclass
@@ -21,16 +20,6 @@ class ExonInfo:
     end: Optional[int] = None
     strand: Optional[str] = None
     trx_id: Optional[str] = None
-
-    def __hash__(self) -> int:
-        """Hash an exon."""
-        return (
-            hash(self.trx_id)
-            ^ hash(self.chrom)
-            ^ hash(self.start)
-            ^ hash(self.end)
-            ^ hash(self.strand)
-        )
 
     def __repr__(self) -> str:
         """Get a string representation of an Exon."""
@@ -69,6 +58,7 @@ def _extract_annotated_exons(
     in_file: str,
     boundary_size: int = 10,
     minimum_exon_size: int = 30,
+    *,
     shrink=False,
     consider_strand=False,
 ) -> HTSeq.GenomicArrayOfSets:
@@ -90,8 +80,6 @@ def _extract_annotated_exons(
     trx_to_exon = defaultdict(list)
 
     for feature in gtf_file:
-        feature.attr.get("gene_name") or feature.attr.get("gene")
-
         if feature.type == "exon":
             trx_id = feature.attr["transcript_id"]
             trx_to_exon[trx_id].append(feature.iv)
@@ -146,7 +134,7 @@ class CircRNAFilter:
             gtf_file, boundary_size, shrink=False, consider_strand=True
         )
 
-    def is_circRNA(self, series: NLPath) -> bool:
+    def is_circrna(self, series: NLPath) -> bool:
         nodes = series.nodes
         # one-hop event
         if len(nodes) == 2:
@@ -171,58 +159,53 @@ class CircRNAFilter:
                 )
                 and self.is_megaexon_superpose_with_annotated_exons(longest_node)
             )
+
         # multi-hop event
-        else:
-            num_of_tdups = 0
-            num_of_hops = len(nodes) - 1
-            num_of_hops_satisfy_condition = 0
-            for _id, current_node in enumerate(nodes[:-1], 1):
-                next_node = series[_id]
-                if current_node.sv_type == "TDUP":
-                    num_of_tdups += 1
+        num_of_tdups = 0
+        num_of_hops = len(nodes) - 1
+        num_of_hops_satisfy_condition = 0
+        for _id, current_node in enumerate(nodes[:-1], 1):
+            next_node = series[_id]
+            if current_node.sv_type == "TDUP":
+                num_of_tdups += 1
 
-                # first hop
-                if _id == 1:
-                    if (
-                        set(current_node.exons).issubset(set(next_node.exons))
-                        or (
-                            len(current_node.introns) > 0
-                            and len(next_node.introns) > 0
-                            and set(current_node.introns).issubset(
-                                set(next_node.introns)
-                            )
-                        )
-                        or current_node.ref_start == next_node.ref_start
-                        or current_node.ref_end == next_node.ref_end
-                    ) and self.is_megaexon_superpose_with_annotated_exons(next_node):
-                        num_of_hops_satisfy_condition += 1
-                # last hop
-                elif _id == num_of_hops:
-                    if (
-                        set(current_node.exons).issuperset(set(next_node.exons))
-                        or (
-                            len(current_node.introns) > 0
-                            and len(next_node.introns) > 0
-                            and set(current_node.introns).issuperset(
-                                set(next_node.introns)
-                            )
-                        )
-                        or current_node.ref_start == next_node.ref_start
-                        or current_node.ref_end == next_node.ref_end
-                    ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
-                        num_of_hops_satisfy_condition += 1
-                # middle hops
-                else:
-                    if (
-                        set(current_node.exons) == set(next_node.exons)
-                        or (
-                            current_node.ref_start == next_node.ref_start
-                            and current_node.ref_end == next_node.ref_end
-                        )
-                    ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
-                        num_of_hops_satisfy_condition += 1
+            # first hop
+            if _id == 1:
+                if (
+                    set(current_node.exons).issubset(set(next_node.exons))
+                    or (
+                        len(current_node.introns) > 0
+                        and len(next_node.introns) > 0
+                        and set(current_node.introns).issubset(set(next_node.introns))
+                    )
+                    or current_node.ref_start == next_node.ref_start
+                    or current_node.ref_end == next_node.ref_end
+                ) and self.is_megaexon_superpose_with_annotated_exons(next_node):
+                    num_of_hops_satisfy_condition += 1
+            # last hop
+            elif _id == num_of_hops:
+                if (
+                    set(current_node.exons).issuperset(set(next_node.exons))
+                    or (
+                        len(current_node.introns) > 0
+                        and len(next_node.introns) > 0
+                        and set(current_node.introns).issuperset(set(next_node.introns))
+                    )
+                    or current_node.ref_start == next_node.ref_start
+                    or current_node.ref_end == next_node.ref_end
+                ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
+                    num_of_hops_satisfy_condition += 1
+            # middle hops
+            elif (
+                set(current_node.exons) == set(next_node.exons)
+                or (
+                    current_node.ref_start == next_node.ref_start
+                    and current_node.ref_end == next_node.ref_end
+                )
+            ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
+                num_of_hops_satisfy_condition += 1
 
-            return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
+        return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
 
     def is_megaexon_superpose_with_annotated_exons(
         self, node: Node, threshold: int = 10
@@ -242,12 +225,13 @@ class CircRNAFilter:
             # no overlapping annotated exon
             if len(common_exons) == 0:
                 return False
-            else:
-                # overlapping annotated exon does not satisfy condition
-                if not CircRNAFilter.is_largest_overlapping_exon(
-                    common_exons, _exon_start, _exon_end, threshold
-                ):
-                    flag = False
+
+            # overlapping annotated exon does not satisfy condition
+            if not CircRNAFilter.is_largest_overlapping_exon(
+                common_exons, _exon_start, _exon_end, threshold
+            ):
+                flag = False
+
         return flag
 
     @staticmethod

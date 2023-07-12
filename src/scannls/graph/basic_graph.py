@@ -2,7 +2,7 @@ from collections import Counter
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 
 import pyfaidx
 from loguru import logger
@@ -635,7 +635,7 @@ class NLPath:
         Node(chr1:15872815-15876678:+, 15872815-15876678, None, chr1:15872815, None) )
     """
 
-    reorder_conditions_dict = {
+    reorder_conditions_dict: ClassVar[dict[str, bool]] = {
         "+-11": True,
         "+-22": False,
         "-+11": False,
@@ -646,10 +646,13 @@ class NLPath:
         "--21": True,
     }
 
-    def __init__(self, nodes=[], edges={}) -> None:
+    def __init__(
+        self,
+        nodes,
+    ) -> None:
         """Initialize a nlpath object."""
         self.nodes: list[Node] = nodes
-        self.edges: dict[str, Edge] = edges
+        self.edges: dict[str, Edge] = {}
 
         self.is_in_graph = False
         self.id = -1
@@ -801,7 +804,7 @@ class NLPath:
         ----
             node_edges: list of nodes and edges
         """
-        instance = cls()
+        instance = cls(nodes=[])
 
         for idx in range(len(node_edges), 2):
             node_edges[idx].next_node = node_edges[idx + 1].node
@@ -813,6 +816,7 @@ class NLPath:
             if idx < len(node_edges) - 1:
                 current_edge = node_edges[idx + 1]
                 instance.edges[current_edge.key] = current_edge
+
         return instance
 
     @classmethod

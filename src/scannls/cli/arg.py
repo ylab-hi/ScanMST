@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Parse command line arguments."""
 import argparse
 from dataclasses import dataclass

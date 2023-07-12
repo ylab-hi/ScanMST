@@ -381,8 +381,7 @@ class Event:
         """Return the length of insertion or microhomology."""
         if self.has_insertion() or self.has_microhomology():
             return len(self.insertion_info[0]) - 1
-        else:
-            return 0
+        return 0
 
     def is_same_strand(self) -> bool:
         """Return True if the event is same strand."""

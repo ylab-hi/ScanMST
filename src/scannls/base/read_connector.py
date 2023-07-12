@@ -187,23 +187,22 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-        else:
-            if next_read_mode == 2:
-                bp_region_seq_len = (
-                    read_query_length
-                    - _lt_len_r1
-                    - _rt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
-                )
-            elif next_read_mode == 1:
-                bp_region_seq_len = (
-                    read_query_length
-                    - _lt_len_r1
-                    - _lt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
-                )
+        elif next_read_mode == 2:
+            bp_region_seq_len = (
+                read_query_length
+                - _lt_len_r1
+                - _rt_len_r2
+                - _read_match_r1
+                - _read_match_r2
+            )
+        elif next_read_mode == 1:
+            bp_region_seq_len = (
+                read_query_length
+                - _lt_len_r1
+                - _lt_len_r2
+                - _read_match_r1
+                - _read_match_r2
+            )
         is_microhomology = False
         microhomology_length = 0
 

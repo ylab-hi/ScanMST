@@ -8,9 +8,8 @@ from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from typing import Any, Optional, Union
 
+from scannls import LoggerType
 from scannls.base.merge_condition import MergeCondition
-from scannls.base.sr_rescuer import SRRescuer
-from scannls.base.type import LoggerType
 
 from .basic_graph import (
     Edge,
@@ -21,6 +20,7 @@ from .basic_graph import (
     update_node_with_other_node,
 )
 from .plot_graph import plot_graph
+from .sr_rescuer import SRRescuer
 
 
 class NLGraph:
@@ -70,7 +70,6 @@ class NLGraph:
         self.construct()
 
         # sr rescuer
-
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
 
         if is_plot:

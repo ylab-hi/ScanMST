@@ -15,7 +15,7 @@ except ImportError:
     Please install it using the following command:
 
     {sys.executable} -m pip install nox-poetry"""
-    raise SystemExit(dedent(message))
+    raise SystemExit(dedent(message)) from ImportError
 
 package = "scannls"
 python_versions = ["3.8", "3.9", "3.10"]
@@ -163,10 +163,10 @@ def typeguard(session: Session) -> None:
 @session(python="3.10")
 def refurb(session: Session) -> None:
     """Runtime type checking using Typeguard."""
-    session.posargs or ["src", "tests", "docs/conf.py"]
+    args = session.posargs or ["src", "tests", "docs/conf.py"]
     session.install("pybind11", "setuptools")
     session.install(".")
-    session.install("refurb")
+    session.install("refurb", *args)
 
 
 @session(python=python_versions)
