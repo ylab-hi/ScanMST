@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """VCF Writer class.
 
 @Filename:    vcfWriter.py
@@ -8,12 +7,11 @@
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, Any, ClassVar
 
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from typing import ClassVar
 from scannls import __version__
 from scannls.base.basic_class import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (

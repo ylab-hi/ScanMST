@@ -74,7 +74,7 @@ class NLGraph:
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
 
         if is_plot:
-            plot_graph(self, f"_{clique_ind}", False)
+            plot_graph(self, f"_{clique_ind}", is_matplotlib=False)
 
         # trace path
         for node_list in self.trace():

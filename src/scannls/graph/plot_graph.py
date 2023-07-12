@@ -1,9 +1,7 @@
-# !/usr/bin/env python
 """Plot Graphs.
 
 @Filename:    plotGraph.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        1/28/22 8:46 PM
 """
 from pathlib import Path

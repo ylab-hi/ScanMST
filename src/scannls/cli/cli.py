@@ -1,9 +1,7 @@
-# !/usr/bin/env python
 """CLi for scannls.
 
 @Filename:    cli.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        1/11/22 4:28 PM
 """
 import argparse
@@ -75,7 +73,7 @@ def parse_splice_graph_for_cliques_seq(
     with writers.open():
         for ind, clique in enumerate(cliques, 1):
             logger.debug(f"processing clique {ind}")
-            for series in splice_graph(clique, ind):
+            for series in splice_graph(clique, ind, is_plot=False):
                 if len(series) == 1:
                     logger.warning(
                         f"Single Series {ind}: {series}{series[0].query_name}"
@@ -111,7 +109,7 @@ def _parse_splice_graph_for_cliques_par(
     result_series = []
     for ind, clique in enumerate(cliques, 1):
         series_list = []
-        for series in splice_graph(clique, ind):
+        for series in splice_graph(clique, ind, is_plot=False):
             series_list.append(series)
         result_series.append(series_list)
     return result_series
