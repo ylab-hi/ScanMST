@@ -10,9 +10,9 @@ import networkx as nx
 from loguru import logger
 from networkx import connected_components
 
-from scannls.graph import NLPath, Node
 from scannls.utils import timeit
 
+from .basic_graph import NLPath, Node
 from .merge_condition import MergeCondition
 
 

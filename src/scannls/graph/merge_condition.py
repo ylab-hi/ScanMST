@@ -8,7 +8,8 @@ from enum import Enum, auto
 from itertools import zip_longest
 
 from scannls.exception import ExonsNotFoundError
-from scannls.graph import Node
+
+from .basic_graph import Node
 
 
 class MergeConditionMode(Enum):

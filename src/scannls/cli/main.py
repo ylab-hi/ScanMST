@@ -14,18 +14,22 @@ from pyfaidx import Fasta, FastaNotFoundError
 
 from scannls import (
     Blat,
+    CircRNAFilter,
     Event,
+    ExonFilter,
     MyLogger,
     ParallelWorker,
-    cigarstring2cigartuples,
+    RTSwitchingFilter,
     detect_read_read_connections_from_cigar,
-    get_longest_insertion_sequence,
-    get_softclip_length,
     reverse_complement,
 )
-from scannls.base.filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
 from scannls.graph import NLPath
 from scannls.type import LoggerType
+from scannls.utils import (
+    cigarstring2cigartuples,
+    get_longest_insertion_sequence,
+    get_softclip_length,
+)
 
 from .helper import (
     blat2chimeric_alignment,

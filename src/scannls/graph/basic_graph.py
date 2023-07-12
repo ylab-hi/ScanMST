@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from loguru import logger
 
-from scannls.base.basic_class import (
+from scannls.base import (
     BreakPoint,
     Event,
     MicroHomology,
     NovelInsertion,
     reverse_complement,
 )
-from scannls.cli.nls_inference import infer_nls_from_connected_reads
+from scannls.cli import infer_nls_from_connected_reads
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

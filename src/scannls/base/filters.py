@@ -5,7 +5,6 @@ from typing import Optional
 
 import HTSeq
 
-from scannls.graph import NLPath, Node
 from scannls.type import LoggerType
 
 from .basic_class import Event
@@ -152,7 +151,7 @@ class CircRNAFilter:
             consider_strand=True,
         )
 
-    def is_circrna(self, series: NLPath) -> bool:
+    def is_circrna(self, series) -> bool:
         nodes = series.nodes
         # one-hop event
         if len(nodes) == 2:
@@ -227,7 +226,7 @@ class CircRNAFilter:
 
     def is_megaexon_superpose_with_annotated_exons(
         self,
-        node: Node,
+        node,
         threshold: int = 10,
     ) -> bool:
         """Check if all the exons in the megaexon can superpose with annotated exons."""
@@ -284,9 +283,7 @@ class CircRNAFilter:
         )
 
     @staticmethod
-    def obtain_longest_mega_exon(
-        nodes: list[Node],
-    ) -> Node:
+    def obtain_longest_mega_exon(nodes):
         """Obtain mega-exon with the longest exon length."""
         return sorted(
             nodes,

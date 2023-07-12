@@ -8,10 +8,12 @@ from .basic_graph import (
     SpliceType,
     VariationType,
 )
+from .cluster import ClusterFinder
 from .nlgraph import NLGraph
 from .sr_rescuer import SRRescuer
 
 __all__ = [
+    "ClusterFinder",
     "Node",
     "BasicNode",
     "BasicNode",

@@ -2,7 +2,6 @@
 
 @Filename:    fastaWriter.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        1/30/22 6:18 PM
 """
 from functools import singledispatchmethod
@@ -12,7 +11,7 @@ from typing import IO, Any
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls.base.basic_class import MicroHomology, NovelInsertion, reverse_complement
+from scannls import MicroHomology, NovelInsertion, reverse_complement
 from scannls.graph import Node
 
 from .writer import Writer

@@ -14,11 +14,10 @@ from typing import Any, Optional
 import pysam
 from loguru import logger
 
-from scannls import cppext
-from scannls.type import LoggerType, Mode
-
+from . import cppext
 from .blat import load_fa2bit
 from .exception import ToolNotFoundError
+from .type import LoggerType, Mode
 
 __all__ = [
     "external_tool_checking",

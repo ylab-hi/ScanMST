@@ -2,8 +2,6 @@
 
 @Filename:    __init__.py
 @Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
 @Time:        5/23/22 10:35 AM
 @source:      https://hgdownload.soe.ucsc.edu/admin/exe/
 """

@@ -1,4 +1,5 @@
-"""@Author:      YangyangLi
+"""
+@Author:      YangyangLi
 @Filename:    nlgraph.py
 @Time:        12/15/21 10:42 AM.
 """
@@ -8,7 +9,6 @@ from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from typing import Any, Optional, Union
 
-from scannls.base.merge_condition import MergeCondition
 from scannls.type import LoggerType
 
 from .basic_graph import (
@@ -19,6 +19,7 @@ from .basic_graph import (
     SpliceType,
     update_node_with_other_node,
 )
+from .merge_condition import MergeCondition
 from .plot_graph import plot_graph
 from .sr_rescuer import SRRescuer
 

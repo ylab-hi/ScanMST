@@ -16,7 +16,6 @@ from loguru import logger
 
 from scannls import (
     Blat,
-    ClusterFinder,
     FastaWriter,
     GTFWriter,
     MyLogger,
@@ -24,7 +23,7 @@ from scannls import (
     VCFWriter,
     Writers,
 )
-from scannls.graph import NLGraph
+from scannls.graph import ClusterFinder, NLGraph
 from scannls.type import LoggerType
 from scannls.utils import find_2bit_file, sleep
 

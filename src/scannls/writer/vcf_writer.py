@@ -14,8 +14,7 @@ from typing import IO, TYPE_CHECKING, Any, ClassVar
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import __version__
-from scannls.base.basic_class import MicroHomology, NovelInsertion, reverse_complement
+from scannls import MicroHomology, NovelInsertion, __version__, reverse_complement
 from scannls.exception import (
     AnnotationCodeNotFoundError,
     BreakpointNotFoundError,

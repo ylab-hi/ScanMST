@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Module for nls inference."""
 from typing import Any
 

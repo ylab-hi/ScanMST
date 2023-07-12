@@ -10,7 +10,7 @@ from typing import IO, Any
 
 from loguru import logger
 
-from scannls.base.basic_class import MicroHomology, NovelInsertion
+from scannls import MicroHomology, NovelInsertion
 from scannls.exception import ExonsNotFoundError
 from scannls.graph import NLPath, Node
 
