@@ -3,7 +3,7 @@ import copy
 import inspect
 import math
 import re
-from itertools import chain
+from itertools import chain, pairwise
 from pathlib import Path
 from typing import Any
 
@@ -231,7 +231,7 @@ def detect_sv_from_cigar(
     if read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
-        for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
+        for _lt, _rt in pairwise(read_chains):
             if (_lt, _rt) in reads_pair_mode_dict:
                 _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
 
@@ -504,9 +504,8 @@ def _scan_bam_helper(
                                     event
                                 ):
                                     nls_event_list.append(event)
-                            else:
-                                if not rt_switching_filter.is_from_rt_switching(event):
-                                    nls_event_list.append(event)
+                            elif not rt_switching_filter.is_from_rt_switching(event):
+                                nls_event_list.append(event)
 
                     # num of alignment segments should be equal to the number of hops + 1
                     # after exon, RT switching and other filtering, the condition may be not satisfied.
