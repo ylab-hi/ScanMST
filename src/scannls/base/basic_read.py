@@ -183,7 +183,7 @@ class Read:
         )
 
     @classmethod
-    def init(
+    def new(
         cls,
         query_name: str,
         chrom: str,

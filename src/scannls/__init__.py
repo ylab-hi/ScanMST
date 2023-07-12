@@ -30,7 +30,7 @@ from .exception import (
     ReadNotFoundError,
     ToolNotFoundError,
 )
-from .graph import NLGraph, SpliceType
+from .graph import NLGraph, Node, SpliceType
 from .utils import (
     cigarstring2cigartuples,
     external_tool_checking,
@@ -40,6 +40,7 @@ from .utils import (
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 __all__ = [
+    "Node",
     "Read",
     "Event",
     "reverse_complement",

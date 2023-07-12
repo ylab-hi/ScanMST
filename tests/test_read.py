@@ -1,8 +1,6 @@
-# !/usr/bin/env python
 """Test the read module.
 
 @Filename:    test_read.py
-@contact:     li002252@umn.edu
 @license:     MIT Licence
 @Time:        2/4/22 10:32 AM
 """
@@ -63,7 +61,7 @@ class TestRead:
 
     def test_init(self, param_dict):
         """Test the init function."""
-        read = Read.init(**param_dict)
+        read = Read.new(**param_dict)
 
         assert read.query_name == param_dict["query_name"]
         assert read.lt_soft_len == 10
@@ -72,10 +70,10 @@ class TestRead:
 
     def test_get_exons_and_introns(self, param_dict):
         """Test the get_exons_and_introns function."""
-        read = Read.init(**param_dict)
+        read = Read.new(**param_dict)
         assert read.get_exons_and_introns() == ([[1, 51]], [])
         param_dict["cigar_str"] = "15S2M2N3I50M2S"
-        read = Read.init(**param_dict)
+        read = Read.new(**param_dict)
         assert read.get_exons_and_introns() == ([[1, 3], [5, 55]], [[3, 5]])
 
 

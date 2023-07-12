@@ -180,13 +180,12 @@ class NodeIdentity(Enum):
     def from_str(cls, s) -> "NodeIdentity":
         if s == "HEAD":
             return cls.HEAD
-        elif s == "TAIL":
+        if s == "TAIL":
             return cls.TAIL
-        elif s == "MID":
+        if s == "MID":
             return cls.MID
-        else:
-            msg = f"Invalid value for NodeIdentity: {s}"
-            raise ValueError(msg)
+
+        raise ValueError(f"Invalid value for NodeIdentity: {s}")
 
     def is_head(self) -> bool:
         return self == NodeIdentity.HEAD
@@ -414,17 +413,16 @@ class VariationType(Enum):
     def from_str(cls, s):
         if s == "TRA":
             return cls.TRA
-        elif s == "DEL":
+        if s == "DEL":
             return cls.DEL
-        elif s == "TDUP":
+        if s == "TDUP":
             return cls.TDUP
-        elif s == "INV":
+        if s == "INV":
             return cls.INV
-        elif s == "IDUP":
+        if s == "IDUP":
             return cls.IDUP
-        else:
-            msg = f"Invalid SV type: {s}"
-            raise ValueError(msg)
+
+        raise ValueError(f"Invalid SV type: {s}")
 
     def __str__(self) -> str:
         return self.name
@@ -455,6 +453,7 @@ class EdgeData:
     def equal(
         self,
         other: "EdgeData",
+        *,
         compared_break_point: bool,
         break_point_threshold: int,
     ):
@@ -561,12 +560,15 @@ class Edge:
     def is_merged(
         self,
         other_edge: "Edge",
+        *,
         compared_break_point: bool = True,
         break_point_threshold: int = 10,
     ) -> bool:
         """Check if two edges are merged."""
         return self.edge_data.equal(
-            other_edge.edge_data, compared_break_point, break_point_threshold
+            other_edge.edge_data,
+            compared_break_point=compared_break_point,
+            break_point_threshold=break_point_threshold,
         )
 
 
@@ -1070,7 +1072,7 @@ def _check_insertion_conditions_for_compare_insertion(
     if insertion_info1 is None and insertion_info2 is None:
         return True
 
-    elif insertion_info1 is not None and insertion_info2 is not None:
+    if insertion_info1 is not None and insertion_info2 is not None:
         if insertion_info1[0] and insertion_info2[0]:
             # 1 hit insertion that is added in the series
             return True
@@ -1086,7 +1088,7 @@ def _check_insertion_conditions_for_compare_insertion(
             ):
                 return True
 
-            elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
+            if isinstance(insertion_info1[1], MicroHomology) and isinstance(
                 insertion_info2[1], MicroHomology
             ):
                 return True

@@ -124,7 +124,7 @@ def create_sort_key_by_merge_factor(nlpath: NLPath):
     )
 
 
-def sort_cluster(cluster, key=lambda x: creat_sort_key_for_nlpath(x), reverse=False):
+def sort_cluster(cluster, key=lambda x: creat_sort_key_for_nlpath(x), *, reverse=False):
     return sorted(
         cluster,
         key=key,

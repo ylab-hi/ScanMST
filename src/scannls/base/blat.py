@@ -62,6 +62,7 @@ class Blat:
         ref_2bit: str,
         port: int,
         output_dir: str,
+        *,
         fix_log_file=None,
         is_start_server=False,
         lock=None,

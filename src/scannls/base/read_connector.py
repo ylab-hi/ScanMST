@@ -1,8 +1,4 @@
-# !/usr/bin/env python
 """Connecter Reads.
-
-@Filename:    readConnector.py
-@license:     MIT Licence
 @Time:        12/15/21 2:14 PM
 """
 import re
@@ -114,6 +110,7 @@ class ReadsConnector:
         self,
         query_seq: str,
         target_seq: str,
+        *,
         same_strand: bool,
         minimum_s_length: int = 30,
         minimum_terminal_length: int = 5,
@@ -240,16 +237,18 @@ class ReadsConnector:
         if is_microhomology:
             if prev_read_mode == 2:
                 return read_match_sequence[microhomology_length:]
-            elif prev_read_mode == 1:
+
+            if prev_read_mode == 1:
                 return read_match_sequence[:-microhomology_length]
             return None
-        else:
-            return read_match_sequence
+
+        return read_match_sequence
 
     @staticmethod
     def _check_if_strand_mode_for_compare_ms(
         start_read: Read,
         read: Read,
+        *,
         same_strand: bool,
         first_is_matched: bool = False,
         second_is_matched: bool = False,
@@ -265,12 +264,13 @@ class ReadsConnector:
         if same_strand:
             if mode1 == mode2:
                 flag = False
-        else:
-            if mode1 != mode2:
-                flag = False
+        elif mode1 != mode2:
+            flag = False
         return flag
 
-    def test_2case(self, start_read: Read, read: Read, is_compare_for_ms: bool) -> Any:
+    def test_2case(
+        self, start_read: Read, read: Read, *, is_compare_for_ms: bool
+    ) -> Any:
         """Test 2 case for two reads to check if they are connected.
 
         start read -> read
@@ -287,7 +287,7 @@ class ReadsConnector:
             self.reads_chain.append(read)
             return True, start_read
 
-        _lt_len_r1, _read_match_r1, _rt_len_r1 = start_read.adhocsms
+        _lt_len_r1, _read_match_r1, _ = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
         read_query_sequence = read.query_sequence
 
@@ -310,11 +310,13 @@ class ReadsConnector:
         )
 
         match_flag1 = self.check_if_ms_match(
-            read_match_sequence, read.query_sequence[:_lt_len_r2], same_strand
+            read_match_sequence,
+            read.query_sequence[:_lt_len_r2],
+            same_strand=same_strand,
         )
         if match_flag1:
             condition1 = self._check_if_strand_mode_for_compare_ms(
-                start_read, read, same_strand, match_flag1
+                start_read, read, same_strand=same_strand, first_is_matched=match_flag1
             )
         if match_flag1 and condition1:  # may same
             read.mode = 2
@@ -348,12 +350,18 @@ class ReadsConnector:
         )
 
         match_flag2 = self.check_if_ms_match(
-            read_match_sequence, read.query_sequence[-_rt_len_r2:], same_strand
+            read_match_sequence,
+            read.query_sequence[-_rt_len_r2:],
+            same_strand=same_strand,
         )
 
         if match_flag2:
             condition2 = self._check_if_strand_mode_for_compare_ms(
-                start_read, read, same_strand, False, match_flag2
+                start_read,
+                read,
+                same_strand=same_strand,
+                first_is_matched=False,
+                second_is_matched=match_flag2,
             )
         if match_flag2 and condition2:  # may same
             read.mode = 1
@@ -426,7 +434,8 @@ class ReadsConnector:
             )
             cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
-        new_read = Read.init(
+        assert read.query_qualities is not None
+        new_read = Read.new(
             read.query_name,
             chrom,
             position,
@@ -480,6 +489,9 @@ class ReadsConnector:
         flag, hit, keep_hsp = self.__double_check_blat_query(
             query_sequence, self.align_len_threshold, self.threshold_identity, self.top
         )
+
+        assert keep_hsp is not None
+
         if flag and hit == 1:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
@@ -755,7 +767,7 @@ def detect_read_read_connections_from_cigar(
     if nm_ra < max_allowed_nm:  # type: ignore
         mapq_list.append(mapq_ra)
         chimeric_aln_list.append(
-            Read.init(
+            Read.new(
                 read.query_name,
                 chrm_ra,
                 pos_ra,
@@ -773,11 +785,10 @@ def detect_read_read_connections_from_cigar(
         seq_sa = obtain_sa_query_seq_from_ra(seq_ra, strand_ra, strand_sa)
         if strand_sa == strand_ra:
             query_qualities_sa = query_qualities_ra
+        elif query_qualities_ra is None:
+            query_qualities_sa = None
         else:
-            if query_qualities_ra is None:
-                query_qualities_sa = None
-            else:
-                query_qualities_sa = query_qualities_ra[::-1]
+            query_qualities_sa = query_qualities_ra[::-1]
 
         # filter reads in uncommon chromosome and mitochondrion
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
@@ -785,8 +796,9 @@ def detect_read_read_connections_from_cigar(
 
         if nm_sa < max_allowed_nm:
             mapq_list.append(mapq_sa)
+            assert query_qualities_sa is not None
             chimeric_aln_list.append(
-                Read.init(
+                Read.new(
                     read.query_name,
                     chrm_sa,
                     pos_sa,
@@ -804,26 +816,25 @@ def detect_read_read_connections_from_cigar(
     ):
         return noreturn
 
-    elif is_reverse_transcription_artifacts(chimeric_aln_list):
+    if is_reverse_transcription_artifacts(chimeric_aln_list):
         logger.debug(f"{chimeric_aln_list=} has reverse transcription artifacts")
         return noreturn
 
-    else:
-        read_connector = ReadsConnector(
-            read_list=chimeric_aln_list, blat=blat, logger=logger
+    read_connector = ReadsConnector(
+        read_list=chimeric_aln_list, blat=blat, logger=logger
+    )
+
+    flag = read_connector.connect()
+
+    if flag:
+        logger.debug(
+            f"reads chain: {read_connector.reads_chain};"
+            f" reads pair mode: {read_connector.read_pair_mode_dict}"
+        )
+        return (
+            read_connector.reads_chain,
+            read_connector.read_pair_mode_dict,
+            read_connector.num_added_reads,
         )
 
-        flag = read_connector.connect()
-
-        if flag:
-            logger.debug(
-                f"reads chain: {read_connector.reads_chain};"
-                f" reads pair mode: {read_connector.read_pair_mode_dict}"
-            )
-            return (
-                read_connector.reads_chain,
-                read_connector.read_pair_mode_dict,
-                read_connector.num_added_reads,
-            )
-        else:
-            return noreturn
+    return noreturn

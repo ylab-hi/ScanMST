@@ -13,6 +13,7 @@ from typing import IO, Any
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
+from typing import ClassVar
 from scannls import __version__
 from scannls.base.basic_class import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (
@@ -56,7 +57,7 @@ class VCFWriter(Writer):
 
     num_fields = 10
 
-    reserved_info = {
+    reserved_info: ClassVar[dict[str, str]] = {
         "CANONICAL": "Flag",
         "NONCANONICAL": "Flag",
         "BOUNDARY": "String",
@@ -83,10 +84,18 @@ class VCFWriter(Writer):
         "GENE2": "String",
         "TRANSCRIPT_ID": "String",
     }
-    reserved_format = {"GT": "String"}
-    reserved_alt = ["INS", "DEL", "TDUP", "IDUP", "INV", "TRA", "HOM"]
+    reserved_format: ClassVar[dict[str, str]] = {"GT": "String"}
+    reserved_alt: ClassVar[list[str]] = [
+        "INS",
+        "DEL",
+        "TDUP",
+        "IDUP",
+        "INV",
+        "TRA",
+        "HOM",
+    ]
 
-    description = {
+    description: ClassVar[dict[str, str]] = {
         "CANONICAL": "Canonical splice site",
         "NONCANONICAL": "Noncanonical splice site",
         "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
