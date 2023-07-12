@@ -8,12 +8,10 @@ import types
 from collections import defaultdict
 from collections.abc import Iterable
 from collections.abc import Iterator
-from enum import Enum
 from typing import Any
 from typing import Optional
 from typing import Union
 
-from ..base.basicClass import BreakPoint
 from ..base.mergeCondition import MergeCondition
 from ..base.srRescuer import SRRescuer
 from ..base.type import LoggerType
@@ -527,7 +525,7 @@ class NLGraph:
                     group_paths,
                 )
 
-    def _trace(self, direction: Enum) -> None:
+    def _trace(self, direction: SpliceType) -> None:
         """Trace splice graph but only mark node with trace_id.
 
         :param direction: direction of trace, forward or backward
@@ -565,154 +563,6 @@ class NLGraph:
             result_series_list.extend(group_paths)
 
         return result_series_list
-
-    def create_same_level_node_list(self) -> list[list[Node]]:
-        """Create node trace id dict.
-
-        :return: trace_id: List[node] dict
-        """
-        node_trace_id_dict: dict[int, list[Node]] = defaultdict(list)
-        for node in self:
-            node_trace_id_dict[node.trace_id].append(node)
-
-        return [i for i in node_trace_id_dict.values() if len(i) > 1]
-
-    def _rule_out(self, winner: Node, loser: Node) -> None:
-        """Rule out the loser and add sr to the winner.
-
-        Loser is out, and its sr, successors, predecessors are added to the winner.
-        """
-        winner.update_sr(loser.sr)
-        winner.add_successor_from_list(loser.successors, None, None)
-        winner.add_predecessor_from_list(loser.predecessors, None, None)
-        update_node_with_other_node(
-            winner,
-            loser,
-            (
-                "splicing_code",
-                "annotation_code",
-                "genes",
-            ),
-        )
-
-        for loser_predecessor in loser.predecessors:
-            loser_predecessor.successors.remove(loser)
-
-        for loser_successor in loser.successors:
-            loser_successor.predecessors.remove(loser)
-        self.remove_node(loser)
-
-    @staticmethod
-    def _check_can_battle_condition(
-        breakpoint1: Optional[BreakPoint],
-        breakpoint2: Optional[BreakPoint],
-        threshold: int,
-    ) -> bool:
-        """Check if two breakpoints are in the threshold.
-
-        :param breakpoint1
-        :param breakpoint2
-        :return: True or False
-        """
-        if breakpoint1 is None or breakpoint2 is None:
-            return False
-        return abs(breakpoint1.pos - breakpoint2.pos) < threshold
-
-    def check_can_battle(self, node_a: Node, node_b: Node) -> bool:
-        """Check if two nodes can battle."""
-        self.logger.trace(f"{node_a=}\n{node_b=}")
-
-        # WARN: prev_sv_type is already deleted <06-28-23>
-        if node_a.prev_sv_type != node_b.prev_sv_type:
-            return False
-
-        if node_a.introns != node_b.introns:
-            return False
-
-        if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:
-            return NLGraph._check_can_battle_condition(
-                node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
-            )
-
-        if node_a.next_breakpoint is None and node_b.next_breakpoint is None:
-            return NLGraph._check_can_battle_condition(
-                node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
-            )
-
-        return NLGraph._check_can_battle_condition(
-            node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
-        ) and NLGraph._check_can_battle_condition(
-            node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
-        )
-
-    def _begin_battle(self, node_a: Node, node_b: Node) -> tuple[bool, ...]:
-        """Begin battle between two nodes.
-
-        :return: Two bool values:
-                value1: True if node_a and node_b can battle.
-                value2: if node_a is winner, return True, else return False
-        """
-        self.logger.trace(
-            f"{node_a.harmonic_mean_sr=:.2f}\t{node_b.harmonic_mean_sr=:.2f}"
-        )
-        if (
-            node_a.harmonic_mean_sr == node_b.harmonic_mean_sr
-            or not self.check_can_battle(node_a, node_b)
-        ):
-            return False, False
-
-        if node_a.harmonic_mean_sr > node_b.harmonic_mean_sr:
-            self._rule_out(node_a, node_b)
-            return True, True
-
-        # node_a.original_sr < node_b.original_sr
-        self._rule_out(node_b, node_a)
-        return True, False
-
-    def battle(self, same_level_node_list: list[list[Node]]) -> None:
-        """Nodes with same trace id battle each other.
-
-        Node with larger number of sr wins, otherwise lose.
-
-        Loser will be rule out.
-        """
-        for node_list in same_level_node_list:
-            while node_list:
-                current_node = node_list.pop()
-                for other_node in node_list:
-                    can_battle, is_winner = self._begin_battle(current_node, other_node)
-                    if can_battle:
-                        if not is_winner:
-                            # other_node is winner
-                            break
-                        # winner is last_node
-                        node_list.remove(other_node)
-
-    def _prune(self, direction: Enum) -> None:
-        """Implement function to prune graph.
-
-        :param direction: direction of prune, forward or backward
-        """
-        # 1. trace and mark node with trace_id
-        self._trace(direction)
-        # 2. save every trace_id and its corresponding node to be Dict
-        # 3. check the length of a node list, if the number of nodes is less than 2, remove it
-        same_level_node_list = self.create_same_level_node_list()
-        # 4. compare them and rule out loser
-        self.battle(same_level_node_list)
-
-    def prune(self) -> None:
-        """Prune graph.
-
-        Algorithm:
-        1. trace graph and mark every node with trace id
-        2. save every node with trace id as a Dict[int, List[Node]]
-        3. check nodes of Dict in terms of trace id if len(values)>1,
-        4. then compare them and rule out loser in terms of sr number
-        """
-        self._prune(SpliceType.forward)
-        self.reset_trace_id()
-        self._prune(SpliceType.backward)
 
     def check_circle_in_graph(self, nodes_keys: set[str]):
         """Check if there is a circle in graph."""
