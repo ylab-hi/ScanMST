@@ -4,10 +4,12 @@
 @license:     MIT Licence
 @Time:        1/30/22 6:19 PM
 """
+from __future__ import annotations
+
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any, ClassVar
+from typing import IO, TYPE_CHECKING, Any, ClassVar
 
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
@@ -22,9 +24,11 @@ from scannls.exception import (
     ModesNotFoundError,
     SplicingCodeNotFoundError,
 )
-from scannls.graph import Node
 
 from .writer import Writer
+
+if TYPE_CHECKING:
+    from scannls.graph import Node
 
 
 class VCFWriter(Writer):
@@ -158,7 +162,7 @@ class VCFWriter(Writer):
         """Formatter for writing data."""
         if fields is None or len(fields) != VCFWriter.num_fields:
             logger.warning(
-                f"{self.__class__.__name__}: Number of fields is not equal to 10."
+                f"{self.__class__.__name__}: Number of fields is not equal to 10.",
             )
         return delimiter.join(fields) + "\n"
 
@@ -213,11 +217,13 @@ class VCFWriter(Writer):
 
         if len(data_object.nodes) == 0:
             logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {clique_id} Series."
+                f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {clique_id} Series.",
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
         for _hop_vcf_feature in get_vcf_features_from_series(
-            data_object, self.series_id, self.reference_io
+            data_object,
+            self.series_id,
+            self.reference_io,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
         self.series_id += 1  # series/transcript id
@@ -283,21 +289,21 @@ class VCFWriter(Writer):
                 _number = "."
             header_lines.append(
                 f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},"
-                f'Description="{VCFWriter.description[_id]}">'
+                f'Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_format:
             header_lines.append(
                 f"##FORMAT=<ID={_id},Number=1,Type={VCFWriter.reserved_format[_id]},"
-                f'Description="{VCFWriter.description[_id]}">'
+                f'Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_alt:
             header_lines.append(
-                f'##ALT=<ID={_id},Description="{VCFWriter.description[_id]}">'
+                f'##ALT=<ID={_id},Description="{VCFWriter.description[_id]}">',
             )
         header_lines.append(
-            f"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_name}"
+            f"#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_name}",
         )
 
         return "\n".join(header_lines) + "\n"
@@ -436,14 +442,16 @@ def get_vcf_features_from_series(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{series_id}",
                     "SVMETHOD": "ScanNLS",
-                }
-            }
+                },
+            },
         )
         if current_node.insertion_info:
             if isinstance(current_node.insertion_info[1], NovelInsertion):
                 insertion = current_node.insertion_info[1]
                 ref_allele, alt_allele = get_vcf_features_from_insertion(
-                    insertion, current_node, reference_io
+                    insertion,
+                    current_node,
+                    reference_io,
                 )
                 _af = 0 if _dp1 == 0 else insertion.ao / _dp1
                 sv_distance = len(alt_allele)
@@ -473,13 +481,15 @@ def get_vcf_features_from_series(
                             "STRAND": f"{current_node.strand}",
                             "TRANSCRIPT_ID": f"{series_id}",
                             "SVMETHOD": "ScanNLS",
-                        }
-                    }
+                        },
+                    },
                 )
             elif isinstance(current_node.insertion_info[1], MicroHomology):
                 microhomology = current_node.insertion_info[1]
                 ref_allele, alt_allele = get_vcf_features_from_insertion(
-                    microhomology, current_node, reference_io
+                    microhomology,
+                    current_node,
+                    reference_io,
                 )
                 _af = 0 if _dp1 == 0 else microhomology.ao / _dp1
                 sv_distance = len(alt_allele)
@@ -509,8 +519,8 @@ def get_vcf_features_from_series(
                             "STRAND": f"{current_node.strand}",
                             "TRANSCRIPT_ID": f"{series_id}",
                             "SVMETHOD": "ScanNLS",
-                        }
-                    }
+                        },
+                    },
                 )
 
     return series_hops_features
@@ -555,7 +565,9 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
 
 
 def get_vcf_features_from_insertion(
-    insertion: NovelInsertion, node: Node, reference_io: Fasta
+    insertion: NovelInsertion,
+    node: Node,
+    reference_io: Fasta,
 ) -> tuple[str, str]:
     """Get novel insertion sequence of a node.
 

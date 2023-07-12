@@ -87,7 +87,8 @@ class Blat:
         """
         if self.ref_2bit.startswith("~"):
             abs_2bit = os.path.join(
-                os.path.expanduser("~"), self.ref_2bit.replace("~/", "")
+                os.path.expanduser("~"),
+                self.ref_2bit.replace("~/", ""),
             )
             return os.path.dirname(abs_2bit)
 
@@ -111,7 +112,7 @@ class Blat:
         """
         if not os.path.exists(self.log_file_path):
             raise RuntimeError(
-                f"the process start server but the log file is not exist: {self.log_file_path}"
+                f"the process start server but the log file is not exist: {self.log_file_path}",
             )
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
@@ -239,7 +240,10 @@ class Blat:
         )
         logger.trace(f"{cmd=}")
         subprocess.check_call(
-            cmd, stderr=subprocess.STDOUT, shell=True, stdout=subprocess.DEVNULL
+            cmd,
+            stderr=subprocess.STDOUT,
+            shell=True,
+            stdout=subprocess.DEVNULL,
         )
         os.chdir(cwd)
         logger.trace(f"{Path().cwd()}")
@@ -283,7 +287,10 @@ class Blat:
 
     @staticmethod
     def _query_insertion(
-        blat_result: Any, insert_seq: str, threshold_identity: float, top: int
+        blat_result: Any,
+        insert_seq: str,
+        threshold_identity: float,
+        top: int,
     ) -> Any:
         """Helper function for querying insertion sequence."""
         hsps = blat_result.hsps
@@ -292,7 +299,7 @@ class Blat:
         keep_hsp = []
         for hsp in hsps:
             if (sum(hsp.hit_span_all) - hsp.mismatch_num) / len(
-                insert_seq
+                insert_seq,
             ) > threshold_identity:
                 keep_hsp.append(hsp)
         hit = len(keep_hsp)
@@ -329,7 +336,10 @@ class Blat:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         hit, keep_hsp = Blat._query_insertion(
-            blat_result, insert_seq, threshold_identity, top
+            blat_result,
+            insert_seq,
+            threshold_identity,
+            top,
         )
 
         if hit == 1:
@@ -337,7 +347,8 @@ class Blat:
             flag = True
 
             ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
-                top_hsp, in_seq_len=len(insert_seq)
+                top_hsp,
+                in_seq_len=len(insert_seq),
             )
 
             dummy_qualities = array.array("B", [40] * len(insert_seq))

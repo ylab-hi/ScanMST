@@ -77,7 +77,7 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
                 {session.bin!r},
                 os.environ.get("PATH", ""),
             ))
-            """
+            """,
         )
 
         lines.insert(1, header)

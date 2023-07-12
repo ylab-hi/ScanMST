@@ -29,7 +29,7 @@ class TestRead:
     """Test the read module."""
 
     @pytest.mark.parametrize(
-        "cigar, expected_result",
+        ("cigar", "expected_result"),
         [
             ("10S50M5S", (10, 5, 50, 50, 0, [0, 50], 65, [4, 10, 0, 50, 4, 5])),
             (
@@ -117,19 +117,27 @@ class TestReadsConnector:
         assert read2.mode == 1
 
     @pytest.mark.parametrize(
-        "query_seq, target_seq, same_strand, expected_result",
+        ("query_seq", "target_seq", "same_strand", "expected_result"),
         [
             ("ATCG", "ATCG", True, False),
             ("ATCGC", "TCATCGC", True, True),
         ],
     )
     def test_check_if_ms_match(
-        self, reads_connector, query_seq, target_seq, same_strand, expected_result
+        self,
+        reads_connector,
+        query_seq,
+        target_seq,
+        same_strand,
+        expected_result,
     ):
         """Test the check_if_ms_match function."""
         assert (
             reads_connector.check_if_ms_match(
-                query_seq, target_seq, same_strand, minimum_s_length=4
+                query_seq,
+                target_seq,
+                same_strand,
+                minimum_s_length=4,
             )
             == expected_result
         )
@@ -165,10 +173,18 @@ class TestReadsConnector:
         """Test check if strand mode for compare ms."""
         read1, read2 = reads_connector.aln_list
         assert reads_connector._check_if_strand_mode_for_compare_ms(
-            read1, read2, True, True, False
+            read1,
+            read2,
+            True,
+            True,
+            False,
         )
         assert not reads_connector._check_if_strand_mode_for_compare_ms(
-            read1, read2, False, False, True
+            read1,
+            read2,
+            False,
+            False,
+            True,
         )
 
     def test_test_2case(self, reads_connector):
@@ -182,7 +198,8 @@ class TestReadsConnector:
         assert reads_connector.test_2case(read2, read1, False)
 
     def test__double_check_for_start_end_read_determine_new_read_mode(
-        self, reads_connector
+        self,
+        reads_connector,
     ):
         """Test double check for start end read."""
         read1, read2 = reads_connector.aln_list
@@ -193,7 +210,8 @@ class TestReadsConnector:
         assert read2.mode == 1
         read1.mode = 1
         reads_connector._double_check_for_start_end_read_determine_new_read_mode(
-            read1, read2
+            read1,
+            read2,
         )
         assert read2.mode == 1
 
@@ -205,7 +223,9 @@ class TestReadsConnector:
         reads_connector.blat.psl2sam_return = ("chr1", 1, "+", "2S1M1S", 2)
 
         new_read = reads_connector._double_check_create_new_read_calculate_sms(
-            fake_hsp, "ATCGC", read1
+            fake_hsp,
+            "ATCGC",
+            read1,
         )
 
         assert read1.mode == 1

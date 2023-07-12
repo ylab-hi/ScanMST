@@ -24,7 +24,11 @@ def is_middle_node(node: Node) -> bool:
 def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
     """Make breakpoint."""
     return cppext.BreakPoint(
-        node.ref_start, node.ref_end, mode, node.is_reverse(), is_middle_node(node)
+        node.ref_start,
+        node.ref_end,
+        mode,
+        node.is_reverse(),
+        is_middle_node(node),
     )
 
 
@@ -79,7 +83,9 @@ class SRRescuer:
             node.original_sr = node.sr
             self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
             self.update_sr(
-                node, query_names_in_graph_list, self.node_rescued_sr_maximum
+                node,
+                query_names_in_graph_list,
+                self.node_rescued_sr_maximum,
             )
 
         del query_names_in_graph
@@ -162,20 +168,24 @@ class SRRescuer:
         chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
 
         current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
-            chrom_n, pos_n, pos_n + 1
+            chrom_n,
+            pos_n,
+            pos_n + 1,
         )
 
         query_name_current = current_node.query_name.split(",")
 
         chrom, start, check_pos = SRRescuer.obtain_region_for_rescue_sr2(
-            current_node, mode1, "next_breakpoint"
+            current_node,
+            mode1,
+            "next_breakpoint",
         )
 
         logger.trace(
             f"{chrom=} {start=} {mode1=}  {current_node.strand=} {current_node.ref_start=} "
             f"{current_node.ref_end=} {is_middle_node(current_node)} "
             f"{current_node.cigartuples_without_soft=} {query_name_current=} "
-            f"{query_names_in_graph=} "
+            f"{query_names_in_graph=} ",
         )
 
         # reset query_names in graph
@@ -200,20 +210,24 @@ class SRRescuer:
         for next_node in current_node.successors:
             chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
             next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
-                chrom_p, pos_p, pos_p + 1
+                chrom_p,
+                pos_p,
+                pos_p + 1,
             )
 
             query_name_next = next_node.query_name.split(",")
 
             chrom, start, check_pos = SRRescuer.obtain_region_for_rescue_sr2(
-                next_node, mode2, "prev_breakpoint"
+                next_node,
+                mode2,
+                "prev_breakpoint",
             )
 
             logger.trace(
                 f"{chrom=} {start=} {mode2=} {next_node.strand=} {next_node.ref_start=} {next_node.ref_end=} "
                 f"{is_middle_node(next_node)} "
                 f"{next_node.cigartuples_without_soft=} {query_name_next=}"
-                f" {query_names_in_graph=}"
+                f" {query_names_in_graph=}",
             )
 
             if (

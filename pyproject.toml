@@ -105,6 +105,8 @@ profile = "black"
 
 [tool.ruff]
 select = [
+    # "ANN",
+    # "D",
     "A",
     "F",
     "E",
@@ -139,9 +141,23 @@ select = [
     "PLE",
     "PLW",
     "RUF",
+    "PL",
+    "TD",
+    "FIX",
+    "PTH",
+    "TCH",
+    "SLOT",
+    "PT",
+    "PYI",
+    "PIE",
+    "ISC",
+    "FA",
+    "EXE",
+    "CPY",
+    "COM",
 ]
 line-length = 130
-exclude = ["cppext", "nls_inference.py"]
+exclude = ["tests", "cppext", "nls_inference.py", "blat.py"]
 ignore = [
     "ANN001",
     "D203",
@@ -160,7 +176,7 @@ ignore = [
     "D401",
     "PLR0913",
 ]
-
+target-version = "py39"
 
 [tool.commitizen]
 name = "cz_conventional_commits"

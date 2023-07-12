@@ -1,15 +1,11 @@
-# !/usr/bin/env python
 """Type of the scannls.
 
 @Filename:    type.py
 @Author:      Yangyang Li
-@license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
 from enum import IntEnum
-from typing import Any, NewType, Protocol
-
-from .basic_read import Read
+from typing import Any, Protocol
 
 
 class Mode(IntEnum):
@@ -19,8 +15,6 @@ class Mode(IntEnum):
     type1 = 1
     type2 = 2
 
-
-ReadType = NewType("ReadType", Read)
 
 EventType = tuple[
     str,

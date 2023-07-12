@@ -8,8 +8,8 @@ from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from typing import Any, Optional, Union
 
-from scannls import LoggerType
 from scannls.base.merge_condition import MergeCondition
+from scannls.type import LoggerType
 
 from .basic_graph import (
     Edge,
@@ -30,7 +30,10 @@ class NLGraph:
     list_factory = list
 
     def __init__(
-        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 3
+        self,
+        logger: LoggerType,
+        rescuer: Any,
+        prune_threshold: int = 3,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -137,7 +140,8 @@ class NLGraph:
 
     @staticmethod
     def get_node_identity_base_edge(
-        edge: Edge, node: Node
+        edge: Edge,
+        node: Node,
     ) -> dict[NodeIdentity, list[str]]:
         result = defaultdict(list)
         for read_id in edge.read_ids:
@@ -156,7 +160,10 @@ class NLGraph:
         return True
 
     def get_possible_edges(
-        self, current_path: list[Union[Node, Edge]], current_node: Node, successor: Node
+        self,
+        current_path: list[Union[Node, Edge]],
+        current_node: Node,
+        successor: Node,
     ) -> list[Edge]:
         if not current_path:
             return self.find_edges(current_node, successor)
@@ -165,7 +172,8 @@ class NLGraph:
         assert isinstance(previous_edge, Edge)
 
         previous_edge_node_identity = self.get_node_identity_base_edge(
-            previous_edge, current_node
+            previous_edge,
+            current_node,
         )
 
         possible_edges = []
@@ -173,7 +181,8 @@ class NLGraph:
         for edge in self.find_edges(current_node, successor):
             if edge.sr > self.prune_threshold:
                 edge_node_identity = self.get_node_identity_base_edge(
-                    edge, current_node
+                    edge,
+                    current_node,
                 )
                 if self.determine_edge(previous_edge_node_identity, edge_node_identity):
                     possible_edges.append(edge)
@@ -328,7 +337,10 @@ class NLGraph:
         return False
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
-        self, current_node: Node, similar_key: str, merged_nodes_pool: set[Node]
+        self,
+        current_node: Node,
+        similar_key: str,
+        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
         # get similar nodes in the graph
@@ -338,12 +350,14 @@ class NLGraph:
         for similar_node_in_graph in similar_nodes_in_graph:
             # check if the current node is merged into a similar node in the graph
             if NLGraph._compare_is_merged(
-                similar_node_in_graph, current_node, self.prune_threshold
+                similar_node_in_graph,
+                current_node,
+                self.prune_threshold,
             ):
                 current_node.is_merged = True
 
                 self.logger.warning(
-                    f"merging node {similar_node_in_graph} and {current_node})"
+                    f"merging node {similar_node_in_graph} and {current_node})",
                 )
 
                 update_exon_coord_name_mode(similar_node_in_graph, current_node)
@@ -363,7 +377,9 @@ class NLGraph:
                 )
 
                 similar_node_in_graph.add_predecessor(
-                    current_node.previous_node_in_nlpath, self, edge_data
+                    current_node.previous_node_in_nlpath,
+                    self,
+                    edge_data,
                 )
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
@@ -407,11 +423,13 @@ class NLGraph:
                 similar_key = current_node.similar_key
 
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
-                    current_node, similar_key, merged_nodes_pool
+                    current_node,
+                    similar_key,
+                    merged_nodes_pool,
                 )
 
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
-                    current_node
+                    current_node,
                 )
 
                 current_node.clear_next_and_previous_node_in_series()
@@ -430,7 +448,7 @@ class NLGraph:
         """
         if start_node in path:
             self.logger.warning(
-                f"A circle is found in the graph {start_node} in {path}"
+                f"A circle is found in the graph {start_node} in {path}",
             )
 
         if not start_node or start_node in path:
@@ -544,7 +562,9 @@ class NLGraph:
         return result_paths
 
     def check_circle_in_graph_helper(
-        self, nodes_keys: set[str], result_paths: list[list[Node]]
+        self,
+        nodes_keys: set[str],
+        result_paths: list[list[Node]],
     ) -> None:
         """Check if there is a circle in graph."""
         if (
@@ -554,10 +574,14 @@ class NLGraph:
         ):
             current_nodes_keys: set[str] = set()
             self._trace_forward_record_node_unique_keys(
-                start_node, [], result_paths, current_nodes_keys
+                start_node,
+                [],
+                result_paths,
+                current_nodes_keys,
             )
             self.check_circle_in_graph_helper(
-                nodes_keys - current_nodes_keys, result_paths
+                nodes_keys - current_nodes_keys,
+                result_paths,
             )
 
     def _trace_forward_record_node_unique_keys(
@@ -580,7 +604,10 @@ class NLGraph:
                     if (key := successor.unique_key) is not None:
                         nodes_keys.add(key)
                     self._trace_forward_record_node_unique_keys(
-                        successor, [*path, start_node], group_paths, nodes_keys
+                        successor,
+                        [*path, start_node],
+                        group_paths,
+                        nodes_keys,
                     )
             else:
                 self._trace_forward_record_node_unique_keys(
@@ -602,12 +629,14 @@ def update_exon_coord_name_mode(updated_node: Node, current_node: Node) -> None:
         raise ValueError(f"{updated_node} or {current_node} has no exons")
 
     _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-        updated_node, current_node
+        updated_node,
+        current_node,
     )
 
 
 def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-    updated_node: Node, current_node: Node
+    updated_node: Node,
+    current_node: Node,
 ) -> None:
     """Update exon coordinates of the updated node based on the current node.
 
@@ -619,13 +648,15 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     """
     # update exon coordinates
     updated_node.ref_start = min(  # type: ignore
-        updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
+        updated_node.exons[0][0],
+        current_node.exons[0][0],  # type: ignore
     )
 
     updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
     updated_node.ref_end = max(  # type: ignore
-        updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
+        updated_node.exons[-1][1],
+        current_node.exons[-1][1],  # type: ignore
     )
 
     updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore

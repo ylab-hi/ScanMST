@@ -1,10 +1,10 @@
+from __future__ import annotations
+
 from collections import Counter
-from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-import pyfaidx
 from loguru import logger
 
 from scannls.base.basic_class import (
@@ -14,8 +14,14 @@ from scannls.base.basic_class import (
     NovelInsertion,
     reverse_complement,
 )
-from scannls.base.basic_read import Read
 from scannls.cli.nls_inference import infer_nls_from_connected_reads
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    import pyfaidx
+
+    from scannls.base.basic_read import Read
 
 
 class BasicNode:
@@ -133,7 +139,9 @@ class BasicNode:
                 self._add_successor(successor, graph, edge_data)
             else:
                 self.add_successor_from_list(
-                    successor.merged_parent_nodes, graph, edge_data
+                    successor.merged_parent_nodes,
+                    graph,
+                    edge_data,
                 )
 
     def add_predecessor(self, predecessor, graph=None, edge_data=None) -> None:
@@ -146,7 +154,9 @@ class BasicNode:
                 self._add_predecessor(predecessor, graph, edge_data)
             else:
                 self.add_predecessor_from_list(
-                    predecessor.merged_parent_nodes, graph, edge_data
+                    predecessor.merged_parent_nodes,
+                    graph,
+                    edge_data,
                 )
 
     def update_next_and_previous_node_in_nlpath(self, index: int, nlpath) -> None:
@@ -177,7 +187,7 @@ class NodeIdentity(Enum):
     MID = auto()
 
     @classmethod
-    def from_str(cls, s) -> "NodeIdentity":
+    def from_str(cls, s) -> NodeIdentity:
         if s == "HEAD":
             return cls.HEAD
         if s == "TAIL":
@@ -441,7 +451,7 @@ class EdgeData:
     insertion_info: Optional[Any] = None
 
     @classmethod
-    def from_event(cls, event: Event, read_id: str) -> "EdgeData":
+    def from_event(cls, event: Event, read_id: str) -> EdgeData:
         return cls(
             variantion_type=VariationType.from_str(event.sv_type),
             break_point1=BreakPoint.from_str(event.bp1),
@@ -452,7 +462,7 @@ class EdgeData:
 
     def equal(
         self,
-        other: "EdgeData",
+        other: EdgeData,
         *,
         compared_break_point: bool,
         break_point_threshold: int,
@@ -461,13 +471,15 @@ class EdgeData:
         flag = (
             self.variantion_type == self.variantion_type
             and _check_insertion_conditions_for_compare_insertion(
-                self.insertion_info, other.insertion_info
+                self.insertion_info,
+                other.insertion_info,
             )
         )
 
         if compared_break_point:
             flag = self.break_point1.equal(
-                other.break_point1, break_point_threshold
+                other.break_point1,
+                break_point_threshold,
             ) and self.break_point2.equal(other.break_point2, break_point_threshold)
 
         return flag
@@ -527,7 +539,7 @@ class Edge:
         if read_id not in self.edge_data.read_ids:
             self.edge_data.read_ids.append(read_id)
 
-    def updated(self, other: "Edge"):
+    def updated(self, other: Edge):
         # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
         self.break_point1 = other.break_point1
         self.break_point2 = other.break_point2
@@ -535,7 +547,8 @@ class Edge:
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
         if self.edge_data.insertion_info and isinstance(
-            self.edge_data.insertion_info[1], NovelInsertion | MicroHomology
+            self.edge_data.insertion_info[1],
+            NovelInsertion | MicroHomology,
         ):
             self.edge_data.insertion_info[1].increment_ao()
 
@@ -559,7 +572,7 @@ class Edge:
 
     def is_merged(
         self,
-        other_edge: "Edge",
+        other_edge: Edge,
         *,
         compared_break_point: bool = True,
         break_point_threshold: int = 10,
@@ -675,7 +688,10 @@ class NLPath:
             self.edges[key] = edge
 
     def get_edge(
-        self, nodes: Node, noded: Optional[Node] = None, nodes_idx: Optional[int] = None
+        self,
+        nodes: Node,
+        noded: Optional[Node] = None,
+        nodes_idx: Optional[int] = None,
     ) -> Optional[Edge]:
         """Get edge from the path."""
         if noded is not None:
@@ -687,7 +703,7 @@ class NLPath:
 
         if nodes_idx < len(self.nodes) - 1:
             return self.edges.get(
-                Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1])
+                Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1]),
             )
         return None
 
@@ -753,7 +769,8 @@ class NLPath:
         +2;-2 => down;up
         """
         is_bp1_upstream = NLPath.reorder_conditions_dict.get(
-            f"{evt.strand1}{evt.strand2}{evt.mode1}{evt.mode2}", None
+            f"{evt.strand1}{evt.strand2}{evt.mode1}{evt.mode2}",
+            None,
         )
 
         if not is_bp1_upstream:
@@ -840,7 +857,7 @@ class NLPath:
         gene_iv,
         motif_required,
         blat,
-    ) -> "NLPath":
+    ) -> NLPath:
         """Create a nlpath from a list of events."""
         events = NLPath.order_events_by_trancription_direction(events)
 
@@ -886,7 +903,9 @@ class NLPath:
 
                     # get type of insertion between first node and insertion node
                     insertion.update_cigarstring_sms(
-                        read1.sms, source_s=source_s, source_strand=event.strand1
+                        read1.sms,
+                        source_s=source_s,
+                        source_strand=event.strand1,
                     )
                     logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
                     insertion_mode = (
@@ -906,7 +925,7 @@ class NLPath:
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                        )
+                        ),
                     )
                     # get type of insertion between insertion node and second node
                     insertion_mode = (
@@ -927,7 +946,7 @@ class NLPath:
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                        )
+                        ),
                     )
 
                     if (
@@ -977,7 +996,7 @@ class NLPath:
 
                         insertion_edge_data = EdgeData(
                             variantion_type=VariationType.from_str(
-                                insertion_read2_event.sv_type
+                                insertion_read2_event.sv_type,
                             ),
                             break_point1=edge_prev_breakpoint,
                             break_point2=edge_next_breakpoint,
@@ -1040,7 +1059,9 @@ class NLPath:
 
 
 def update_node_with_other_node(
-    node: Node, other_node: Node, features: Iterable[str]
+    node: Node,
+    other_node: Node,
+    features: Iterable[str],
 ) -> None:
     """Update node with another node.
 
@@ -1052,7 +1073,10 @@ def update_node_with_other_node(
 
 
 def check_end_node_is_ploya(
-    node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.7, length: int = 20
+    node: Node,
+    genome_fasta: pyfaidx.Fasta,
+    ratio: float = 0.7,
+    length: int = 20,
 ) -> None:
     """Check whether the node is bona fide polyA or internal priming events."""
     if node.ref_end is None or node.ref_start is None:
@@ -1071,7 +1095,8 @@ def check_end_node_is_ploya(
 
 
 def _check_insertion_conditions_for_compare_insertion(
-    insertion_info1, insertion_info2
+    insertion_info1,
+    insertion_info2,
 ) -> bool:
     if insertion_info1 is None and insertion_info2 is None:
         return True
@@ -1093,7 +1118,8 @@ def _check_insertion_conditions_for_compare_insertion(
                 return True
 
             if isinstance(insertion_info1[1], MicroHomology) and isinstance(
-                insertion_info2[1], MicroHomology
+                insertion_info2[1],
+                MicroHomology,
             ):
                 return True
 

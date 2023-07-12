@@ -10,9 +10,9 @@ from typing import Optional
 from scannls import cppext
 from scannls.cli.helper import cigar_validity
 from scannls.exception import ReadNotFoundError
+from scannls.type import EventType
 
 from .basic_read import Read
-from .type import EventType
 
 
 class NovelInsertion:
@@ -153,7 +153,7 @@ class Insertion(Read):
             parse_cigar_result.cigartuples_without_soft,
             parse_cigar_result.query_len,
             query_qualities,
-        ),
+        )
 
         self.hit_num = hit_num
 
@@ -165,7 +165,10 @@ class Insertion(Read):
         )
 
     def update_cigarstring_sms(
-        self, sms: Iterable[int], source_s: str, source_strand: str
+        self,
+        sms: Iterable[int],
+        source_s: str,
+        source_strand: str,
     ) -> None:
         """Update cigarstring and sms of Insertion object."""
         _ls, _m, _rs = sms
@@ -436,7 +439,8 @@ class Event:
         :return: the updated node
         """
         new_node = self.update_specific_info_within_event(
-            new_node, ["annotation_code", "splicing_code", "modes", "genes"]
+            new_node,
+            ["annotation_code", "splicing_code", "modes", "genes"],
         )
 
     def update_insertion_node_info(self, insertion_node):

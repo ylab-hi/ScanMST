@@ -44,7 +44,7 @@ def insertion():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def nodes() -> list[Node]:
     """Return a list of nodes."""
     param_dict = [
@@ -381,7 +381,7 @@ def inv_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params})  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
         )
     return read_instances
 
@@ -524,7 +524,7 @@ def trans_same_strand_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params})  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
         )
     return read_instances
 
@@ -743,7 +743,7 @@ def trans_diff_strand_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params})  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
         )
     return read_instances
 
@@ -840,6 +840,6 @@ def tdup_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params})  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
         )
     return read_instances

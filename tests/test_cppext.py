@@ -14,9 +14,17 @@ from scannls import cppext as cpp
 
 @pytest.mark.skip(reason="TODO")
 @pytest.mark.parametrize(
-    "mapq_threshold,soft_len_threshold, "
-    "mismatch_threshold,align_len_threshold,"
-    "chrom, start, mode, current_names, all_names",
+    (
+        "mapq_threshold",
+        "soft_len_threshold",
+        "mismatch_threshold",
+        "align_len_threshold",
+        "chrom",
+        "start",
+        "mode",
+        "current_names",
+        "all_names",
+    ),
     [(15, 5, 3, 0.8, "chr17", 7708250, 1, ["one_hope_back"], ["one_hope_back"])],
 )
 def test_calculate_sr(

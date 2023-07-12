@@ -5,14 +5,17 @@
 @license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls.graph.basic_graph import NLPath
+if TYPE_CHECKING:
+    from scannls.graph import NLPath
 
 
 class Writer(ABC):
@@ -54,7 +57,7 @@ class Writer(ABC):
 class Writers:
     """Writers."""
 
-    def __init__(self, writers: tuple["Writer", ...]) -> None:
+    def __init__(self, writers: tuple[Writer, ...]) -> None:
         """Init writers."""
         self.writers_list = writers
 

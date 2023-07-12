@@ -66,7 +66,8 @@ class Ruler:
             or merge_condition.head2tail(head_node_a, tail_node_b)
             or merge_condition.head2tail(head_node_b, tail_node_a)
             or _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
-                middle_nodes_a, middle_nodes_b
+                middle_nodes_a,
+                middle_nodes_b,
             )
         ):
             connection = True
@@ -142,7 +143,8 @@ def middle_node_signature(node: Node) -> str:
 
 
 def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
-    node_list1: list[Node], node_list2: list[Node]
+    node_list1: list[Node],
+    node_list2: list[Node],
 ) -> bool:
     """Check if two node list of middle nodes have shared node or not.
     :param node_list1:  node_list1
@@ -150,7 +152,7 @@ def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
     :return:  True if two node list have shared node, otherwise False.
     """
     shared_middle_nodes = set(map(middle_node_signature, node_list1)) & set(
-        map(middle_node_signature, node_list2)
+        map(middle_node_signature, node_list2),
     )
 
     return len(shared_middle_nodes) > 0
@@ -158,17 +160,19 @@ def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
 
 def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
     for idx, (updated_node, current_node) in enumerate(
-        zip(path1[start_index : start_index + len(path2)], path2)  # type: ignore
+        zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
     ):
         # update exon coordinates
         updated_node.ref_start = min(  # type: ignore
-            updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
+            updated_node.exons[0][0],
+            current_node.exons[0][0],  # type: ignore
         )
         updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
         # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
         updated_node.ref_end = max(  # type: ignore
-            updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
+            updated_node.exons[-1][1],
+            current_node.exons[-1][1],  # type: ignore
         )
         updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
 
@@ -184,7 +188,10 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
 
 
 def merge_same_len_node_list(
-    path1: NLPath, path2: NLPath, start_index: int, threashold: int
+    path1: NLPath,
+    path2: NLPath,
+    start_index: int,
+    threashold: int,
 ) -> bool:
     """seires1 is equal than series2 and series1 merge series2.
 
@@ -199,7 +206,7 @@ def merge_same_len_node_list(
     flag = True
 
     for idx, (node1, node2) in enumerate(
-        zip(path1[start_index : start_index + len(path2)], path2)  # type: ignore
+        zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
     ):
         node1_edge = path1.get_edge(nodes=node1, nodes_idx=start_index + idx)
         node2_edge = path2.get_edge(nodes=node2, nodes_idx=idx)
@@ -207,7 +214,9 @@ def merge_same_len_node_list(
         same_edge = True
         if node2_edge is not None and node1_edge is not None:
             same_edge = node1_edge.is_merged(
-                node2_edge, compared_break_point=False, break_point_threshold=threashold
+                node2_edge,
+                compared_break_point=False,
+                break_point_threshold=threashold,
             )
 
         if node1.self_identity.is_head() and node2.self_identity.is_head():
@@ -237,7 +246,7 @@ def merge_same_len_node_list(
 
         else:
             raise ValueError(
-                f"invalid node identity {node1.self_identity=} {node2.self_identity=}"
+                f"invalid node identity {node1.self_identity=} {node2.self_identity=}",
             )
 
     return flag
@@ -361,17 +370,22 @@ class ClusterFinder:
 
     @staticmethod
     def check_if_two_nlpath_merge(
-        path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]
+        path1: NLPath,
+        path2: NLPath,
+        merge_keys: dict[int, list[str]],
     ):
         series_2_nodes_key = "".join(merge_keys[path2.id])
 
         for start_index in range(0, len(path1) - len(path2) + 1):
             series_1_nodes_key = "".join(
-                merge_keys[path1.id][start_index : start_index + len(path2)]
+                merge_keys[path1.id][start_index : start_index + len(path2)],
             )
 
             if series_1_nodes_key == series_2_nodes_key and merge_same_len_node_list(
-                path1, path2, start_index, 1
+                path1,
+                path2,
+                start_index,
+                1,
             ):
                 merge_nlpath(path1, path2, start_index)  # type: ignore
                 path1.merge_factor += 1
@@ -418,7 +432,9 @@ class ClusterFinder:
 
             for current_nlpath in nlpaths:
                 if ClusterFinder.check_merge(
-                    slected_nlpath, current_nlpath, merge_keys
+                    slected_nlpath,
+                    current_nlpath,
+                    merge_keys,
                 ):
                     nlpaths.remove(current_nlpath)
 

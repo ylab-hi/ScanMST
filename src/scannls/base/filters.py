@@ -6,9 +6,9 @@ from typing import Optional
 import HTSeq
 
 from scannls.graph import NLPath, Node
+from scannls.type import LoggerType
 
 from .basic_class import Event
-from .type import LoggerType
 
 
 @dataclass
@@ -35,7 +35,10 @@ class ExonFilter:
     def __init__(self, gtf_file: str, boundary_size: int, logger: LoggerType) -> None:
         """Initialize the ExonFilter class."""
         self.exons_gas = _extract_annotated_exons(
-            gtf_file, boundary_size, shrink=True, consider_strand=False
+            gtf_file,
+            boundary_size,
+            shrink=True,
+            consider_strand=False,
         )
         self.logger = logger
 
@@ -98,20 +101,32 @@ def _extract_annotated_exons(
                 if shrink:
                     if consider_strand:
                         iv = HTSeq.GenomicInterval(
-                            chrom, start + boundary_size, end - boundary_size, strand
+                            chrom,
+                            start + boundary_size,
+                            end - boundary_size,
+                            strand,
                         )
                     else:
                         iv = HTSeq.GenomicInterval(
-                            chrom, start + boundary_size, end - boundary_size, "."
+                            chrom,
+                            start + boundary_size,
+                            end - boundary_size,
+                            ".",
                         )
                 else:
                     if consider_strand:
                         iv = HTSeq.GenomicInterval(
-                            chrom, start - boundary_size, end + boundary_size, strand
+                            chrom,
+                            start - boundary_size,
+                            end + boundary_size,
+                            strand,
                         )
                     else:
                         iv = HTSeq.GenomicInterval(
-                            chrom, start - boundary_size, end + boundary_size, "."
+                            chrom,
+                            start - boundary_size,
+                            end + boundary_size,
+                            ".",
                         )
                 exons_gas[iv] += exon_id
     return exons_gas
@@ -131,7 +146,10 @@ class CircRNAFilter:
         """Initialize the CircRNAFilter class."""
         self.logger = logger
         self.exons_gas = _extract_annotated_exons(
-            gtf_file, boundary_size, shrink=False, consider_strand=True
+            gtf_file,
+            boundary_size,
+            shrink=False,
+            consider_strand=True,
         )
 
     def is_circrna(self, series: NLPath) -> bool:
@@ -157,7 +175,7 @@ class CircRNAFilter:
                         or nodes[0].ref_end == nodes[1].ref_end
                     )
                 )
-                and self.is_megaexon_superpose_with_annotated_exons(longest_node)
+                and self.is_megaexon_superpose_with_annotated_exons(longest_node),
             )
 
         # multi-hop event
@@ -208,7 +226,9 @@ class CircRNAFilter:
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
 
     def is_megaexon_superpose_with_annotated_exons(
-        self, node: Node, threshold: int = 10
+        self,
+        node: Node,
+        threshold: int = 10,
     ) -> bool:
         """Check if all the exons in the megaexon can superpose with annotated exons."""
         flag = True
@@ -228,7 +248,10 @@ class CircRNAFilter:
 
             # overlapping annotated exon does not satisfy condition
             if not CircRNAFilter.is_largest_overlapping_exon(
-                common_exons, _exon_start, _exon_end, threshold
+                common_exons,
+                _exon_start,
+                _exon_end,
+                threshold,
             ):
                 flag = False
 
@@ -257,7 +280,7 @@ class CircRNAFilter:
 
         return bool(
             start_position - largest_overlapping_exon.start < threshold
-            and largest_overlapping_exon.end - end_position < threshold
+            and largest_overlapping_exon.end - end_position < threshold,
         )
 
     @staticmethod
@@ -266,7 +289,9 @@ class CircRNAFilter:
     ) -> Node:
         """Obtain mega-exon with the longest exon length."""
         return sorted(
-            nodes, key=lambda x: sum(j[1] - j[0] for j in x.exons), reverse=True
+            nodes,
+            key=lambda x: sum(j[1] - j[0] for j in x.exons),
+            reverse=True,
         )[0]
 
 

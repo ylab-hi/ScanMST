@@ -20,7 +20,10 @@ def get_label_from_node(node: Node) -> str:
 
 
 def plot_graph_helper(
-    start_node: Node, path, nx_graph: nx.Graph, labels: dict[Node, str]
+    start_node: Node,
+    path,
+    nx_graph: nx.Graph,
+    labels: dict[Node, str],
 ) -> None:
     """Plot graph helper."""
     if not start_node or start_node in path:
@@ -30,13 +33,17 @@ def plot_graph_helper(
         for successor in successors:
             labels.update({successor: get_label_from_node(successor)})
             nx_graph.add_edge(
-                get_label_from_node(start_node), get_label_from_node(successor)
+                get_label_from_node(start_node),
+                get_label_from_node(successor),
             )
             plot_graph_helper(successor, [*path, start_node], nx_graph, labels)
     else:
         # successor be [] or None
         plot_graph_helper(
-            successors, [*path, start_node], nx_graph, labels  # type: ignore
+            successors,
+            [*path, start_node],
+            nx_graph,
+            labels,  # type: ignore
         )
 
 

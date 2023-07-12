@@ -13,7 +13,9 @@ from scannls import Node
 
 
 def add_edge_according_order(
-    nodes: Sequence[Node], parent_order: int, child_order: int
+    nodes: Sequence[Node],
+    parent_order: int,
+    child_order: int,
 ):
     """Add edge according order.
 

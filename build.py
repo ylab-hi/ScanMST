@@ -81,7 +81,7 @@ external_htslib_libraries = ["z", "hts"]
 @contextmanager
 def change_dir(path: str):
     """Change directory."""
-    save_dir = os.getcwd()
+    save_dir = Path.cwd()
     os.chdir(path)
     try:
         yield
@@ -135,12 +135,12 @@ def build(setup_kwargs):
             include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,
-        )
+        ),
     ]
     setup_kwargs.update(
         {
             "ext_modules": ext_modules,
             "cmdclass": {"build_ext": build_ext},
             "zip_safe": False,
-        }
+        },
     )

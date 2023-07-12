@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Test the utils.py module."""
 import shutil
 
@@ -38,7 +37,7 @@ class FakeRead:
 
 
 @pytest.mark.parametrize(
-    "read, mode, expected_result",
+    ("read", "mode", "expected_result"),
     [
         (
             FakeRead(

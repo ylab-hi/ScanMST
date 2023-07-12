@@ -39,7 +39,7 @@ class FastaWriter(Writer):
         """Formatter for writing data."""
         if sequence == "":
             logger.warning(
-                f"{self.__class__.__name__}: Sequence ID or sequence is empty."
+                f"{self.__class__.__name__}: Sequence ID or sequence is empty.",
             )
         return f">{seq_id:0>6}\n{sequence}\n"
 
@@ -79,17 +79,19 @@ class FastaWriter(Writer):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
             logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
+                f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
         sequence, node_length_str = get_nodes_sequence_from_series(
-            data_object, reference_io=self.reference_io
+            data_object,
+            reference_io=self.reference_io,
         )
 
         self.write_line(self.formatter(f"{self.id} {node_length_str}", sequence))
 
 
 def get_nodes_sequence_from_series(
-    series: Path, reference_io: Fasta
+    series: Path,
+    reference_io: Fasta,
 ) -> tuple[str, str]:
     """Get sequence of nodes of series.
 

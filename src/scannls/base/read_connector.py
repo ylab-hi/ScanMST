@@ -1,5 +1,5 @@
 """Connecter Reads.
-@Time:        12/15/21 2:14 PM
+@Time:        12/15/21 2:14 PM.
 """
 import re
 from itertools import combinations
@@ -9,11 +9,11 @@ from Bio import SearchIO
 from loguru import logger
 
 from scannls.cli.helper import cigar_validity
+from scannls.type import LoggerType
 
 from .basic_class import reverse_complement
 from .basic_read import Read
 from .blat import Blat
-from .type import LoggerType
 
 
 class ReadsConnector:
@@ -89,7 +89,8 @@ class ReadsConnector:
     def init_mode_judge(read1: Read, read2: Read) -> None:
         """Initialize the mode of the reads."""
         sorted_by_s_length = sorted(
-            [read1, read2], key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
+            [read1, read2],
+            key=lambda x: min(x.lt_soft_len, x.rt_soft_len),
         )
 
         if read1 == sorted_by_s_length[0]:
@@ -128,7 +129,7 @@ class ReadsConnector:
         match_flag = False
 
         self.logger.trace(
-            f"query length ={len(query_seq)} target length ={len(target_seq)}"
+            f"query length ={len(query_seq)} target length ={len(target_seq)}",
         )
         if len(target_seq) <= minimum_s_length:
             return match_flag
@@ -268,7 +269,11 @@ class ReadsConnector:
         return flag
 
     def test_2case(
-        self, start_read: Read, read: Read, *, is_compare_for_ms: bool
+        self,
+        start_read: Read,
+        read: Read,
+        *,
+        is_compare_for_ms: bool,
     ) -> Any:
         """Test 2 case for two reads to check if they are connected.
 
@@ -315,7 +320,10 @@ class ReadsConnector:
         )
         if match_flag1:
             condition1 = self._check_if_strand_mode_for_compare_ms(
-                start_read, read, same_strand=same_strand, first_is_matched=match_flag1
+                start_read,
+                read,
+                same_strand=same_strand,
+                first_is_matched=match_flag1,
             )
         if match_flag1 and condition1:  # may same
             read.mode = 2
@@ -385,13 +393,14 @@ class ReadsConnector:
 
             return True, start_read
         self.logger.debug(
-            "start read cannot connect with read and try to connect other reads"
+            "start read cannot connect with read and try to connect other reads",
         )
         return False, start_read  # not match
 
     @staticmethod
     def _double_check_for_start_end_read_determine_new_read_mode(
-        read: Read, new_read_strand: str
+        read: Read,
+        new_read_strand: str,
     ) -> int:
         """Double check for start and end read determine new read mode."""
         read.mode = 1 if read.mode == 2 else 2
@@ -400,19 +409,24 @@ class ReadsConnector:
         return 1 if read.mode == 1 else 2
 
     def _double_check_create_new_read_calculate_sms(
-        self, hsp: Any, query_seq: str, read: Read
+        self,
+        hsp: Any,
+        query_seq: str,
+        read: Read,
     ) -> Read:
         """Double check creat new read and calculate sms."""
         mapq = 60
         chrom, position, strand, cigar_str, num_of_mismatch = self.blat.psl2sam(
-            hsp, len(query_seq)
+            hsp,
+            len(query_seq),
         )
 
         lt_s_len = hsp.query_start
         rt_s_len = len(query_seq) - hsp.query_end
         new_read_mode = (
             ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
-                read, strand
+                read,
+                strand,
             )
         )
 
@@ -427,9 +441,9 @@ class ReadsConnector:
         else:
             cigar_str = (
                 f"{read.lt_soft_len + read.read_match_size}S"
-                + f"{lt_s_len}S"
-                + cigar_str
-                + f"{rt_s_len}S"
+                f"{lt_s_len}S"
+                f"{cigar_str}"
+                f"{rt_s_len}S"
             )
             cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
@@ -451,7 +465,11 @@ class ReadsConnector:
         return new_read
 
     def __double_check_blat_query(
-        self, query_sequence, align_len_threshold, threshold_identity, top
+        self,
+        query_sequence,
+        align_len_threshold,
+        threshold_identity,
+        top,
     ):
         """Double check blat query."""
         flag = False
@@ -466,7 +484,10 @@ class ReadsConnector:
             return flag, None, None
 
         hit, keep_hsp = self.blat._query_insertion(
-            blat_result, query_sequence, threshold_identity, top=top
+            blat_result,
+            query_sequence,
+            threshold_identity,
+            top=top,
         )
         return True, hit, keep_hsp
 
@@ -486,7 +507,10 @@ class ReadsConnector:
         )
 
         flag, hit, keep_hsp = self.__double_check_blat_query(
-            query_sequence, self.align_len_threshold, self.threshold_identity, self.top
+            query_sequence,
+            self.align_len_threshold,
+            self.threshold_identity,
+            self.top,
         )
 
         assert keep_hsp is not None
@@ -495,7 +519,9 @@ class ReadsConnector:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
             new_read = self._double_check_create_new_read_calculate_sms(
-                hsp, query_sequence, read
+                hsp,
+                query_sequence,
+                read,
             )
 
             if read_type == "start":
@@ -529,7 +555,8 @@ class ReadsConnector:
         """
         # find start node and end node
         temp_list = sorted(
-            self.aln_list, key=lambda x: min(x.lt_soft_len, x.rt_soft_len)
+            self.aln_list,
+            key=lambda x: min(x.lt_soft_len, x.rt_soft_len),
         )
         start_nodes = temp_list[:2]
         self.candidate_nodes = temp_list[2:]
@@ -551,7 +578,7 @@ class ReadsConnector:
             )
 
         self.candidate_nodes.sort(
-            key=lambda x: self.__sort_candidate_reads_key(x, start_read)
+            key=lambda x: self.__sort_candidate_reads_key(x, start_read),
         )
         start_read.adhocseq = start_read.query_sequence
 
@@ -570,13 +597,15 @@ class ReadsConnector:
                 if self.index == len(self.candidate_nodes):
                     logger.warning(
                         f"ReadsConnector: cannot connect all reads in candidate_nodes "
-                        f"{start_read.query_name}"
+                        f"{start_read.query_name}",
                     )
                     return False
                 read = self.candidate_nodes[self.index]
                 ReadsConnector.init_mode_judge(start_read, read)
                 flag, start_read = self.test_2case(
-                    start_read, read, is_compare_for_ms=True
+                    start_read,
+                    read,
+                    is_compare_for_ms=True,
                 )
 
                 if not flag:  # False
@@ -587,7 +616,9 @@ class ReadsConnector:
 
             ReadsConnector.init_mode_judge(start_read, end_read)
             _, start_read = self.test_2case(
-                start_read, end_read, is_compare_for_ms=True
+                start_read,
+                end_read,
+                is_compare_for_ms=True,
             )
             self._double_check_for_start_end_read(end_read, "end")
 
@@ -649,7 +680,9 @@ def detect_read_read_connections_from_cigar(
         return chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
 
     def obtain_sa_query_seq_from_ra(
-        query_seq_ra: str, strand_ra: str, strand_sa: str
+        query_seq_ra: str,
+        strand_ra: str,
+        strand_sa: str,
     ) -> str:
         """Helper function to define query_seq for the supplementary alignment.
 
@@ -692,12 +725,12 @@ def detect_read_read_connections_from_cigar(
                 mean_qualities_read1_match = mean(
                     read1.query_qualities[
                         read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)
-                    ]
+                    ],
                 )
                 mean_qualities_read2_match = mean(
                     read2.query_qualities[
                         read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
-                    ]
+                    ],
                 )
             if (
                 read1.strand != read2.strand
@@ -776,7 +809,7 @@ def detect_read_read_connections_from_cigar(
                 nm_ra,  # type: ignore
                 seq_ra,
                 query_qualities_ra,
-            )
+            ),
         )
 
     for sa_string in chimeric_aln:
@@ -807,7 +840,7 @@ def detect_read_read_connections_from_cigar(
                     nm_sa,
                     seq_sa,
                     query_qualities_sa,
-                )
+                ),
             )
 
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
@@ -820,7 +853,9 @@ def detect_read_read_connections_from_cigar(
         return noreturn
 
     read_connector = ReadsConnector(
-        read_list=chimeric_aln_list, blat=blat, logger=logger
+        read_list=chimeric_aln_list,
+        blat=blat,
+        logger=logger,
     )
 
     flag = read_connector.connect()
@@ -828,7 +863,7 @@ def detect_read_read_connections_from_cigar(
     if flag:
         logger.debug(
             f"reads chain: {read_connector.reads_chain};"
-            f" reads pair mode: {read_connector.read_pair_mode_dict}"
+            f" reads pair mode: {read_connector.read_pair_mode_dict}",
         )
         return (
             read_connector.reads_chain,

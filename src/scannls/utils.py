@@ -15,8 +15,8 @@ import pysam
 from loguru import logger
 
 from scannls import cppext
+from scannls.type import LoggerType, Mode
 
-from .base.type import LoggerType, Mode
 from .blat import load_fa2bit
 from .exception import ToolNotFoundError
 
@@ -61,14 +61,14 @@ def find_2bit_file(fasta_path: str, parameter: Optional[list[str]] = None) -> st
     if not bit_file.exists():
         logger.info(f"{bit_file.as_posix()} Not Found Creating...")
         subprocess.check_call(
-            [load_fa2bit(), " ".join(parameter), fasta_path, bit_file.as_posix()]
+            [load_fa2bit(), " ".join(parameter), fasta_path, bit_file.as_posix()],
         )
     return bit_file.as_posix()
 
 
 def sleep(input_file: str, max_time: int = 30) -> None:
     """Sleep random time."""
-    file_size = os.stat(input_file).st_size
+    file_size = Path.stat(Path(input_file)).st_size
     secrets.SystemRandom().seed(file_size)
     time.sleep(secrets.randbelow(max_time))
 
@@ -218,7 +218,9 @@ def get_longest_insertion_sequence(
     # sorted by insertion length
     # if multiple insertions with the same size, choose the one with smallest reference position
     ins_ref_pos, ins_read_pos, ins_length = sorted(
-        insertion_list, key=lambda x: x[2], reverse=True
+        insertion_list,
+        key=lambda x: x[2],
+        reverse=True,
     )[0]
     ins_seq = read.query_sequence[ins_read_pos : (ins_read_pos + ins_length)]
     # update `ins_ref_pos` if insertion has adjacent N (100I500N)

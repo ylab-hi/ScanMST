@@ -8,7 +8,7 @@
 """
 from loguru._logger import Logger
 
-from .type import LoggerType
+from scannls.type import LoggerType
 
 
 class MyLogger(LoggerType):

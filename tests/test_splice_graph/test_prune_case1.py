@@ -14,7 +14,7 @@ from tests import assign_value_for_instance
 from . import add_edge_according_order
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def graph_for_prun():
     """Create a splice graph for testing pruning.
 
@@ -292,7 +292,7 @@ def graph_for_prun():
     for node in nodes:
         graph.add_node_with_similar_key(node)
 
-    yield graph
+    return graph
 
 
 @pytest.fixture(autouse=True)

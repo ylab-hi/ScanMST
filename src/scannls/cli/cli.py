@@ -19,13 +19,13 @@ from scannls import (
     ClusterFinder,
     FastaWriter,
     GTFWriter,
-    LoggerType,
     MyLogger,
-    NLGraph,
     ParallelWorker,
     VCFWriter,
     Writers,
 )
+from scannls.graph import NLGraph
+from scannls.type import LoggerType
 from scannls.utils import find_2bit_file, sleep
 
 from .arg import DefaultOptions
@@ -76,7 +76,7 @@ def parse_splice_graph_for_cliques_seq(
             for series in splice_graph(clique, ind, is_plot=False):
                 if len(series) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {series}{series[0].query_name}"
+                        f"Single Series {ind}: {series}{series[0].query_name}",
                     )
                 if series.is_all_node_sr_higher_than_threshold(options.support_reads):
                     logger.debug(f"Output Clique{ind}: {series}")
@@ -136,14 +136,15 @@ def parse_splice_graph_for_cliques_par(
     )
     cliques = [[list(clique)] for clique in cliques]
     result = parallel_workers.map(
-        cliques, chunksize=max(1, len(cliques) // parallel_workers.n_jobs)
+        cliques,
+        chunksize=max(1, len(cliques) // parallel_workers.n_jobs),
     )
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
             for series in clique[0]:  # reduce list depth
                 if len(series) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {series}{series[0].query_name}"
+                        f"Single Series {ind}: {series}{series[0].query_name}",
                     )
                 if series.is_all_node_sr_higher_than_threshold(options.support_reads):
                     logger.debug(f"Output Clique{ind}: {series}")

@@ -57,17 +57,22 @@ class MergeCondition:
 
     def head2head(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-            node1, node2, self.threshold
+            node1,
+            node2,
+            self.threshold,
         )
 
     def head2tail(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-            node1, node2, self.threshold
+            node1,
+            node2,
+            self.threshold,
         )
 
     def head2mid(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-            node1, node2
+            node1,
+            node2,
         )
 
     def mid2head(self, node1: Node, node2: Node) -> bool:
@@ -81,7 +86,8 @@ class MergeCondition:
 
     def mid2tail(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-            node2, node1
+            node2,
+            node1,
         )
 
     def tail2head(self, node1: Node, node2: Node) -> bool:
@@ -92,7 +98,9 @@ class MergeCondition:
 
     def tail2tail(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-            node1, node2, self.threshold
+            node1,
+            node2,
+            self.threshold,
         )
 
     def merged(self, node1: Node, node2: Node) -> bool:
@@ -124,7 +132,9 @@ class MergeCondition:
 
 
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-    node1: Node, node2: Node, threshold: int
+    node1: Node,
+    node2: Node,
+    threshold: int,
 ) -> bool:
     """Check if both head nodes can be merged.
 
@@ -222,7 +232,9 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
 
 
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-    node1: Node, node2: Node, threshold: float
+    node1: Node,
+    node2: Node,
+    threshold: float,
 ) -> bool:
     """Check if two end nodes can be merged or not.
 

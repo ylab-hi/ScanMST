@@ -3,7 +3,7 @@ import copy
 import inspect
 import math
 import re
-from itertools import chain, pairwise
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +24,8 @@ from scannls import (
     reverse_complement,
 )
 from scannls.base.filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
-from scannls.base.type import LoggerType
-from scannls.graph.basic_graph import NLPath
+from scannls.graph import NLPath
+from scannls.type import LoggerType
 
 from .helper import (
     blat2chimeric_alignment,
@@ -138,7 +138,9 @@ class BamScanner:
                 nm = read.get_tag("NM")
                 md_tag = read.get_tag("MD")
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
-                    sup_aln_cigar, md_tag, self.long_indel_length
+                    sup_aln_cigar,
+                    md_tag,
+                    self.long_indel_length,
                 )
 
                 subs_fraction = 0 if nm == 0 else num_of_subs / nm
@@ -156,7 +158,7 @@ class BamScanner:
                 else:
                     self.logger.trace(
                         f"{read.query_name=} does not pass the substitutions/indel cutoff. "
-                        f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}"
+                        f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}",
                     )
         return self.representative_alignments_new_cigar
 
@@ -167,7 +169,7 @@ def _get_genome_fasta(ref_genome):
         return Fasta(str(ref_genome), sequence_always_upper=True)
     except FastaNotFoundError:
         raise SystemExit(
-            f"Reference File {ref_genome} is Not Found!"
+            f"Reference File {ref_genome} is Not Found!",
         ) from FastaNotFoundError
 
 
@@ -231,7 +233,7 @@ def detect_sv_from_cigar(
     if read_chains:
         # every chain is a group of connected reads
         # every chain may have a list of events
-        for _lt, _rt in pairwise(read_chains):
+        for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
             if (_lt, _rt) in reads_pair_mode_dict:
                 _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
 
@@ -240,7 +242,7 @@ def detect_sv_from_cigar(
 
             if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
                 logger.warning(
-                    f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}"
+                    f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}",
                 )
 
             event = Event(
@@ -254,7 +256,7 @@ def detect_sv_from_cigar(
                     cvg=cvg,
                     gene_iv=gene_iv,
                     motif_required=motif_required,
-                )
+                ),
             )
 
             if not event.is_type_na():
@@ -307,7 +309,7 @@ def _scan_bam_helper(
         chrom_bam_io_object = in_bam_io_object.fetch(contig=identified_key)
     else:
         chrom_bam_io_object = chain.from_iterable(
-            [in_bam_io_object.fetch(contig=key) for key in identified_key]
+            [in_bam_io_object.fetch(contig=key) for key in identified_key],
         )
 
     logger.trace(f"{identified_key=} start")
@@ -335,7 +337,7 @@ def _scan_bam_helper(
             if read.has_tag("SA"):
                 logger.trace(
                     f"Pre-checking: {read.query_name= } has SA; supplementary read: "
-                    f"{read.is_supplementary}"
+                    f"{read.is_supplementary}",
                 )
 
                 updated_chimeric_alns = []
@@ -367,7 +369,7 @@ def _scan_bam_helper(
                         # supplementary alignments with lower MAPQ is allowed
                         if not (int(nm_sa) > max_allowed_nm):
                             updated_chimeric_alns.append(
-                                f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}"
+                                f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}",
                             )
 
                 if (
@@ -415,7 +417,7 @@ def _scan_bam_helper(
                         logger.trace(
                             f"Pre-checking: {read.query_name= } "
                             f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it "
-                            f"has one SA tag "
+                            f"has one SA tag ",
                         )
                         read.set_tag("SA", chimeric_aln_str)
 
@@ -440,12 +442,12 @@ def _scan_bam_helper(
                     if primary_aln_cigarstring:
                         logger.trace(
                             f"Pre-checking: {read.query_name= } "
-                            f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag"
+                            f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag",
                         )
 
                         read.cigarstring = primary_aln_cigarstring
                         read.cigartuples = cigarstring2cigartuples(
-                            primary_aln_cigarstring
+                            primary_aln_cigarstring,
                         )
                         read.reference_start = ins_ref_pos
                         read.set_tag("NM", read_ori_nm - ins_len)
@@ -454,13 +456,15 @@ def _scan_bam_helper(
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if read.has_tag("SA"):
                 logger.trace(
-                    f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}"
+                    f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}",
                 )
 
                 nm = read.get_tag("NM")
 
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
-                    read.cigarstring, read.get_tag("MD"), long_indel_length
+                    read.cigarstring,
+                    read.get_tag("MD"),
+                    long_indel_length,
                 )
 
                 subs_fraction = 0 if nm == 0 else num_of_subs / nm
@@ -499,9 +503,9 @@ def _scan_bam_helper(
                         }:
                             if exon_filter:
                                 if not exon_filter.is_breakpoints_in_same_exon(
-                                    event
+                                    event,
                                 ) and not rt_switching_filter.is_from_rt_switching(
-                                    event
+                                    event,
                                 ):
                                     nls_event_list.append(event)
                             elif not rt_switching_filter.is_from_rt_switching(event):
@@ -542,7 +546,7 @@ def _scan_bam_helper(
                 else:
                     logger.trace(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "
-                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}"
+                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}",
                     )
     logger.debug(f"Total Series: {nls_src_forms_list}")
     logger.complete()
@@ -601,7 +605,7 @@ def scanbam_run(
 
     num_chimeric_reads = len(representative_alignments_new_cigar)
     logger.info(
-        f"species: {species}, Reads coverage: {avg_cov:.2f}, Number of chimeric reads: {num_chimeric_reads}"
+        f"species: {species}, Reads coverage: {avg_cov:.2f}, Number of chimeric reads: {num_chimeric_reads}",
     )
     # get the chromosome name we want to scan
 
