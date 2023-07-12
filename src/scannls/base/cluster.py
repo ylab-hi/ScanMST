@@ -1,7 +1,6 @@
-"""Find cliques in a graph.
+"""cluster paths.
 
 @Filename:    cluster.py
-@license:     MIT Licence
 @Time:        1/19/22 7:59 PM
 """
 from itertools import combinations
