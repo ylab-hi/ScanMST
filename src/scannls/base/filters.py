@@ -1,17 +1,14 @@
 # !/usr/bin/env python
-"""Filters based on breakpoints or circurlarRNAs.
-"""
+"""Filters based on breakpoints or circurlarRNAs."""
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List
 from typing import Optional
-from typing import Set
 
 import HTSeq
 
-from ..graph import NLPath
-from ..graph import Node
-from .basicClass import Event
+from scannls.graph import NLPath, Node
+
+from .basic_class import Event
 from .type import LoggerType
 
 
@@ -65,10 +62,7 @@ class ExonFilter:
         exon_set1 = self.exons_gas[gp1]
         exon_set2 = self.exons_gas[gp2]
         common_exons = exon_set1.intersection(exon_set2)
-        if len(common_exons) > 0:
-            return True
-        else:
-            return False
+        return len(common_exons) > 0
 
 
 def _extract_annotated_exons(
@@ -142,7 +136,7 @@ class CircRNAFilter:
     2) There are full inclusions relationship between mega-exons, in terms of exons.
        For multi-hop transcripts, the middle mega-exons should be identical.
        e.g., [3][4]->[1][2][3][4]
-             [4]->[1][2][3][4]->[1][2][3][4]->[1]
+             [4]->[1][2][3][4]->[1][2][3][4]->[1].
     """
 
     def __init__(self, gtf_file: str, boundary_size: int, logger: LoggerType) -> None:
@@ -157,16 +151,14 @@ class CircRNAFilter:
         # one-hop event
         if len(nodes) == 2:
             longest_node = CircRNAFilter.obtain_longest_mega_exon(nodes)
-            if (
+            return bool(
                 nodes[0].sv_type == "TDUP"
                 and (
-                    (
-                        len(nodes[0].introns) > 0
-                        and len(nodes[1].introns) > 0
-                        and (
-                            set(nodes[0].introns).issuperset(set(nodes[1].introns))
-                            or set(nodes[0].introns).issubset(set(nodes[1].introns))
-                        )
+                    len(nodes[0].introns) > 0
+                    and len(nodes[1].introns) > 0
+                    and (
+                        set(nodes[0].introns).issuperset(set(nodes[1].introns))
+                        or set(nodes[0].introns).issubset(set(nodes[1].introns))
                     )
                     or (
                         set(nodes[0].exons).issuperset(set(nodes[1].exons))
@@ -178,10 +170,7 @@ class CircRNAFilter:
                     )
                 )
                 and self.is_megaexon_superpose_with_annotated_exons(longest_node)
-            ):
-                return True
-            else:
-                return False
+            )
         # multi-hop event
         else:
             num_of_tdups = 0
@@ -263,13 +252,12 @@ class CircRNAFilter:
 
     @staticmethod
     def is_largest_overlapping_exon(
-        overlapping_exons_set: Set[ExonInfo],
+        overlapping_exons_set: set[ExonInfo],
         start_position: int,
         end_position: int,
         threshold: int = 10,
     ) -> bool:
-        """
-        Check if the exon in mega exon overlapped with annotated exon with largest fraction.
+        """Check if the exon in mega exon overlapped with annotated exon with largest fraction.
 
         [XXXXXXXXXXXXXXXXXXXXXXX]
           [XXXXXXXXXXXXXXXXXX]
@@ -283,17 +271,14 @@ class CircRNAFilter:
             reverse=True,
         )[0]
 
-        if (
+        return bool(
             start_position - largest_overlapping_exon.start < threshold
             and largest_overlapping_exon.end - end_position < threshold
-        ):
-            return True
-        else:
-            return False
+        )
 
     @staticmethod
     def obtain_longest_mega_exon(
-        nodes: List[Node],
+        nodes: list[Node],
     ) -> Node:
         """Obtain mega-exon with the longest exon length."""
         return sorted(
@@ -306,13 +291,11 @@ class RTSwitchingFilter:
 
     def __init__(self, rt_switching_filter_len: int, logger: LoggerType) -> None:
         """Initialize the RTSwitchingFilter class."""
-
         self.filter_size = rt_switching_filter_len
         self.logger = logger
 
     def is_from_rt_switching(self, event: Event) -> bool:
         """The event is from RT switching."""
-
         return (
             event.has_microhomology()
             and event.insertion_microhomology_len > self.filter_size

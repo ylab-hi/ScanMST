@@ -1,13 +1,14 @@
-from .basicGraph import BasicNode
-from .basicGraph import Edge
-from .basicGraph import EdgeData
-from .basicGraph import NLPath
-from .basicGraph import Node
-from .basicGraph import NodeIdentity
-from .basicGraph import SpliceType
-from .basicGraph import VariationType
+from .basic_graph import (
+    BasicNode,
+    Edge,
+    EdgeData,
+    NLPath,
+    Node,
+    NodeIdentity,
+    SpliceType,
+    VariationType,
+)
 from .nlgraph import NLGraph
-
 
 __all__ = [
     "Node",

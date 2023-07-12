@@ -1,24 +1,19 @@
-# !/usr/bin/env python
 """GTF writer class.
 
 @Filename:    gtfWriter.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        1/30/22 6:18 PM
 """
+import copy
 from functools import singledispatchmethod
-from typing import Any
-from typing import IO
-from typing import List
+from typing import IO, Any
 
 from loguru import logger
-import copy
 
-from ..base.basicClass import MicroHomology
-from ..base.basicClass import NovelInsertion
-from ..exception import ExonsNotFoundError
-from ..graph import NLPath
-from ..graph import Node
+from scannls.base.basic_class import MicroHomology, NovelInsertion
+from scannls.exception import ExonsNotFoundError
+from scannls.graph import NLPath, Node
+
 from .writer import Writer
 
 

@@ -13,8 +13,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Optional
 
-from pybind11.setup_helpers import build_ext
-from pybind11.setup_helpers import Pybind11Extension
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 
 def remove_env(key: str):
@@ -111,6 +110,8 @@ def get_files(path: Optional[Path], suffix: list[str]) -> typing.Iterator[str]:
     if isinstance(path, str):
         path = Path(path)
 
+    assert path is not None
+
     for file in path.iterdir():
         if file.is_dir():
             yield from get_files(file, suffix)
@@ -129,8 +130,8 @@ def build(setup_kwargs):
                 "src/scannls/cppext/src/ssw.c",
                 "src/scannls/cppext/src/ssw_cpp.cpp",
                 # "src/scannls/cppext/src/binding.cpp",
-            ]
-            + list(get_files("src/scannls/cppext/bindings", [".cpp", ".c"])),
+                *list(get_files(Path("src/scannls/cppext/bindings"), [".cpp", ".c"])),
+            ],
             include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,

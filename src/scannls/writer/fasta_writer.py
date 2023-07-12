@@ -7,17 +7,14 @@
 """
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import Any
-from typing import IO
+from typing import IO, Any
 
 from loguru import logger
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta, FastaNotFoundError
 
-from ..base.basicClass import MicroHomology
-from ..base.basicClass import NovelInsertion
-from ..base.basicClass import reverse_complement
-from ..graph import Node
+from scannls.base.basic_class import MicroHomology, NovelInsertion, reverse_complement
+from scannls.graph import Node
+
 from .writer import Writer
 
 

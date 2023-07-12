@@ -8,24 +8,23 @@
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import Any
-from typing import IO
+from typing import IO, Any
 
 from loguru import logger
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta, FastaNotFoundError
 
-from .. import __version__
-from ..base.basicClass import MicroHomology
-from ..base.basicClass import NovelInsertion
-from ..base.basicClass import reverse_complement
-from ..exception import AnnotationCodeNotFoundError
-from ..exception import BreakpointNotFoundError
-from ..exception import ExonsNotFoundError
-from ..exception import GenesNotFoundError
-from ..exception import ModesNotFoundError
-from ..exception import SplicingCodeNotFoundError
-from ..graph import Node
+from scannls import __version__
+from scannls.base.basic_class import MicroHomology, NovelInsertion, reverse_complement
+from scannls.exception import (
+    AnnotationCodeNotFoundError,
+    BreakpointNotFoundError,
+    ExonsNotFoundError,
+    GenesNotFoundError,
+    ModesNotFoundError,
+    SplicingCodeNotFoundError,
+)
+from scannls.graph import Node
+
 from .writer import Writer
 
 

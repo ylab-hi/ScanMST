@@ -20,10 +20,9 @@ import psutil
 from Bio import SearchIO
 from loguru import logger
 
-from ..blat import load_gfclient
-from ..blat import load_gfserver
-from .basicClass import Insertion
-from .basicClass import NovelInsertion
+from scannls.blat import load_gfclient, load_gfserver
+
+from .basic_class import Insertion, NovelInsertion
 
 
 class Blat:
@@ -368,7 +367,7 @@ class Blat:
         """Function is used to calculate map quality of the insertion.
         We adapted the way of calculation in TopHat.
         reference: 1) https://www.biostars.org/p/69773/
-                   2) https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/v
+                   2) https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/v.
 
         :param hsps: the list of hsp after aligning the insertion sequence
         :param in_seq_len: the length of the input sequence

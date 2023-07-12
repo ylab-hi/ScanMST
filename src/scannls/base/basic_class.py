@@ -8,10 +8,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 from scannls import cppext
+from scannls.cli.helper import cigar_validity
+from scannls.exception import ReadNotFoundError
 
-from ..cli.helper import cigar_validity
-from ..exception import ReadNotFoundError
-from .basicRead import Read
+from .basic_read import Read
 from .type import EventType
 
 
@@ -79,7 +79,7 @@ class MicroHomology:
         self.query_sequence = query_sequence
         self.ao = 1
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent MicroHomology object."""
         return f"MicroHomology({self.query_sequence})"
 
@@ -157,7 +157,7 @@ class Insertion(Read):
 
         self.hit_num = hit_num
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent Insertion object."""
         return (
             f"{self.__class__.__name__}({self.hit_num=},"
@@ -202,7 +202,7 @@ class BreakPoint:
     pos: int
     depth: int = 1
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return string representation of BreakPoint object."""
         return f"{self.chrom}:{self.pos}"
 
@@ -238,9 +238,8 @@ class BreakPoint:
         :param breakpoint1:  breakpoint1
         :param breakpoint2:  breakpoint2
         :param threshold:  threshold for checking if two breakpoints are different
-        :return:  True if two breakpoints are different, otherwise False
+        :return:  True if two breakpoints are different, otherwise False.
         """
-
         if self.chrom != other.chrom:
             return False
 

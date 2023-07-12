@@ -9,10 +9,9 @@ import HTSeq  # type: ignore
 import pyfaidx  # type: ignore
 import pysam  # type: ignore
 import yaml  # type: ignore
-from scannls import cppext
 
-from .. import __PACKAGE_NAME__
-from ..exception import ModesNotEqualError
+from scannls import __PACKAGE_NAME__, cppext
+from scannls.exception import ModesNotEqualError
 
 __all__ = [
     "extract_splice_sites",
@@ -433,34 +432,35 @@ def splicing_confirmation(
         ].seq
         if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
             return True, 0, 1
-        else:
-            return (False, 0, 0) if motif_required else (True, 0, 0)
+
+        return (False, 0, 0) if motif_required else (True, 0, 0)
 
     # pos1 in annotated coding exon boundary, pos2 not.
-    elif motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
+    if motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
         acceptor_seq = genome_fasta[chrm_ac][
             pos_ac - splice_bin : pos_ac + splice_bin
         ].seq
         if splice_motif_dict[motif_do] in acceptor_seq:
             return True, 2, 1
-        else:
-            return (False, 2, 0) if motif_required else (True, 2, 0)
+
+        return (False, 2, 0) if motif_required else (True, 2, 0)
 
     # pos2 in annotated coding exon boundary, pos1 not.
-    elif motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
+    if motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
         donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
 
         if possible_donors[motif_ac] in donor_seq:
             return True, 1, 1
-        else:
-            return (False, 1, 0) if motif_required else (True, 1, 0)
+
+        return (False, 1, 0) if motif_required else (True, 1, 0)
 
     # pos1 and pos2 both in annotated coding exon boundary
-    elif motif_do in splice_motif_dict and motif_ac in splice_motif_dict.values():
+    if motif_do in splice_motif_dict and motif_ac in splice_motif_dict.values():
         if splice_motif_dict[motif_do] == motif_ac:
             return True, 3, 1
-        else:
-            return (False, 3, 0) if motif_required else (True, 3, 0)
+        return (False, 3, 0) if motif_required else (True, 3, 0)
+
+    return None
 
 
 def cigar_validity(cigar_str: str) -> str:
@@ -1014,6 +1014,8 @@ def same_chrom_same_strand_mode21_handler(
                     )
                 else:
                     return noreturn
+            return None
+    return None
 
 
 def same_chrom_same_strand_handler(
@@ -1060,6 +1062,7 @@ def same_chrom_same_strand_handler(
             microinsertion_cutoff,
             is_reverse=True,
         )
+    return None
 
 
 def same_chrom_diff_strand_handler(
@@ -1382,6 +1385,7 @@ def diff_chrom_same_strand_handler(
             microinsertion_cutoff,
             is_reverse=True,
         )
+    return None
 
 
 def diff_chrom_diff_strand_handler(

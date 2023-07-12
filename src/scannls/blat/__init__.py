@@ -11,7 +11,7 @@ import platform
 import sys
 from pathlib import Path
 
-from .. import __PACKAGE_NAME__
+from scannls import __PACKAGE_NAME__
 
 
 def load_blat() -> Path:

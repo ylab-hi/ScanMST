@@ -5,20 +5,18 @@ import secrets
 import shutil
 import subprocess
 import time
-from collections.abc import Callable
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any
-from typing import Optional
+from typing import Any, Optional
 
 import pysam
 from loguru import logger
+
 from scannls import cppext
 
-from .base.type import LoggerType
-from .base.type import Mode
+from .base.type import LoggerType, Mode
 from .blat import load_fa2bit
 from .exception import ToolNotFoundError
 

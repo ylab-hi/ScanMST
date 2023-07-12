@@ -6,9 +6,9 @@
 @license:     MIT Licence
 @Time:        1/30/22 6:15 PM
 """
-from .fastaWriter import FastaWriter
-from .gtfWriter import GTFWriter
-from .vcfWriter import VCFWriter
+from .fasta_writer import FastaWriter
+from .gtf_writer import GTFWriter
+from .vcf_writer import VCFWriter
 from .writer import Writers
 
 __all__ = ["FastaWriter", "GTFWriter", "VCFWriter", "Writers"]

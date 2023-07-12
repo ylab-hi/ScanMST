@@ -1,22 +1,21 @@
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from enum import auto
-from enum import Enum
-from typing import Any
-from typing import Iterable
-from typing import Optional
+from enum import Enum, auto
+from typing import Any, Optional
 
 import pyfaidx
 from loguru import logger
 
-from ..base.basicClass import BreakPoint
-from ..base.basicClass import Event
-from ..base.basicClass import MicroHomology
-from ..base.basicClass import NovelInsertion
-from ..base.basicClass import reverse_complement
-from ..base.basicRead import Read
-from ..cli.nls_inference import infer_nls_from_connected_reads
+from scannls.base.basic_class import (
+    BreakPoint,
+    Event,
+    MicroHomology,
+    NovelInsertion,
+    reverse_complement,
+)
+from scannls.base.basic_read import Read
+from scannls.cli.nls_inference import infer_nls_from_connected_reads
 
 
 class BasicNode:
@@ -186,7 +185,8 @@ class NodeIdentity(Enum):
         elif s == "MID":
             return cls.MID
         else:
-            raise ValueError("Invalid value for NodeIdentity: {}".format(s))
+            msg = f"Invalid value for NodeIdentity: {s}"
+            raise ValueError(msg)
 
     def is_head(self) -> bool:
         return self == NodeIdentity.HEAD
@@ -336,7 +336,6 @@ class Node(BasicNode):
     @property
     def introns(self):
         """Get introns of a node."""
-
         if self._introns is not None:
             return self._introns
 
@@ -386,14 +385,8 @@ class Node(BasicNode):
     # NOTE: used in  rescue sr. Now use edge info to rescue sr <Yangyang Li yangyang.li@northwestern.edu>
 
     # def get_breakpoint_depth_pos(self, mode: int, direc: str) -> tuple[str, Any]:
-    #     """Get update breakpoint depth and position of a node."""
-    #     break_point = self.prev_breakpoint if direc == "prev" else self.next_breakpoint
     #     if break_point is not None:
-    #         chrom, pos = break_point.to_tuple()
     #         if mode == 1:
-    #             pos -= 1
-    #         return chrom, pos
-    #     return " ", 1
 
     def is_reverse(self) -> bool:
         """Check if a node is reverse."""
@@ -430,12 +423,13 @@ class VariationType(Enum):
         elif s == "IDUP":
             return cls.IDUP
         else:
-            raise ValueError("Invalid SV type: {}".format(s))
+            msg = f"Invalid SV type: {s}"
+            raise ValueError(msg)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
 
@@ -485,6 +479,7 @@ class Edge:
         """Initializes a new instance of the Edge class.
 
         Args:
+        ----
             node1_key (str): The key of the first node connected by the edge.
             node2_key (str): The key of the second node connected by the edge.
             edge_data (EdgeData): The data of the edge.
@@ -496,45 +491,34 @@ class Edge:
     def __repr__(self) -> str:
         return f"Edge(key={self.key}, data={self.edge_data})"
 
+    # fmt: off
     @property
-    def key(self):
-        return f"{self.node1_key}-{self.node2_key}"
+    def key(self): return f"{self.node1_key}-{self.node2_key}"
 
     @property
-    def break_point1(self):
-        return self.edge_data.break_point1
-
+    def break_point1(self): return self.edge_data.break_point1
     @break_point1.setter
-    def break_point1(self, value: BreakPoint):
-        self.edge_data.break_point1 = value
+    def break_point1(self, value: BreakPoint): self.edge_data.break_point1 = value
 
     @property
-    def break_point2(self):
-        return self.edge_data.break_point2
-
+    def break_point2(self): return self.edge_data.break_point2
     @break_point2.setter
-    def break_point2(self, value: BreakPoint):
-        self.edge_data.break_point2 = value
+    def break_point2(self, value: BreakPoint): self.edge_data.break_point2 = value
 
     @property
-    def insertion_info(self):
-        return self.edge_data.insertion_info
+    def insertion_info(self): return self.edge_data.insertion_info
 
     @property
-    def variation_type(self):
-        return self.edge_data.variantion_type
+    def variation_type(self): return self.edge_data.variantion_type
 
     @property
-    def sr(self):
-        return self.edge_data.sr
-
+    def sr(self): return self.edge_data.sr
     @sr.setter
-    def sr(self, value):
-        self.edge_data.sr = value
+    def sr(self, value): self.edge_data.sr = value
 
     @property
-    def read_ids(self):
-        return self.edge_data.read_ids
+    def read_ids(self): return self.edge_data.read_ids
+    # fmt: on
 
     @staticmethod
     def create_key_from_node(node1: Node, node2: Node) -> str:
@@ -552,7 +536,7 @@ class Edge:
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
         if self.edge_data.insertion_info and isinstance(
-            self.edge_data.insertion_info[1], (NovelInsertion, MicroHomology)
+            self.edge_data.insertion_info[1], NovelInsertion | MicroHomology
         ):
             self.edge_data.insertion_info[1].increment_ao()
 
@@ -671,7 +655,6 @@ class NLPath:
 
     def add_edge(self, nodes: Node, noded: Node, edge: Optional[Edge] = None) -> None:
         """Add edge to the path."""
-
         if nodes not in self.nodes:
             self.nodes.append(nodes)
 
@@ -701,6 +684,7 @@ class NLPath:
             return self.edges.get(
                 Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1])
             )
+        return None
 
     def is_all_type_del(self) -> bool:
         """Check if sv_type of all nodes in the series are DEL."""
@@ -812,6 +796,7 @@ class NLPath:
         """Create a path from a list of nodes and edges.
 
         Args:
+        ----
             node_edges: list of nodes and edges
         """
         instance = cls()

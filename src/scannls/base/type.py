@@ -7,11 +7,9 @@
 @Time:        12/30/21 2:20 PM
 """
 from enum import IntEnum
-from typing import Any
-from typing import NewType
-from typing import Protocol
+from typing import Any, NewType, Protocol
 
-from .basicRead import Read
+from .basic_read import Read
 
 
 class Mode(IntEnum):

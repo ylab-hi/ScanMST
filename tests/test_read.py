@@ -7,9 +7,7 @@
 @Time:        2/4/22 10:32 AM
 """
 import pytest
-from scannls import cppext
-from scannls import Read
-from scannls import ReadsConnector
+from scannls import Read, ReadsConnector, cppext
 
 from tests import FakeHsp
 

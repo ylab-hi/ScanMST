@@ -5,17 +5,14 @@
 @license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """
-from abc import ABC
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Any
-from typing import IO
+from pathlib import Path
+from typing import IO, Any
 
 from loguru import logger
 
-from ..graph.basicGraph import NLPath
-
-# todo: add asyncio support
+from scannls.graph.basic_graph import NLPath
 
 
 class Writer(ABC):
@@ -23,7 +20,7 @@ class Writer(ABC):
 
     def __init__(self, file_path: str) -> None:
         """Initialize Writer object."""
-        self.file_path = NLPath(file_path)
+        self.file_path = Path(file_path)
         if self.file_path.exists():
             logger.warning(f"{self.file_path} exists, will be overwritten.")
         self.io: IO | None = None

@@ -7,12 +7,11 @@
 """
 import pytest
 from loguru import logger
-from scannls import NLGraph
-from scannls import Node
-from scannls import SpliceType
+from scannls import NLGraph, Node, SpliceType
+
+from tests import assign_value_for_instance
 
 from . import add_edge_according_order
-from .. import assign_value_for_instance
 
 
 @pytest.fixture(scope="function", autouse=True)

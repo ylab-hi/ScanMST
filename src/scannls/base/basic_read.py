@@ -5,10 +5,8 @@
 @contact:     yangyang.li@northwestern.edu
 @Time:        1/9/22 12:13 PM
 """
-from enum import Enum
-from enum import IntEnum
-from typing import Any
-from typing import Optional
+from enum import Enum, IntEnum
+from typing import Any, Optional
 
 from scannls import cppext
 

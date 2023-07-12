@@ -56,7 +56,7 @@ def export_graph(graph: Any, file_name: Path) -> None:
     nx.write_adjlist(g, file_name)
 
 
-def plot_graph(graph: Any, figure_name: str, is_matplotlib=True) -> None:
+def plot_graph(graph: Any, figure_name: str, *, is_matplotlib=True) -> None:
     """Plot graph."""
     g = nx.DiGraph()
     labels = {}

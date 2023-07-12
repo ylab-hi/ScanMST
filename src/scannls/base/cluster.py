@@ -11,10 +11,10 @@ import networkx as nx
 from loguru import logger
 from networkx import connected_components
 
-from ..graph import NLPath
-from ..graph import Node
-from ..utils import timeit
-from .mergeCondition import MergeCondition
+from scannls.graph import NLPath, Node
+from scannls.utils import timeit
+
+from .merge_condition import MergeCondition
 
 
 class Ruler:
@@ -30,7 +30,7 @@ class Ruler:
         """
         self.prune_threshold = prune_threshold
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent Ruler."""
         return f"{self.__class__.__name__}()"
 
@@ -137,7 +137,7 @@ def middle_node_signature(node: Node) -> str:
     chrom = node.chrom
     exons = node.exons
     strand = node.strand
-    exons_string = map(lambda x: f"{x[0]}-{x[1]}", exons)  # type: ignore
+    exons_string = (f"{x[0]}-{x[1]}" for x in exons)  # type: ignore
 
     return f"{chrom}:{';'.join(exons_string)};{strand}"
 
@@ -148,7 +148,7 @@ def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
     """Check if two node list of middle nodes have shared node or not.
     :param node_list1:  node_list1
     :param node_list2:  node_list2
-    :return:  True if two node list have shared node, otherwise False
+    :return:  True if two node list have shared node, otherwise False.
     """
     shared_middle_nodes = set(map(middle_node_signature, node_list1)) & set(
         map(middle_node_signature, node_list2)
@@ -371,11 +371,12 @@ class ClusterFinder:
                 merge_keys[path1.id][start_index : start_index + len(path2)]
             )
 
-            if series_1_nodes_key == series_2_nodes_key:
-                if merge_same_len_node_list(path1, path2, start_index, 1):  # type: ignore
-                    merge_nlpath(path1, path2, start_index)  # type: ignore
-                    path1.merge_factor += 1
-                    return True
+            if series_1_nodes_key == series_2_nodes_key and merge_same_len_node_list(
+                path1, path2, start_index, 1
+            ):
+                merge_nlpath(path1, path2, start_index)  # type: ignore
+                path1.merge_factor += 1
+                return True
 
         return False
 
@@ -385,10 +386,11 @@ class ClusterFinder:
         if len(merge_keys[path1.id]) == len(merge_keys[path2.id]):
             # reduce duplication
             return False
-        elif len(merge_keys[path1.id]) > len(merge_keys[path2.id]):
+
+        if len(merge_keys[path1.id]) > len(merge_keys[path2.id]):
             return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys)
-        else:
-            raise ValueError("series1 is shorter than series2")
+
+        raise ValueError("series1 is shorter than series2")
 
     def merge_cluster(self):
         for cluster_index in self.find_cluster_index():

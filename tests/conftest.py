@@ -1,16 +1,9 @@
 # !/usr/bin/env python
 """Conftest for pytest."""
 import pytest
-from scannls import Event
-from scannls import Insertion
-from scannls import MicroHomology
-from scannls import Node
-from scannls import NovelInsertion
-from scannls import Read
+from scannls import Event, Insertion, MicroHomology, Node, NovelInsertion, Read
 
-from tests import assign_value_for_instance
-from tests import FakeBlat
-from tests import FakeLogger
+from tests import FakeBlat, FakeLogger, assign_value_for_instance
 
 
 @pytest.fixture(scope="session")

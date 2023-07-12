@@ -12,23 +12,24 @@ import sys
 import tempfile
 import time
 from functools import partial
-from typing import Any
-from typing import Union
+from typing import Any, Union
 
 from loguru import logger
 
-from .. import Blat
-from .. import ClusterFinder
-from .. import FastaWriter
-from .. import GTFWriter
-from .. import LoggerType
-from .. import MyLogger
-from .. import NLGraph
-from .. import ParallelWorker
-from .. import VCFWriter
-from .. import Writers
-from ..utils import find_2bit_file
-from ..utils import sleep
+from scannls import (
+    Blat,
+    ClusterFinder,
+    FastaWriter,
+    GTFWriter,
+    LoggerType,
+    MyLogger,
+    NLGraph,
+    ParallelWorker,
+    VCFWriter,
+    Writers,
+)
+from scannls.utils import find_2bit_file, sleep
+
 from .arg import DefaultOptions
 from .main import scanbam_run
 

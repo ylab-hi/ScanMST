@@ -10,29 +10,31 @@ from typing import Any
 import HTSeq
 import pyfaidx
 import pysam
-from pyfaidx import Fasta
-from pyfaidx import FastaNotFoundError
+from pyfaidx import Fasta, FastaNotFoundError
 
-from .. import Blat
-from .. import cigarstring2cigartuples
-from .. import detect_read_read_connections_from_cigar
-from .. import Event
-from .. import get_longest_insertion_sequence
-from .. import get_softclip_length
-from .. import MyLogger
-from .. import ParallelWorker
-from .. import reverse_complement
-from ..base.filters import CircRNAFilter
-from ..base.filters import ExonFilter
-from ..base.filters import RTSwitchingFilter
-from ..base.type import LoggerType
-from ..graph.basicGraph import NLPath
-from .helper import blat2chimeric_alignment
-from .helper import extract_splice_sites
-from .helper import get_transcriptome_length
-from .helper import insertion2chimeric_alignment
-from .helper import obtain_variants_stats
-from .helper import strand_mode_checker
+from scannls import (
+    Blat,
+    Event,
+    MyLogger,
+    ParallelWorker,
+    cigarstring2cigartuples,
+    detect_read_read_connections_from_cigar,
+    get_longest_insertion_sequence,
+    get_softclip_length,
+    reverse_complement,
+)
+from scannls.base.filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
+from scannls.base.type import LoggerType
+from scannls.graph.basic_graph import NLPath
+
+from .helper import (
+    blat2chimeric_alignment,
+    extract_splice_sites,
+    get_transcriptome_length,
+    insertion2chimeric_alignment,
+    obtain_variants_stats,
+    strand_mode_checker,
+)
 from .nls_inference import infer_nls_from_connected_reads
 
 

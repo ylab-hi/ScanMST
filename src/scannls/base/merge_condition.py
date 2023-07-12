@@ -4,12 +4,11 @@
 @contact:     yangyang.li@northwestern.edu
 @Time:        4/18/22 7:51 PM
 """
-from enum import auto
-from enum import Enum
+from enum import Enum, auto
 from itertools import zip_longest
 
-from ..exception import ExonsNotFoundError
-from ..graph import Node
+from scannls.exception import ExonsNotFoundError
+from scannls.graph import Node
 
 
 class MergeConditionMode(Enum):
@@ -32,28 +31,28 @@ class MergeConditionMode(Enum):
 
         if node1_self_identity.is_head() and node2_self_identity.is_head():
             return cls.head2head
-        elif node1_self_identity.is_head() and node2_self_identity.is_tail():
+        if node1_self_identity.is_head() and node2_self_identity.is_tail():
             return cls.head2tail
-        elif node1_self_identity.is_head() and node2_self_identity.is_mid():
+        if node1_self_identity.is_head() and node2_self_identity.is_mid():
             return cls.head2mid
-        elif node1_self_identity.is_mid() and node2_self_identity.is_head():
+        if node1_self_identity.is_mid() and node2_self_identity.is_head():
             return cls.mid2head
-        elif node1_self_identity.is_mid() and node2_self_identity.is_mid():
+        if node1_self_identity.is_mid() and node2_self_identity.is_mid():
             return cls.mid2mid
-        elif node1_self_identity.is_mid() and node2_self_identity.is_tail():
+        if node1_self_identity.is_mid() and node2_self_identity.is_tail():
             return cls.mid2tail
-        elif node1_self_identity.is_tail() and node2_self_identity.is_head():
+        if node1_self_identity.is_tail() and node2_self_identity.is_head():
             return cls.tail2head
-        elif node1_self_identity.is_tail() and node2_self_identity.is_mid():
+        if node1_self_identity.is_tail() and node2_self_identity.is_mid():
             return cls.tail2mid
-        elif node1_self_identity.is_tail() and node2_self_identity.is_tail():
+        if node1_self_identity.is_tail() and node2_self_identity.is_tail():
             return cls.tail2tail
-        else:
-            raise ValueError("Invalid node identity")
+
+        raise ValueError("Invalid node identity")
 
 
 class MergeCondition:
-    def __init__(self, threshold: int):
+    def __init__(self, threshold: int) -> None:
         self.threshold = threshold
 
     def head2head(self, node1: Node, node2: Node) -> bool:

@@ -24,7 +24,7 @@ def process():
     names = ["gfServer", "test"]
 
     class _Process:
-        def __init__(self, name: str, status: str):
+        def __init__(self, name: str, status: str) -> None:
             self._status = status
             self._name = name
 

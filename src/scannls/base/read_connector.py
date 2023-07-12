@@ -12,9 +12,10 @@ from typing import Any
 from Bio import SearchIO
 from loguru import logger
 
-from ..cli.helper import cigar_validity
-from .basicClass import reverse_complement
-from .basicRead import Read
+from scannls.cli.helper import cigar_validity
+
+from .basic_class import reverse_complement
+from .basic_read import Read
 from .blat import Blat
 from .type import LoggerType
 
@@ -241,6 +242,7 @@ class ReadsConnector:
                 return read_match_sequence[microhomology_length:]
             elif prev_read_mode == 1:
                 return read_match_sequence[:-microhomology_length]
+            return None
         else:
             return read_match_sequence
 

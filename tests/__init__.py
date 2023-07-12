@@ -23,7 +23,7 @@ def assign_value_for_instance(node: Node, **kwargs: Mapping[str, object]):
 class FakeLogger:
     """Fake logger."""
 
-    def __init__(self, name: str = "fake_logger"):
+    def __init__(self, name: str = "fake_logger") -> None:
         """Initialize fake logger."""
         self.name = name
 
@@ -61,7 +61,7 @@ class FakeBlat:
         query_return: str = "query_return",
         query_insertion_return: str = "query_insertion_return",
         psl2sam_return: tuple[Any, ...] = ("psl2sam_return",),
-    ):
+    ) -> None:
         """Init."""
         self.name = name
         self.query_return = query_return

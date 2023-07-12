@@ -1,27 +1,26 @@
-"""
-@Author:      YangyangLi
+"""@Author:      YangyangLi
 @Filename:    nlgraph.py
-@Time:        12/15/21 10:42 AM
+@Time:        12/15/21 10:42 AM.
 """
 import copy
 import types
 from collections import defaultdict
-from collections.abc import Iterable
-from collections.abc import Iterator
-from typing import Any
-from typing import Optional
-from typing import Union
+from collections.abc import Iterable, Iterator
+from typing import Any, Optional, Union
 
-from ..base.mergeCondition import MergeCondition
-from ..base.srRescuer import SRRescuer
-from ..base.type import LoggerType
-from .basicGraph import Edge
-from .basicGraph import NLPath
-from .basicGraph import Node
-from .basicGraph import NodeIdentity
-from .basicGraph import SpliceType
-from .basicGraph import update_node_with_other_node
-from .plotGraph import plot_graph
+from scannls.base.merge_condition import MergeCondition
+from scannls.base.sr_rescuer import SRRescuer
+from scannls.base.type import LoggerType
+
+from .basic_graph import (
+    Edge,
+    NLPath,
+    Node,
+    NodeIdentity,
+    SpliceType,
+    update_node_with_other_node,
+)
+from .plot_graph import plot_graph
 
 
 class NLGraph:
@@ -31,7 +30,7 @@ class NLGraph:
     list_factory = list
 
     def __init__(
-        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 10
+        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 3
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -44,8 +43,8 @@ class NLGraph:
         self,
         nlpath_list: Iterable[NLPath],
         clique_ind: int,
-        is_plot: bool = False,
-        is_check_circle: bool = False,
+        *,
+        is_plot: bool,
     ) -> Iterable[NLPath]:
         """Find a specific path based on splice graph.
 
@@ -71,13 +70,8 @@ class NLGraph:
         self.construct()
 
         # sr rescuer
-        # self.rescuer(self)
 
         self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
-
-        # self.prune()
-
-        # export_graph(self, Path(f"graph_{clique_ind}.adj"))
 
         if is_plot:
             plot_graph(self, f"_{clique_ind}", False)
@@ -87,14 +81,6 @@ class NLGraph:
             yield NLPath.create_path_from_node_edge_list(
                 node_list,
             )
-
-        # current_nodes_keys: set[str] = set()
-        # if is_check_circle:
-        #     # check circle in graph
-        #     for node_list in self.check_circle_in_graph(current_nodes_keys):
-        #         yield Series.create_series_from_node_list(
-        #             node_list, self.logger, set(), is_add_key=False
-        #         )
 
     @classmethod
     def create_graph(
@@ -123,7 +109,7 @@ class NLGraph:
         return cls(logger, rescuer, prune_threshold)
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
-        """Add edge from node1 -> node2"""
+        """Add edge from node1 -> node2."""
         edge = Edge.from_nodes(node1, node2, edge_data)
 
         if self.edges.get(edge.key) is None:
@@ -148,8 +134,7 @@ class NLGraph:
         edge_key = Edge.create_key_from_node(node1, node2)
         if self.edges.get(edge_key) is None:
             raise KeyError(f"Edge {edge_key} not found in splice graph.")
-        else:
-            return self.edges[edge_key]
+        return self.edges[edge_key]
 
     @staticmethod
     def get_node_identity_base_edge(
@@ -187,9 +172,12 @@ class NLGraph:
         possible_edges = []
 
         for edge in self.find_edges(current_node, successor):
-            edge_node_identity = self.get_node_identity_base_edge(edge, current_node)
-            if self.determine_edge(previous_edge_node_identity, edge_node_identity):
-                possible_edges.append(edge)
+            if edge.sr > self.prune_threshold:
+                edge_node_identity = self.get_node_identity_base_edge(
+                    edge, current_node
+                )
+                if self.determine_edge(previous_edge_node_identity, edge_node_identity):
+                    possible_edges.append(edge)
 
         return possible_edges
 
@@ -213,11 +201,6 @@ class NLGraph:
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             yield from nodes
-
-    def print_path(self) -> None:
-        """Print path based on splice graph."""
-        for _node_list in self.trace():
-            pass
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
@@ -299,27 +282,27 @@ class NLGraph:
         ):  # node1 is end node, node2 is start node
             return merge_condition.head2tail(node1, node2)
 
-        elif (
+        if (
             node1_self_identity.is_tail() and node2_self_identity.is_mid()
         ):  # node1 is end node, node2 is middle node
             return merge_condition.tail2tail(node1, node2)
 
-        elif (
+        if (
             node1_self_identity.is_head() and node2_self_identity.is_head()
         ):  # both are start nodes
             return merge_condition.head2head(node1, node2)
 
-        elif (
+        if (
             node1_self_identity.is_tail() and node2_self_identity.is_tail()
-        ):  # both are end nodes  # check first exon start
+        ):  # both are end nodes   check first exon start
             return merge_condition.tail2tail(node1, node2)
 
-        elif (
+        if (
             node1_self_identity.is_head() and node2_self_identity.is_mid()
         ):  # node1 is start node, node2 is middle node
             return merge_condition.head2mid(node1, node2)
 
-        elif (
+        if (
             node1_self_identity.is_mid() and node2_self_identity.is_mid()
         ):  # both are middle nodes
             return merge_condition.mid2mid(node1, node2)
@@ -336,7 +319,6 @@ class NLGraph:
         :param node2: node2
         :return:
         """
-
         # NOTE: may not swap order <04-24-23, Yangyang Li>
         if NLGraph._compare_is_merged_helper(node1, node2, threshold):
             return True
@@ -388,8 +370,6 @@ class NLGraph:
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
         self,
         current_node: Node,
-        similar_key: str,
-        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if the current node is added in graph and update a predecessor and successor."""
         if not current_node.is_merged:
@@ -424,13 +404,6 @@ class NLGraph:
                 # add information about next and previous node in series to current node
                 current_node.update_next_and_previous_node_in_nlpath(index, nlpath)
 
-                # initialize and get unique key of current node and set node.unique_key
-                # if not set when you reach node.unique_key, will return None
-                # _ = current_node.get_unique_key()
-
-                # get node identity mid, tail, head
-                # current_node.update_identity()
-
                 # get a similar key(chrom and first intron) of current node
                 similar_key = current_node.similar_key
 
@@ -439,7 +412,7 @@ class NLGraph:
                 )
 
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
-                    current_node, similar_key, merged_nodes_pool
+                    current_node
                 )
 
                 current_node.clear_next_and_previous_node_in_series()
@@ -456,7 +429,6 @@ class NLGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-
         if start_node in path:
             self.logger.warning(
                 f"A circle is found in the graph {start_node} in {path}"
@@ -471,8 +443,6 @@ class NLGraph:
             if successors := start_node.successors:
                 for successor in successors:
                     successor.set_trace_id(trace_id)
-
-                    # successor.set_harmoic_mean_sr(successor.sr)
                     for edge in self.get_possible_edges(path, start_node, successor):
                         self._trace_forward(
                             successor,
@@ -508,7 +478,6 @@ class NLGraph:
             if predecessors := end_node.successors:
                 for predecessor in predecessors:
                     predecessor.set_trace_id(trace_id)
-                    # successor.set_harmoic_mean_sr(successor.sr)
                     for edge in self.get_possible_edges(path, end_node, predecessor):
                         self._trace_backward(
                             predecessor,
@@ -537,13 +506,12 @@ class NLGraph:
         if direction == SpliceType.forward:
             for start_node in self.get_start_nodes():
                 start_node.set_trace_id(1)
-                # start_node.set_harmoic_mean_sr(start_node.sr)
                 self._trace_forward(start_node, 2, [], [])
             return
-        elif direction == SpliceType.backward:
+
+        if direction == SpliceType.backward:
             for end_node in self.get_end_nodes():
                 end_node.set_trace_id(1)
-                end_node.set_harmoic_mean_sr(end_node.sr)
                 self._trace_backward(end_node, 2, [], [])
             return
 
@@ -650,7 +618,6 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     :param current_node: node has not been inserted into graph
     :return: None
     """
-
     # update exon coordinates
     updated_node.ref_start = min(  # type: ignore
         updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore

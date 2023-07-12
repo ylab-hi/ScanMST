@@ -2,9 +2,7 @@
 """Parse command line arguments."""
 import argparse
 from dataclasses import dataclass
-from typing import Any
-from typing import Optional
-from typing import Tuple
+from typing import Any, Optional
 
 from scannls import __version__
 
@@ -27,7 +25,7 @@ class DefaultOptions:
     bound: bool = True
     log: str = "info"
     species: str = "human"
-    species_choices: Tuple[str, ...] = ("human", "mouse")
+    species_choices: tuple[str, ...] = ("human", "mouse")
     parallel: int = 1
     port: int = 88888
     min_soft_seg_len: int = 200
@@ -42,7 +40,7 @@ class DefaultOptions:
     substitutions_fraction: float = 0.1
     indel_fraction: float = 0.1
     circular_rna: str = "remove"
-    circular_rna_choices: Tuple[str, ...] = ("remove", "keep", "extract")
+    circular_rna_choices: tuple[str, ...] = ("remove", "keep", "extract")
     # junctions within one annotated exon filter
     exon_filter: bool = True
     rt_switching_filter_len: int = 10
