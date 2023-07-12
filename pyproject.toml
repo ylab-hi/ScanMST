@@ -104,8 +104,8 @@ skips = ["B602", "B404", "B603"]
 profile = "black"
 
 [tool.ruff]
-line-length = 130
 select = [
+    "A",
     "F",
     "E",
     "W",
@@ -140,6 +140,7 @@ select = [
     "PLW",
     "RUF",
 ]
+line-length = 130
 exclude = ["cppext", "nls_inference.py"]
 ignore = [
     "ANN001",
