@@ -174,7 +174,8 @@ def get_gtf_features_from_node(
         9. attribute: a semicolon-separated list of tag-value pairs (separated by spaces)
     """
     if node.exons is None:
-        raise ExonsNotFoundError(f"{node.query_name}")
+        msg = f"{node.query_name}"
+        raise ExonsNotFoundError(msg)
 
     exons = node.exons[::-1] if node.strand == "-" else node.exons
     copy_exons = copy.deepcopy(exons)

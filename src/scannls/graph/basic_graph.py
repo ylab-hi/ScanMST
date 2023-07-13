@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from loguru import logger
 
@@ -56,9 +56,9 @@ class BasicNode:
         self.merged_child_nodes: list[Node] = []
         self.merged_parent_nodes: list[Node] = []
 
-        self.next_node_in_nlpath: Optional[Node] = None
-        self.previous_node_in_nlpath: Optional[Node] = None
-        self.previous_edge_in_nlapth: Optional[Edge] = None
+        self.next_node_in_nlpath: Node | None = None
+        self.previous_node_in_nlpath: Node | None = None
+        self.previous_edge_in_nlapth: Edge | None = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
         self.sr: int = 1
@@ -198,7 +198,8 @@ class NodeIdentity(Enum):
         if s == "MID":
             return cls.MID
 
-        raise ValueError(f"Invalid value for NodeIdentity: {s}")
+        msg = f"Invalid value for NodeIdentity: {s}"
+        raise ValueError(msg)
 
     def is_head(self) -> bool:
         return self == NodeIdentity.HEAD
@@ -284,13 +285,13 @@ class Node(BasicNode):
         strand: Strand | str,
         ref_start: int,
         ref_end: int,
-        exons: Optional[Exons] = None,
-        annot: Optional[int] = None,
-        canonical: Optional[int] = None,
-        modes: Optional[list[int]] = None,
-        genes: Optional[tuple[str, str]] = None,
-        cigartuples_without_soft: Optional[list[int]] = None,
-        identity: Optional[NodeIdentity] = None,
+        exons: Exons | None = None,
+        annot: int | None = None,
+        canonical: int | None = None,
+        modes: list[int] | None = None,
+        genes: tuple[str, str] | None = None,
+        cigartuples_without_soft: list[int] | None = None,
+        identity: NodeIdentity | None = None,
     ) -> None:
         """Initialize a Node object."""
         super().__init__()  # initialize BasicNode object
@@ -301,7 +302,7 @@ class Node(BasicNode):
         self._ref_end = ref_end
 
         self.exons = exons
-        self._introns: Optional[Introns] = None
+        self._introns: Introns | None = None
         self._exon_str = ""
 
         self.modes = modes
@@ -309,7 +310,7 @@ class Node(BasicNode):
 
         self.annotation_code = annot
         self.splicing_code = canonical
-        self._unique_key: Optional[str] = None
+        self._unique_key: str | None = None
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {}
@@ -348,7 +349,7 @@ class Node(BasicNode):
         )
 
     @property
-    def self_identity(self) -> Optional[NodeIdentity]:
+    def self_identity(self) -> NodeIdentity | None:
         return self.identities.get(self.query_name, None)
 
     @self_identity.setter
@@ -442,7 +443,8 @@ class VariationType(Enum):
         if s == "IDUP":
             return cls.IDUP
 
-        raise ValueError(f"Invalid SV type: {s}")
+        msg = f"Invalid SV type: {s}"
+        raise ValueError(msg)
 
     def __str__(self) -> str:
         return self.name
@@ -458,7 +460,7 @@ class EdgeData:
     break_point2: BreakPoint
     sr: int
     read_ids: list[str]
-    insertion_info: Optional[Any] = None
+    insertion_info: Any | None = None
 
     @classmethod
     def from_event(cls, event: Event, read_id: str) -> EdgeData:
@@ -565,7 +567,8 @@ class Edge:
         node2 = graph.get_node_with_unique_key(self.node2_key)
 
         if node1 is None or node2 is None:
-            raise ValueError("Node not found due to edge is invalidated")
+            msg = "Node not found due to edge is invalidated"
+            raise ValueError(msg)
 
         return node1, node2
 
@@ -679,7 +682,7 @@ class NLPath:
         self.id = -1
         self.merge_factor = 1
 
-    def add_edge(self, nodes: Node, noded: Node, edge: Optional[Edge] = None) -> None:
+    def add_edge(self, nodes: Node, noded: Node, edge: Edge | None = None) -> None:
         """Add edge to the path."""
         if nodes not in self.nodes:
             self.nodes.append(nodes)
@@ -698,9 +701,9 @@ class NLPath:
     def get_edge(
         self,
         nodes: Node,
-        noded: Optional[Node] = None,
-        nodes_idx: Optional[int] = None,
-    ) -> Optional[Edge]:
+        noded: Node | None = None,
+        nodes_idx: int | None = None,
+    ) -> Edge | None:
         """Get edge from the path."""
         if noded is not None:
             key = Edge.create_key_from_node(nodes, noded)
@@ -1084,7 +1087,8 @@ def check_end_node_is_ploya(
 ) -> None:
     """Check whether the node is bona fide polyA or internal priming events."""
     if node.ref_end is None or node.ref_start is None:
-        raise SystemExit(f"{node} has no start or end position")
+        msg = f"{node} has no start or end position"
+        raise SystemExit(msg)
 
     if node.strand == "+":
         seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq

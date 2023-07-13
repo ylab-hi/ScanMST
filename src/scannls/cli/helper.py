@@ -429,7 +429,8 @@ def splicing_confirmation(
     splice_motif_dict = canonical_splice_dict.get(f"{strand_do}{strand_ac}")
 
     if splice_motif_dict is None:
-        raise ValueError("Invalid strand combination")
+        msg = "Invalid strand combination"
+        raise ValueError(msg)
 
     possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
 
@@ -1470,8 +1471,9 @@ def diff_chrom_diff_strand_handler(
     logger.trace("diff_chrom_diff_strand_handler takes over the task.")
     # lt_mode must be equal to rt_mode
     if lt_mode != rt_mode:
+        msg = f"read_lt:{read_lt.query_name} read_rt:{read_rt.query_name}"
         raise ModesNotEqualError(
-            f"read_lt:{read_lt.query_name} read_rt:{read_rt.query_name}",
+            msg,
         )
 
     lt_exons, lt_introns = read_lt.get_exons_and_introns()

@@ -10,7 +10,7 @@ import time
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -44,7 +44,7 @@ def external_tool_checking(software: list[str], log_handler: LoggerType) -> None
         log_handler.success(f"Checking for {tool} found ")
 
 
-def find_2bit_file(fasta_path: str, parameter: Optional[list[str]] = None) -> str:
+def find_2bit_file(fasta_path: str, parameter: list[str] | None = None) -> str:
     """Create 2bit file from fasta file.
 
      fa2bit usage:
@@ -90,7 +90,8 @@ def get_softclip_length(
      mode of soft-clipped part: 0:other; 2:left[SM]; 1:right[MS]
     """
     if read.query_sequence is None or read.cigarstring is None:
-        raise ValueError(f"{read.query_name}'s query sequence or cigar is None")
+        msg = f"{read.query_name}'s query sequence or cigar is None"
+        raise ValueError(msg)
 
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_end = read.reference_start + parse_result.ref_match
@@ -192,7 +193,8 @@ def get_longest_insertion_sequence(
     :return: the reference start position of insertion, the read start position of insertion, length of the insertion
     """
     if read.query_sequence is None or read.cigarstring is None:
-        raise ValueError(f"{read.query_name}'s query sequence or cigar is None")
+        msg = f"{read.query_name}'s query sequence or cigar is None"
+        raise ValueError(msg)
 
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_start = read.reference_start

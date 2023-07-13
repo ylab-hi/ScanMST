@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from scannls import cppext
 from scannls.cli.helper import cigar_validity
@@ -220,7 +220,7 @@ class BreakPoint:
         return self.chrom, self.pos
 
     @classmethod
-    def from_str(cls, breakpoint_str: str, depth: Optional[int] = None) -> BreakPoint:
+    def from_str(cls, breakpoint_str: str, depth: int | None = None) -> BreakPoint:
         """Create BreakPoint object from string."""
         assert breakpoint_str != ""
         chrom, pos = breakpoint_str.split(":")

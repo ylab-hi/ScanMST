@@ -21,7 +21,8 @@ def load_blat() -> Path:
 
     system = platform.system()
     if system == "Windows":
-        raise NotImplementedError("Windows is not supported for blat.")
+        msg = "Windows is not supported for blat."
+        raise NotImplementedError(msg)
     return blat_path / system.lower()
 
 

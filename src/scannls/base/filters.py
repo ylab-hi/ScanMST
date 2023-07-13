@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import HTSeq
 
@@ -21,8 +21,8 @@ class ExonInfo:
 
     chrom: str
     interval: Interval
-    strand: Optional[Strand] = None
-    trx_id: Optional[str] = None
+    strand: Strand | None = None
+    trx_id: str | None = None
 
     # fmt: off
     @property

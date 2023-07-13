@@ -790,7 +790,8 @@ def detect_read_read_connections_from_cigar(
         or nm_ra is None
         or cigar_ra is None
     ):
-        raise ValueError("None value found in read")
+        msg = "None value found in read"
+        raise ValueError(msg)
 
     # filter reads in uncommon chromosome and mitochondrion
     if "_" in chrm_ra or chrm_ra in {"chrM", "MT"}:

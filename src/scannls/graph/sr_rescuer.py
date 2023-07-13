@@ -6,7 +6,7 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -48,7 +48,7 @@ class SRRescuer:
         mismatch_cutoff: int,
         alignment_frac: float,
         node_rescued_sr_maximum: int,
-        average_read_depth: Optional[int],
+        average_read_depth: int | None,
     ) -> None:
         """Initialize Rescuer.
 
@@ -97,8 +97,8 @@ class SRRescuer:
 
     @staticmethod
     def obtain_region_for_rescue_sr(
-        strand: Optional[str],
-        chrom: Optional[str],
+        strand: str | None,
+        chrom: str | None,
         exons: Any,
         tgt_name: str,
         mode: int,
@@ -110,7 +110,8 @@ class SRRescuer:
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
         if exons is None or strand is None or chrom is None:
-            raise ExonsNotFoundError(f"{chrom=} {strand=} {exons=}")
+            msg = f"chrom={chrom!r} strand={strand!r} exons={exons!r}"
+            raise ExonsNotFoundError(msg)
 
         if strand == "+":
             pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
@@ -128,7 +129,8 @@ class SRRescuer:
     def obtain_region_for_rescue_sr2(node: Node, mode: int, tag_name: str):
         """Obtain region from rescue."""
         if node.exons is None or node.strand is None or node.chrom is None:
-            raise ExonsNotFoundError(f"{node.chrom=} {node.strand=} {node.exons=}")
+            msg = f"node.chrom={node.chrom!r} node.strand={node.strand!r} node.exons={node.exons!r}"
+            raise ExonsNotFoundError(msg)
 
         if node.strand == "+":
             pre_pos = node.exons[0][0]
@@ -166,7 +168,8 @@ class SRRescuer:
             return
 
         if current_node.modes is None:
-            raise ModesNotFoundError(f"{current_node.query_name}")
+            msg = f"{current_node.query_name}"
+            raise ModesNotFoundError(msg)
 
         mode1, mode2 = current_node.modes
 
@@ -198,7 +201,8 @@ class SRRescuer:
             current_node.ref_start is None
             or current_node.cigartuples_without_soft is None
         ):
-            raise ValueError(f"{current_node.query_name} with None value")
+            msg = f"{current_node.query_name} with None value"
+            raise ValueError(msg)
 
         region = cppext.Region(chrom, start - 1, start)
         break_point = make_breakpoint(current_node, mode1)
@@ -239,7 +243,8 @@ class SRRescuer:
                 next_node.ref_start is None
                 or next_node.cigartuples_without_soft is None
             ):
-                raise ValueError(f"{next_node.query_name} with None value")
+                msg = f"{next_node.query_name} with None value"
+                raise ValueError(msg)
 
             region = cppext.Region(chrom, start - 1, start)
             break_point = make_breakpoint(next_node, mode2)

@@ -101,7 +101,8 @@ class BamScanner:
         try:
             return header["HD"]["SO"] == "coordinate"
         except KeyError:
-            raise RuntimeError(f"Bam file {self.in_bam} is not sorted") from KeyError
+            msg = f"Bam file {self.in_bam} is not sorted"
+            raise RuntimeError(msg) from KeyError
 
     def _count_chrom_info(self, read):
         """Count the chrom and the chrom start and the chrom end."""
@@ -172,8 +173,9 @@ def _get_genome_fasta(ref_genome):
     try:
         return Fasta(str(ref_genome), sequence_always_upper=True)
     except FastaNotFoundError:
+        msg = f"Reference File {ref_genome} is Not Found!"
         raise SystemExit(
-            f"Reference File {ref_genome} is Not Found!",
+            msg,
         ) from FastaNotFoundError
 
 
@@ -186,7 +188,8 @@ def _get_cvg_gene_iv(gtf, splice_bin):
     try:
         return extract_splice_sites(str(gtf), splice_bin)
     except OSError:
-        raise SystemExit(f"Reading GTF file {gtf} error!") from OSError
+        msg = f"Reading GTF file {gtf} error!"
+        raise SystemExit(msg) from OSError
 
 
 def detect_sv_from_cigar(

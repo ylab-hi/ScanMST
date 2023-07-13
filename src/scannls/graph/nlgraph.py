@@ -8,7 +8,7 @@ from __future__ import annotations
 import copy
 import types
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from .basic_graph import (
     Edge,
@@ -140,7 +140,8 @@ class NLGraph:
     def find_edges(self, node1: Node, node2: Node):
         edge_key = Edge.create_key_from_node(node1, node2)
         if self.edges.get(edge_key) is None:
-            raise KeyError(f"Edge {edge_key} not found in splice graph.")
+            msg = f"Edge {edge_key} not found in splice graph."
+            raise KeyError(msg)
         return self.edges[edge_key]
 
     @staticmethod
@@ -239,7 +240,8 @@ class NLGraph:
         :param node: node to be removed
         """
         if node.similar_key is None:
-            raise ValueError(f"node.similar_key is None, {node.query_name}")
+            msg = f"node.similar_key is None, {node.query_name}"
+            raise ValueError(msg)
         self.get_nodes_with_similar_key(node.similar_key).remove(node)
 
     def reset_trace_id(self) -> None:
@@ -247,7 +249,7 @@ class NLGraph:
         for node in self:
             node.reset_trace_id()
 
-    def get_node_with_unique_key(self, unique_key: str) -> Optional[Node]:
+    def get_node_with_unique_key(self, unique_key: str) -> Node | None:
         """Get node with unique key.
 
         :param unique_key: unique key
@@ -283,8 +285,9 @@ class NLGraph:
         if node1.strand != node2.strand:
             return False
 
-        assert node1.self_identity is not None
-        assert node2.self_identity is not None
+        if node1.self_identity is None or node2.self_identity is None:
+            msg = f"{node1} {node2} self_identity is None"
+            raise ValueError(msg)
 
         node1_self_identity: NodeIdentity = node1.self_identity
         node2_self_identity: NodeIdentity = node2.self_identity
@@ -535,7 +538,8 @@ class NLGraph:
                 self._trace_backward(end_node, 2, [], [])
             return
 
-        raise ValueError(f"{direction=} is not a valid direction[forward, backward]")
+        msg = f"direction={direction!r} is not a valid direction[forward, backward]"
+        raise ValueError(msg)
 
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
@@ -628,7 +632,8 @@ def update_exon_coord_name_mode(updated_node: Node, current_node: Node) -> None:
     :return: None
     """
     if updated_node.exons is None or current_node.exons is None:
-        raise ValueError(f"{updated_node} or {current_node} has no exons")
+        msg = f"{updated_node} or {current_node} has no exons"
+        raise ValueError(msg)
 
     _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
         updated_node,
@@ -648,8 +653,9 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     :param current_node: node has not been inserted into graph
     :return: None
     """
-    assert updated_node.exons is not None
-    assert current_node.exons is not None
+    if updated_node.exons is None or current_node.exons is None:
+        msg = f"{current_node} or {updated_node} exons is None"
+        raise ValueError(msg)
 
     # update exon coordinates
     updated_node.ref_start = min(
@@ -675,5 +681,9 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     )
 
     updated_node.read_names.append(current_node.query_name)
-    assert current_node.self_identity is not None
+
+    if current_node.self_identity is None:
+        msg = f"{current_node}'s self_identity is None"
+        raise ValueError(msg)
+
     updated_node.identities[current_node.query_name] = current_node.self_identity

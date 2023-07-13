@@ -49,7 +49,8 @@ class MergeConditionMode(Enum):
         if node1_self_identity.is_tail() and node2_self_identity.is_tail():
             return cls.tail2tail
 
-        raise ValueError("Invalid node identity")
+        msg = "Invalid node identity"
+        raise ValueError(msg)
 
 
 class MergeCondition:
@@ -128,7 +129,8 @@ class MergeCondition:
             return self.tail2mid(node1, node2)
         if node1_self_identity.is_tail() and node2_self_identity.is_tail():
             return self.tail2tail(node1, node2)
-        raise ValueError("Invalid node identity")
+        msg = "Invalid node identity"
+        raise ValueError(msg)
 
 
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
@@ -190,7 +192,8 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
             [node2] ->      <- [node2]
     """
     if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+        msg = f"{node1.query_name} or {node2.query_name}"
+        raise ExonsNotFoundError(msg)
 
     # limit all introns
     if node1.introns != node2.introns:
@@ -252,7 +255,8 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         -> [node2]
     """
     if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+        msg = f"{node1.query_name} or {node2.query_name}"
+        raise ExonsNotFoundError(msg)
 
     # limit all introns
     if node1.introns != node2.introns:
@@ -319,7 +323,8 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
         -> [  node2  ] ->
     """
     if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+        msg = f"{node1.query_name} or {node2.query_name}"
+        raise ExonsNotFoundError(msg)
 
     # limit all introns
     if node1.introns != node2.introns:
@@ -364,7 +369,8 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
         -> [  node2  ] ->
     """
     if node1.exons is None or node2.exons is None:
-        raise ExonsNotFoundError(f"{node1.query_name} or {node2.query_name}")
+        msg = f"{node1.query_name} or {node2.query_name}"
+        raise ExonsNotFoundError(msg)
 
     # limit all introns
     if node1.introns != node2.introns:

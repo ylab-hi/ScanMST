@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum, IntEnum
-from typing import Optional
 
 
 class Strand(Enum):
@@ -28,7 +27,8 @@ class Strand(Enum):
             return cls.Forward
         if strand == "-":
             return cls.Reverse
-        raise ValueError(f"Invalid strand: {strand}")
+        msg = f"Invalid strand: {strand}"
+        raise ValueError(msg)
 
 
 # // #define BAM_CMATCH      0
@@ -91,7 +91,8 @@ class Interval:
         elif index == 1:
             self.end = value
 
-        raise IndexError(f"index: {index} is out")
+        msg = f"index: {index} is out"
+        raise IndexError(msg)
 
     def __getitem__(self, index: int):
         """Get item from interval."""
@@ -100,7 +101,8 @@ class Interval:
             return self.start
         if index == 1:
             return self.end
-        raise IndexError(f"index: {index} is out")
+        msg = f"index: {index} is out"
+        raise IndexError(msg)
 
     def __len__(self):
         return self.end - self.start
@@ -185,7 +187,8 @@ class Intervals:
         elif isinstance(item, Interval):
             self.exon_list.append(item)
 
-        raise TypeError(f"item: {item} is not Interval or tuple")
+        msg = f"item: {item} is not Interval or tuple"
+        raise TypeError(msg)
 
     @classmethod
     def from_list(cls, item: list[list[int] | tuple[int, int]]):
@@ -197,7 +200,7 @@ class Intervals:
         for exon in self.exon_list:
             exon.self_assert()
 
-    def introns(self) -> Optional[Intervals]:
+    def introns(self) -> Intervals | None:
         if len(self) < 2:
             return None
 

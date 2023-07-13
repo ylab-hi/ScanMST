@@ -236,8 +236,9 @@ def merge_same_len_node_list(
                 break
 
         else:
+            msg = f"invalid node identity node1.self_identity={node1.self_identity!r} node2.self_identity={node2.self_identity!r}"
             raise ValueError(
-                f"invalid node identity {node1.self_identity=} {node2.self_identity=}",
+                msg,
             )
 
     return flag
@@ -393,7 +394,8 @@ class ClusterFinder:
         if len(merge_keys[path1.id]) > len(merge_keys[path2.id]):
             return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys)
 
-        raise ValueError("series1 is shorter than series2")
+        msg = "series1 is shorter than series2"
+        raise ValueError(msg)
 
     def merge_cluster(self):
         for cluster_index in self.find_cluster_index():
