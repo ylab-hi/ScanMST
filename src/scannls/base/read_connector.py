@@ -11,6 +11,7 @@ from loguru import logger
 from scannls.cli.helper import cigar_validity
 from scannls.type import LoggerType
 
+from .basic import Mode
 from .basic_class import reverse_complement
 from .basic_read import Read
 from .blat import Blat
@@ -96,14 +97,14 @@ class ReadsConnector:
         if read1 == sorted_by_s_length[0]:
             read1.mode = ReadsConnector._get_mode(read1.adhocsms)
             if read1.strand == read2.strand:
-                read2.mode = 1 if read1.mode == 2 else 2
+                read2.mode = Mode.Type1 if read1.mode == Mode.Type2 else Mode.Type2
             else:
                 read2.mode = read1.mode
 
         else:
             read2.mode = ReadsConnector._get_mode(read2.sms)
             if read1.strand == read2.strand:
-                read1.mode = 1 if read2.mode == 2 else 2
+                read1.mode = Mode.Type1 if read2.mode == Mode.Type2 else Mode.Type1
             else:
                 read1.mode = read2.mode
 
@@ -171,8 +172,8 @@ class ReadsConnector:
         bp_region_seq_len = 0
         _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
-        if prev_read_mode == 2:
-            if next_read_mode == 2:
+        if prev_read_mode == Mode.Type2:
+            if next_read_mode == Mode.Type2:
                 bp_region_seq_len = (
                     read_query_length
                     - _rt_len_r1
@@ -180,7 +181,7 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-            elif next_read_mode == 1:
+            elif next_read_mode == Mode.Type1:
                 bp_region_seq_len = (
                     read_query_length
                     - _rt_len_r1
@@ -188,7 +189,7 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-        elif next_read_mode == 2:
+        elif next_read_mode == Mode.Type2:
             bp_region_seq_len = (
                 read_query_length
                 - _lt_len_r1
@@ -196,7 +197,7 @@ class ReadsConnector:
                 - _read_match_r1
                 - _read_match_r2
             )
-        elif next_read_mode == 1:
+        elif next_read_mode == Mode.Type1:
             bp_region_seq_len = (
                 read_query_length
                 - _lt_len_r1
@@ -235,10 +236,10 @@ class ReadsConnector:
             next_read_mode,
         )
         if is_microhomology:
-            if prev_read_mode == 2:
+            if prev_read_mode == Mode.Type2:
                 return read_match_sequence[microhomology_length:]
 
-            if prev_read_mode == 1:
+            if prev_read_mode == Mode.Type1:
                 return read_match_sequence[:-microhomology_length]
             return None
 
@@ -300,7 +301,7 @@ class ReadsConnector:
         # first case
         self.logger.debug("testing first case M vs LS")
 
-        next_read_mode = 2
+        next_read_mode = Mode.Type2
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
@@ -343,7 +344,7 @@ class ReadsConnector:
 
         self.logger.debug("testing second case M vs RS")
         # second case
-        next_read_mode = 1
+        next_read_mode = Mode.Type1
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
@@ -403,10 +404,10 @@ class ReadsConnector:
         new_read_strand: str,
     ) -> int:
         """Double check for start and end read determine new read mode."""
-        read.mode = 1 if read.mode == 2 else 2
+        read.mode = Mode.Type1 if read.mode == Mode.Type2 else Mode.Type2
         if new_read_strand == read.strand:
-            return 1 if read.mode == 2 else 2
-        return 1 if read.mode == 1 else 2
+            return Mode.Type1 if read.mode == Mode.Type2 else Mode.Type2
+        return Mode.Type1 if read.mode == Mode.Type1 else Mode.Type2
 
     def _double_check_create_new_read_calculate_sms(
         self,
@@ -430,7 +431,7 @@ class ReadsConnector:
             )
         )
 
-        if new_read_mode == 1:
+        if new_read_mode == Mode.Type1:
             cigar_str = (
                 f"{lt_s_len}S"
                 + cigar_str

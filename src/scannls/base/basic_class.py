@@ -12,7 +12,7 @@ from scannls import cppext
 from scannls.cli.helper import cigar_validity
 from scannls.exception import ReadNotFoundError
 
-from .basic import Strand
+from .basic import AnnotationCode, Mode, Strand
 from .basic_read import Read
 
 if TYPE_CHECKING:
@@ -222,7 +222,9 @@ class BreakPoint:
     @classmethod
     def from_str(cls, breakpoint_str: str, depth: int | None = None) -> BreakPoint:
         """Create BreakPoint object from string."""
-        assert breakpoint_str != ""
+        if breakpoint_str == "":
+            msg = "breakpoint_str can not be empty string"
+            raise ValueError(msg)
         chrom, pos = breakpoint_str.split(":")
         depth = int(depth) if depth is not None else cls.depth
         return cls(chrom, int(pos), depth)
@@ -310,10 +312,11 @@ class Event:
 
     def reverse(self) -> None:
         """Reverse breakpoint1 and breakpoint2."""
-        if self.annotation_code == 1:
-            self.annotation_code = 2
-        elif self.annotation_code == 2:
-            self.annotation_code = 1
+        if self.annotation_code == AnnotationCode.Type1:
+            self.annotation_code = AnnotationCode.Type2
+        elif self.annotation_code == AnnotationCode.Type2:
+            self.annotation_code = AnnotationCode.Type1
+
         self.bp1, self.bp2 = self.bp2, self.bp1
         self.mode1, self.mode2 = self.mode2, self.mode1
         self.strand1, self.strand2 = self.strand2, self.strand1
@@ -367,12 +370,12 @@ class Event:
     @property
     def source_s1(self) -> str:
         """Source of insertion of read1."""
-        return "left" if self.mode1 == 2 else "right"
+        return "left" if self.mode1 == Mode.Type2 else "right"
 
     @property
     def source_s2(self) -> str:
         """Source of insertion of read2."""
-        return "left" if self.mode2 == 2 else "right"
+        return "left" if self.mode2 == Mode.Type2 else "right"
 
     def is_type_na(self) -> bool:
         """Return True if the event is NA."""

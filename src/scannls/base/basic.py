@@ -3,6 +3,25 @@ from __future__ import annotations
 from enum import Enum, IntEnum
 
 
+class Mode(IntEnum):
+    """Mode code."""
+
+    Type0 = 0
+    Type1 = 1
+    Type2 = 2
+
+    def reverse(self):
+        self = self.Type2 if self == self.Type1 else self.Type1
+
+
+class AnnotationCode(IntEnum):
+    Type1 = 1
+    Type2 = 2
+
+    def reverse(self):
+        self = self.Type2 if self == self.Type1 else self.Type1
+
+
 class Strand(Enum):
     """Strand."""
 
@@ -69,6 +88,7 @@ class Interval:
 
     start: int
     end: int
+    __index: int = 2
 
     def __init__(self, start: int, end: int):
         """Initialize Interval."""
@@ -99,7 +119,7 @@ class Interval:
 
     def __getitem__(self, index: int):
         """Get item from interval."""
-        if index >= 2:
+        if index >= Interval.__index:
             msg = f"index: {index} is out"
             raise ValueError(msg)
 
@@ -235,13 +255,8 @@ class Intervals:
         """Create Exons from list."""
         return cls(exon_list=[Interval.from_list(exon) for exon in item])
 
-    def self_assert(self):
-        """Assert exons."""
-        for exon in self.exon_list:
-            exon.self_assert()
-
     def introns(self) -> Intervals | None:
-        if len(self) < 2:
+        if len(self) < Interval.__index:
             return None
 
         introns = Intervals([])

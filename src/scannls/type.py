@@ -4,17 +4,7 @@
 @Author:      Yangyang Li
 @Time:        12/30/21 2:20 PM
 """
-from enum import IntEnum
 from typing import Any, Protocol
-
-
-class Mode(IntEnum):
-    """Mode code."""
-
-    type0 = 0
-    type1 = 1
-    type2 = 2
-
 
 EventType = tuple[
     str,

@@ -14,15 +14,18 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from scannls.base import Mode
+
 from . import cppext
 from .blat import load_fa2bit
 from .exception import ToolNotFoundError
-from .type import LoggerType, Mode
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
     import pysam
+
+    from .type import LoggerType
 
 __all__ = [
     "external_tool_checking",

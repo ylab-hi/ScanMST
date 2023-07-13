@@ -5,11 +5,13 @@
 """
 
 from .basic import (
+    AnnotationCode,
     Exon,
     Exons,
     Interval,
     Intervals,
     Introns,
+    Mode,
     Strand,
 )
 from .basic_class import (
@@ -31,6 +33,8 @@ from .read_connector import (
 )
 
 __all__ = [
+    "Mode",
+    "AnnotationCode",
     "Exon",
     "Exons",
     "Introns",
