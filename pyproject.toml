@@ -26,17 +26,21 @@ Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
 python = "^3.8"
 biopython = "^1.79"
 pysam = "0.19.0"
-HTSeq = "^2.0.2"
+HTSeq = "2.0.2"
 pyfaidx = "^0.7.1"
 psutil = "^5.9.1"
 loguru = "^0.6.0"
 rich = "^12.5.1"
 networkx = "^2.8"
 pybind11 = "^2.10.0"
-matplotlib = "^3.6.3"
-maturin = "^0.14.12"
+matplotlib = { extras = ["vis"], version = "^3.7.2" }
+pyvis = { extras = ["vis"], version = "^0.3.2" }
+maturin = { extras = ["rust"], version = "^1.1.0" }
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+codespell = "^2.2.2"
+ipdb = "^0.13.11"
+isort = "^5.12.0"
 pytest = "^7.1.2"
 coverage = { extras = ["toml"], version = "^6.4" }
 safety = "^2.1.1"
@@ -54,7 +58,6 @@ flake8-bugbear = "^22.9.11"
 flake8-docstrings = "^1.6.0"
 flake8-rst-docstrings = "^0.2.6"
 pep8-naming = "^0.13.2"
-darglint = "^1.8.0"
 reorder-python-imports = "^3.8.2"
 pre-commit-hooks = "^4.3.0"
 sphinx-rtd-theme = "^0.5.2"
@@ -72,16 +75,13 @@ flake8-alfred = "^1.1.1"
 cohesion = "^1.0.0"
 tqdm = "^4.64.0"
 
+
 [tool.poetry.build]
 script = "build.py"
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
 
-[tool.poetry.group.dev.dependencies]
-codespell = "^2.2.2"
-ipdb = "^0.13.11"
-isort = "^5.12.0"
 
 [tool.mypy]
 strict = false
@@ -99,7 +99,6 @@ norecursedirs = ["cppext"]
 [tool.bandit]
 exclude_dirs = ['tests']
 skips = ["B602", "B404", "B603"]
-
 
 [tool.isort]
 profile = "black"
@@ -159,24 +158,7 @@ select = [
 ]
 line-length = 130
 exclude = ["tests", "cppext", "nls_inference.py", "blat.py"]
-ignore = [
-    "ANN001",
-    "D203",
-    "D213",
-    # "UP007",
-    "PGH003",
-    # "EM102",
-    # "EM101",
-    # "S101",
-    # "PLR2004",
-    # "C901",
-    # "A003",
-    # "B905",
-    # "FBT003",
-    # "DTZ002",
-    # "D401",
-    # "PLR0913",
-]
+ignore = ["ANN001", "D203", "D213", "PGH003"]
 target-version = "py39"
 
 [tool.commitizen]
