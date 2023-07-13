@@ -12,11 +12,11 @@ class Strand(Enum):
     def is_reverse(self):
         return self == Strand.Reverse
 
-    def is_forword(self):
+    def is_forward(self):
         return self == Strand.Forward
 
     def reverse(self):
-        self = Strand.Reverse if self.is_forword() else Strand.Reverse
+        self = Strand.Reverse if self.is_forward() else Strand.Reverse
 
     @classmethod
     def from_str(cls, strand: str | Strand):
@@ -72,7 +72,10 @@ class Interval:
 
     def __init__(self, start: int, end: int):
         """Initialize Interval."""
-        assert start <= end, f"start: {start} > end: {end}"
+        if start > end:
+            msg = f"start: {start} > end: {end}"
+            raise ValueError(msg)
+
         self.start = start
         self.end = end
 
@@ -96,7 +99,10 @@ class Interval:
 
     def __getitem__(self, index: int):
         """Get item from interval."""
-        assert index < 2, f"index: {index} is out"
+        if index >= 2:
+            msg = f"index: {index} is out"
+            raise ValueError(msg)
+
         if index == 0:
             return self.start
         if index == 1:
@@ -120,11 +126,45 @@ class Interval:
         """Create Interval from tuple."""
         return cls(*item)
 
-    def self_assert(self):
-        """Assert interval."""
-        assert self.start >= 0, f"start: {self.start} < 0"
-        assert self.end >= 0, f"end: {self.end} < 0"
-        assert self.start <= self.end, f"start: {self.start} > end: {self.end}"
+    def join(self, other: Interval):
+        """Set operation overlap and union."""
+        if isinstance(other, Interval):
+            if self.start <= other.start < self.end:
+                if other.end < self.end:
+                    # s |o o| s
+                    return Interval(other.start, other.end), Interval(
+                        self.start,
+                        self.end,
+                    )
+                # s |o s| o
+                return Interval(other.start, self.end), Interval(self.start, other.end)
+
+            if other.start <= self.start < other.end:
+                # o |s s| o
+                if self.end < other.end:
+                    return Interval(self.start, self.end), Interval(
+                        other.start,
+                        other.end,
+                    )
+                # o |s o| s
+                return Interval(self.start, other.end), Interval(other.start, self.end)
+
+        msg = f"{other} is not a Interval"
+        raise ValueError(msg)
+
+    def contain(self, other: Interval, *, same_left=False, same_right=False) -> bool:
+        if isinstance(other, Interval):
+            if not same_left and not same_right:
+                return other in self
+            if same_left and same_right:
+                return other == self
+            if same_left:
+                return self.end >= other.end
+            if same_right:
+                return self.start <= other.start
+
+        msg = f"{other} is not Interval"
+        raise ValueError(msg)
 
 
 class Intervals:

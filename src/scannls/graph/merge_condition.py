@@ -4,12 +4,16 @@
 @contact:     yangyang.li@northwestern.edu
 @Time:        4/18/22 7:51 PM
 """
+from __future__ import annotations
+
 from enum import Enum, auto
 from itertools import zip_longest
+from typing import TYPE_CHECKING
 
 from scannls.exception import ExonsNotFoundError
 
-from .basic_graph import Node
+if TYPE_CHECKING:
+    from .basic_graph import Node
 
 
 class MergeConditionMode(Enum):
@@ -24,11 +28,12 @@ class MergeConditionMode(Enum):
     tail2tail = auto()
 
     @classmethod
-    def get_mode(cls, node1: Node, node2: Node) -> "MergeConditionMode":
+    def from_node(cls, node1: Node, node2: Node) -> MergeConditionMode:
         node1_self_identity = node1.self_identity
         node2_self_identity = node2.self_identity
-        assert node1_self_identity is not None, "Node1 self identity is None"
-        assert node2_self_identity is not None, "Node2 self identity is None"
+        if node2_self_identity is None or node1_self_identity is None:
+            msg = f"{node1} or {node2}'s self_identity is None"
+            raise ValueError(msg)
 
         if node1_self_identity.is_head() and node2_self_identity.is_head():
             return cls.head2head
@@ -108,8 +113,9 @@ class MergeCondition:
     def merged(self, node1: Node, node2: Node) -> bool:
         node1_self_identity = node1.self_identity
         node2_self_identity = node2.self_identity
-        assert node1_self_identity is not None, "Node1 self identity is None"
-        assert node2_self_identity is not None, "Node2 self identity is None"
+        if node2_self_identity is None or node1_self_identity is None:
+            msg = f"{node1} or {node2}'s self_identity is None"
+            raise ValueError(msg)
 
         if node1_self_identity.is_head() and node2_self_identity.is_head():
             return self.head2head(node1, node2)
@@ -199,37 +205,17 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     if node1.introns != node2.introns:
         return False
 
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
     if node1.is_polya:
         return False
 
-    if node1.strand == "+":
-        condition = (
-            node1_first_exon_start
-            <= node2_first_exon_start
-            < node1_last_exon_end
-            <= node2_last_exon_end
-        )
+    if node1.strand.is_forward():
+        if ret := node1.exons.first.join(node2.exons.last):
+            overlap, union = ret
+            return len(overlap) / len(union) >= threshold
 
-        if condition:
-            overlap_len = node1_last_exon_end - node2_first_exon_start
-            union_len = node2_last_exon_end - node1_first_exon_start
-            return overlap_len / union_len >= threshold
-    else:
-        condition = (
-            node2_first_exon_start
-            <= node1_first_exon_start
-            < node2_last_exon_end
-            <= node1_last_exon_end
-        )
-        if condition:
-            overlap_len = node2_last_exon_end - node1_first_exon_start
-            union_len = node2_last_exon_end - node1_first_exon_start
-            return overlap_len / union_len >= threshold
+    elif ret := node2.exons.first.join(node1.exons.last):
+        overlap, union = ret
+        return len(overlap) / len(union) >= threshold
 
     return False
 
@@ -262,44 +248,23 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     if node1.introns != node2.introns:
         return False
 
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
     if node1.is_polya and node2.is_polya:
-        return (
-            node1_first_exon_start == node2_first_exon_start
-            and node1_last_exon_end == node2_last_exon_end
-        )
+        return node1.exons.first == node2.exons.first
 
     if node1.is_polya and not node2.is_polya:
-        if node1.strand == "+":
-            return (
-                node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end >= node2_last_exon_end
-            )
-
-        return (
-            node1_last_exon_end == node2_last_exon_end
-            and node1_first_exon_start <= node2_first_exon_start
-        )
+        if node1.strand.is_forward():
+            return node1.contains(node2, same_left=True)
+        return node1.contains(node2, same_right=True)
 
     if not node1.is_polya and node2.is_polya:
-        if node1.strand == "+":
-            return (
-                node1_first_exon_start == node2_first_exon_start
-                and node1_last_exon_end <= node2_last_exon_end
-            )
-        return (
-            node1_last_exon_end == node2_last_exon_end
-            and node1_first_exon_start >= node2_first_exon_start
-        )
+        if node1.strand.is_forward():
+            return node2.contains(node1, same_left=True)
+        return node2.contains(node1, same_right=True)
 
     if not node1.is_polya and not node2.is_polya:
-        if node1.strand == "+":
-            return node1_first_exon_start == node2_first_exon_start
-        return node1_last_exon_end == node2_last_exon_end
+        if node1.strand.is_forward():
+            return node1.exons.first.start == node2.exons.first.start
+        return node1.exons.last.end == node2.exons.last.end
 
     return False
 
@@ -333,21 +298,10 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
     # WARN: first exon start = ref start, last exon end = ref end <06-30-23, Yangyang Li>
     # we save same value in different variable in which it is diffficult to change them at same time
 
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
+    if node1.strand.is_forward():
+        return node2.contains(node1, same_right=True)
 
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
-    if node1.strand == "+":
-        return (
-            node1_last_exon_end == node2_last_exon_end
-            and node1_first_exon_start >= node2_first_exon_start
-        )
-    return (
-        node1_first_exon_start == node2_first_exon_start
-        and node1_last_exon_end <= node2_last_exon_end
-    )
+    return node2.contains(node1, same_left=True)
 
 
 def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
@@ -376,20 +330,10 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
     if node1.introns != node2.introns:
         return False
 
-    node1_first_exon_start = node1.exons[0][0]
-    node1_last_exon_end = node1.exons[-1][1]
-    node2_first_exon_start = node2.exons[0][0]
-    node2_last_exon_end = node2.exons[-1][1]
-
     if node1.is_polya:
         return False
 
-    if node1.strand == "+":
-        return (
-            node1_first_exon_start == node2_first_exon_start
-            and node1_last_exon_end <= node2_last_exon_end
-        )
-    return (
-        node1_last_exon_end == node2_last_exon_end
-        and node1_first_exon_start >= node2_first_exon_start
-    )
+    if node1.strand.is_forward():
+        return node2.contains(node1, same_left=True)
+
+    return node2.contains(node1, same_right=True)

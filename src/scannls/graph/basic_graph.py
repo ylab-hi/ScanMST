@@ -381,7 +381,7 @@ class Node(BasicNode):
         introns = self.introns
         chosen_intron = None
         if introns:
-            chosen_intron = introns.last if self.strand.is_forword() else introns.first
+            chosen_intron = introns.last if self.strand.is_forward() else introns.first
 
         key = f"{chosen_intron!s}"
         return f"{self.chrom}_{key}"
@@ -410,7 +410,51 @@ class Node(BasicNode):
 
     def is_reverse(self) -> bool:
         """Check if a node is reverse."""
-        return self.strand == "-"
+        return self.strand.is_reverse()
+
+    def contains(
+        self,
+        other: Node,
+        *,
+        same_left=False,
+        same_right=False,
+        check_introns=False,
+    ):
+        if isinstance(other, Node):
+            if self.exons is None or other.exons is None:
+                return False
+
+            if check_introns and self.introns != other.introns:
+                return False
+
+            if not same_left and not same_right:
+                return (
+                    self.exons.first.start
+                    <= other.exons.first.start
+                    <= other.exons.last.end
+                    <= self.exons.last.end
+                )
+
+            if same_left and same_right:
+                return (
+                    self.exons.first.start == other.exons.first.start
+                    and self.exons.last.end == other.exons.last.end
+                )
+
+            if same_left:
+                return (
+                    self.exons.first.start == other.exons.first.start
+                    and self.exons.last.end >= other.exons.last.end
+                )
+
+            if same_right:
+                return (
+                    self.exons.first.start <= other.exons.first.start
+                    and self.exons.last.end == other.exons.last.end
+                )
+
+        msg = f"{other} is not Node"
+        raise ValueError(msg)
 
 
 class SpliceType(Enum):

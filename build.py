@@ -115,7 +115,8 @@ def get_files(path: Path | None, suffix: list[str]) -> typing.Iterator[str]:
     if isinstance(path, str):
         path = Path(path)
 
-    assert path is not None
+    if path is None:
+        raise ValueError
 
     for file in path.iterdir():
         if file.is_dir():
