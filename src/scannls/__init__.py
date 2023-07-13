@@ -12,6 +12,8 @@ from .base import (
     Event,
     ExonFilter,
     Insertion,
+    Interval,
+    Intervals,
     MicroHomology,
     MyLogger,
     NovelInsertion,
@@ -19,6 +21,7 @@ from .base import (
     Read,
     ReadsConnector,
     RTSwitchingFilter,
+    Strand,
     detect_read_read_connections_from_cigar,
     reverse_complement,
 )
@@ -31,6 +34,9 @@ from .exception import (
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 __all__ = [
+    "Strand",
+    "Interval",
+    "Intervals",
     "CircRNAFilter",
     "ExonFilter",
     "RTSwitchingFilter",

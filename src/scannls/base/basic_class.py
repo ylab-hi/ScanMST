@@ -3,16 +3,22 @@
 @Author:      YangyangLi
 @Time:        12/30/21 2:20 PM
 """
-from collections.abc import Iterable
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from scannls import cppext
 from scannls.cli.helper import cigar_validity
 from scannls.exception import ReadNotFoundError
-from scannls.type import EventType
 
+from .basic import Strand
 from .basic_read import Read
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from scannls.type import EventType
 
 
 class NovelInsertion:
@@ -168,7 +174,7 @@ class Insertion(Read):
         self,
         sms: Iterable[int],
         source_s: str,
-        source_strand: str,
+        source_strand: str | Strand,
     ) -> None:
         """Update cigarstring and sms of Insertion object."""
         _ls, _m, _rs = sms
@@ -194,7 +200,7 @@ class Insertion(Read):
 
     def reverse_strand(self) -> None:
         """Reverse strand of Insertion object."""
-        self.strand = "-" if self.strand == "+" else "+"
+        self.strand.reverse()
 
 
 @dataclass(unsafe_hash=True)
@@ -214,7 +220,7 @@ class BreakPoint:
         return self.chrom, self.pos
 
     @classmethod
-    def from_str(cls, breakpoint_str: str, depth: Optional[int] = None) -> "BreakPoint":
+    def from_str(cls, breakpoint_str: str, depth: Optional[int] = None) -> BreakPoint:
         """Create BreakPoint object from string."""
         assert breakpoint_str != ""
         chrom, pos = breakpoint_str.split(":")
@@ -222,8 +228,8 @@ class BreakPoint:
         return cls(chrom, int(pos), depth)
 
     @classmethod
-    def from_node(cls, node) -> tuple["BreakPoint", "BreakPoint"]:
-        if node.strand == "+":
+    def from_node(cls, node) -> tuple[BreakPoint, BreakPoint]:
+        if node.strand.is_forward():
             prev_breakpoint = BreakPoint.from_str(f"{node.chrom}:{node.ref_start}")
             next_breakpoint = BreakPoint.from_str(f"{node.chrom}:{node.ref_end}")
         else:
@@ -234,7 +240,7 @@ class BreakPoint:
 
     def equal(
         self,
-        other: "BreakPoint",
+        other: BreakPoint,
         threshold: int,
     ) -> bool:
         """Check if two breakpoints are different.
@@ -285,7 +291,8 @@ class Event:
             self.positions = _positions
             self.bp1, self.bp2 = _positions[:2]
             self.mode1, self.mode2 = _positions[2:]
-            self.strand1, self.strand2 = strands
+            self.strand1 = Strand.from_str(strands[0])
+            self.strand2 = Strand.from_str(strands[1])
             self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
             self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
 

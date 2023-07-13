@@ -19,8 +19,8 @@ from .basic_graph import (
     SpliceType,
     update_node_with_other_node,
 )
+from .graphvis import plot_graph
 from .merge_condition import MergeCondition
-from .plot_graph import plot_graph
 from .sr_rescuer import SRRescuer
 
 
@@ -647,20 +647,20 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     :param current_node: node has not been inserted into graph
     :return: None
     """
+    assert updated_node.exons is not None
+    assert current_node.exons is not None
+
     # update exon coordinates
-    updated_node.ref_start = min(  # type: ignore
-        updated_node.exons[0][0],
-        current_node.exons[0][0],  # type: ignore
+    updated_node.ref_start = min(
+        updated_node.exons.first.start,
+        current_node.exons.first.start,
     )
 
-    updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
-
-    updated_node.ref_end = max(  # type: ignore
-        updated_node.exons[-1][1],
-        current_node.exons[-1][1],  # type: ignore
+    # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
+    updated_node.ref_end = max(
+        updated_node.exons.last.end,
+        current_node.exons.last.end,
     )
-
-    updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
 
     update_node_with_other_node(
         updated_node,

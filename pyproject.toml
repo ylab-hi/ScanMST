@@ -6,15 +6,16 @@ authors = [
     "Yangyang Li <yangyang.li@northwestern.edu>",
     "Ting-You Wang <tingyou.wang@northwestern.edu>",
 ]
-license = "MIT"
+license = "GPL"
 readme = "README.md"
 homepage = "https://github.com/ylab-hi/ScanNLS"
 repository = "https://github.com/ylab-hi/ScanNLS"
 # documentation = "https://ScanNLS.readthedocs.io"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 1 - Beta",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 exclude = ["src/scannls/cppext/cmake-*"]
 

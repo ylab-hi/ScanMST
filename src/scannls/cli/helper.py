@@ -50,7 +50,6 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
         annotated gene regions (HTSeq.GenomicArrayOfSets)
     :rtype: tuple
     """
-    # TODO using real splice sites from reference genome
     gtf_file = HTSeq.GFF_Reader(in_file)
     cvg = HTSeq.GenomicArrayOfSets("auto", stranded=False)
     gene_iv = HTSeq.GenomicArrayOfSets("auto", stranded=False)

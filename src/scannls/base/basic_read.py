@@ -5,49 +5,13 @@
 @contact:     yangyang.li@northwestern.edu
 @Time:        1/9/22 12:13 PM
 """
-from enum import Enum, IntEnum
+from __future__ import annotations
+
 from typing import Any, Optional
 
 from scannls import cppext
 
-
-class Strand(Enum):
-    """Strand."""
-
-    Forward = "+"
-    Reverse = "-"
-
-    def is_reverse(self):
-        """Check if the strand is reverse."""
-        return self == Strand.Reverse
-
-
-# // #define BAM_CMATCH      0
-# // #define BAM_CINS        1
-# // #define BAM_CDEL        2
-# // #define BAM_CREF_SKIP   3
-# // #define BAM_CSOFT_CLIP  4
-# // #define BAM_CHARD_CLIP  5
-# // #define BAM_CEQUAL      7
-# // #define BAM_CPAD        6
-# // #define BAM_CDIFF       8
-# // #define BAM_CBACK       9
-# // #define BAM_CIGAR_STR   "MIDNSHP=XB"
-
-
-class CigarCode(IntEnum):
-    """Cigar Code."""
-
-    Match = 0
-    Insertion = 1
-    Del = 2
-    Ref_skip = 3
-    Soft_clip = 4
-    Hard_clip = 5
-    Pad = 6
-    Equal = 7
-    Diff = 8
-    Back = 9
+from .basic import CigarCode, Intervals, Strand
 
 
 class Read:
@@ -138,7 +102,7 @@ class Read:
         self.query_name = query_name
         self.chrom = chrom
         self.ref_start = ref_start
-        self.strand = strand
+        self.strand = Strand.from_str(strand)
         self.cigarstring = cigarstring
         self.mapq = mapq
         self.nm = nm
@@ -194,7 +158,7 @@ class Read:
         nm: int,
         query_seq: str,
         query_qualities: list[int],
-    ) -> "Read":
+    ) -> Read:
         """Calculate the features of the read and initialize the read."""
         parse_cigar_result = cppext.parseCigar(cigar_str)
 
@@ -217,7 +181,7 @@ class Read:
             query_qualities,
         )
 
-    def get_exons_and_introns(self) -> Any:
+    def get_exons(self) -> Intervals:
         """Get the coordinates for reads matched part (without softclipping).
 
         :return: exons coordinates and introns coordinates
@@ -239,18 +203,7 @@ class Read:
                 start_pos = current_pos
 
         exons.append((start_pos, current_pos))
-
-        introns = []
-        # No 'N' in the cigar
-        if len(exons) > 1:
-            _positions = []
-            for i, j in exons:
-                _positions.extend([i, j])
-            _positions.sort()
-            _positions.pop(0)
-            _positions.pop(-1)
-            introns = [(x, y) for x, y in zip(_positions[::2], _positions[1::2])]
-        return exons, introns
+        return Intervals.from_list(exons)
 
     def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
         """Check whether the fraction of canonical splice site usage.
@@ -264,9 +217,10 @@ class Read:
         :return: using canonical splice sites OR not
         :rtype: bool
         """
-        _, introns = self.get_exons_and_introns()
+        exons = self.get_exons()
+        introns = exons.introns()
 
-        if len(introns) == 0:
+        if introns is None:
             return True
 
         intron_count = len(introns)
@@ -275,12 +229,12 @@ class Read:
         for start, end in introns:
             donor_site = (
                 genome_fasta[self.chrom][end - 2 : end].reverse.complement.seq
-                if self.strand == "-"
+                if self.strand.is_reverse()
                 else genome_fasta[self.chrom][start : start + 2].seq
             )
             acceptor_site = (
                 genome_fasta[self.chrom][start : start + 2].reverse.complement.seq
-                if self.strand == "-"
+                if self.strand.is_reverse()
                 else genome_fasta[self.chrom][end - 2 : end].seq
             )
 

@@ -157,9 +157,9 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         return True
 
     introns_group = (
-        zip_longest(node1.introns, node2.introns)
-        if node1.strand == "-"
-        else zip_longest(node1.introns[::-1], node2.introns[::-1])
+        zip_longest(node1.introns, node2.introns)  # type:ignore
+        if node1.strand.is_reverse()
+        else zip_longest(node1.introns[::-1], node2.introns[::-1])  # type:ignore
     )
 
     # have introns

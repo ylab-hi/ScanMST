@@ -7,6 +7,7 @@ import HTSeq
 
 from scannls.type import LoggerType
 
+from .basic import Interval, Strand
 from .basic_class import Event
 
 
@@ -14,11 +15,21 @@ from .basic_class import Event
 class ExonInfo:
     """Class to store the information of one annotated exon."""
 
-    chrom: Optional[str] = None
-    start: Optional[int] = None
-    end: Optional[int] = None
-    strand: Optional[str] = None
+    chrom: str
+    interval: Interval
+    strand: Optional[Strand] = None
     trx_id: Optional[str] = None
+
+    # fmt: off
+    @property
+    def start(self): return self.interval.start
+    @start.setter
+    def start(self, value: int): self.interval.start = value
+    @property
+    def end(self): return self.interval.end
+    @end.setter
+    def end(self, value: int): self.interval.end = value
+    # fmt: on
 
     def __repr__(self) -> str:
         """Get a string representation of an Exon."""
@@ -96,7 +107,7 @@ def _extract_annotated_exons(
             start = _exon.start
             end = _exon.end
             if end - start >= minimum_exon_size:
-                exon_id = ExonInfo(chrom, start, end, strand, trx_id)
+                exon_id = ExonInfo(chrom, Interval(start, end), strand, trx_id)
                 if shrink:
                     if consider_strand:
                         iv = HTSeq.GenomicInterval(
@@ -287,7 +298,7 @@ class CircRNAFilter:
         """Obtain mega-exon with the longest exon length."""
         return sorted(
             nodes,
-            key=lambda x: sum(j[1] - j[0] for j in x.exons),
+            key=lambda x: sum(len(j) for j in x.exons),
             reverse=True,
         )[0]
 

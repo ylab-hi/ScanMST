@@ -12,8 +12,6 @@ from typing import Any
 
 from scannls.type import LoggerType
 
-# TODO: add asyncio support
-
 
 class ParallelWorker:
     """ParallelWorker class is used to run function in parallel.

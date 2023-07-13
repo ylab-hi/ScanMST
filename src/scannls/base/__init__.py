@@ -4,6 +4,14 @@
 @Time:        12/15/21 2:04 PM
 """
 
+from .basic import (
+    Exon,
+    Exons,
+    Interval,
+    Intervals,
+    Introns,
+    Strand,
+)
 from .basic_class import (
     BreakPoint,
     Event,
@@ -23,6 +31,12 @@ from .read_connector import (
 )
 
 __all__ = [
+    "Exon",
+    "Exons",
+    "Introns",
+    "Strand",
+    "Interval",
+    "Intervals",
     "CircRNAFilter",
     "ExonFilter",
     "RTSwitchingFilter",

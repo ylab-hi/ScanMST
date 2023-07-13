@@ -1,0 +1,213 @@
+from __future__ import annotations
+
+from enum import Enum, IntEnum
+from typing import Optional
+
+
+class Strand(Enum):
+    """Strand."""
+
+    Forward = "+"
+    Reverse = "-"
+
+    def is_reverse(self):
+        return self == Strand.Reverse
+
+    def is_forword(self):
+        return self == Strand.Forward
+
+    def reverse(self):
+        self = Strand.Reverse if self.is_forword() else Strand.Reverse
+
+    @classmethod
+    def from_str(cls, strand: str | Strand):
+        if isinstance(strand, cls):
+            return strand
+
+        if strand == "+":
+            return cls.Forward
+        if strand == "-":
+            return cls.Reverse
+        raise ValueError(f"Invalid strand: {strand}")
+
+
+# // #define BAM_CMATCH      0
+# // #define BAM_CINS        1
+# // #define BAM_CDEL        2
+# // #define BAM_CREF_SKIP   3
+# // #define BAM_CSOFT_CLIP  4
+# // #define BAM_CHARD_CLIP  5
+# // #define BAM_CEQUAL      7
+# // #define BAM_CPAD        6
+# // #define BAM_CDIFF       8
+# // #define BAM_CBACK       9
+# // #define BAM_CIGAR_STR   "MIDNSHP=XB"
+
+
+class CigarCode(IntEnum):
+    """Cigar Code."""
+
+    Match = 0
+    Insertion = 1
+    Del = 2
+    Ref_skip = 3
+    Soft_clip = 4
+    Hard_clip = 5
+    Pad = 6
+    Equal = 7
+    Diff = 8
+    Back = 9
+
+
+class Interval:
+    """0-based interval is used to represent the interval of genomics.
+
+    .. note:
+        start <= end
+
+    """
+
+    start: int
+    end: int
+
+    def __init__(self, start: int, end: int):
+        """Initialize Interval."""
+        assert start <= end, f"start: {start} > end: {end}"
+        self.start = start
+        self.end = end
+
+    def __eq__(self, other: Interval):
+        if isinstance(other, Interval):
+            return self.start == other.start and self.end == other.end
+        return False
+
+    def __contains__(self, item: Interval):
+        """Check if item is in the interval."""
+        return self.start <= item.start and item.end <= self.end
+
+    def __setitem__(self, index: int, value: int):
+        if index == 0:
+            self.start = value
+        elif index == 1:
+            self.end = value
+
+        raise IndexError(f"index: {index} is out")
+
+    def __getitem__(self, index: int):
+        """Get item from interval."""
+        assert index < 2, f"index: {index} is out"
+        if index == 0:
+            return self.start
+        if index == 1:
+            return self.end
+        raise IndexError(f"index: {index} is out")
+
+    def __len__(self):
+        return self.end - self.start
+
+    def __repr__(self) -> str:
+        return f"[{self.start}, {self.end})"
+
+    def __iter__(self):
+        return iter((self.start, self.end))
+
+    __str__ = __repr__
+
+    @classmethod
+    def from_list(cls, item: list[int] | tuple[int, int]):
+        """Create Interval from tuple."""
+        return cls(*item)
+
+    def self_assert(self):
+        """Assert interval."""
+        assert self.start >= 0, f"start: {self.start} < 0"
+        assert self.end >= 0, f"end: {self.end} < 0"
+        assert self.start <= self.end, f"start: {self.start} > end: {self.end}"
+
+
+class Intervals:
+    """Exons is used to represent exons of a gene.
+    :param exon_list: list of exons
+
+    :Example:
+    >>> exons = Exons(exon_list=[Interval(0, 10), Interval(20, 30)])
+    >>> exons
+    Exons([0, 10), [20, 30))
+    >>> exons[0]
+    [0, 10)
+    >>> exons[1]
+    [20, 30)
+    >>> exons[0] in exons
+    True
+    >>> exons[1] in exons
+    True
+    >>> Interval(0, 5) in exons
+    False
+    >>> Interval(0, 10) in exons
+    True
+    >>> Interval(0, 11) in exons
+    False
+    >>> len(exons)
+    20
+
+    .. seealso::
+        :class:`Interval`
+    """
+
+    def __init__(self, exon_list: list[Interval]) -> None:
+        self.exon_list = exon_list
+
+    def __setitem__(self, index: int, value: Interval) -> None:
+        self.exon_list[index] = value
+
+    def __getitem__(self, index: int) -> Interval:
+        return self.exon_list[index]
+
+    def __len__(self):
+        return len(self.exon_list)
+
+    def __contains__(self, item: Interval):
+        return any(item == exon for exon in self.exon_list)
+
+    # fmt: off
+    def first(self) -> Interval: return self.exon_list[0]
+    def last(self) -> Interval: return self.exon_list[-1]
+    def __iter__(self): return iter(self.exon_list)
+    def __repr__(self) -> str: return f"Exons({self.exon_list})"
+    def __str__(self) -> str:
+        return "_".join( [f"{interval.start}-{interval.end}" for interval in self.exon_list])
+    # fmt: on
+
+    def append(self, item: Interval | tuple[int, int]) -> None:
+        """Append item to exon_list."""
+        if isinstance(item, tuple):
+            self.exon_list.append(Interval(*item))
+        elif isinstance(item, Interval):
+            self.exon_list.append(item)
+
+        raise TypeError(f"item: {item} is not Interval or tuple")
+
+    @classmethod
+    def from_list(cls, item: list[list[int] | tuple[int, int]]):
+        """Create Exons from list."""
+        return cls(exon_list=[Interval.from_list(exon) for exon in item])
+
+    def self_assert(self):
+        """Assert exons."""
+        for exon in self.exon_list:
+            exon.self_assert()
+
+    def introns(self) -> Optional[Intervals]:
+        if len(self) < 2:
+            return None
+
+        introns = Intervals([])
+        for exon_group in zip(self.exon_list, self.exon_list[1:]):
+            introns.append(Interval(exon_group[0].end, exon_group[1].start))
+
+        return introns
+
+
+Exon = Interval
+Exons = Intervals
+Introns = Intervals

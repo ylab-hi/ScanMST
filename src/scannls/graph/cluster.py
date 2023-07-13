@@ -10,8 +10,6 @@ import networkx as nx
 from loguru import logger
 from networkx import connected_components
 
-from scannls.utils import timeit
-
 from .basic_graph import NLPath, Node
 from .merge_condition import MergeCondition
 
@@ -94,11 +92,7 @@ class Ruler:
 
 
 def create_merge_key_for_node(node: Node):
-    introns = node.introns
-    introns_key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
-    chrom = node.chrom
-
-    return f"{chrom}_{introns_key}"
+    return f"{node.chrom}_{node.introns!s}"
 
 
 def create_merge_key_for_nlpath(nodes_key: list[str]):
@@ -163,18 +157,16 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
     ):
         # update exon coordinates
-        updated_node.ref_start = min(  # type: ignore
-            updated_node.exons[0][0],
-            current_node.exons[0][0],  # type: ignore
+        updated_node.ref_start = min(
+            updated_node.exons.first.start,
+            current_node.exons.first.start,
         )
-        updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
         # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
-        updated_node.ref_end = max(  # type: ignore
-            updated_node.exons[-1][1],
-            current_node.exons[-1][1],  # type: ignore
+        updated_node.ref_end = max(
+            updated_node.exons.last.end,
+            current_node.exons.last.end,
         )
-        updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
 
         # update edge data
         node1_edge = path1.get_edge(nodes=updated_node, nodes_idx=start_index + idx)
@@ -216,7 +208,6 @@ def merge_same_len_node_list(
             same_edge = node1_edge.is_merged(
                 node2_edge,
                 compared_break_point=False,
-                break_point_threshold=threashold,
             )
 
         if node1.self_identity.is_head() and node2.self_identity.is_head():
@@ -328,7 +319,6 @@ class ClusterFinder:
         if not self.intact_nlpaths[ind_y].is_in_graph:
             self._graph.add_node(ind_y)
 
-    @timeit
     def find_cluster(self) -> Any:
         """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 

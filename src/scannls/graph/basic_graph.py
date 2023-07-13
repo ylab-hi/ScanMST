@@ -10,8 +10,11 @@ from loguru import logger
 from scannls.base import (
     BreakPoint,
     Event,
+    Exons,
+    Introns,
     MicroHomology,
     NovelInsertion,
+    Strand,
     reverse_complement,
 )
 from scannls.cli import infer_nls_from_connected_reads
@@ -278,10 +281,10 @@ class Node(BasicNode):
         self,
         query_name: str,
         chrom: str,
-        strand: str,
+        strand: Strand | str,
         ref_start: int,
         ref_end: int,
-        exons: Optional[list[Any]] = None,
+        exons: Optional[Exons] = None,
         annot: Optional[int] = None,
         canonical: Optional[int] = None,
         modes: Optional[list[int]] = None,
@@ -293,13 +296,13 @@ class Node(BasicNode):
         super().__init__()  # initialize BasicNode object
         self.query_name = query_name
         self.chrom = chrom
-        self.strand = strand
-        self.ref_start = ref_start
-        self.ref_end = ref_end
+        self.strand = Strand.from_str(strand)
+        self._ref_start = ref_start
+        self._ref_end = ref_end
 
         self.exons = exons
-        self._introns = None
-        self._exon_repr = ""
+        self._introns: Optional[Introns] = None
+        self._exon_str = ""
 
         self.modes = modes
         self.genes = genes
@@ -312,17 +315,34 @@ class Node(BasicNode):
         self.identities: dict[str, NodeIdentity] = {}
         self.read_names = [self.query_name]
 
-        # NOTE: maybe unused <06-29-23, Yangyang Li>
-        self.insertion_info = None
-
         if self.query_name != "" and identity is not None:
             self.identities[self.query_name] = identity
+
+    @property
+    def ref_start(self) -> int:
+        return self._ref_start
+
+    @ref_start.setter
+    def ref_start(self, value: int) -> None:
+        self._ref_start = value
+        if self.exons is not None:
+            self.exons.first.start = value
+
+    @property
+    def ref_end(self) -> int:
+        return self._ref_end
+
+    @ref_end.setter
+    def ref_end(self, value: int) -> None:
+        self._ref_end = value
+        if self.exons is not None:
+            self.exons.last.end = value
 
     def __repr__(self) -> str:
         """Get a string representation of a node."""
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{self.exons_repr},"
+            f"{self.exons_str},"
             f"modes={self.modes}, "
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
         )
@@ -336,29 +356,22 @@ class Node(BasicNode):
         self.identities[self.query_name] = identity
 
     @property
-    def exons_repr(self) -> str:
+    def exons_str(self) -> str:
         """Get a string representation of exons."""
-        if self._exon_repr == "":
-            self._exon_repr = "|".join([f"{i}-{j}" for i, j in self.exons])  # type: ignore
-        return self._exon_repr
+        if self._exon_str == "":
+            self._exon_str = str(self.exons)
+        return self._exon_str
 
     @property
-    def introns(self):
+    def introns(self) -> Introns | None:
         """Get introns of a node."""
         if self._introns is not None:
             return self._introns
 
-        assert self.exons is not None
+        if self.exons is None:
+            return None
 
-        if len(self.exons) <= 1:
-            return []
-
-        positions = []
-        for i, j in self.exons:
-            positions.extend([i, j])
-        positions.pop(0)
-        positions.pop(-1)
-        self._introns = list(zip(positions[::2], positions[1::2]))
+        self._introns = self.exons.introns()
         return self._introns
 
     @property
@@ -367,25 +380,22 @@ class Node(BasicNode):
         introns = self.introns
         chosen_intron = None
         if introns:
-            chosen_intron = introns[-1] if self.strand == "+" else introns[0]
+            chosen_intron = introns.last if self.strand.is_forword() else introns.first
 
-        key = f"{chosen_intron[0]}-{chosen_intron[1]}" if chosen_intron else "None"
+        key = f"{chosen_intron!s}"
         return f"{self.chrom}_{key}"
 
     @property
     def exons_length(self) -> int:
         """Get total length of exon of a node."""
         assert self.exons is not None
-        total_len = 0
-        for i, j in self.exons:
-            total_len += j - i
-        return total_len
+        return sum(len(exon) for exon in self.exons)
 
     @property
     def unique_key(self) -> str:
         if self._unique_key is None:
             introns = self.introns
-            key = "-".join([f"{i}-{j}" for i, j in introns]) if introns else "None"
+            key = str(introns) if introns else "None"
             key = f"{self.chrom}-{key}-{self.ref_start}-{self.ref_end}"
             self._unique_key = key
 
@@ -477,10 +487,14 @@ class EdgeData:
         )
 
         if compared_break_point:
-            flag = self.break_point1.equal(
-                other.break_point1,
-                break_point_threshold,
-            ) and self.break_point2.equal(other.break_point2, break_point_threshold)
+            return (
+                flag
+                and self.break_point1.equal(
+                    other.break_point1,
+                    break_point_threshold,
+                )
+                and self.break_point2.equal(other.break_point2, break_point_threshold)
+            )
 
         return flag
 
@@ -505,28 +519,22 @@ class Edge:
     # fmt: off
     @property
     def key(self): return f"{self.node1_key}-{self.node2_key}"
-
     @property
     def break_point1(self): return self.edge_data.break_point1
     @break_point1.setter
     def break_point1(self, value: BreakPoint): self.edge_data.break_point1 = value
-
     @property
     def break_point2(self): return self.edge_data.break_point2
     @break_point2.setter
     def break_point2(self, value: BreakPoint): self.edge_data.break_point2 = value
-
     @property
     def insertion_info(self): return self.edge_data.insertion_info
-
     @property
     def variation_type(self): return self.edge_data.variantion_type
-
     @property
     def sr(self): return self.edge_data.sr
     @sr.setter
     def sr(self, value): self.edge_data.sr = value
-
     @property
     def read_ids(self): return self.edge_data.read_ids
     # fmt: on
@@ -661,10 +669,10 @@ class NLPath:
 
     def __init__(
         self,
-        nodes,
+        nodes: list[Node],
     ) -> None:
         """Initialize a nlpath object."""
-        self.nodes: list[Node] = nodes
+        self.nodes = nodes
         self.edges: dict[str, Edge] = {}
 
         self.is_in_graph = False
@@ -721,7 +729,7 @@ class NLPath:
         """Check if all nodes in the series have sr > threshold."""
         return all(node.sr >= threshold for node in self.nodes[:-1])
 
-    def get_sr_sum(self) -> int:
+    def sum_sr(self) -> int:
         """Get sum of sr for all nodes in the series."""
         return sum(edge.sr for edge in self.edges.values())
 
@@ -870,13 +878,13 @@ class NLPath:
             read1: Read = event.read1(read_chains)
             read2: Read = event.read2(read_chains)
 
-            read1_node: Node = Node(
+            read1_node = Node(
                 query_name=read1.query_name,
                 chrom=event.chrom1,
                 strand=event.strand1,
                 ref_start=event.read1_ref_start,
                 ref_end=event.read1_ref_end,
-                exons=event.read1_exons,  # type: ignore
+                exons=Exons.from_list(event.read1_exons),
                 cigartuples_without_soft=read1.cigartuples_without_soft,
                 identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
             )
@@ -890,7 +898,7 @@ class NLPath:
                 insertion_seq = event.insertion_seq1  # pick from the first read
                 insertion_seq = (
                     reverse_complement(insertion_seq)
-                    if event.strand1 == "-"
+                    if event.strand1.is_reverse()
                     else insertion_seq
                 )
 
@@ -978,14 +986,10 @@ class NLPath:
                             strand=insertion.strand,
                             ref_start=insertion.ref_start,
                             ref_end=insertion.ref_end,
+                            exons=insertion.get_exons(),
                             cigartuples_without_soft=insertion.cigartuples_without_soft,
                             identity=NodeIdentity.MID,
                         )
-
-                        (
-                            insertion_node.exons,
-                            insertion_node._introns,
-                        ) = insertion.get_exons_and_introns()
 
                         insertion_read2_event.update_insertion_node_info(insertion_node)
 
@@ -1026,7 +1030,7 @@ class NLPath:
                 microhomology = MicroHomology(event.insertion_seq1)
 
                 logger.trace(f"Add MicroHomology {microhomology=} to read1")
-                if event.strand1 == "-":
+                if event.strand1.is_reverse():
                     microhomology.reverse_completement_query()
 
                 event.update_node_info(read1_node)
@@ -1047,7 +1051,7 @@ class NLPath:
                     strand=event.strand2,
                     ref_start=event.read2_ref_start,
                     ref_end=event.read2_ref_end,
-                    exons=event.read2_exons,  # type: ignore
+                    exons=Exons.from_list(event.read2_exons),
                     cigartuples_without_soft=read2.cigartuples_without_soft,
                     identity=NodeIdentity.TAIL,
                 )
