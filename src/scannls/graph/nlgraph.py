@@ -3,13 +3,12 @@
 @Filename:    nlgraph.py
 @Time:        12/15/21 10:42 AM.
 """
+from __future__ import annotations
+
 import copy
 import types
 from collections import defaultdict
-from collections.abc import Iterable, Iterator
-from typing import Any, Optional, Union
-
-from scannls.type import LoggerType
+from typing import TYPE_CHECKING, Any, Optional
 
 from .basic_graph import (
     Edge,
@@ -22,6 +21,11 @@ from .basic_graph import (
 from .graphvis import plot_graph
 from .merge_condition import MergeCondition
 from .sr_rescuer import SRRescuer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from scannls.type import LoggerType
 
 
 class NLGraph:
@@ -96,8 +100,8 @@ class NLGraph:
         logger: LoggerType,
         prune_threshold: int,
         node_rescued_sr_maximum: int,
-        average_read_depth: Optional[int],
-    ) -> "NLGraph":
+        average_read_depth: int | None,
+    ) -> NLGraph:
         """Create splice graph."""
         rescuer = SRRescuer(
             input_bam,
@@ -162,7 +166,7 @@ class NLGraph:
 
     def get_possible_edges(
         self,
-        current_path: list[Union[Node, Edge]],
+        current_path: list[Node | Edge],
         current_node: Node,
         successor: Node,
     ) -> list[Edge]:
@@ -439,8 +443,8 @@ class NLGraph:
         self,
         start_node: Node,
         trace_id: int,
-        path: list[Union[Node, Edge]],
-        group_paths: list[list[Union[Node, Edge]]],
+        path: list[Node | Edge],
+        group_paths: list[list[Node | Edge]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -457,32 +461,31 @@ class NLGraph:
             assert isinstance(path[-1], Node)
             group_paths.append(path)
 
+        elif successors := start_node.successors:
+            for successor in successors:
+                successor.set_trace_id(trace_id)
+                for edge in self.get_possible_edges(path, start_node, successor):
+                    self._trace_forward(
+                        successor,
+                        trace_id + 1,
+                        [*path, start_node, edge],
+                        group_paths,
+                    )
         else:
-            if successors := start_node.successors:
-                for successor in successors:
-                    successor.set_trace_id(trace_id)
-                    for edge in self.get_possible_edges(path, start_node, successor):
-                        self._trace_forward(
-                            successor,
-                            trace_id + 1,
-                            [*path, start_node, edge],
-                            group_paths,
-                        )
-            else:
-                # successor be [] or None
-                self._trace_forward(
-                    successors,  # type: ignore
-                    trace_id + 1,
-                    [*path, start_node],
-                    group_paths,
-                )
+            # successor be [] or None
+            self._trace_forward(
+                successors,  # type: ignore
+                trace_id + 1,
+                [*path, start_node],
+                group_paths,
+            )
 
     def _trace_backward(
         self,
         end_node: Node,
         trace_id: int,
-        path: list[Union[Node, Edge]],
-        group_paths: list[list[Union[Node, Edge]]],
+        path: list[Node | Edge],
+        group_paths: list[list[Node | Edge]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -492,25 +495,24 @@ class NLGraph:
         if not end_node or end_node in path:
             # successor be [] or None
             group_paths.append(path)
+        elif predecessors := end_node.successors:
+            for predecessor in predecessors:
+                predecessor.set_trace_id(trace_id)
+                for edge in self.get_possible_edges(path, end_node, predecessor):
+                    self._trace_backward(
+                        predecessor,
+                        trace_id + 1,
+                        [*path, end_node, edge],
+                        group_paths,
+                    )
         else:
-            if predecessors := end_node.successors:
-                for predecessor in predecessors:
-                    predecessor.set_trace_id(trace_id)
-                    for edge in self.get_possible_edges(path, end_node, predecessor):
-                        self._trace_backward(
-                            predecessor,
-                            trace_id + 1,
-                            [*path, end_node, edge],
-                            group_paths,
-                        )
-            else:
-                # successor be [] or None
-                self._trace_backward(
-                    predecessors,  # type: ignore
-                    trace_id + 1,
-                    [*path, end_node],
-                    group_paths,
-                )
+            # successor be [] or None
+            self._trace_backward(
+                predecessors,  # type: ignore
+                trace_id + 1,
+                [*path, end_node],
+                group_paths,
+            )
 
     def _trace(self, direction: SpliceType) -> None:
         """Trace splice graph but only mark node with trace_id.
@@ -599,24 +601,23 @@ class NLGraph:
         """
         if not start_node or start_node in path:
             group_paths.append(path)
-        else:
-            if successors := start_node.successors:
-                for successor in successors:
-                    if (key := successor.unique_key) is not None:
-                        nodes_keys.add(key)
-                    self._trace_forward_record_node_unique_keys(
-                        successor,
-                        [*path, start_node],
-                        group_paths,
-                        nodes_keys,
-                    )
-            else:
+        elif successors := start_node.successors:
+            for successor in successors:
+                if (key := successor.unique_key) is not None:
+                    nodes_keys.add(key)
                 self._trace_forward_record_node_unique_keys(
-                    successors,  # type: ignore
+                    successor,
                     [*path, start_node],
                     group_paths,
                     nodes_keys,
                 )
+        else:
+            self._trace_forward_record_node_unique_keys(
+                successors,  # type: ignore
+                [*path, start_node],
+                group_paths,
+                nodes_keys,
+            )
 
 
 def update_exon_coord_name_mode(updated_node: Node, current_node: Node) -> None:

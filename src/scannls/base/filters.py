@@ -1,14 +1,18 @@
 """Filters based on breakpoints or circurlarRNAs."""
+from __future__ import annotations
+
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import HTSeq
 
-from scannls.type import LoggerType
-
 from .basic import Interval, Strand
-from .basic_class import Event
+
+if TYPE_CHECKING:
+    from scannls.type import LoggerType
+
+    from .basic_class import Event
 
 
 @dataclass
@@ -123,21 +127,21 @@ def _extract_annotated_exons(
                             end - boundary_size,
                             ".",
                         )
+                elif consider_strand:
+                    iv = HTSeq.GenomicInterval(
+                        chrom,
+                        start - boundary_size,
+                        end + boundary_size,
+                        strand,
+                    )
                 else:
-                    if consider_strand:
-                        iv = HTSeq.GenomicInterval(
-                            chrom,
-                            start - boundary_size,
-                            end + boundary_size,
-                            strand,
-                        )
-                    else:
-                        iv = HTSeq.GenomicInterval(
-                            chrom,
-                            start - boundary_size,
-                            end + boundary_size,
-                            ".",
-                        )
+                    iv = HTSeq.GenomicInterval(
+                        chrom,
+                        start - boundary_size,
+                        end + boundary_size,
+                        ".",
+                    )
+
                 exons_gas[iv] += exon_id
     return exons_gas
 

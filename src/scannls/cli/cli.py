@@ -4,13 +4,14 @@
 @Author:      YangyangLi
 @Time:        1/11/22 4:28 PM
 """
-import argparse
+from __future__ import annotations
+
 import os
 import sys
 import tempfile
 import time
 from functools import partial
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any, Union
 
 from loguru import logger
 
@@ -24,11 +25,16 @@ from scannls import (
     Writers,
 )
 from scannls.graph import ClusterFinder, NLGraph
-from scannls.type import LoggerType
 from scannls.utils import find_2bit_file, sleep
 
-from .arg import DefaultOptions
 from .main import scanbam_run
+
+if TYPE_CHECKING:
+    import argparse
+
+    from scannls.type import LoggerType
+
+    from .arg import DefaultOptions
 
 
 def get_writers(

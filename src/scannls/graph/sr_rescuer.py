@@ -4,14 +4,19 @@
 @author:      Yangyang Li
 @Time:        12/30/21 15:00 PM
 """
-from collections.abc import Iterable
-from typing import Any, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Optional
 
 from loguru import logger
 
 from scannls import cppext
 from scannls.exception import ExonsNotFoundError, ModesNotFoundError
-from scannls.graph import Node
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from scannls.graph import Node
 
 # TODO: Rescure sr based on edge <05-01-23, Yangyang Li yangyang.li@northwestern.edu>
 

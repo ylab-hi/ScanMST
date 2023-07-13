@@ -1,23 +1,28 @@
 """Useful functions for scannls."""
+from __future__ import annotations
+
 import os
 import re
 import secrets
 import shutil
 import subprocess
 import time
-from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-import pysam
 from loguru import logger
 
 from . import cppext
 from .blat import load_fa2bit
 from .exception import ToolNotFoundError
 from .type import LoggerType, Mode
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
+
+    import pysam
 
 __all__ = [
     "external_tool_checking",

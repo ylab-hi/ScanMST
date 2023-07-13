@@ -112,24 +112,23 @@ class MergeCondition:
 
         if node1_self_identity.is_head() and node2_self_identity.is_head():
             return self.head2head(node1, node2)
-        elif node1_self_identity.is_head() and node2_self_identity.is_tail():
+        if node1_self_identity.is_head() and node2_self_identity.is_tail():
             return self.head2tail(node1, node2)
-        elif node1_self_identity.is_head() and node2_self_identity.is_mid():
+        if node1_self_identity.is_head() and node2_self_identity.is_mid():
             return self.head2mid(node1, node2)
-        elif node1_self_identity.is_mid() and node2_self_identity.is_head():
+        if node1_self_identity.is_mid() and node2_self_identity.is_head():
             return self.mid2head(node1, node2)
-        elif node1_self_identity.is_mid() and node2_self_identity.is_mid():
+        if node1_self_identity.is_mid() and node2_self_identity.is_mid():
             return self.mid2mid(node1, node2)
-        elif node1_self_identity.is_mid() and node2_self_identity.is_tail():
+        if node1_self_identity.is_mid() and node2_self_identity.is_tail():
             return self.mid2tail(node1, node2)
-        elif node1_self_identity.is_tail() and node2_self_identity.is_head():
+        if node1_self_identity.is_tail() and node2_self_identity.is_head():
             return self.tail2head(node1, node2)
-        elif node1_self_identity.is_tail() and node2_self_identity.is_mid():
+        if node1_self_identity.is_tail() and node2_self_identity.is_mid():
             return self.tail2mid(node1, node2)
-        elif node1_self_identity.is_tail() and node2_self_identity.is_tail():
+        if node1_self_identity.is_tail() and node2_self_identity.is_tail():
             return self.tail2tail(node1, node2)
-        else:
-            raise ValueError("Invalid node identity")
+        raise ValueError("Invalid node identity")
 
 
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(

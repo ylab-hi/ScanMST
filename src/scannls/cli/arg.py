@@ -1,4 +1,6 @@
 """Parse command line arguments."""
+from __future__ import annotations
+
 import argparse
 from dataclasses import dataclass
 from typing import Any, Optional
