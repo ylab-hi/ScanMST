@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from scannls import cppext
+from scannls.base import Mode
 from scannls.exception import ExonsNotFoundError, ModesNotFoundError
 
 if TYPE_CHECKING:
@@ -139,7 +140,7 @@ class SRRescuer:
             pre_pos = node.exons[-1][1]
             next_pos = node.exons[0][0]
 
-        if mode == 2:
+        if mode == Mode.Type2:
             pre_pos += 1
             next_pos += 1
         else:

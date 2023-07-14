@@ -265,7 +265,6 @@ class VCFWriter(Writer):
     @property
     def header(self) -> str:
         """VCF header provides metadata describing the body of the file."""
-        # Metadata parsers/constants
 
         date = datetime.datetime.today().strftime("%Y%m%d")
         source = f"ScanNLS v{__version__}"
