@@ -157,7 +157,7 @@ select = [
     "COM",
 ]
 line-length = 130
-exclude = ["tests", "cppext", "nls_inference.py", "blat.py"]
+exclude = ["tests", "cppext", "blat.py"]
 ignore = ["ANN001", "D203", "D213", "PGH003"]
 target-version = "py39"
 

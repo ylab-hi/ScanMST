@@ -8,6 +8,7 @@ from . import blat, cli, cppext, graph, type, utils
 from .base import (
     Blat,
     BreakPoint,
+    CigarCode,
     CircRNAFilter,
     Event,
     ExonFilter,
@@ -34,6 +35,7 @@ from .exception import (
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 __all__ = [
+    "CigarCode",
     "Strand",
     "Interval",
     "Intervals",

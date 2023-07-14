@@ -7,11 +7,9 @@
 """
 from __future__ import annotations
 
-from typing import Any
-
 from scannls import cppext
 
-from .basic import CigarCode, Intervals, Strand
+from .basic import CigarCode, Intervals, Mode, Strand
 
 
 class Read:
@@ -118,9 +116,9 @@ class Read:
         self.ref_end = self.ref_start + self.reference_match_size
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
-        self.adhocsms: Any = None
-        self.adhocseq: Any = None
-        self.mode: Any = None
+        self.adhocsms = None
+        self.adhocseq = None
+        self.mode: Mode | None = None
 
     def __hash__(self) -> int:
         """Get the hash value of the read.

@@ -11,6 +11,7 @@ import pysam  # type: ignore
 import yaml  # type: ignore
 
 from scannls import __PACKAGE_NAME__, cppext
+from scannls.base import CigarCode, Mode
 from scannls.exception import ModesNotEqualError
 
 __all__ = [
@@ -360,12 +361,10 @@ def splicing_confirmation(
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
-        paired = False
-        for _donor, _acceptor in splice_motif_dict.items():
-            if _donor in donor_seq and _acceptor in acceptor_seq:
-                paired = True
-                break
-        return paired
+        return any(
+            _donor in donor_seq and _acceptor in acceptor_seq
+            for _donor, _acceptor in splice_motif_dict.items()
+        )
 
     def donor_accepter_breakpoint_determintor(
         chrm1: str,
@@ -792,7 +791,7 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     return bp_region_seq
 
 
-noreturn = "NA", 0, 0, (), (), (), (), (), []  # type: ignore
+noreturn = None
 
 
 def same_chrom_same_strand_mode21_handler(
@@ -815,7 +814,7 @@ def same_chrom_same_strand_mode21_handler(
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
     rt_exons, rt_introns = read_rt.get_exons_and_introns()
 
-    if lt_mode == 2 and rt_mode == 1:
+    if lt_mode == Mode.Type2 and rt_mode == Mode.Type1:
         target_start = read_rt.ref_start
         target_end = read_lt.ref_end
         target_offset = target_end - target_start
@@ -1074,7 +1073,7 @@ def same_chrom_same_strand_handler(
 ):
     """Handler for same chrom and same strand."""
     logger.trace("same_chrom_same_strand_handler takes over the task.")
-    if lt_mode == 2 and rt_mode == 1:
+    if lt_mode == Mode.Type2 and rt_mode == Mode.Type1:
         return same_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
@@ -1089,7 +1088,7 @@ def same_chrom_same_strand_handler(
             microinsertion_cutoff,
         )
 
-    if lt_mode == 1 and rt_mode == 2:
+    if lt_mode == Mode.Type1 and rt_mode == Mode.Type2:
         return same_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1421,7 +1420,7 @@ def diff_chrom_same_strand_handler(
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")
-    if lt_mode == 2 and rt_mode == 1:
+    if lt_mode == Mode.Type2 and rt_mode == Mode.Type1:
         return diff_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
@@ -1436,7 +1435,7 @@ def diff_chrom_same_strand_handler(
             microinsertion_cutoff,
         )
 
-    if lt_mode == 1 and rt_mode == 2:
+    if lt_mode == Mode.Type1 and rt_mode == Mode.Type2:
         return diff_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1480,7 +1479,7 @@ def diff_chrom_diff_strand_handler(
     rt_exons, rt_introns = read_rt.get_exons_and_introns()
     same_mode = lt_mode
 
-    if same_mode == 1:
+    if same_mode == Mode.Type1:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start + read_lt.reference_match_size
         chrm_end = read_rt.chrom
@@ -1492,7 +1491,7 @@ def diff_chrom_diff_strand_handler(
             - read_lt.read_match_size
             - read_rt.read_match_size
         )
-    elif same_mode == 2:
+    elif same_mode == Mode.Type2:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start
         chrm_end = read_rt.chrom
@@ -1571,21 +1570,18 @@ def obtain_variants_stats(
     parsed_cigar_result = cppext.parseCigar(cigar_str)
     cigartuples_without_soft: list[int] = parsed_cigar_result.cigartuples_without_soft
 
-    del_num = 0
-    ins_num = 0
-    del_outlier_num = 0
-    ins_outlier_num = 0
-    dels_len_total = 0
+    del_num, ins_num = 0, 0
+    del_outlier_num, ins_outlier_num, dels_len_total = 0, 0, 0
 
     for idx in range(0, len(cigartuples_without_soft), 2):
         op_code = cigartuples_without_soft[idx]
         _len = cigartuples_without_soft[idx + 1]
-        if op_code == 2:  # DEL
+        if op_code == CigarCode.Del:
             del_num += 1
             dels_len_total += _len
             if _len >= indel_len_cutoff:
                 del_outlier_num += 1
-        elif op_code == 1:  # INS
+        elif op_code == CigarCode.Insertion:
             ins_num += 1
             if _len >= indel_len_cutoff:
                 ins_outlier_num += 1

@@ -23,6 +23,7 @@ from scannls import (
     detect_read_read_connections_from_cigar,
     reverse_complement,
 )
+from scannls.base import Mode
 from scannls.graph import NLPath
 from scannls.type import LoggerType
 from scannls.utils import (
@@ -247,30 +248,31 @@ def detect_sv_from_cigar(
             elif (_rt, _lt) in reads_pair_mode_dict:
                 _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
 
+            else:
+                raise ValueError
+
             if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
                 logger.warning(
                     f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}",
                 )
 
-            event = Event(
-                infer_nls_from_connected_reads(
-                    read_lt=_lt,
-                    read_rt=_rt,
-                    lt_mode=_lt_mode,
-                    rt_mode=_rt_mode,
-                    splice_bin=splice_bin,
-                    genome_fasta=genome_fasta,
-                    cvg=cvg,
-                    gene_iv=gene_iv,
-                    motif_required=motif_required,
-                ),
+            event_type = infer_nls_from_connected_reads(
+                read_lt=_lt,
+                read_rt=_rt,
+                lt_mode=_lt_mode,
+                rt_mode=_rt_mode,
+                splice_bin=splice_bin,
+                genome_fasta=genome_fasta,
+                cvg=cvg,
+                gene_iv=gene_iv,
+                motif_required=motif_required,
             )
-
-            if not event.is_type_na():
+            if event_type is not None:
+                event = Event(event_type)
                 event_list.append(event)
                 logger.trace(str(event))
             else:  # temporary solution
-                logger.warning(f"Event Type is NA {event=}")
+                logger.warning(f"Event Type is NA {event_type=}")
 
     return event_list, read_chains, num_added_reads
 
@@ -397,18 +399,14 @@ def _scan_bam_helper(
                 read_strand = "-" if read.is_reverse else "+"
                 read_ori_nm = read.get_tag("NM")
                 read_length = int(read.query_length)
-                _, _soft_seq, _, read_mode = get_softclip_length(read, mode=0)
                 ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
 
-                soft_seq_ori = (
-                    reverse_complement(_soft_seq) if read.is_reverse else _soft_seq
-                )
-
-                if (
-                    read_mode in {1, 2}
-                    and soft_seq_ori
-                    and len(soft_seq_ori) >= min_soft_seg_len
-                ):
+                ret = get_softclip_length(read, mode=Mode.Type0)
+                if ret is not None and ret[1] != "" and len(ret[1]) >= min_soft_seg_len:
+                    soft_seq_ori = (
+                        reverse_complement(ret[1]) if read.is_reverse else ret[1]
+                    )
+                    read_mode = ret[-1]
                     chimeric_aln_str = blat2chimeric_alignment(
                         soft_seq_ori,
                         read_length,

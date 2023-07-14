@@ -18,8 +18,6 @@ from .basic_read import Read
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from scannls.type import EventType
-
 
 class NovelInsertion:
     """NovelInsertion is used to represent reads insertion whose hit is 0 or >1.
@@ -270,7 +268,7 @@ class Event:
     Event(TRA, )
     """
 
-    def __init__(self, event: EventType) -> None:
+    def __init__(self, event) -> None:
         """Initialize the event."""
         (
             sv_type,
@@ -285,30 +283,27 @@ class Event:
         ) = event
 
         self.sv_type = sv_type
-        if self.sv_type != "NA":
-            self.annotation_code = annot
-            self.splicing_code = canonical
-            self.genes = genes
-            self.insertion_info = insertion_info
-            self.positions = _positions
-            self.bp1, self.bp2 = _positions[:2]
-            self.mode1, self.mode2 = _positions[2:]
-            self.strand1 = Strand.from_str(strands[0])
-            self.strand2 = Strand.from_str(strands[1])
-            self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
-            self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+        self.annotation_code = annot
+        self.splicing_code = canonical
+        self.genes = genes
+        self.insertion_info = insertion_info
+        self.positions = _positions
+        self.bp1, self.bp2 = _positions[:2]
+        self.mode1, self.mode2 = _positions[2:]
+        self.strand1 = Strand.from_str(strands[0])
+        self.strand2 = Strand.from_str(strands[1])
+        self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
+        self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
 
     def __repr__(self) -> str:
         """Return the string representation of the event."""
-        if self.sv_type != "NA":
-            return (
-                f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} ({self.bp1} "
-                f"{self.bp2} {self.mode1} {self.mode2}) "
-                f"{self.strand1} {self.read1_ref_start} {self.read1_ref_end} {self.read1_exons} "
-                f"{self.strand2} {self.read2_ref_start} {self.read2_ref_end} {self.read2_exons} "
-                f"{self.insertion_info})"
-            )
-        return f"Event({self.sv_type})"
+        return (
+            f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} ({self.bp1} "
+            f"{self.bp2} {self.mode1} {self.mode2}) "
+            f"{self.strand1} {self.read1_ref_start} {self.read1_ref_end} {self.read1_exons} "
+            f"{self.strand2} {self.read2_ref_start} {self.read2_ref_end} {self.read2_exons} "
+            f"{self.insertion_info})"
+        )
 
     def reverse(self) -> None:
         """Reverse breakpoint1 and breakpoint2."""

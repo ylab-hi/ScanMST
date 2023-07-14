@@ -69,7 +69,7 @@ class ReadsConnector:
         self.index += 1
 
     @staticmethod
-    def _get_mode(sms: Any) -> int:
+    def _get_mode(sms) -> Mode:
         """Get the mode of the reads.
 
         :param sms:
@@ -82,9 +82,9 @@ class ReadsConnector:
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
-            return 2
+            return Mode.Type2
         # MS
-        return 1
+        return Mode.Type1
 
     @staticmethod
     def init_mode_judge(read1: Read, read2: Read) -> None:
@@ -220,9 +220,9 @@ class ReadsConnector:
         read_query_sequence: str,
         prev_sms: tuple[int, int, int],
         next_sms: tuple[int, int, int],
-        prev_read_mode: int,
-        next_read_mode: int,
-    ) -> Any:
+        prev_read_mode: Mode,
+        next_read_mode: Mode,
+    ):
         """Update the query sequence based on the length of the microhomology."""
         (
             is_microhomology,
@@ -259,9 +259,9 @@ class ReadsConnector:
         mode1 = start_read.mode
         mode2 = read.mode
         if first_is_matched:
-            mode2 = 2
+            mode2 = Mode.Type2
         if second_is_matched:
-            mode2 = 1
+            mode2 = Mode.Type1
         if same_strand:
             if mode1 == mode2:
                 flag = False
@@ -275,7 +275,7 @@ class ReadsConnector:
         read: Read,
         *,
         is_compare_for_ms: bool,
-    ) -> Any:
+    ):
         """Test 2 case for two reads to check if they are connected.
 
         start read -> read
@@ -327,7 +327,7 @@ class ReadsConnector:
                 first_is_matched=match_flag1,
             )
         if match_flag1 and condition1:  # may same
-            read.mode = 2
+            read.mode = Mode.Type2
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
@@ -372,7 +372,7 @@ class ReadsConnector:
                 second_is_matched=match_flag2,
             )
         if match_flag2 and condition2:  # may same
-            read.mode = 1
+            read.mode = Mode.Type1
 
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
 
@@ -402,7 +402,7 @@ class ReadsConnector:
     def _double_check_for_start_end_read_determine_new_read_mode(
         read: Read,
         new_read_strand: str,
-    ) -> int:
+    ) -> Mode:
         """Double check for start and end read determine new read mode."""
         read.mode = Mode.Type1 if read.mode == Mode.Type2 else Mode.Type2
         if new_read_strand == read.strand:
@@ -411,7 +411,7 @@ class ReadsConnector:
 
     def _double_check_create_new_read_calculate_sms(
         self,
-        hsp: Any,
+        hsp,
         query_seq: str,
         read: Read,
     ) -> Read:
@@ -503,7 +503,7 @@ class ReadsConnector:
         """
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
-            if read.mode == 1
+            if read.mode == Mode.Type1
             else read.query_sequence[len(read.query_sequence) - read.rt_soft_len :]
         )
 
@@ -761,7 +761,7 @@ def detect_read_read_connections_from_cigar(
 
         return is_artifact
 
-    noreturn = [], {}, 0  # type: ignore
+    noreturn = None
 
     # if no 'SA' tag was found, read-to-read chain will be empty
     try:
@@ -860,9 +860,7 @@ def detect_read_read_connections_from_cigar(
         logger=logger,
     )
 
-    flag = read_connector.connect()
-
-    if flag:
+    if read_connector.connect():
         logger.debug(
             f"reads chain: {read_connector.reads_chain};"
             f" reads pair mode: {read_connector.read_pair_mode_dict}",

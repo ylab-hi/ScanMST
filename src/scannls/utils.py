@@ -82,8 +82,8 @@ def sleep(input_file: str, max_time: int = 30) -> None:
 
 def get_softclip_length(
     read: pysam.libcalignedsegment.AlignedSegment,
-    mode: int,
-) -> tuple[int, str, int, int]:
+    mode: Mode,
+) -> tuple[int, str, int, Mode] | None:
     """Extract softclipped sequence information from input read.
 
     :param mode: read mode
@@ -99,13 +99,13 @@ def get_softclip_length(
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_end = read.reference_start + parse_result.ref_match
 
-    if mode == Mode.type0:
+    if mode == Mode.Type0:
         if parse_result.lt_soft_len > parse_result.rt_soft_len:
             return (
                 parse_result.lt_soft_len,
                 read.query_sequence[: parse_result.lt_soft_len],
                 read.reference_start,
-                2,
+                Mode.Type2,
             )
 
         if parse_result.lt_soft_len < parse_result.rt_soft_len:
@@ -115,26 +115,27 @@ def get_softclip_length(
                     parse_result.query_len - parse_result.rt_soft_len :
                 ],
                 ref_end,
-                1,
+                Mode.Type1,
             )
-        return 0, "", -1, 0
+        return None
 
-    if mode == Mode.type1:
+    if mode == Mode.Type1:
         return (
             parse_result.rt_soft_len,
             read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
             ref_end,
-            1,
+            mode,
         )
 
-    if mode == Mode.type2:
+    if mode == Mode.Type2:
         return (
             parse_result.lt_soft_len,
             read.query_sequence[: parse_result.lt_soft_len],
             read.reference_start,
-            2,
+            mode,
         )
-    return 0, "", -1, 0
+
+    return None
 
 
 def timeit(func: Callable[..., Any]) -> Callable[..., Any]:

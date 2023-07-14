@@ -6,6 +6,7 @@
 
 from .basic import (
     AnnotationCode,
+    CigarCode,
     Exon,
     Exons,
     Interval,
@@ -33,6 +34,7 @@ from .read_connector import (
 )
 
 __all__ = [
+    "CigarCode",
     "Mode",
     "AnnotationCode",
     "Exon",

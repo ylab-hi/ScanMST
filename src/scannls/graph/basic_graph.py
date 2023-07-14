@@ -31,7 +31,6 @@ class BasicNode:
     """BasicNode is used to represent nodes in the nlgraph."""
 
     __slots__ = (
-        # parent class: basic node fields
         "successors",
         "predecessors",
         "merged_child_nodes",
@@ -294,7 +293,7 @@ class Node(BasicNode):
         identity: NodeIdentity | None = None,
     ) -> None:
         """Initialize a Node object."""
-        super().__init__()  # initialize BasicNode object
+        super().__init__()
         self.query_name = query_name
         self.chrom = chrom
         self.strand = Strand.from_str(strand)
@@ -389,7 +388,8 @@ class Node(BasicNode):
     @property
     def exons_length(self) -> int:
         """Get total length of exon of a node."""
-        assert self.exons is not None
+        if self.exons is None:
+            return 0
         return sum(len(exon) for exon in self.exons)
 
     @property
@@ -401,12 +401,6 @@ class Node(BasicNode):
             self._unique_key = key
 
         return self._unique_key
-
-    # NOTE: used in  rescue sr. Now use edge info to rescue sr <Yangyang Li yangyang.li@northwestern.edu>
-
-    # def get_breakpoint_depth_pos(self, mode: int, direc: str) -> tuple[str, Any]:
-    #     if break_point is not None:
-    #         if mode == 1:
 
     def is_reverse(self) -> bool:
         """Check if a node is reverse."""
@@ -726,31 +720,31 @@ class NLPath:
         self.id = -1
         self.merge_factor = 1
 
-    def add_edge(self, nodes: Node, noded: Node, edge: Edge | None = None) -> None:
+    def add_edge(self, nodes: Node, nodet: Node, edge: Edge | None = None) -> None:
         """Add edge to the path."""
         if nodes not in self.nodes:
             self.nodes.append(nodes)
 
-        if noded not in self.nodes:
-            self.nodes.append(noded)
+        if nodet not in self.nodes:
+            self.nodes.append(nodet)
 
         if edge is not None:
             self.edges[edge.key] = edge
 
-    def only_add_edge(self, nodes: Node, noded: Node, edge: Edge) -> None:
-        key = Edge.create_key_from_node(nodes, noded)
+    def only_add_edge(self, nodes: Node, nodet: Node, edge: Edge) -> None:
+        key = Edge.create_key_from_node(nodes, nodet)
         if key not in self.edges:
             self.edges[key] = edge
 
     def get_edge(
         self,
         nodes: Node,
-        noded: Node | None = None,
+        nodet: Node | None = None,
         nodes_idx: int | None = None,
     ) -> Edge | None:
         """Get edge from the path."""
-        if noded is not None:
-            key = Edge.create_key_from_node(nodes, noded)
+        if nodet is not None:
+            key = Edge.create_key_from_node(nodes, nodet)
             return self.edges.get(key)
 
         if nodes_idx is None:
