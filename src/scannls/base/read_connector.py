@@ -8,13 +8,13 @@ from typing import Any
 from Bio import SearchIO
 from loguru import logger
 
-from scannls.cli.helper import cigar_validity
 from scannls.type import LoggerType
 
 from .basic import Mode
 from .basic_class import reverse_complement
 from .basic_read import Read
 from .blat import Blat
+from .utils import cigar_validity
 
 
 class ReadsConnector:

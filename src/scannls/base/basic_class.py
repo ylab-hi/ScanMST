@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from scannls import cppext
-from scannls.cli.helper import cigar_validity
 from scannls.exception import ReadNotFoundError
 
 from .basic import AnnotationCode, Mode, Strand
 from .basic_read import Read
+from .utils import cigar_validity
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

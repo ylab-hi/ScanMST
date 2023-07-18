@@ -32,8 +32,10 @@ from .read_connector import (
     ReadsConnector,
     detect_read_read_connections_from_cigar,
 )
+from .utils import cigar_validity
 
 __all__ = [
+    "cigar_validity",
     "CigarCode",
     "Mode",
     "AnnotationCode",
