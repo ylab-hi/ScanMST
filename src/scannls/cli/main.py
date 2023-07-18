@@ -133,10 +133,13 @@ class BamScanner:
         for read in self.in_bam.fetch():
             self._count_chrom_info(read)
             self.total_length += read.query_length
+
             if read.is_supplementary:
-                sup_aln_cigar = read.cigarstring
-                left_mat = self.pat_left_s.search(sup_aln_cigar)
-                right_mat = self.pat_right_s.search(sup_aln_cigar)
+                if read.cigarstring is None:
+                    raise ValueError
+
+                left_mat = self.pat_left_s.search(read.cigarstring)
+                right_mat = self.pat_right_s.search(read.cigarstring)
 
                 l_s_len = left_mat.group(1) if left_mat else ""
                 r_s_len = right_mat.group(1) if right_mat else ""
@@ -144,12 +147,12 @@ class BamScanner:
                 nm = read.get_tag("NM")
                 md_tag = read.get_tag("MD")
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
-                    sup_aln_cigar,
+                    read.cigarstring,
                     md_tag,
                     self.long_indel_length,
                 )
 
-                subs_fraction = 0 if nm == 0 else num_of_subs / nm
+                subs_fraction = 0 if nm == 0 else num_of_subs / nm  # type: ignore
                 if (
                     not (
                         num_of_subs > self.substitutions_num
@@ -160,7 +163,7 @@ class BamScanner:
                 ):
                     self.representative_alignments_new_cigar[
                         f"{read.qname}\t{l_s_len}\t{r_s_len}"
-                    ] = sup_aln_cigar
+                    ] = read.cigarstring
                 else:
                     self.logger.trace(
                         f"{read.query_name=} does not pass the substitutions/indel cutoff. "
@@ -466,6 +469,7 @@ def _scan_bam_helper(
 
                 nm = read.get_tag("NM")
 
+                assert read.cigarstring is not None
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring,
                     read.get_tag("MD"),

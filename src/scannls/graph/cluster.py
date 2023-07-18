@@ -4,7 +4,6 @@
 @Time:        1/19/22 7:59 PM
 """
 from itertools import combinations
-from typing import Any
 
 import networkx as nx
 from loguru import logger
@@ -257,7 +256,7 @@ class ClusterFinder:
     .. note::
         :function: `networkx.algorithms.components.connected.connected_components` is used to find clusters.
 
-    :Example:
+    .. example::
 
     >>> from loguru import  logger
     >>> clique_finder = CliqueFinder([], logger)
@@ -321,7 +320,7 @@ class ClusterFinder:
         if not self.intact_nlpaths[ind_y].is_in_graph:
             self._graph.add_node(ind_y)
 
-    def find_cluster(self) -> Any:
+    def find_cluster(self):
         """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
         :return:  every clique in graph as a iterator (List[Series])

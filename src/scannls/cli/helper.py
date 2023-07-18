@@ -1519,7 +1519,7 @@ def diff_chrom_diff_strand_handler(
 
 def obtain_variants_stats(
     cigar_str: str,
-    md_tag: str,
+    md_tag,
     indel_len_cutoff: int = 4,
 ) -> tuple[int, float, float]:
     """Obtain variants stats from read matched part.

@@ -115,7 +115,7 @@ def infer_nls_from_connected_reads(
             microinsertion_cutoff,
         )
 
-    # If using noncanonical splice site, return NA
+    # If using noncanonical splice site, return None
     if not read_lt.splice_site_checker(
         genome_fasta,
     ) or not read_rt.splice_site_checker(genome_fasta):
