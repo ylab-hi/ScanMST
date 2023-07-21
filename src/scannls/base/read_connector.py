@@ -82,9 +82,9 @@ class ReadsConnector:
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
-            return Mode.Type2
+            return Mode.SM
         # MS
-        return Mode.Type1
+        return Mode.MS
 
     @staticmethod
     def init_mode_judge(read1: Read, read2: Read) -> None:
@@ -97,14 +97,14 @@ class ReadsConnector:
         if read1 == sorted_by_s_length[0]:
             read1.mode = ReadsConnector._get_mode(read1.adhocsms)
             if read1.strand == read2.strand:
-                read2.mode = Mode.Type1 if read1.mode == Mode.Type2 else Mode.Type2
+                read2.mode = Mode.MS if read1.mode == Mode.SM else Mode.SM
             else:
                 read2.mode = read1.mode
 
         else:
             read2.mode = ReadsConnector._get_mode(read2.sms)
             if read1.strand == read2.strand:
-                read1.mode = Mode.Type1 if read2.mode == Mode.Type2 else Mode.Type1
+                read1.mode = Mode.MS if read2.mode == Mode.SM else Mode.MS
             else:
                 read1.mode = read2.mode
 
@@ -172,8 +172,8 @@ class ReadsConnector:
         bp_region_seq_len = 0
         _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
-        if prev_read_mode == Mode.Type2:
-            if next_read_mode == Mode.Type2:
+        if prev_read_mode == Mode.SM:
+            if next_read_mode == Mode.SM:
                 bp_region_seq_len = (
                     read_query_length
                     - _rt_len_r1
@@ -181,7 +181,7 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-            elif next_read_mode == Mode.Type1:
+            elif next_read_mode == Mode.MS:
                 bp_region_seq_len = (
                     read_query_length
                     - _rt_len_r1
@@ -189,7 +189,7 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-        elif next_read_mode == Mode.Type2:
+        elif next_read_mode == Mode.SM:
             bp_region_seq_len = (
                 read_query_length
                 - _lt_len_r1
@@ -197,7 +197,7 @@ class ReadsConnector:
                 - _read_match_r1
                 - _read_match_r2
             )
-        elif next_read_mode == Mode.Type1:
+        elif next_read_mode == Mode.MS:
             bp_region_seq_len = (
                 read_query_length
                 - _lt_len_r1
@@ -236,10 +236,10 @@ class ReadsConnector:
             next_read_mode,
         )
         if is_microhomology:
-            if prev_read_mode == Mode.Type2:
+            if prev_read_mode == Mode.SM:
                 return read_match_sequence[microhomology_length:]
 
-            if prev_read_mode == Mode.Type1:
+            if prev_read_mode == Mode.MS:
                 return read_match_sequence[:-microhomology_length]
             return None
 
@@ -259,9 +259,9 @@ class ReadsConnector:
         mode1 = start_read.mode
         mode2 = read.mode
         if first_is_matched:
-            mode2 = Mode.Type2
+            mode2 = Mode.SM
         if second_is_matched:
-            mode2 = Mode.Type1
+            mode2 = Mode.MS
         if same_strand:
             if mode1 == mode2:
                 flag = False
@@ -301,7 +301,7 @@ class ReadsConnector:
         # first case
         self.logger.debug("testing first case M vs LS")
 
-        next_read_mode = Mode.Type2
+        next_read_mode = Mode.SM
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
@@ -327,7 +327,7 @@ class ReadsConnector:
                 first_is_matched=match_flag1,
             )
         if match_flag1 and condition1:  # may same
-            read.mode = Mode.Type2
+            read.mode = Mode.SM
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
@@ -344,7 +344,7 @@ class ReadsConnector:
 
         self.logger.debug("testing second case M vs RS")
         # second case
-        next_read_mode = Mode.Type1
+        next_read_mode = Mode.MS
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
@@ -372,7 +372,7 @@ class ReadsConnector:
                 second_is_matched=match_flag2,
             )
         if match_flag2 and condition2:  # may same
-            read.mode = Mode.Type1
+            read.mode = Mode.MS
 
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
 
@@ -404,10 +404,10 @@ class ReadsConnector:
         new_read_strand: str,
     ) -> Mode:
         """Double check for start and end read determine new read mode."""
-        read.mode = Mode.Type1 if read.mode == Mode.Type2 else Mode.Type2
+        read.mode = Mode.MS if read.mode == Mode.SM else Mode.SM
         if new_read_strand == read.strand:
-            return Mode.Type1 if read.mode == Mode.Type2 else Mode.Type2
-        return Mode.Type1 if read.mode == Mode.Type1 else Mode.Type2
+            return Mode.MS if read.mode == Mode.SM else Mode.SM
+        return Mode.MS if read.mode == Mode.MS else Mode.SM
 
     def _double_check_create_new_read_calculate_sms(
         self,
@@ -431,7 +431,7 @@ class ReadsConnector:
             )
         )
 
-        if new_read_mode == Mode.Type1:
+        if new_read_mode == Mode.MS:
             cigar_str = (
                 f"{lt_s_len}S"
                 + cigar_str
@@ -503,7 +503,7 @@ class ReadsConnector:
         """
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
-            if read.mode == Mode.Type1
+            if read.mode == Mode.MS
             else read.query_sequence[len(read.query_sequence) - read.rt_soft_len :]
         )
 

@@ -7,11 +7,11 @@ class Mode(IntEnum):
     """Mode code."""
 
     Type0 = 0
-    Type1 = 1
-    Type2 = 2
+    MS = 1  # 1 MS
+    SM = 2  # 2 SM
 
     def reverse(self):
-        self = self.Type2 if self == self.Type1 else self.Type1
+        self = self.SM if self == self.MS else self.MS
 
 
 class AnnotationCode(IntEnum):

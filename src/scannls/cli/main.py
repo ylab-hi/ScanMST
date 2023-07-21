@@ -625,8 +625,6 @@ def scanbam_run(
     ]
 
     logger.info(f" Processing {contigs=}")
-    # get running mode
-    running_mode = "normal" if parallel == 1 else "parallel"
 
     # get current local namespace
     self_local_namespace = copy.copy(locals())
@@ -641,7 +639,6 @@ def scanbam_run(
 
     if parallel == 1:
         intact_series_list = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
-
     else:
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)

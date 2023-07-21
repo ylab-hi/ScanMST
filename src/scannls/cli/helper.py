@@ -710,7 +710,7 @@ def softclipped_length_and_event_size_checker(
     """
     return (
         read.lt_soft_len < event_size + bp_region_seq_len
-        if mode == 2
+        if mode == Mode.SM
         else read.rt_soft_len < event_size + bp_region_seq_len
     )
 
@@ -739,19 +739,19 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     bp_region_seq = ""
     # inserted sequence
     if bp_region_seq_len > 0:
-        if mode == 2:  # SM
+        if mode == Mode.SM:  # SM
             bp_region_seq = read_seq[: read.lt_soft_len][-bp_region_seq_len:]
-        elif mode == 1:  # MS
+        elif mode == Mode.MS:  # MS
             bp_region_seq = read_seq[-read.rt_soft_len :][:bp_region_seq_len]
         bp_region_seq = "+" + bp_region_seq
     # microhomology
     elif bp_region_seq_len < 0:
-        if mode == 2:  # SM
+        if mode == Mode.SM:  # SM
             bp_region_seq = genome_fasta[chrom][
                 read.ref_start : read.ref_start - bp_region_seq_len
             ].seq
 
-        elif mode == 1:  # MS
+        elif mode == Mode.MS:  # MS
             bp_region_seq = genome_fasta[chrom][
                 read.ref_end + bp_region_seq_len : read.ref_end
             ].seq
@@ -784,7 +784,7 @@ def same_chrom_same_strand_mode21_handler(
     lt_exons, lt_introns = read_lt.get_exons_and_introns()
     rt_exons, rt_introns = read_rt.get_exons_and_introns()
 
-    if lt_mode == Mode.Type2 and rt_mode == Mode.Type1:
+    if lt_mode == Mode.SM and rt_mode == Mode.MS:
         target_start = read_rt.ref_start
         target_end = read_lt.ref_end
         target_offset = target_end - target_start
@@ -1043,7 +1043,7 @@ def same_chrom_same_strand_handler(
 ):
     """Handler for same chrom and same strand."""
     logger.trace("same_chrom_same_strand_handler takes over the task.")
-    if lt_mode == Mode.Type2 and rt_mode == Mode.Type1:
+    if lt_mode == Mode.SM and rt_mode == Mode.MS:
         return same_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
@@ -1058,7 +1058,7 @@ def same_chrom_same_strand_handler(
             microinsertion_cutoff,
         )
 
-    if lt_mode == Mode.Type1 and rt_mode == Mode.Type2:
+    if lt_mode == Mode.MS and rt_mode == Mode.SM:
         return same_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1390,7 +1390,7 @@ def diff_chrom_same_strand_handler(
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")
-    if lt_mode == Mode.Type2 and rt_mode == Mode.Type1:
+    if lt_mode == Mode.SM and rt_mode == Mode.MS:
         return diff_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
@@ -1405,7 +1405,7 @@ def diff_chrom_same_strand_handler(
             microinsertion_cutoff,
         )
 
-    if lt_mode == Mode.Type1 and rt_mode == Mode.Type2:
+    if lt_mode == Mode.MS and rt_mode == Mode.SM:
         return diff_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1449,7 +1449,7 @@ def diff_chrom_diff_strand_handler(
     rt_exons, rt_introns = read_rt.get_exons_and_introns()
     same_mode = lt_mode
 
-    if same_mode == Mode.Type1:
+    if same_mode == Mode.MS:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start + read_lt.reference_match_size
         chrm_end = read_rt.chrom
@@ -1461,7 +1461,7 @@ def diff_chrom_diff_strand_handler(
             - read_lt.read_match_size
             - read_rt.read_match_size
         )
-    elif same_mode == Mode.Type2:
+    elif same_mode == Mode.SM:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start
         chrm_end = read_rt.chrom

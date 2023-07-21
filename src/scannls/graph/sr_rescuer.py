@@ -140,7 +140,7 @@ class SRRescuer:
             pre_pos = node.exons[-1][1]
             next_pos = node.exons[0][0]
 
-        if mode == Mode.Type2:
+        if mode == Mode.SM:
             pre_pos += 1
             next_pos += 1
         else:

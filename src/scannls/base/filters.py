@@ -85,12 +85,7 @@ def _extract_annotated_exons(
     :param boundary_size: boundary size for narrow down exon
     :param shrink: shrink or expand the annotated exons
     :param consider_strand: consider strand information
-    :type in_file: str
-    :type boundary_size: int
-    :type shrink: bool
-    :type consider_strand: bool
     :return: annotated exons
-    :rtype: HTSeq.GenomicArrayOfSets
     """
     gtf_file = HTSeq.GFF_Reader(in_file)
     exons_gas = HTSeq.GenomicArrayOfSets("auto", stranded=False)
@@ -214,6 +209,7 @@ class CircRNAFilter:
                     or current_node.ref_end == next_node.ref_end
                 ) and self.is_megaexon_superpose_with_annotated_exons(next_node):
                     num_of_hops_satisfy_condition += 1
+
             # last hop
             elif _id == num_of_hops:
                 if (
@@ -227,6 +223,7 @@ class CircRNAFilter:
                     or current_node.ref_end == next_node.ref_end
                 ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
                     num_of_hops_satisfy_condition += 1
+
             # middle hops
             elif (
                 set(current_node.exons) == set(next_node.exons)

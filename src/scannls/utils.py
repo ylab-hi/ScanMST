@@ -105,7 +105,7 @@ def get_softclip_length(
                 parse_result.lt_soft_len,
                 read.query_sequence[: parse_result.lt_soft_len],
                 read.reference_start,
-                Mode.Type2,
+                Mode.SM,
             )
 
         if parse_result.lt_soft_len < parse_result.rt_soft_len:
@@ -115,11 +115,11 @@ def get_softclip_length(
                     parse_result.query_len - parse_result.rt_soft_len :
                 ],
                 ref_end,
-                Mode.Type1,
+                Mode.MS,
             )
         return None
 
-    if mode == Mode.Type1:
+    if mode == Mode.MS:
         return (
             parse_result.rt_soft_len,
             read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
@@ -127,7 +127,7 @@ def get_softclip_length(
             mode,
         )
 
-    if mode == Mode.Type2:
+    if mode == Mode.SM:
         return (
             parse_result.lt_soft_len,
             read.query_sequence[: parse_result.lt_soft_len],

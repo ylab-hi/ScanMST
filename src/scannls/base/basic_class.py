@@ -365,12 +365,12 @@ class Event:
     @property
     def source_s1(self) -> str:
         """Source of insertion of read1."""
-        return "left" if self.mode1 == Mode.Type2 else "right"
+        return "left" if self.mode1 == Mode.SM else "right"
 
     @property
     def source_s2(self) -> str:
         """Source of insertion of read2."""
-        return "left" if self.mode2 == Mode.Type2 else "right"
+        return "left" if self.mode2 == Mode.SM else "right"
 
     def is_type_na(self) -> bool:
         """Return True if the event is NA."""
