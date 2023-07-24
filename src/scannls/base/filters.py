@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import HTSeq
 
 from .basic import Interval, Strand
+from scannls.graph import NLPath, Node
 
 if TYPE_CHECKING:
     from .basic_class import Event
@@ -157,27 +158,29 @@ class CircRNAFilter:
             consider_strand=True,
         )
 
-    def is_circrna(self, series) -> bool:
-        nodes = series.nodes
+    def is_circrna(self, nlpath: NLPath) -> bool:
+        nodes = nlpath.nodes
         # one-hop event
         if len(nodes) == 2:
             longest_node = CircRNAFilter.obtain_longest_mega_exon(nodes)
+            current_node, next_node = nodes
+            current_edge = nlpath.next_edge(current_node, 0)
             return bool(
-                nodes[0].sv_type == "TDUP"
+                current_edge.variation_type == "TDUP"
                 and (
-                    len(nodes[0].introns) > 0
-                    and len(nodes[1].introns) > 0
+                    len(current_node.introns) > 0
+                    and len(next_node.introns) > 0
                     and (
-                        set(nodes[0].introns).issuperset(set(nodes[1].introns))
-                        or set(nodes[0].introns).issubset(set(nodes[1].introns))
+                        set(current_node.introns).issuperset(set(next_node.introns))
+                        or set(current_node.introns).issubset(set(next_node.introns))
                     )
                     or (
-                        set(nodes[0].exons).issuperset(set(nodes[1].exons))
-                        or set(nodes[0].exons).issubset(set(nodes[1].exons))
+                        set(current_node.exons).issuperset(set(next_node.exons))
+                        or set(current_node.exons).issubset(set(next_node.exons))
                     )
                     or (
-                        nodes[0].ref_start == nodes[1].ref_start
-                        or nodes[0].ref_end == nodes[1].ref_end
+                        current_node.ref_start == next_node.ref_start
+                        or current_node.ref_end == next_node.ref_end
                     )
                 )
                 and self.is_megaexon_superpose_with_annotated_exons(longest_node),
@@ -188,8 +191,9 @@ class CircRNAFilter:
         num_of_hops = len(nodes) - 1
         num_of_hops_satisfy_condition = 0
         for _id, current_node in enumerate(nodes[:-1], 1):
-            next_node = series[_id]
-            if current_node.sv_type == "TDUP":
+            current_edge = nlpath.next_edge(current_node, _id - 1)
+            next_node = nlpath[_id]
+            if current_edge.variation_type == "TDUP"
                 num_of_tdups += 1
 
             # first hop
@@ -242,8 +246,8 @@ class CircRNAFilter:
         chrom = node.chrom
         strand = node.strand
         for _exon in node.exons:
-            _exon_start = _exon[0]
-            _exon_end = _exon[1]
+            _exon_start = _exon.start
+            _exon_end = _exon.end
             exon_start = HTSeq.GenomicPosition(chrom, _exon_start, strand)
             exon_end = HTSeq.GenomicPosition(chrom, _exon_end, strand)
             exon_set1 = self.exons_gas[exon_start]
