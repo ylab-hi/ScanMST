@@ -193,7 +193,7 @@ class CircRNAFilter:
         for _id, current_node in enumerate(nodes[:-1], 1):
             current_edge = nlpath.next_edge(current_node, _id - 1)
             next_node = nlpath[_id]
-            if current_edge.variation_type == "TDUP"
+            if current_edge.variation_type == "TDUP":
                 num_of_tdups += 1
 
             # first hop
