@@ -168,8 +168,8 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
         )
 
         # update edge data
-        node1_edge = path1.get_edge(nodes=updated_node, nodes_idx=start_index + idx)
-        node2_edge = path2.get_edge(nodes=current_node, nodes_idx=idx)
+        node1_edge = path1.next_edge(nodes=updated_node, nodes_idx=start_index + idx)
+        node2_edge = path2.next_edge(nodes=current_node, nodes_idx=idx)
 
         if node2_edge is not None and node1_edge is not None:
             node1_edge.sr += node2_edge.sr
@@ -200,8 +200,8 @@ def merge_same_len_node_list(
     for idx, (node1, node2) in enumerate(
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
     ):
-        node1_edge = path1.get_edge(nodes=node1, nodes_idx=start_index + idx)
-        node2_edge = path2.get_edge(nodes=node2, nodes_idx=idx)
+        node1_edge = path1.next_edge(nodes=node1, nodes_idx=start_index + idx)
+        node2_edge = path2.next_edge(nodes=node2, nodes_idx=idx)
 
         same_edge = True
         if node2_edge is not None and node1_edge is not None:
@@ -364,7 +364,7 @@ class ClusterFinder:
         path1: NLPath,
         path2: NLPath,
         merge_keys: dict[int, list[str]],
-    ):
+    ) -> bool:
         series_2_nodes_key = "".join(merge_keys[path2.id])
 
         for start_index in range(0, len(path1) - len(path2) + 1):

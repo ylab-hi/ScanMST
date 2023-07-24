@@ -170,7 +170,7 @@ class NLGraph:
         current_path: list[Node | Edge],
         current_node: Node,
         successor: Node,
-    ) -> list[Edge]:
+    ) -> Iterable[Edge]:
         if not current_path:
             return self.find_edges(current_node, successor)
 
@@ -182,8 +182,6 @@ class NLGraph:
             current_node,
         )
 
-        possible_edges = []
-
         for edge in self.find_edges(current_node, successor):
             if edge.sr > self.prune_threshold:
                 edge_node_identity = self.get_node_identity_base_edge(
@@ -191,9 +189,7 @@ class NLGraph:
                     current_node,
                 )
                 if self.determine_edge(previous_edge_node_identity, edge_node_identity):
-                    possible_edges.append(edge)
-
-        return possible_edges
+                    yield edge
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in a graph.

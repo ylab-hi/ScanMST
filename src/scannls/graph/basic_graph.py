@@ -736,6 +736,17 @@ class NLPath:
         if key not in self.edges:
             self.edges[key] = edge
 
+    def next_edge(self, nodes: Node, nodes_idx: int | None = None) -> Edge | None:
+        if nodes_idx is None:
+            nodes_idx = self.nodes.index(nodes)
+
+        if nodes_idx < len(self.nodes) - 1:
+            return self.edges.get(
+                Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1]),
+            )
+
+        return None
+
     def get_edge(
         self,
         nodes: Node,
@@ -747,14 +758,7 @@ class NLPath:
             key = Edge.create_key_from_node(nodes, nodet)
             return self.edges.get(key)
 
-        if nodes_idx is None:
-            nodes_idx = self.nodes.index(nodes)
-
-        if nodes_idx < len(self.nodes) - 1:
-            return self.edges.get(
-                Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1]),
-            )
-        return None
+        return self.next_edge(nodes, nodes_idx)
 
     def is_all_type_del(self) -> bool:
         """Check if sv_type of all nodes in the series are DEL."""
@@ -873,9 +877,7 @@ class NLPath:
         instance = cls(nodes=[])
 
         for idx in range(len(node_edges), 2):
-            node_edges[idx].next_node = node_edges[idx + 1].node
             current_node = node_edges[idx]
-
             assert isinstance(current_node, Node)
             instance.nodes.append(current_node)
 
