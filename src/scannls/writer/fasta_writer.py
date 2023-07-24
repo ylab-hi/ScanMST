@@ -12,7 +12,7 @@ from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
 from scannls import MicroHomology, NovelInsertion, reverse_complement
-from scannls.graph import Node
+from scannls.graph import NLPath, Node
 
 from .writer import Writer
 
@@ -75,7 +75,7 @@ class FastaWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: Path, object_id: int = -1):
+    def _(self, data_object: NLPath, object_id: int = -1):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
             logger.warning(
@@ -90,7 +90,7 @@ class FastaWriter(Writer):
 
 
 def get_nodes_sequence_from_series(
-    series: Path,
+    nlpath: NLPath,
     reference_io: Fasta,
 ) -> tuple[str, str]:
     """Get sequence of nodes of series.
@@ -102,14 +102,16 @@ def get_nodes_sequence_from_series(
     """
     sequence = ""
     node_length_str = ""
-    for node in series:
-        node_seq = get_exon_sequence_from_node(node, reference_io)
+    for idx, node in enumerate(nlpath):
+        edge = nlpath.next_edge(node, idx)
+        insertion_info = None if edge is None else edge.insertion_info
+        node_seq = get_exon_sequence_from_node(node, insertion_info, reference_io)
         sequence += node_seq
         node_length_str += f"{len(node_seq)}|"
     return sequence, node_length_str[:-1]
 
 
-def get_exon_sequence_from_node(node: Node, reference_io: Fasta) -> str:
+def get_exon_sequence_from_node(node: Node, insertion_info, reference_io: Fasta) -> str:
     """Get exon sequence of a node.
 
     remove microhomology from the sequence, and add novel insertion sequence.
@@ -122,8 +124,8 @@ def get_exon_sequence_from_node(node: Node, reference_io: Fasta) -> str:
 
     # positive strand sequence for novel insertion
     microhomology_sequence, novel_insertion_sequence = "", ""
-    if node.insertion_info and not node.insertion_info[0]:
-        insertion = node.insertion_info[1]
+    if insertion_info and not insertion_info[0]:
+        insertion = insertion_info[1]
         if isinstance(insertion, NovelInsertion):
             novel_insertion_sequence += insertion.query_sequence
         if isinstance(insertion, MicroHomology):
@@ -133,7 +135,7 @@ def get_exon_sequence_from_node(node: Node, reference_io: Fasta) -> str:
         node_sequence += reference_io.get_seq(node.chrom, start + 1, end).seq  # 1-based
 
     node_sequence = (
-        node_sequence if node.strand == "+" else reverse_complement(node_sequence)
+        node_sequence if node.strand.is_forward() else reverse_complement(node_sequence)
     )
 
     node_sequence += novel_insertion_sequence

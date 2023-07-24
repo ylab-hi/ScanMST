@@ -95,6 +95,7 @@ class GTFWriter(Writer):
             logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
+
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object,
             self.id,
