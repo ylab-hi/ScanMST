@@ -484,11 +484,15 @@ class VariationType(Enum):
         msg = f"Invalid SV type: {s}"
         raise ValueError(msg)
 
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return self.name
+    # fmt: off
+    def __str__(self) -> str: return self.name
+    def __repr__(self) -> str: return self.name
+    def is_tra(self) -> bool: return self == self.TRA
+    def is_del(self) -> bool: return self == self.DEL
+    def is_tdup(self) -> bool: return self == self.TDUP
+    def is_inv(self) -> bool: return self == self.INV
+    def is_idup(self) -> bool: return self == self.IDUP
+    # fmt: on
 
 
 @dataclass

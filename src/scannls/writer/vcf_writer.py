@@ -1,7 +1,6 @@
 """VCF Writer class.
 
 @Filename:    vcfWriter.py
-@license:     MIT Licence
 @Time:        1/30/22 6:19 PM
 """
 from __future__ import annotations
@@ -23,11 +22,12 @@ from scannls.exception import (
     ModesNotFoundError,
     SplicingCodeNotFoundError,
 )
+from scannls.graph import NLPath, Node
 
 from .writer import Writer
 
 if TYPE_CHECKING:
-    from scannls.graph import Node
+    from scannls.graph import NLPath, Node
 
 
 class VCFWriter(Writer):
@@ -201,7 +201,7 @@ class VCFWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: Path, clique_id: int) -> None:
+    def _(self, data_object: NLPath, clique_id: int) -> None:
         """Write Series to VCF file.
 
         :param data_object: Series to write to file.
@@ -346,8 +346,8 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 
 
 def get_vcf_features_from_series(
-    series: Path,
-    series_id: int,
+    nlpath: NLPath,
+    nlpath_id: int,
     reference_io: Fasta,
 ) -> Any:
     """Obtain hop vcf features from one series."""
@@ -355,8 +355,9 @@ def get_vcf_features_from_series(
 
     can_field_dict = {0: "NONCANONICAL", 1: "CANONICAL"}
     anno_field_dict = {0: "NEITHER", 1: "RIGHT", 2: "LEFT"}
-    for event_id, current_node in enumerate(series.nodes[:-1], 1):
-        next_node = series[event_id]
+    for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
+        current_edge = nlpath.next_edge(current_node, event_id - 1)
+        next_node = nlpath[event_id]
 
         if current_node.splicing_code is None:
             raise SplicingCodeNotFoundError(current_node.query_name)
@@ -372,20 +373,20 @@ def get_vcf_features_from_series(
 
         if current_node.modes is None:
             raise ModesNotFoundError(current_node.query_name)
+
         _mode1, _mode2 = current_node.modes
         mode1 = "MS" if _mode1 == 1 else "SM"
         mode2 = "MS" if _mode2 == 1 else "SM"
 
-        if current_node.next_breakpoint is None:
+        if current_edge is None:
             raise BreakpointNotFoundError(current_node.query_name)
-        if next_node.prev_breakpoint is None:
-            raise BreakpointNotFoundError(next_node.query_name)
-        _chrom1, _pos1 = current_node.next_breakpoint.to_tuple()
-        _chrom2, _pos2 = next_node.prev_breakpoint.to_tuple()
+
+        _chrom1, _pos1 = current_edge.break_point1.to_tuple()
+        _chrom2, _pos2 = current_edge.break_point2.to_tuple()
 
         microhomology_sequence = ""
-        if current_node.insertion_info and not current_node.insertion_info[0]:
-            insertion = current_node.insertion_info[1]
+        if current_edge.insertion_info and not current_edge.insertion_info[0]:
+            insertion = current_edge.insertion_info[1]
             if isinstance(insertion, MicroHomology):
                 microhomology_sequence += insertion.query_sequence
 
@@ -396,32 +397,36 @@ def get_vcf_features_from_series(
             else _pos1 + len(microhomology_sequence)
         )
 
-        sv_distance = abs(_pos1 - _pos2) if current_node.sv_type != "TRA" else 0
+        sv_distance = (
+            abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
+        )
         _dp1 = (
             0
-            if current_node.next_breakpoint_depth is None
-            else current_node.next_breakpoint_depth
+            if current_edge.break_point1.depth is None
+            else current_edge.break_point1.depth
         )
+
         _dp2 = (
             0
-            if next_node.prev_breakpoint_depth is None
-            else next_node.prev_breakpoint_depth
+            if current_edge.break_point2.depth is None
+            else current_edge.break_point2.depth
         )
+
         _pso = (
             0
             if _dp1 == 0 or _dp2 == 0
-            else current_node.sr / (current_node.sr + (_dp1 + _dp2) / 2)
+            else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
         )
 
         series_hops_features.append(
             {
-                f"{current_node.sv_type}_{_chrom1}|{_pos1 + 1}"
+                f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}"
                 f"_{_chrom2}|{_pos2 + 1}": {
                     "CHROM": _chrom1,
                     "POS": f"{_pos1 + 1}",
                     "REF": ".",
-                    "ALT": f"<{current_node.sv_type}>",
-                    "SVTYPE": current_node.sv_type,
+                    "ALT": f"<{current_edge.variation_type}>",
+                    "SVTYPE": current_edge.variation_type,
                     "SR": current_node.sr,
                     "OSR": current_node.original_sr,
                     "CAN": can_field,
@@ -438,14 +443,14 @@ def get_vcf_features_from_series(
                     "STRAND2": f"{next_node.strand}",
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
-                    "TRANSCRIPT_ID": f"{series_id}",
+                    "TRANSCRIPT_ID": f"{nlpath_id}",
                     "SVMETHOD": "ScanNLS",
                 },
             },
         )
-        if current_node.insertion_info:
-            if isinstance(current_node.insertion_info[1], NovelInsertion):
-                insertion = current_node.insertion_info[1]
+        if current_edge.insertion_info:
+            if isinstance(current_edge.insertion_info[1], NovelInsertion):
+                insertion = current_edge.insertion_info[1]
                 ref_allele, alt_allele = get_vcf_features_from_insertion(
                     insertion,
                     current_node,
@@ -477,13 +482,13 @@ def get_vcf_features_from_series(
                             "SVLEN": f"{sv_distance}",
                             "GENE": f"{gene1}",
                             "STRAND": f"{current_node.strand}",
-                            "TRANSCRIPT_ID": f"{series_id}",
+                            "TRANSCRIPT_ID": f"{nlpath_id}",
                             "SVMETHOD": "ScanNLS",
                         },
                     },
                 )
-            elif isinstance(current_node.insertion_info[1], MicroHomology):
-                microhomology = current_node.insertion_info[1]
+            elif isinstance(current_edge.insertion_info[1], MicroHomology):
+                microhomology = current_edge.insertion_info[1]
                 ref_allele, alt_allele = get_vcf_features_from_insertion(
                     microhomology,
                     current_node,
@@ -515,7 +520,7 @@ def get_vcf_features_from_series(
                             "SVLEN": f"{sv_distance}",
                             "GENE": f"{gene1}",
                             "STRAND": f"{current_node.strand}",
-                            "TRANSCRIPT_ID": f"{series_id}",
+                            "TRANSCRIPT_ID": f"{nlpath_id}",
                             "SVMETHOD": "ScanNLS",
                         },
                     },
