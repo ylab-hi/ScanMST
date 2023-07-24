@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Module for BLAT.
 
 @Filename:    blat.py

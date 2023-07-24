@@ -10,8 +10,6 @@ import HTSeq
 from .basic import Interval, Strand
 
 if TYPE_CHECKING:
-    from scannls.type import LoggerType
-
     from .basic_class import Event
 
 
@@ -46,7 +44,7 @@ class ExonInfo:
 class ExonFilter:
     """ExonFilter is used to filter out events with both breakpoints harbored in the same exon."""
 
-    def __init__(self, gtf_file: str, boundary_size: int, logger: LoggerType) -> None:
+    def __init__(self, gtf_file: str, boundary_size: int) -> None:
         """Initialize the ExonFilter class."""
         self.exons_gas = _extract_annotated_exons(
             gtf_file,
@@ -54,7 +52,6 @@ class ExonFilter:
             shrink=True,
             consider_strand=False,
         )
-        self.logger = logger
 
     def is_breakpoints_in_same_exon(self, event: Event) -> bool:
         """Annotate vcf file."""
@@ -151,9 +148,8 @@ class CircRNAFilter:
              [4]->[1][2][3][4]->[1][2][3][4]->[1].
     """
 
-    def __init__(self, gtf_file: str, boundary_size: int, logger: LoggerType) -> None:
+    def __init__(self, gtf_file: str, boundary_size: int) -> None:
         """Initialize the CircRNAFilter class."""
-        self.logger = logger
         self.exons_gas = _extract_annotated_exons(
             gtf_file,
             boundary_size,
@@ -307,10 +303,9 @@ class CircRNAFilter:
 class RTSwitchingFilter:
     """RTSwitchingFilter is used to filter out events derived from potential RT switching."""
 
-    def __init__(self, rt_switching_filter_len: int, logger: LoggerType) -> None:
+    def __init__(self, rt_switching_filter_len: int) -> None:
         """Initialize the RTSwitchingFilter class."""
         self.filter_size = rt_switching_filter_len
-        self.logger = logger
 
     def is_from_rt_switching(self, event: Event) -> bool:
         """The event is from RT switching."""

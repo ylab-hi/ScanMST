@@ -312,8 +312,8 @@ def _scan_bam_helper(
 
     genome_fasta = _get_genome_fasta(ref_genome)
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
-    exon_filter = ExonFilter(gtf, 10, logger)
-    rt_switching_filter = RTSwitchingFilter(rt_switching_filter_len, logger)
+    exon_filter = ExonFilter(gtf, 10)
+    rt_switching_filter = RTSwitchingFilter(rt_switching_filter_len)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
     if running_mode == "parallel":
@@ -327,7 +327,14 @@ def _scan_bam_helper(
     logger.trace(f"{identified_key=} start")
 
     blat_log_file, blat_is_start_server = blat_info
-    blat = Blat(two_bit, port, tmp_dir, blat_log_file, blat_is_start_server, lock)
+    blat = Blat(
+        two_bit,
+        port,
+        tmp_dir,
+        fix_log_file=blat_log_file,
+        is_start_server=blat_is_start_server,
+        lock=lock,
+    )
 
     nls_src_forms_list = []
 
@@ -335,7 +342,7 @@ def _scan_bam_helper(
     pat_right_s = re.compile(r"(\d+)S$")
 
     # Circular RNA filter
-    circ_rna_filter = CircRNAFilter(gtf, 10, logger)
+    circ_rna_filter = CircRNAFilter(gtf, 10)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
         if (
@@ -542,11 +549,11 @@ def _scan_bam_helper(
                             and nlpath.is_minimum_node_length_larger_than_threshold()
                         ):
                             if circular_rna == "remove":
-                                if not circ_rna_filter.is_circRNA(nlpath):
+                                if not circ_rna_filter.is_circrna(nlpath):
                                     nls_src_forms_list.append(nlpath)
                                     logger.trace(f"{nlpath=}")
                             elif circular_rna == "extract":
-                                if circ_rna_filter.is_circRNA(nlpath):
+                                if circ_rna_filter.is_circrna(nlpath):
                                     nls_src_forms_list.append(nlpath)
                                     logger.trace(f"extracted circular RNA: {nlpath=}")
                             else:

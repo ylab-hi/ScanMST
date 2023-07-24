@@ -9,12 +9,12 @@ from Bio import SearchIO
 from loguru import logger
 
 from scannls.type import LoggerType
+from scannls.utils import cigar_validity
 
 from .basic import Mode
 from .basic_class import reverse_complement
 from .basic_read import Read
 from .blat import Blat
-from .utils import cigar_validity
 
 
 class ReadsConnector:

@@ -159,7 +159,6 @@ def parse_splice_graph_for_cliques_par(
 def cli(options: argparse.Namespace | DefaultOptions):
     """Cli function."""
     start = time.perf_counter()
-    # add logger
     logger.remove()
     if options.log.upper() == "INFO":
         info_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"

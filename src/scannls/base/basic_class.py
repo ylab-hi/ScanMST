@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 
 from scannls import cppext
 from scannls.exception import ReadNotFoundError
+from scannls.utils import cigar_validity
 
 from .basic import AnnotationCode, Mode, Strand
 from .basic_read import Read
-from .utils import cigar_validity
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

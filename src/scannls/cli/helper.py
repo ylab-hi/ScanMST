@@ -1,17 +1,21 @@
 """Helper functions."""
+from __future__ import annotations
+
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import HTSeq  # type: ignore
-import pyfaidx  # type: ignore
-import pysam  # type: ignore
 import yaml  # type: ignore
 
 from scannls import __PACKAGE_NAME__, cppext
 from scannls.base import CigarCode, Mode
 from scannls.exception import ModesNotEqualError
+
+if TYPE_CHECKING:
+    import pyfaidx
+    import pysam
 
 __all__ = [
     "extract_splice_sites",
@@ -308,7 +312,7 @@ def splicing_confirmation(
     cvg: HTSeq.GenomicArrayOfSets,
     *,
     motif_required: bool = True,
-) -> tuple[bool, int, int]:
+) -> tuple[bool, int, int] | None:
     """Judge whether the breakpoints are NLS events or not.
 
     if motif_required is ON: it will only report NLS events with 'canonical
@@ -398,7 +402,10 @@ def splicing_confirmation(
             "-+11": (_breakpoint2, _breakpoint1),
         }
 
-        return donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
+        ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
+        if ret is None:
+            raise ValueError
+        return ret
 
     # key: strand of donor site, strand of accepter site
     # values: possible matched donor site and accepter site (>99% splice site using GT-AG)
@@ -433,11 +440,12 @@ def splicing_confirmation(
 
     # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
     try:
-        motif_do = list(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)])[0]
+        motif_do = next(iter(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)]))
     except IndexError:
         motif_do = ""
+
     try:
-        motif_ac = list(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)])[0]
+        motif_ac = next(iter(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)]))
     except IndexError:
         motif_ac = ""
 
