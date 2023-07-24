@@ -3,12 +3,16 @@
 @Author:      YangyangLi
 @Time:        1/28/22 8:46 PM
 """
+from __future__ import annotations
+
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from . import Node
+if TYPE_CHECKING:
+    from . import Node
 
 GRAPH_LINK_DATA = {"link": "edges", "source": "from", "target": "to"}
 

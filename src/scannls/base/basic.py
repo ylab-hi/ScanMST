@@ -233,25 +233,17 @@ class Intervals:
     def __init__(self, exon_list: list[Interval]) -> None:
         self.exon_list = exon_list
 
-    def __setitem__(self, index: int, value: Interval) -> None:
-        self.exon_list[index] = value
-
-    def __getitem__(self, index: int) -> Interval:
-        return self.exon_list[index]
-
-    def __len__(self):
-        return len(self.exon_list)
-
-    def __contains__(self, item: Interval):
-        return any(item == exon for exon in self.exon_list)
-
     # fmt: off
-    def first(self) -> Interval: return self.exon_list[0]
-    def last(self) -> Interval: return self.exon_list[-1]
+    def __getitem__(self, index: int) -> Interval: return self.exon_list[index]
+    def __setitem__(self, index: int, value: Interval) -> None: self.exon_list[index] = value
+    def __len__(self): return len(self.exon_list)
+    def __contains__(self, item: Interval): return any(item == exon for exon in self.exon_list)
     def __iter__(self): return iter(self.exon_list)
     def __repr__(self) -> str: return f"Exons({self.exon_list})"
-    def __str__(self) -> str:
-        return "_".join( [f"{interval.start}-{interval.end}" for interval in self.exon_list])
+    def __str__(self) -> str: return "_".join( [f"{interval.start}-{interval.end}" for interval in self.exon_list])
+    def reverse(self) -> None: self.exon_list[::-1]
+    def first(self) -> Interval: return self.exon_list[0]
+    def last(self) -> Interval: return self.exon_list[-1]
     # fmt: on
 
     def append(self, item: Interval | tuple[int, int]) -> None:

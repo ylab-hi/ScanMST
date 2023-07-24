@@ -105,8 +105,8 @@ class GTFWriter(Writer):
 
 
 def get_nodes_gtf_features_from_series(
-    series: NLPath,
-    series_id: int,
+    nlpath: NLPath,
+    nlpath_id: int,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
@@ -116,13 +116,18 @@ def get_nodes_gtf_features_from_series(
     :return: List of GTF features for node and insertions in the series.
     """
     series_gtf_features = []
-    for node_id, node in enumerate(series, 1):
-        series_gtf_features.extend(get_gtf_features_from_node(node, series_id, node_id))
-        if node.insertion_info and isinstance(node.insertion_info[1], NovelInsertion):
+    for node_id, node in enumerate(nlpath, 1):
+        edge = nlpath.next_edge(node, node_id - 1)
+        insertion_info = None if edge is None else edge.insertion_info
+
+        series_gtf_features.extend(
+            get_gtf_features_from_node(node, nlpath_id, node_id, insertion_info),
+        )
+        if insertion_info and isinstance(insertion_info[1], NovelInsertion):
             series_gtf_features.append(
                 get_gtf_features_from_insertion(
-                    node.insertion_info[1],
-                    series_id,
+                    insertion_info[1],
+                    nlpath_id,
                     node_id,
                 ),
             )
@@ -131,7 +136,7 @@ def get_nodes_gtf_features_from_series(
 
 def get_gtf_features_from_insertion(
     insertion: NovelInsertion,
-    series_id: int,
+    nlpath_id: int,
     node_id: int,
 ) -> list[str]:
     """Get GTF features of novel insertion."""
@@ -144,15 +149,16 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>3}"; '
+        f'transcript_id "{nlpath_id:0>6}"; mega_exon_id "{node_id:0>3}"; '
         f'sequence "{insertion.query_sequence}";',
     ]
 
 
 def get_gtf_features_from_node(
     node: Node,
-    series_id: int,
+    nlpath_id: int,
     node_id: int,
+    insertion_info,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
@@ -174,26 +180,36 @@ def get_gtf_features_from_node(
                   of a codon, and so on..
         9. attribute: a semicolon-separated list of tag-value pairs (separated by spaces)
     """
+
     if node.exons is None:
         msg = f"{node.query_name}"
         raise ExonsNotFoundError(msg)
 
-    exons = node.exons[::-1] if node.strand == "-" else node.exons
+    exons = node.exons.reverse() if node.strand.is_reverse() else node.exons
+
+    if exons is None:
+        msg = f"{node.query_name}"
+        raise ExonsNotFoundError(msg)
+
     copy_exons = copy.deepcopy(exons)
 
     microhomology_sequence = ""
-    if node.insertion_info and not node.insertion_info[0]:
-        insertion = node.insertion_info[1]
+    if insertion_info and not insertion_info[0]:
+        insertion = insertion_info[1]
         if isinstance(insertion, MicroHomology):
             microhomology_sequence += insertion.query_sequence
 
     # last exon end position needs a correction if there is a microhomology.
-    if node.strand == "+" and exons[-1][0] < exons[-1][1] - len(microhomology_sequence):
-        copy_exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
-    elif (
-        node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]
+    if node.strand.is_forward() and exons.last().start < exons.last().end - len(
+        microhomology_sequence,
     ):
-        copy_exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
+        copy_exons.last().end -= len(microhomology_sequence)
+
+    elif (
+        node.strand.is_reverse()
+        and exons.last().start + len(microhomology_sequence) < exons.last().end
+    ):
+        copy_exons.last().start += len(microhomology_sequence)
 
     node_sr = node.sr
     node_original_sr = node.original_sr
@@ -202,7 +218,7 @@ def get_gtf_features_from_node(
 
     for index, (start, end) in enumerate(copy_exons, 1):
         info = [
-            f'transcript_id "{series_id:0>6}"; '
+            f'transcript_id "{nlpath_id:0>6}"; '
             f'mega_exon_id "{node_id:0>3}"; '
             f'exon_id "{index:0>3}"; '
             f'sr "{node_sr}"; '
