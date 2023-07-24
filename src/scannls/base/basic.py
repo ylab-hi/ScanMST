@@ -10,8 +10,26 @@ class Mode(IntEnum):
     MS = 1  # 1 MS
     SM = 2  # 2 SM
 
-    def reverse(self):
-        self = self.SM if self == self.MS else self.MS
+    # fmt: off
+    def reverse(self): self = self.SM if self == self.MS else self.MS
+    def is_sm(self): return self == self.SM
+    def is_ms(self): return self == self.MS
+    # fmt: on
+
+    @classmethod
+    def from_int(cls, mode: int | Mode):
+        if isinstance(mode, cls):
+            return mode
+
+        if mode == 0:
+            return cls.Type0
+        if mode == 1:
+            return cls.MS
+        if mode == 2:
+            return cls.SM
+
+        msg = f"Invalid mode: {mode}"
+        raise ValueError(msg)
 
 
 class AnnotationCode(IntEnum):
@@ -28,20 +46,16 @@ class Strand(Enum):
     Forward = "+"
     Reverse = "-"
 
-    def is_reverse(self):
-        return self == Strand.Reverse
-
-    def is_forward(self):
-        return self == Strand.Forward
-
-    def reverse(self):
-        self = Strand.Reverse if self.is_forward() else Strand.Reverse
+    # fmt: off
+    def is_reverse(self): return self == Strand.Reverse
+    def is_forward(self): return self == Strand.Forward
+    def reverse(self): self = Strand.Reverse if self.is_forward() else Strand.Reverse
+    # fmt: on
 
     @classmethod
     def from_str(cls, strand: str | Strand):
         if isinstance(strand, cls):
             return strand
-
         if strand == "+":
             return cls.Forward
         if strand == "-":

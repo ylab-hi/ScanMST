@@ -6,25 +6,28 @@
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from scannls import cppext
-from scannls.base import Mode
+from scannls.base import Exons, Mode, Strand
 from scannls.exception import ExonsNotFoundError, ModesNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from scannls.graph import Edge, Node
 
-    from scannls.graph import Node
-
-# TODO: Rescure sr based on edge <05-01-23, Yangyang Li yangyang.li@northwestern.edu>
+MIN_SEQ_ALIGN_LEN = 10
 
 
 def is_middle_node(node: Node) -> bool:
     """Check if the node is middle node."""
-    return node.predecessors and node.successors
+    self_identity = node.self_identity
+    if self_identity is None:
+        msg = f"node={node!r}"
+        raise ValueError(msg)
+
+    return self_identity.is_mid()
 
 
 def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
@@ -62,7 +65,7 @@ class SRRescuer:
             .soft_len(soft_len_cutoff)
             .mismatch(mismatch_cutoff)
             .identity(alignment_frac)
-            .min_seq_align_len(10)
+            .min_seq_align_len(MIN_SEQ_ALIGN_LEN)
         )
 
         if average_read_depth is not None:
@@ -71,7 +74,7 @@ class SRRescuer:
         self.cppext_rescuer = cppext.Rescuer(options)
         self.node_rescued_sr_maximum = node_rescued_sr_maximum
 
-    def __call__(self, nodes_in_graph: Iterable[Node]) -> None:
+    def __call__(self, graph) -> None:
         """Rescue SR from soft-clipped non-chimeric reads.
 
         changed in place
@@ -80,12 +83,12 @@ class SRRescuer:
         """
         query_names_in_graph = set()
 
-        for node in nodes_in_graph:
+        for node in graph:
             query_names_in_graph.update(node.query_name.split(","))
 
         query_names_in_graph_list = list(query_names_in_graph)
 
-        for node in nodes_in_graph:
+        for node in graph:
             node.original_sr = node.sr
             self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
             self.update_sr(
@@ -98,15 +101,15 @@ class SRRescuer:
 
     @staticmethod
     def obtain_region_for_rescue_sr(
-        strand: str | None,
-        chrom: str | None,
-        exons: Any,
+        strand: Strand,
+        chrom: str,
+        exons: Exons,
         tgt_name: str,
-        mode: int,
+        mode: Mode,
     ) -> tuple[str, int]:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
-        ..note.
+        .. note:
               Due to micro homology, prev_breakpoint/next_breakpoint locates inside the M side of S-M boundary
               Thus, exon start/end (S-M boundary) will be used to rescue SR.
         """
@@ -114,12 +117,20 @@ class SRRescuer:
             msg = f"chrom={chrom!r} strand={strand!r} exons={exons!r}"
             raise ExonsNotFoundError(msg)
 
-        if strand == "+":
-            pos = exons[-1][1] if tgt_name == "next_breakpoint" else exons[0][0]
+        if not strand.is_reverse():
+            pos = (
+                exons.last().end
+                if tgt_name == "next_breakpoint"
+                else exons.first().start
+            )
         else:
-            pos = exons[0][0] if tgt_name == "next_breakpoint" else exons[-1][1]
+            pos = (
+                exons.first().start
+                if tgt_name == "next_breakpoint"
+                else exons.last().end
+            )
 
-        if mode == 2:
+        if mode.is_sm():
             pos += 1
         else:
             pos = pos + 1 if pos == 0 else pos
@@ -127,30 +138,30 @@ class SRRescuer:
         return chrom, pos
 
     @staticmethod
-    def obtain_region_for_rescue_sr2(node: Node, mode: int, tag_name: str):
+    def obtain_region_for_rescue_sr2(node: Node, mode: Mode, tag_name: str):
         """Obtain region from rescue."""
-        if node.exons is None or node.strand is None or node.chrom is None:
+        if node.exons is None or node.chrom is None:
             msg = f"node.chrom={node.chrom!r} node.strand={node.strand!r} node.exons={node.exons!r}"
             raise ExonsNotFoundError(msg)
 
-        if node.strand == "+":
-            pre_pos = node.exons[0][0]
-            next_pos = node.exons[-1][1]
+        if node.strand.is_forward():
+            pre_pos = node.exons.first().start
+            next_pos = node.exons.last().end
         else:
-            pre_pos = node.exons[-1][1]
-            next_pos = node.exons[0][0]
+            pre_pos = node.exons.last().end
+            next_pos = node.exons.first().start
 
-        if mode == Mode.SM:
+        if mode.is_sm():
             pre_pos += 1
             next_pos += 1
         else:
             pre_pos = max(pre_pos, 1)
             next_pos = max(next_pos, 1)
 
-        if node.prev_breakpoint is None:
+        if node.is_start_node():
             pre_pos = 0
 
-        if node.next_breakpoint is None:
+        if node.is_end_node():
             next_pos = 0
 
         if tag_name == "prev_breakpoint":
@@ -161,6 +172,7 @@ class SRRescuer:
     def update_sr(
         self,
         current_node: Node,
+        edge: Edge,
         query_names_in_graph: list[str],
         node_rescued_sr_maximum: int,
     ) -> None:
@@ -174,9 +186,10 @@ class SRRescuer:
 
         mode1, mode2 = current_node.modes
 
-        chrom_n, pos_n = current_node.get_breakpoint_depth_pos(mode1, "next")
+        # WARN: do not consider mode to minus 1 for pos <07-24-23, Yangyang Li>
+        chrom_n, pos_n = edge.break_point1.to_tuple()
 
-        current_node.next_breakpoint_depth = self.cppext_rescuer.count_reads(
+        edge.break_point1.depth = self.cppext_rescuer.count_reads(
             chrom_n,
             pos_n,
             pos_n + 1,
@@ -186,7 +199,7 @@ class SRRescuer:
 
         chrom, start, check_pos = SRRescuer.obtain_region_for_rescue_sr2(
             current_node,
-            mode1,
+            Mode.from_int(mode1),
             "next_breakpoint",
         )
 
@@ -219,6 +232,7 @@ class SRRescuer:
 
         for next_node in current_node.successors:
             chrom_p, pos_p = next_node.get_breakpoint_depth_pos(mode2, "prev")
+
             next_node.prev_breakpoint_depth = self.cppext_rescuer.count_reads(
                 chrom_p,
                 pos_p,
