@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 import HTSeq
 
 from .basic import Interval, Strand
-from scannls.graph import NLPath, Node
 
 if TYPE_CHECKING:
     from .basic_class import Event
@@ -158,7 +157,7 @@ class CircRNAFilter:
             consider_strand=True,
         )
 
-    def is_circrna(self, nlpath: NLPath) -> bool:
+    def is_circrna(self, nlpath) -> bool:
         nodes = nlpath.nodes
         # one-hop event
         if len(nodes) == 2:
