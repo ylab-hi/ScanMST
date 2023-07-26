@@ -40,6 +40,16 @@ class ExonInfo:
             f"{self.trx_id})"
         )
 
+    def __hash__(self) -> int:
+        """Hash an exon."""
+        return (
+            hash(self.trx_id)
+            ^ hash(self.chrom)
+            ^ hash(self.start)
+            ^ hash(self.end)
+            ^ hash(self.strand)
+        )
+
 
 class ExonFilter:
     """ExonFilter is used to filter out events with both breakpoints harbored in the same exon."""

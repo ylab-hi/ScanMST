@@ -24,22 +24,21 @@ from scannls import (
     reverse_complement,
 )
 from scannls.base import Mode
+from scannls.core import (
+    blat2chimeric_alignment,
+    extract_splice_sites,
+    get_transcriptome_length,
+    infer_nls_from_connected_reads,
+    insertion2chimeric_alignment,
+    obtain_variants_stats,
+    strand_mode_checker,
+)
 from scannls.graph import NLPath
 from scannls.type import LoggerType
 from scannls.utils import (
     cigarstring2cigartuples,
     get_longest_insertion_sequence,
     get_softclip_length,
-)
-
-from scannls.core import (
-    blat2chimeric_alignment,
-    extract_splice_sites,
-    get_transcriptome_length,
-    insertion2chimeric_alignment,
-    obtain_variants_stats,
-    strand_mode_checker,
-    infer_nls_from_connected_reads
 )
 
 
@@ -632,7 +631,7 @@ def scanbam_run(
     ]
 
     logger.info(f" Processing {contigs=}")
-
+    running_mode = "normal" if parallel == 1 else "parallel"
     # get current local namespace
     self_local_namespace = copy.copy(locals())
     # get the keyword arguments for the _scan_bam_helper function
