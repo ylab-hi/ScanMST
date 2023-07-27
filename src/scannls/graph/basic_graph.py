@@ -270,7 +270,7 @@ class Node(BasicNode):
         "insertion_info",
         "_unique_key",
         "is_polya",
-        "_exon_repr",
+        "_exon_str",
         "cigartuples_without_soft",
         "identity",
         "read_names",
