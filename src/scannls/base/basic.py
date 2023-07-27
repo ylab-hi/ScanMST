@@ -52,6 +52,14 @@ class Strand(Enum):
     def reverse(self): self = Strand.Reverse if self.is_forward() else Strand.Reverse
     # fmt: on
 
+    def __repr__(self) -> str:
+        return super().__repr__()
+
+    def __str__(self) -> str:
+        if self.is_forward():
+            return "+"
+        return "-"
+
     @classmethod
     def from_str(cls, strand: str | Strand):
         if isinstance(strand, cls):
