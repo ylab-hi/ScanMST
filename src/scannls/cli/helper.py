@@ -1272,7 +1272,7 @@ def same_chrom_diff_strand_handler(
             splice_bin,
             genome_fasta,
             cvg,
-            motif_required,
+            motif_required=motif_required,
         )
         _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
         if _nls:
