@@ -102,7 +102,7 @@ class Interval:
 
     start: int
     end: int
-    __index: int = 2
+    _index: int = 2
 
     def __init__(self, start: int, end: int):
         """Initialize Interval."""
@@ -133,7 +133,7 @@ class Interval:
 
     def __getitem__(self, index: int):
         """Get item from interval."""
-        if index >= Interval.__index:
+        if index >= Interval._index:
             msg = f"index: {index} is out"
             raise ValueError(msg)
 
@@ -262,7 +262,7 @@ class Intervals:
         return cls(exon_list=[Interval.from_list(exon) for exon in item])
 
     def introns(self) -> Intervals | None:
-        if len(self) < Interval.__index:
+        if len(self) < Interval._index:
             return None
 
         introns = Intervals([])
