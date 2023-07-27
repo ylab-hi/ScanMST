@@ -448,7 +448,10 @@ class ReadsConnector:
             )
             cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
-        assert read.query_qualities is not None
+        if read.query_qualities is None:
+            msg = "query_qualities is None"
+            raise ValueError(msg)
+
         new_read = Read.new(
             read.query_name,
             chrom,
@@ -832,7 +835,10 @@ def detect_read_read_connections_from_cigar(
 
         if nm_sa < max_allowed_nm:
             mapq_list.append(mapq_sa)
-            assert query_qualities_sa is not None
+            if query_qualities_sa is None:
+                msg = "None value found in read"
+                raise ValueError(msg)
+
             chimeric_aln_list.append(
                 Read.new(
                     read.query_name,

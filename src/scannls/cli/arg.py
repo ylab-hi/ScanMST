@@ -12,7 +12,7 @@ from scannls import __version__
 class DefaultOptions:
     """Cli default options."""
 
-    input: str
+    input: str  # noqa: A003
     ref: str
     gtf: str
     output: str

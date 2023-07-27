@@ -170,7 +170,7 @@ class CircRNAFilter:
     def is_circrna(self, nlpath) -> bool:
         nodes = nlpath.nodes
         # one-hop event
-        if len(nodes) == 2:
+        if len(nodes) == 2:  # noqa: PLR2004
             longest_node = CircRNAFilter.obtain_longest_mega_exon(nodes)
             current_node, next_node = nodes
             current_edge = nlpath.next_edge(current_node, 0)

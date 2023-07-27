@@ -175,7 +175,9 @@ class NLGraph:
             return self.find_edges(current_node, successor)
 
         previous_edge = current_path[-1]
-        assert isinstance(previous_edge, Edge)
+        if not isinstance(previous_edge, Edge):
+            msg = f"previous_edge is not instance of Edge: {previous_edge}"
+            raise TypeError(msg)
 
         previous_edge_node_identity = self.get_node_identity_base_edge(
             previous_edge,
@@ -457,7 +459,9 @@ class NLGraph:
 
         if not start_node or start_node in path:
             # successor be [] or None
-            assert isinstance(path[-1], Node)
+            if not isinstance(path[-1], Node):
+                msg = f"Last element in path is not a node {path[-1]}"
+                raise TypeError(msg)
             group_paths.append(path)
 
         elif successors := start_node.successors:

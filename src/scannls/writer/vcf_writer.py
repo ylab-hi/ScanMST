@@ -22,7 +22,6 @@ from scannls.exception import (
     ModesNotFoundError,
     SplicingCodeNotFoundError,
 )
-from scannls.graph import NLPath, Node
 
 from .writer import Writer
 

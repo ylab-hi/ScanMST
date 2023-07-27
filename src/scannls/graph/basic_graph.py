@@ -882,7 +882,10 @@ class NLPath:
 
         for idx in range(len(node_edges), 2):
             current_node = node_edges[idx]
-            assert isinstance(current_node, Node)
+            if not isinstance(current_node, Node):
+                msg = f"Expected Node, got {type(current_node)} from {current_node}"
+                raise TypeError(msg)
+
             instance.nodes.append(current_node)
 
             if idx < len(node_edges) - 1:

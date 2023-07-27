@@ -25,7 +25,7 @@ class Mode(IntEnum):
             return cls.Type0
         if mode == 1:
             return cls.MS
-        if mode == 2:
+        if mode == 2:  # noqa: PLR2004
             return cls.SM
 
         msg = f"Invalid mode: {mode}"

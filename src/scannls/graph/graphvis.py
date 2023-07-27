@@ -54,7 +54,7 @@ def output_graph(
             plot_graph_helper(start_node, [], g, graph)  # type: ignore
 
     data = nx.node_link_data(g, **GRAPH_LINK_DATA)
-    with open(f"{file_name}.json", "w", encoding="utf-8") as f:
+    with Path(f"{file_name}.json").open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 

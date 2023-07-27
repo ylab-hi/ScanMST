@@ -472,7 +472,9 @@ def _scan_bam_helper(
 
                 nm = read.get_tag("NM")
 
-                assert read.cigarstring is not None
+                if read.cigarstring is None:
+                    msg = f"{read}'s cigarstring is None"
+                    raise ValueError(msg)
                 num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring,
                     read.get_tag("MD"),
