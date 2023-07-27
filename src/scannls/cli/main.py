@@ -24,15 +24,6 @@ from scannls import (
     reverse_complement,
 )
 from scannls.base import Mode
-from scannls.core import (
-    blat2chimeric_alignment,
-    extract_splice_sites,
-    get_transcriptome_length,
-    infer_nls_from_connected_reads,
-    insertion2chimeric_alignment,
-    obtain_variants_stats,
-    strand_mode_checker,
-)
 from scannls.graph import NLPath
 from scannls.type import LoggerType
 from scannls.utils import (
@@ -40,6 +31,16 @@ from scannls.utils import (
     get_longest_insertion_sequence,
     get_softclip_length,
 )
+
+from .helper import (
+    blat2chimeric_alignment,
+    extract_splice_sites,
+    get_transcriptome_length,
+    insertion2chimeric_alignment,
+    obtain_variants_stats,
+    strand_mode_checker,
+)
+from .nls_inference import infer_nls_from_connected_reads
 
 
 class BamScanner:

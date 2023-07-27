@@ -17,7 +17,7 @@ from scannls.base import (
     Strand,
     reverse_complement,
 )
-from scannls.core import infer_nls_from_connected_reads
+from scannls.cli import infer_nls_from_connected_reads
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

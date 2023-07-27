@@ -6,5 +6,6 @@
 """
 
 from .arg import DefaultOptions
+from .nls_inference import infer_nls_from_connected_reads
 
-__all__ = ["DefaultOptions"]
+__all__ = ["infer_nls_from_connected_reads", "DefaultOptions"]
