@@ -404,7 +404,9 @@ def splicing_confirmation(
 
         ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
         if ret is None:
-            raise ValueError
+            msg = f"Unexpected breakpoint combination: {strand1}{strand2}{mode1}{mode2}"
+            raise ValueError(msg)
+
         return ret
 
     # key: strand of donor site, strand of accepter site
