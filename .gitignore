@@ -6,6 +6,7 @@
 /.pytype/
 /dist/
 /data/
+/dependency/
 /build/
 /docs/_build/
 /src/*.egg-info/

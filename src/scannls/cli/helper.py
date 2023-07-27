@@ -789,8 +789,8 @@ def same_chrom_same_strand_mode21_handler(
 ):
     """Same chrom same strand mode 21 handler."""
     lt_chrm = read_lt.chrom
-    lt_exons, lt_introns = read_lt.get_exons_and_introns()
-    rt_exons, rt_introns = read_rt.get_exons_and_introns()
+    lt_exons = read_lt.get_exons()
+    rt_exons = read_rt.get_exons()
 
     if lt_mode == Mode.SM and rt_mode == Mode.MS:
         target_start = read_rt.ref_start
@@ -1107,8 +1107,8 @@ def same_chrom_diff_strand_handler(
         return noreturn
 
     lt_chrm = read_lt.chrom
-    lt_exons, lt_introns = read_lt.get_exons_and_introns()
-    rt_exons, rt_introns = read_rt.get_exons_and_introns()
+    lt_exons = read_lt.get_exons()
+    rt_exons = read_rt.get_exons()
 
     same_mode = lt_mode
     if same_mode == 1:
@@ -1309,8 +1309,8 @@ def diff_chrom_same_strand_mode21_handler(
     is_reverse=False,
 ):
     """Different chrom same stand mode 21 handler."""
-    lt_exons, lt_introns = read_lt.get_exons_and_introns()
-    rt_exons, rt_introns = read_rt.get_exons_and_introns()
+    lt_exons = read_lt.get_exons()
+    rt_exons = read_rt.get_exons()
 
     chrm_start = read_lt.chrom
     junc_start = read_lt.ref_start
@@ -1453,8 +1453,8 @@ def diff_chrom_diff_strand_handler(
             msg,
         )
 
-    lt_exons, lt_introns = read_lt.get_exons_and_introns()
-    rt_exons, rt_introns = read_rt.get_exons_and_introns()
+    lt_exons = read_lt.get_exons()
+    rt_exons = read_rt.get_exons()
     same_mode = lt_mode
 
     if same_mode == Mode.MS:
