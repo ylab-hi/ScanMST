@@ -443,12 +443,12 @@ def splicing_confirmation(
     # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
     try:
         motif_do = next(iter(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)]))
-    except IndexError:
+    except (IndexError, StopIteration):
         motif_do = ""
 
     try:
         motif_ac = next(iter(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)]))
-    except IndexError:
+    except (IndexError, StopIteration):
         motif_ac = ""
 
     # Non-annotated coding exon boundary
