@@ -272,7 +272,7 @@ class Node(BasicNode):
         "is_polya",
         "_exon_str",
         "cigartuples_without_soft",
-        "identity",
+        "identities",
         "read_names",
         *BasicNode.__slots__,
     )
