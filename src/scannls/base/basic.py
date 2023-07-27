@@ -252,9 +252,9 @@ class Intervals:
             self.exon_list.append(Interval(*item))
         elif isinstance(item, Interval):
             self.exon_list.append(item)
-
-        msg = f"item: {item} is not Interval or tuple"
-        raise TypeError(msg)
+        else:
+            msg = f"item: {item} is not Interval or tuple"
+            raise TypeError(msg)
 
     @classmethod
     def from_list(cls, item: list[list[int] | tuple[int, int]]):
