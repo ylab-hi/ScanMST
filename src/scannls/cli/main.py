@@ -5,7 +5,6 @@ import math
 import re
 from itertools import chain
 from pathlib import Path
-from typing import Any
 
 import HTSeq
 import pyfaidx
@@ -208,7 +207,7 @@ def detect_sv_from_cigar(
     motif_required: bool,
     blat: Blat,
     logger: LoggerType,
-) -> Any:
+):
     """Detect SV from cigar string.
 
     :param logger: logger for logging
@@ -227,21 +226,16 @@ def detect_sv_from_cigar(
     :return: event groups in a list, every group is also a list
     :rtype: list (list of lists)
     """
-    (
-        read_chains,
-        reads_pair_mode_dict,
-        num_added_reads,
-    ) = detect_read_read_connections_from_cigar(
+
+    if ret := detect_read_read_connections_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
         max_allowed_nm=max_allowed_nm,
         blat=blat,
         logger=logger,
-    )
-
-    event_list: list[Event] = []
-
-    if read_chains:
+    ):
+        (read_chains, reads_pair_mode_dict, num_added_reads) = ret
+        event_list: list[Event] = []
         # every chain is a group of connected reads
         # every chain may have a list of events
         for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
@@ -277,7 +271,9 @@ def detect_sv_from_cigar(
             else:  # temporary solution
                 logger.warning(f"Event Type is NA {event_type=}")
 
-    return event_list, read_chains, num_added_reads
+        return event_list, read_chains, num_added_reads
+
+    return None
 
 
 def _scan_bam_helper(
@@ -493,7 +489,7 @@ def _scan_bam_helper(
                     and ins_fraction <= indels_fraction
                     and del_fraction <= indels_fraction
                 ):
-                    event_lists, read_chains, num_added_reads = detect_sv_from_cigar(
+                    if ret := detect_sv_from_cigar(
                         read=read,
                         mapq_cutoff=mapq_cutoff,
                         max_allowed_nm=max_allowed_nm,
@@ -504,9 +500,11 @@ def _scan_bam_helper(
                         motif_required=motif_required,
                         blat=blat,
                         logger=logger,
-                    )
-
-                    logger.trace(f"{read_chains=}")
+                    ):
+                        event_lists, read_chains, num_added_reads = ret
+                        logger.trace(f"{read_chains=}")
+                    else:
+                        event_lists, read_chains, num_added_reads = [], [], 0
 
                     nls_event_list = []
                     for event in event_lists:
