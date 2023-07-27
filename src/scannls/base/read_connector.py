@@ -473,16 +473,15 @@ class ReadsConnector:
         top,
     ):
         """Double check blat query."""
-        flag = False
 
         if len(query_sequence) < align_len_threshold:
-            return flag, None, None
+            return None
 
         out_blat = self.blat.query(in_seq=query_sequence)
         try:
             blat_result = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
-            return flag, None, None
+            return None
 
         hit, keep_hsp = self.blat._query_insertion(
             blat_result,
@@ -490,7 +489,7 @@ class ReadsConnector:
             threshold_identity,
             top=top,
         )
-        return True, hit, keep_hsp
+        return hit, keep_hsp
 
     def _double_check_for_start_end_read(
         self,
@@ -507,16 +506,19 @@ class ReadsConnector:
             else read.query_sequence[len(read.query_sequence) - read.rt_soft_len :]
         )
 
-        flag, hit, keep_hsp = self.__double_check_blat_query(
+        ret = self.__double_check_blat_query(
             query_sequence,
             self.align_len_threshold,
             self.threshold_identity,
             self.top,
         )
 
-        assert keep_hsp is not None
+        if ret is None:
+            return
 
-        if flag and hit == 1:
+        hit, keep_hsp = ret
+
+        if hit == 1:
             self.num_added_reads += 1
             hsp = keep_hsp[0]
             new_read = self._double_check_create_new_read_calculate_sms(
