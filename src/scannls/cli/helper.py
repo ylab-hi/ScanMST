@@ -12,6 +12,7 @@ import yaml  # type: ignore
 from scannls import __PACKAGE_NAME__, cppext
 from scannls.base import CigarCode, Mode
 from scannls.exception import ModesNotEqualError
+from scannls.utils import cigar_validity
 
 if TYPE_CHECKING:
     import pyfaidx
