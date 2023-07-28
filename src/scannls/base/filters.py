@@ -177,7 +177,9 @@ class CircRNAFilter:
             return bool(
                 current_edge.variation_type == "TDUP"
                 and (
-                    len(current_node.introns) > 0
+                    current_node.introns
+                    and next_node.introns
+                    and len(current_node.introns) > 0
                     and len(next_node.introns) > 0
                     and (
                         set(current_node.introns).issuperset(set(next_node.introns))
@@ -210,7 +212,9 @@ class CircRNAFilter:
                 if (
                     set(current_node.exons).issubset(set(next_node.exons))
                     or (
-                        len(current_node.introns) > 0
+                        current_node.introns
+                        and next_node.introns
+                        and len(current_node.introns) > 0
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issubset(set(next_node.introns))
                     )
@@ -224,7 +228,9 @@ class CircRNAFilter:
                 if (
                     set(current_node.exons).issuperset(set(next_node.exons))
                     or (
-                        len(current_node.introns) > 0
+                        current_node.introns
+                        and next_node.introns
+                        and len(current_node.introns) > 0
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issuperset(set(next_node.introns))
                     )
