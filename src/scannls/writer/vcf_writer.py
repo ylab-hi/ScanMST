@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, ClassVar
+from typing import IO, Any, ClassVar
 
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
@@ -22,11 +22,9 @@ from scannls.exception import (
     ModesNotFoundError,
     SplicingCodeNotFoundError,
 )
+from scannls.graph import NLPath, Node  # noqa: TCH001
 
 from .writer import Writer
-
-if TYPE_CHECKING:
-    from scannls.graph import NLPath, Node
 
 
 class VCFWriter(Writer):
