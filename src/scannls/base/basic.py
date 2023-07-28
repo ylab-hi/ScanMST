@@ -130,6 +130,9 @@ class Interval:
         """Check if item is in the interval."""
         return self.start <= item.start and item.end <= self.end
 
+    def __hash__(self) -> int:
+        return hash(self.start) ^ hash(self.end)
+
     def __setitem__(self, index: int, value: int):
         if index == 0:
             self.start = value
