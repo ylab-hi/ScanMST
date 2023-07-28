@@ -238,14 +238,13 @@ def detect_sv_from_cigar(
         event_list: list[Event] = []
         # every chain is a group of connected reads
         # every chain may have a list of events
-        for _lt, _rt in zip(read_chains[::1], read_chains[1::1]):
+        for _lt, _rt in zip(read_chains[:], read_chains[1:]):
             if (_lt, _rt) in reads_pair_mode_dict:
                 _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
-
             elif (_rt, _lt) in reads_pair_mode_dict:
                 _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
-
             else:
+                logger.warning(f"{_lt=}, {_rt=} are not in {reads_pair_mode_dict}")
                 raise ValueError
 
             if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
