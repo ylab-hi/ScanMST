@@ -529,13 +529,20 @@ class ReadsConnector:
                 query_sequence,
                 read,
             )
-
-            if read_type == "start":
-                self.reads_chain.insert(0, new_read)
-                self.read_pair_mode_dict[(new_read, read)] = (new_read.mode, read.mode)
-            else:
-                self.reads_chain.append(new_read)
-                self.read_pair_mode_dict[(read, new_read)] = (read.mode, new_read.mode)
+            # discard blat alignments mapped to uncommon chromosome and mitochondrion
+            if "_" not in new_read.chrom and new_read.chrom not in {"chrM", "MT"}:
+                if read_type == "start":
+                    self.reads_chain.insert(0, new_read)
+                    self.read_pair_mode_dict[(new_read, read)] = (
+                        new_read.mode,
+                        read.mode,
+                    )
+                else:
+                    self.reads_chain.append(new_read)
+                    self.read_pair_mode_dict[(read, new_read)] = (
+                        read.mode,
+                        new_read.mode,
+                    )
 
     @staticmethod
     def __sort_candidate_reads_key(read: Read, start_read: Read) -> int:
