@@ -259,7 +259,7 @@ class CircRNAFilter:
         """Check if all the exons in the megaexon can superpose with annotated exons."""
         flag = True
         chrom = node.chrom
-        strand = node.strand
+        strand = str(node.strand)
         for _exon in node.exons:
             _exon_start = _exon.start
             _exon_end = _exon.end
