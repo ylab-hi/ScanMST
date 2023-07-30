@@ -140,8 +140,8 @@ class Read:
         :return: representation of the read
         """
         return (
-            f"Read({self.query_name}, {self.chrom}, {self.ref_start}, {self.ref_end}, {self.cigarstring}, "
-            f"{self.strand}, {self.mapq}, {self.nm})"
+            f"Read({self.query_name}, {self.chrom}, {self.ref_start}, {self.ref_end}, {self.cigarstring}, {self.sms} "
+            f"{self.strand}, {self.mode} {self.mapq}, {self.nm})"
         )
 
     @classmethod

@@ -87,14 +87,15 @@ class ReadsConnector:
         return Mode.MS
 
     @staticmethod
-    def init_mode_judge(read1: Read, read2: Read) -> None:
+    def init_read_mode(read1: Read, read2: Read) -> None:
         """Initialize the mode of the reads."""
-        sorted_by_s_length = sorted(
-            [read1, read2],
-            key=lambda x: min(x.lt_soft_len, x.rt_soft_len),
-        )
 
-        if read1 == sorted_by_s_length[0]:
+        logger.debug(
+            f"before:  {read1=} {read1.adhocsms=} {read1.lt_soft_len=} {read1.rt_soft_len=} {read2=} {read2.adhocsms=} {read2.lt_soft_len=} {read2.rt_soft_len}"
+        )
+        if min(read1.lt_soft_len, read1.rt_soft_len) <= min(
+            read2.lt_soft_len, read2.rt_soft_len
+        ):
             read1.mode = ReadsConnector._get_mode(read1.adhocsms)
             if read1.strand == read2.strand:
                 read2.mode = Mode.MS if read1.mode == Mode.SM else Mode.SM
@@ -107,6 +108,8 @@ class ReadsConnector:
                 read1.mode = Mode.MS if read2.mode == Mode.SM else Mode.MS
             else:
                 read1.mode = read2.mode
+
+        logger.debug(f"after:{read1=} {read1.adhocsms=} {read2=} {read2.adhocsms=}")
 
     def check_if_ms_match(
         self,
@@ -290,9 +293,12 @@ class ReadsConnector:
         :param is_compare_for_ms: is compare for ms
         """
         condition1, condition2 = False, False
+
         self.logger.debug(f"{start_read.mode=}, {read.mode=}, {start_read.query_name=}")
         self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
+
         if not is_compare_for_ms:  # one hop
+            self.logger.debug(f"add pair {start_read=} {read=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
             return True, start_read
@@ -336,6 +342,7 @@ class ReadsConnector:
             read.mode = Mode.SM
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.logger.debug(f"Add {read=} to reads chain")
             self.reads_chain.append(read)
 
             if read in self.candidate_nodes:
@@ -380,10 +387,10 @@ class ReadsConnector:
         if match_flag2 and condition2:  # may same
             read.mode = Mode.MS
 
-            self.logger.debug(f"{start_read.mode=}, {read.mode=}")
-
+            self.logger.debug(f"add {start_read=}, {read=} to mode dict")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
 
+            self.logger.debug(f"Add {read=} to reads chain")
             self.reads_chain.append(read)
 
             if read in self.candidate_nodes:
@@ -538,13 +545,18 @@ class ReadsConnector:
             # discard blat alignments mapped to uncommon chromosome and mitochondrion
             if "_" not in new_read.chrom and new_read.chrom not in {"chrM", "MT"}:
                 if read_type == "start":
+                    self.logger.debug(f"Insert {new_read=} to start of reads chain")
                     self.reads_chain.insert(0, new_read)
+
+                    self.logger.debug(f"add {new_read=}, {read=} to mode dict")
                     self.read_pair_mode_dict[(new_read, read)] = (
                         new_read.mode,
                         read.mode,
                     )
                 else:
+                    self.logger.debug(f"Add {read=} to reads chain")
                     self.reads_chain.append(new_read)
+                    self.logger.debug(f"add {read=}, {new_read=} to mode dict")
                     self.read_pair_mode_dict[(read, new_read)] = (
                         read.mode,
                         new_read.mode,
@@ -605,7 +617,7 @@ class ReadsConnector:
         flag = True
         if not self.candidate_nodes:  # []
             self.logger.debug("ReadsConnector: candidate_nodes is []")
-            ReadsConnector.init_mode_judge(start_read, end_read)
+            ReadsConnector.init_read_mode(start_read, end_read)
             _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
             self._double_check_for_start_end_read(start_read, "start")
             self._double_check_for_start_end_read(end_read, "end")
@@ -620,7 +632,7 @@ class ReadsConnector:
                     )
                     return False
                 read = self.candidate_nodes[self.index]
-                ReadsConnector.init_mode_judge(start_read, read)
+                ReadsConnector.init_read_mode(start_read, read)
                 flag, start_read = self.test_2case(
                     start_read,
                     read,
@@ -636,12 +648,13 @@ class ReadsConnector:
             self.logger.warning(
                 f"before end {self.reads_chain=} {self.read_pair_mode_dict=}"
             )
-            ReadsConnector.init_mode_judge(start_read, end_read)
+            ReadsConnector.init_read_mode(start_read, end_read)
             _, start_read = self.test_2case(
                 start_read,
                 end_read,
                 is_compare_for_ms=True,
             )
+
             self._double_check_for_start_end_read(end_read, "end")
             self.logger.warning(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
 
