@@ -90,26 +90,20 @@ class ReadsConnector:
     def init_read_mode(read1: Read, read2: Read) -> None:
         """Initialize the mode of the reads."""
 
-        logger.debug(
-            f"before:  {read1=} {read1.adhocsms=} {read1.lt_soft_len=} {read1.rt_soft_len=} {read2=} {read2.adhocsms=} {read2.lt_soft_len=} {read2.rt_soft_len}"
-        )
         if min(read1.lt_soft_len, read1.rt_soft_len) <= min(
-            read2.lt_soft_len, read2.rt_soft_len
+            read2.lt_soft_len,
+            read2.rt_soft_len,
         ):
             read1.mode = ReadsConnector._get_mode(read1.adhocsms)
-            if read1.strand == read2.strand:
-                read2.mode = Mode.MS if read1.mode == Mode.SM else Mode.SM
-            else:
-                read2.mode = read1.mode
+            read2.mode = (
+                read1.mode.reversed() if read1.strand == read2.strand else read1.mode
+            )
 
         else:
             read2.mode = ReadsConnector._get_mode(read2.sms)
-            if read1.strand == read2.strand:
-                read1.mode = Mode.MS if read2.mode == Mode.SM else Mode.MS
-            else:
-                read1.mode = read2.mode
-
-        logger.debug(f"after:{read1=} {read1.adhocsms=} {read2=} {read2.adhocsms=}")
+            read1.mode = (
+                read2.mode.reversed() if read1.strand == read2.strand else read2.mode
+            )
 
     def check_if_ms_match(
         self,
@@ -174,7 +168,7 @@ class ReadsConnector:
         """
 
         logger.trace(
-            f"{prev_sms=} {next_sms=} {prev_read_mode=} {next_read_mode=} {len(read_match_sequence)=} {read_query_length=}"
+            f"{prev_sms=} {next_sms=} {prev_read_mode=} {next_read_mode=} {len(read_match_sequence)=} {read_query_length=}",
         )
 
         bp_region_seq_len = 0
@@ -197,23 +191,22 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-        else:
-            if next_read_mode == Mode.SM:
-                bp_region_seq_len = (
-                    read_query_length
-                    - _lt_len_r1
-                    - _rt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
-                )
-            elif next_read_mode == Mode.MS:
-                bp_region_seq_len = (
-                    read_query_length
-                    - _lt_len_r1
-                    - _lt_len_r2
-                    - _read_match_r1
-                    - _read_match_r2
-                )
+        elif next_read_mode == Mode.SM:
+            bp_region_seq_len = (
+                read_query_length
+                - _lt_len_r1
+                - _rt_len_r2
+                - _read_match_r1
+                - _read_match_r2
+            )
+        elif next_read_mode == Mode.MS:
+            bp_region_seq_len = (
+                read_query_length
+                - _lt_len_r1
+                - _lt_len_r2
+                - _read_match_r1
+                - _read_match_r2
+            )
         is_microhomology = False
         microhomology_length = 0
 
@@ -244,11 +237,11 @@ class ReadsConnector:
             prev_read_mode,
             next_read_mode,
         )
-        logger.warning(f"{is_microhomology=} {microhomology_length=}")
         if is_microhomology:
             if prev_read_mode == Mode.SM:
                 return read_match_sequence[microhomology_length:]
-            elif prev_read_mode == Mode.MS:
+
+            if prev_read_mode == Mode.MS:
                 return read_match_sequence[:-microhomology_length]
 
         return read_match_sequence
@@ -645,18 +638,20 @@ class ReadsConnector:
                 if flag and len(self.candidate_nodes) + 1 == candidate_read_len:
                     self._double_check_for_start_end_read(start_nodes[0], "start")
 
-            self.logger.warning(
-                f"before end {self.reads_chain=} {self.read_pair_mode_dict=}"
-            )
             ReadsConnector.init_read_mode(start_read, end_read)
-            _, start_read = self.test_2case(
+            flag, start_read = self.test_2case(
                 start_read,
                 end_read,
                 is_compare_for_ms=True,
             )
 
+            if not flag:
+                self.logger.warning(
+                    f"ReadsConnector: cannot connect end read"
+                    f"{start_read.query_name}",
+                )
+
             self._double_check_for_start_end_read(end_read, "end")
-            self.logger.warning(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
 
         return flag
 

@@ -181,6 +181,7 @@ target-version = "py39"
 "src/scannls/writer/vcf_writer.py" = ["A003", "DTZ002"]
 "src/scannls/writer/gtf_writer.py" = ["A003"]
 "src/scannls/base/parallel.py" = ["A003"]
+"src/scannls/base/basic.py" = ["A003"]
 "src/scannls/utils.py" = ["S603"]
 
 [tool.commitizen]

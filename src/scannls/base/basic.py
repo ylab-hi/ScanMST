@@ -12,6 +12,7 @@ class Mode(IntEnum):
 
     # fmt: off
     def reverse(self): self = self.SM if self == self.MS else self.MS
+    def reversed(self): return self.SM if self == self.MS else self.MS
     def is_sm(self): return self == self.SM
     def is_ms(self): return self == self.MS
     # fmt: on
@@ -50,6 +51,7 @@ class Strand(Enum):
     def is_reverse(self): return self == Strand.Reverse
     def is_forward(self): return self == Strand.Forward
     def reverse(self): self = Strand.Reverse if self.is_forward() else Strand.Reverse
+    def reversed(self) -> Strand: return Strand.Reverse if self.is_forward() else Strand.Reverse
     # fmt: on
 
     def __repr__(self) -> str:
