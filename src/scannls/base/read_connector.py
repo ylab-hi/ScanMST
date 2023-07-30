@@ -169,6 +169,11 @@ class ReadsConnector:
         :param prev_read_mode: previous predicted connected read mode
         :param next_read_mode: next predicted connected read mode
         """
+
+        logger.trace(
+            f"{prev_sms=} {next_sms=} {prev_read_mode=} {next_read_mode=} {len(read_match_sequence)=} {read_query_length=}"
+        )
+
         bp_region_seq_len = 0
         _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
@@ -189,22 +194,23 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-        elif next_read_mode == Mode.SM:
-            bp_region_seq_len = (
-                read_query_length
-                - _lt_len_r1
-                - _rt_len_r2
-                - _read_match_r1
-                - _read_match_r2
-            )
-        elif next_read_mode == Mode.MS:
-            bp_region_seq_len = (
-                read_query_length
-                - _lt_len_r1
-                - _lt_len_r2
-                - _read_match_r1
-                - _read_match_r2
-            )
+        else:
+            if next_read_mode == Mode.SM:
+                bp_region_seq_len = (
+                    read_query_length
+                    - _lt_len_r1
+                    - _rt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
+            elif next_read_mode == Mode.MS:
+                bp_region_seq_len = (
+                    read_query_length
+                    - _lt_len_r1
+                    - _lt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
         is_microhomology = False
         microhomology_length = 0
 
@@ -235,13 +241,12 @@ class ReadsConnector:
             prev_read_mode,
             next_read_mode,
         )
+        logger.warning(f"{is_microhomology=} {microhomology_length=}")
         if is_microhomology:
             if prev_read_mode == Mode.SM:
                 return read_match_sequence[microhomology_length:]
-
-            if prev_read_mode == Mode.MS:
+            elif prev_read_mode == Mode.MS:
                 return read_match_sequence[:-microhomology_length]
-            return None
 
         return read_match_sequence
 
@@ -305,6 +310,7 @@ class ReadsConnector:
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
+
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -603,10 +609,10 @@ class ReadsConnector:
             _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
             self._double_check_for_start_end_read(start_read, "start")
             self._double_check_for_start_end_read(end_read, "end")
-
         else:
             candidate_read_len = len(self.candidate_nodes)
             while self.candidate_nodes:
+                self.logger.warning(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
                 if self.index == len(self.candidate_nodes):
                     logger.warning(
                         f"ReadsConnector: cannot connect all reads in candidate_nodes "
@@ -627,6 +633,9 @@ class ReadsConnector:
                 if flag and len(self.candidate_nodes) + 1 == candidate_read_len:
                     self._double_check_for_start_end_read(start_nodes[0], "start")
 
+            self.logger.warning(
+                f"before end {self.reads_chain=} {self.read_pair_mode_dict=}"
+            )
             ReadsConnector.init_mode_judge(start_read, end_read)
             _, start_read = self.test_2case(
                 start_read,
@@ -634,6 +643,7 @@ class ReadsConnector:
                 is_compare_for_ms=True,
             )
             self._double_check_for_start_end_read(end_read, "end")
+            self.logger.warning(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
 
         return flag
 
@@ -651,12 +661,8 @@ def detect_read_read_connections_from_cigar(
     :param blat:
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: NM cutoff
-    :type read: pysam.AlignedSegment object
-    :type mapq_cutoff: int
-    :type max_allowed_nm: int
     :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) =>
         mode-of-Read1, mode-of-Read2
-    :rtype: tuple
 
     .. note::
         Read-to-Read chain scenarios
@@ -670,7 +676,6 @@ def detect_read_read_connections_from_cigar(
     .. important::
         If no 'SA' tag is found in this read, read-to-read chain and the read-pair =>
         mode dictionary will become empty.
-
     """
 
     def format_sa_tag(in_str: str) -> Any:
@@ -679,9 +684,7 @@ def detect_read_read_connections_from_cigar(
         start position of SA alignment need to subtract 1
 
         :param in_str: string of supplementary read item in the SA tag
-        :type in_str: str
         :return: chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa
-        :rtype: tuple
 
         .. note::
              pos_sa, mapq_sa and nm_sa are integral variables now.
@@ -701,11 +704,8 @@ def detect_read_read_connections_from_cigar(
 
         :param query_seq_ra: query sequence of representative alignment
         :param strand_ra: direction of representative read (-|+)
-        :type strand_ra: str
         :param strand_sa: direction of supplementary read (-|+)
-        :type strand_sa: str
         :return: query sequence of supplementary alignment
-        :rtype: str
         """
         return (
             query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
@@ -869,6 +869,7 @@ def detect_read_read_connections_from_cigar(
         logger.debug(f"{chimeric_aln_list=} has reverse transcription artifacts")
         return noreturn
 
+    logger.debug(f"{len(chimeric_aln_list)} {chimeric_aln_list=}")
     read_connector = ReadsConnector(
         read_list=chimeric_aln_list,
         blat=blat,
