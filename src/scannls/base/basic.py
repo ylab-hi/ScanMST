@@ -207,6 +207,9 @@ class Interval:
                     other.end,
                 )
 
+            # no overlap o  o  s  s or s  s  o  o
+            return Interval(0, 0), Interval(0, 0)
+
         msg = f"{other} is not a Interval"
         raise ValueError(msg)
 
