@@ -169,10 +169,13 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     if not node1.introns and not node2.introns:
         return True
 
+    node1_introns = [] if node1.introns is None else node1.introns
+    node2_introns = [] if node2.introns is None else node2.introns
+
     introns_group = (
-        zip_longest(node1.introns, node2.introns)  # type:ignore
+        zip_longest(node1_introns, node2_introns)  # type:ignore
         if node1.strand.is_reverse()
-        else zip_longest(node1.introns[::-1], node2.introns[::-1])  # type:ignore
+        else zip_longest(node1_introns[::-1], node2_introns[::-1])  # type:ignore
     )
 
     # have introns
