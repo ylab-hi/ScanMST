@@ -22,7 +22,7 @@ from scannls import (
     detect_read_read_connections_from_cigar,
     reverse_complement,
 )
-from scannls.base import Mode
+from scannls.base import MappingMode
 from scannls.graph import NLPath
 from scannls.type import LoggerType
 from scannls.utils import (
@@ -406,7 +406,7 @@ def _scan_bam_helper(
                 read_length = int(read.query_length)
                 ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
 
-                ret = get_softclip_length(read, mode=Mode.Type0)
+                ret = get_softclip_length(read, mode=MappingMode.Type0)
                 if ret is not None and ret[1] != "" and len(ret[1]) >= min_soft_seg_len:
                     soft_seq_ori = (
                         reverse_complement(ret[1]) if read.is_reverse else ret[1]

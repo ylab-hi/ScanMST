@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from scannls import cppext
 
-from .basic import CigarCode, Intervals, Mode, Strand
+from .basic import CigarCode, Intervals, MappingMode, Strand
 
 
 class Read:
@@ -118,7 +118,7 @@ class Read:
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
         self.adhocsms = None
         self.adhocseq = None
-        self.mode: Mode | None = None
+        self.mode: MappingMode | None = None
 
     def __hash__(self) -> int:
         """Get the hash value of the read.

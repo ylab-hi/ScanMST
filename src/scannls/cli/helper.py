@@ -10,7 +10,7 @@ import HTSeq  # type: ignore
 import yaml  # type: ignore
 
 from scannls import __PACKAGE_NAME__, cppext
-from scannls.base import CigarCode, Mode
+from scannls.base import CigarCode, MappingMode
 from scannls.exception import ModesNotEqualError
 from scannls.utils import cigar_validity
 
@@ -721,7 +721,7 @@ def softclipped_length_and_event_size_checker(
     """
     return (
         read.lt_soft_len < event_size + bp_region_seq_len
-        if mode == Mode.SM
+        if mode == MappingMode.SM
         else read.rt_soft_len < event_size + bp_region_seq_len
     )
 
@@ -750,19 +750,19 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     bp_region_seq = ""
     # inserted sequence
     if bp_region_seq_len > 0:
-        if mode == Mode.SM:  # SM
+        if mode == MappingMode.SM:  # SM
             bp_region_seq = read_seq[: read.lt_soft_len][-bp_region_seq_len:]
-        elif mode == Mode.MS:  # MS
+        elif mode == MappingMode.MS:  # MS
             bp_region_seq = read_seq[-read.rt_soft_len :][:bp_region_seq_len]
         bp_region_seq = "+" + bp_region_seq
     # microhomology
     elif bp_region_seq_len < 0:
-        if mode == Mode.SM:  # SM
+        if mode == MappingMode.SM:  # SM
             bp_region_seq = genome_fasta[chrom][
                 read.ref_start : read.ref_start - bp_region_seq_len
             ].seq
 
-        elif mode == Mode.MS:  # MS
+        elif mode == MappingMode.MS:  # MS
             bp_region_seq = genome_fasta[chrom][
                 read.ref_end + bp_region_seq_len : read.ref_end
             ].seq
@@ -795,7 +795,7 @@ def same_chrom_same_strand_mode21_handler(
     lt_exons = read_lt.get_exons()
     rt_exons = read_rt.get_exons()
 
-    if lt_mode == Mode.SM and rt_mode == Mode.MS:
+    if lt_mode == MappingMode.SM and rt_mode == MappingMode.MS:
         target_start = read_rt.ref_start
         target_end = read_lt.ref_end
         target_offset = target_end - target_start
@@ -1054,7 +1054,7 @@ def same_chrom_same_strand_handler(
 ):
     """Handler for same chrom and same strand."""
     logger.trace("same_chrom_same_strand_handler takes over the task.")
-    if lt_mode == Mode.SM and rt_mode == Mode.MS:
+    if lt_mode == MappingMode.SM and rt_mode == MappingMode.MS:
         return same_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
@@ -1069,7 +1069,7 @@ def same_chrom_same_strand_handler(
             microinsertion_cutoff,
         )
 
-    if lt_mode == Mode.MS and rt_mode == Mode.SM:
+    if lt_mode == MappingMode.MS and rt_mode == MappingMode.SM:
         return same_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1401,7 +1401,7 @@ def diff_chrom_same_strand_handler(
 ):
     """Diff chrom same strand handler."""
     logger.trace("diff_chrom_same_strand_handler takes over the task.")
-    if lt_mode == Mode.SM and rt_mode == Mode.MS:
+    if lt_mode == MappingMode.SM and rt_mode == MappingMode.MS:
         return diff_chrom_same_strand_mode21_handler(
             read_lt,
             read_rt,
@@ -1416,7 +1416,7 @@ def diff_chrom_same_strand_handler(
             microinsertion_cutoff,
         )
 
-    if lt_mode == Mode.MS and rt_mode == Mode.SM:
+    if lt_mode == MappingMode.MS and rt_mode == MappingMode.SM:
         return diff_chrom_same_strand_mode21_handler(
             read_rt,
             read_lt,
@@ -1460,7 +1460,7 @@ def diff_chrom_diff_strand_handler(
     rt_exons = read_rt.get_exons()
     same_mode = lt_mode
 
-    if same_mode == Mode.MS:
+    if same_mode == MappingMode.MS:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start + read_lt.reference_match_size
         chrm_end = read_rt.chrom
@@ -1472,7 +1472,7 @@ def diff_chrom_diff_strand_handler(
             - read_lt.read_match_size
             - read_rt.read_match_size
         )
-    elif same_mode == Mode.SM:
+    elif same_mode == MappingMode.SM:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start
         chrm_end = read_rt.chrom

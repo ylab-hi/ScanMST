@@ -11,7 +11,7 @@ from loguru import logger
 from scannls.type import LoggerType
 from scannls.utils import cigar_validity
 
-from .basic import Mode
+from .basic import MappingMode
 from .basic_class import reverse_complement
 from .basic_read import Read
 from .blat import Blat
@@ -69,7 +69,7 @@ class ReadsConnector:
         self.index += 1
 
     @staticmethod
-    def _get_mode(sms) -> Mode:
+    def _get_mode(sms) -> MappingMode:
         """Get the mode of the reads.
 
         :param sms:
@@ -82,9 +82,9 @@ class ReadsConnector:
         _lt, _, _rt = sms
         # SM
         if _lt > _rt:
-            return Mode.SM
+            return MappingMode.SM
         # MS
-        return Mode.MS
+        return MappingMode.MS
 
     @staticmethod
     def init_read_mode(read1: Read, read2: Read) -> None:
@@ -174,8 +174,8 @@ class ReadsConnector:
         bp_region_seq_len = 0
         _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
-        if prev_read_mode == Mode.SM:
-            if next_read_mode == Mode.SM:
+        if prev_read_mode == MappingMode.SM:
+            if next_read_mode == MappingMode.SM:
                 bp_region_seq_len = (
                     read_query_length
                     - _rt_len_r1
@@ -183,7 +183,7 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-            elif next_read_mode == Mode.MS:
+            elif next_read_mode == MappingMode.MS:
                 bp_region_seq_len = (
                     read_query_length
                     - _rt_len_r1
@@ -191,7 +191,7 @@ class ReadsConnector:
                     - _read_match_r1
                     - _read_match_r2
                 )
-        elif next_read_mode == Mode.SM:
+        elif next_read_mode == MappingMode.SM:
             bp_region_seq_len = (
                 read_query_length
                 - _lt_len_r1
@@ -199,7 +199,7 @@ class ReadsConnector:
                 - _read_match_r1
                 - _read_match_r2
             )
-        elif next_read_mode == Mode.MS:
+        elif next_read_mode == MappingMode.MS:
             bp_region_seq_len = (
                 read_query_length
                 - _lt_len_r1
@@ -222,8 +222,8 @@ class ReadsConnector:
         read_query_sequence: str,
         prev_sms: tuple[int, int, int],
         next_sms: tuple[int, int, int],
-        prev_read_mode: Mode,
-        next_read_mode: Mode,
+        prev_read_mode: MappingMode,
+        next_read_mode: MappingMode,
     ):
         """Update the query sequence based on the length of the microhomology."""
         (
@@ -238,10 +238,10 @@ class ReadsConnector:
             next_read_mode,
         )
         if is_microhomology:
-            if prev_read_mode == Mode.SM:
+            if prev_read_mode == MappingMode.SM:
                 return read_match_sequence[microhomology_length:]
 
-            if prev_read_mode == Mode.MS:
+            if prev_read_mode == MappingMode.MS:
                 return read_match_sequence[:-microhomology_length]
 
         return read_match_sequence
@@ -260,9 +260,9 @@ class ReadsConnector:
         mode1 = start_read.mode
         mode2 = read.mode
         if first_is_matched:
-            mode2 = Mode.SM
+            mode2 = MappingMode.SM
         if second_is_matched:
-            mode2 = Mode.MS
+            mode2 = MappingMode.MS
         if same_strand:
             if mode1 == mode2:
                 flag = False
@@ -305,7 +305,7 @@ class ReadsConnector:
         # first case
         self.logger.debug("testing first case M vs LS")
 
-        next_read_mode = Mode.SM
+        next_read_mode = MappingMode.SM
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
@@ -332,7 +332,7 @@ class ReadsConnector:
                 first_is_matched=match_flag1,
             )
         if match_flag1 and condition1:  # may same
-            read.mode = Mode.SM
+            read.mode = MappingMode.SM
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
             self.logger.debug(f"Add {read=} to reads chain")
@@ -350,7 +350,7 @@ class ReadsConnector:
 
         self.logger.debug("testing second case M vs RS")
         # second case
-        next_read_mode = Mode.MS
+        next_read_mode = MappingMode.MS
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
         ]
@@ -378,7 +378,7 @@ class ReadsConnector:
                 second_is_matched=match_flag2,
             )
         if match_flag2 and condition2:  # may same
-            read.mode = Mode.MS
+            read.mode = MappingMode.MS
 
             self.logger.debug(f"add {start_read=}, {read=} to mode dict")
             self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
@@ -408,12 +408,12 @@ class ReadsConnector:
     def _double_check_for_start_end_read_determine_new_read_mode(
         read: Read,
         new_read_strand: str,
-    ) -> Mode:
+    ) -> MappingMode:
         """Double check for start and end read determine new read mode."""
-        read.mode = Mode.MS if read.mode == Mode.SM else Mode.SM
+        read.mode = MappingMode.MS if read.mode == MappingMode.SM else MappingMode.SM
         if new_read_strand == read.strand:
-            return Mode.MS if read.mode == Mode.SM else Mode.SM
-        return Mode.MS if read.mode == Mode.MS else Mode.SM
+            return MappingMode.MS if read.mode == MappingMode.SM else MappingMode.SM
+        return MappingMode.MS if read.mode == MappingMode.MS else MappingMode.SM
 
     def _double_check_create_new_read_calculate_sms(
         self,
@@ -437,7 +437,7 @@ class ReadsConnector:
             )
         )
 
-        if new_read_mode == Mode.MS:
+        if new_read_mode == MappingMode.MS:
             cigar_str = (
                 f"{lt_s_len}S"
                 + cigar_str
@@ -511,7 +511,7 @@ class ReadsConnector:
         """
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
-            if read.mode == Mode.MS
+            if read.mode == MappingMode.MS
             else read.query_sequence[len(read.query_sequence) - read.rt_soft_len :]
         )
 

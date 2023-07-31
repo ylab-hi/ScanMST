@@ -12,7 +12,7 @@ from scannls import cppext
 from scannls.exception import ReadNotFoundError
 from scannls.utils import cigar_validity
 
-from .basic import AnnotationCode, Mode, Strand
+from .basic import AnnotationCode, MappingMode, Strand
 from .basic_read import Read
 
 if TYPE_CHECKING:
@@ -365,12 +365,12 @@ class Event:
     @property
     def source_s1(self) -> str:
         """Source of insertion of read1."""
-        return "left" if self.mode1 == Mode.SM else "right"
+        return "left" if self.mode1 == MappingMode.SM else "right"
 
     @property
     def source_s2(self) -> str:
         """Source of insertion of read2."""
-        return "left" if self.mode2 == Mode.SM else "right"
+        return "left" if self.mode2 == MappingMode.SM else "right"
 
     def is_type_na(self) -> bool:
         """Return True if the event is NA."""

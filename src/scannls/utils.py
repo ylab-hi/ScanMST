@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls.base import Mode
+from scannls.base import MappingMode
 
 from . import cppext
 from .blat import load_fa2bit
@@ -83,8 +83,8 @@ def sleep(input_file: str, max_time: int = 30) -> None:
 
 def get_softclip_length(
     read: pysam.libcalignedsegment.AlignedSegment,
-    mode: Mode,
-) -> tuple[int, str, int, Mode] | None:
+    mode: MappingMode,
+) -> tuple[int, str, int, MappingMode] | None:
     """Extract softclipped sequence information from input read.
 
     :param mode: read mode
@@ -100,13 +100,13 @@ def get_softclip_length(
     parse_result = cppext.parseCigar(read.cigarstring)
     ref_end = read.reference_start + parse_result.ref_match
 
-    if mode == Mode.Type0:
+    if mode == MappingMode.Type0:
         if parse_result.lt_soft_len > parse_result.rt_soft_len:
             return (
                 parse_result.lt_soft_len,
                 read.query_sequence[: parse_result.lt_soft_len],
                 read.reference_start,
-                Mode.SM,
+                MappingMode.SM,
             )
 
         if parse_result.lt_soft_len < parse_result.rt_soft_len:
@@ -116,11 +116,11 @@ def get_softclip_length(
                     parse_result.query_len - parse_result.rt_soft_len :
                 ],
                 ref_end,
-                Mode.MS,
+                MappingMode.MS,
             )
         return None
 
-    if mode == Mode.MS:
+    if mode == MappingMode.MS:
         return (
             parse_result.rt_soft_len,
             read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
@@ -128,7 +128,7 @@ def get_softclip_length(
             mode,
         )
 
-    if mode == Mode.SM:
+    if mode == MappingMode.SM:
         return (
             parse_result.lt_soft_len,
             read.query_sequence[: parse_result.lt_soft_len],

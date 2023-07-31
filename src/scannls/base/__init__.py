@@ -12,7 +12,7 @@ from .basic import (
     Interval,
     Intervals,
     Introns,
-    Mode,
+    MappingMode,
     Strand,
 )
 from .basic_class import (
@@ -35,7 +35,7 @@ from .read_connector import (
 
 __all__ = [
     "CigarCode",
-    "Mode",
+    "MappingMode",
     "AnnotationCode",
     "Exon",
     "Exons",

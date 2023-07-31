@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum, IntEnum
 
 
-class Mode(IntEnum):
+class MappingMode(IntEnum):
     """Mode code."""
 
     Type0 = 0
@@ -18,7 +18,7 @@ class Mode(IntEnum):
     # fmt: on
 
     @classmethod
-    def from_int(cls, mode: int | Mode):
+    def from_int(cls, mode: int | MappingMode):
         if isinstance(mode, cls):
             return mode
 

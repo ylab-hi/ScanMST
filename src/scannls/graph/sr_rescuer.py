@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from scannls import cppext
-from scannls.base import Exons, Mode, Strand
+from scannls.base import Exons, MappingMode, Strand
 from scannls.exception import ExonsNotFoundError, ModesNotFoundError
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ class SRRescuer:
         chrom: str,
         exons: Exons,
         tgt_name: str,
-        mode: Mode,
+        mode: MappingMode,
     ) -> tuple[str, int]:
         """Obtain target region (S-M boundary, M side) for rescuing SR purpose.
 
@@ -138,7 +138,7 @@ class SRRescuer:
         return chrom, pos
 
     @staticmethod
-    def obtain_region_for_rescue_sr2(node: Node, mode: Mode, tag_name: str):
+    def obtain_region_for_rescue_sr2(node: Node, mode: MappingMode, tag_name: str):
         """Obtain region from rescue."""
         if node.exons is None or node.chrom is None:
             msg = f"node.chrom={node.chrom!r} node.strand={node.strand!r} node.exons={node.exons!r}"
@@ -199,7 +199,7 @@ class SRRescuer:
 
         chrom, start, check_pos = SRRescuer.obtain_region_for_rescue_sr2(
             current_node,
-            Mode.from_int(mode1),
+            MappingMode.from_int(mode1),
             "next_breakpoint",
         )
 
