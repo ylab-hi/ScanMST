@@ -118,17 +118,9 @@ class SRRescuer:
             raise ExonsNotFoundError(msg)
 
         if not strand.is_reverse():
-            pos = (
-                exons.last().end
-                if tgt_name == "next_breakpoint"
-                else exons.first().start
-            )
+            pos = exons.last.end if tgt_name == "next_breakpoint" else exons.first.start
         else:
-            pos = (
-                exons.first().start
-                if tgt_name == "next_breakpoint"
-                else exons.last().end
-            )
+            pos = exons.first.start if tgt_name == "next_breakpoint" else exons.last.end
 
         if mode.is_sm():
             pos += 1
@@ -145,11 +137,11 @@ class SRRescuer:
             raise ExonsNotFoundError(msg)
 
         if node.strand.is_forward():
-            pre_pos = node.exons.first().start
-            next_pos = node.exons.last().end
+            pre_pos = node.exons.first.start
+            next_pos = node.exons.last.end
         else:
-            pre_pos = node.exons.last().end
-            next_pos = node.exons.first().start
+            pre_pos = node.exons.last.end
+            next_pos = node.exons.first.start
 
         if mode.is_sm():
             pre_pos += 1

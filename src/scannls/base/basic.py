@@ -255,7 +255,10 @@ class Intervals:
     def __repr__(self) -> str: return f"Exons({self.exon_list})"
     def __str__(self) -> str: return "_".join( [f"{interval.start}-{interval.end}" for interval in self.exon_list])
     def reverse(self) -> None: self.exon_list[::-1]
+    def reversed(self) -> Intervals: return Intervals(self.exon_list[::-1])
+    @property
     def first(self) -> Interval: return self.exon_list[0]
+    @property
     def last(self) -> Interval: return self.exon_list[-1]
     # fmt: on
 

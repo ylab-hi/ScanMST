@@ -185,7 +185,7 @@ def get_gtf_features_from_node(
         msg = f"{node.query_name}"
         raise ExonsNotFoundError(msg)
 
-    exons = node.exons.reverse() if node.strand.is_reverse() else node.exons
+    exons = node.exons.reversed() if node.strand.is_reverse() else node.exons
 
     if exons is None:
         msg = f"{node.query_name}"
@@ -200,16 +200,16 @@ def get_gtf_features_from_node(
             microhomology_sequence += insertion.query_sequence
 
     # last exon end position needs a correction if there is a microhomology.
-    if node.strand.is_forward() and exons.last().start < exons.last().end - len(
+    if node.strand.is_forward() and exons.last.start < exons.last.end - len(
         microhomology_sequence,
     ):
-        copy_exons.last().end -= len(microhomology_sequence)
+        copy_exons.last.end -= len(microhomology_sequence)
 
     elif (
         node.strand.is_reverse()
-        and exons.last().start + len(microhomology_sequence) < exons.last().end
+        and exons.last.start + len(microhomology_sequence) < exons.last.end
     ):
-        copy_exons.last().start += len(microhomology_sequence)
+        copy_exons.last.start += len(microhomology_sequence)
 
     node_sr = node.sr
     node_original_sr = node.original_sr
