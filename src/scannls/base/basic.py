@@ -196,6 +196,17 @@ class Interval:
                 # o |s o| s
                 return Interval(self.start, other.end), Interval(other.start, self.end)
 
+            if self.start == other.end:
+                #  o  os  s
+                return Interval(other.end, self.start), Interval(other.start, self.end)
+
+            if self.end == other.start:
+                # s  so  o
+                return Interval(self.end, other.start), Interval(
+                    self.start,
+                    other.end,
+                )
+
         msg = f"{other} is not a Interval"
         raise ValueError(msg)
 

@@ -607,7 +607,7 @@ class ReadsConnector:
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)
-        flag = True
+        is_connected = True
         if not self.candidate_nodes:  # []
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_read_mode(start_read, end_read)
@@ -626,34 +626,34 @@ class ReadsConnector:
                     return False
                 read = self.candidate_nodes[self.index]
                 ReadsConnector.init_read_mode(start_read, read)
-                flag, start_read = self.test_2case(
+                is_connected, start_read = self.test_2case(
                     start_read,
                     read,
                     is_compare_for_ms=True,
                 )
 
-                if not flag:  # False
+                if not is_connected:  # False
                     self.increment_index()
 
-                if flag and len(self.candidate_nodes) + 1 == candidate_read_len:
+                if is_connected and len(self.candidate_nodes) + 1 == candidate_read_len:
                     self._double_check_for_start_end_read(start_nodes[0], "start")
 
             ReadsConnector.init_read_mode(start_read, end_read)
-            flag, start_read = self.test_2case(
+            is_connected, start_read = self.test_2case(
                 start_read,
                 end_read,
                 is_compare_for_ms=True,
             )
-
-            if not flag:
+            if not is_connected:
                 self.logger.warning(
                     f"ReadsConnector: cannot connect end read"
                     f"{start_read.query_name}",
                 )
+                return is_connected
 
             self._double_check_for_start_end_read(end_read, "end")
 
-        return flag
+        return is_connected
 
 
 def detect_read_read_connections_from_cigar(
