@@ -173,7 +173,7 @@ class Interval:
         """Create Interval from tuple."""
         return cls(*item)
 
-    def join(self, other: Interval):
+    def join(self, other: Interval) -> tuple[Interval, Interval] | None:
         """Set operation overlap and union."""
         if isinstance(other, Interval):
             if self.start <= other.start < self.end:
@@ -208,7 +208,7 @@ class Interval:
                 )
 
             # no overlap o  o  s  s or s  s  o  o
-            return Interval(0, 0), Interval(0, 0)
+            return None
 
         msg = f"{other} is not a Interval"
         raise ValueError(msg)
