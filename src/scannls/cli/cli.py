@@ -54,8 +54,8 @@ def get_writers(
     return Writers((fasta_writer, gtf_writer, vcf_writer))
 
 
-def parse_splice_graph_for_cliques_seq(
-    cliques: Any,
+def parse_nlgraph_for_cluster_seq(
+    cluster: Any,
     writers: Writers,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
@@ -76,20 +76,20 @@ def parse_splice_graph_for_cliques_seq(
     )
 
     with writers.open():
-        for ind, clique in enumerate(cliques, 1):
+        for ind, clique in enumerate(cluster, 1):
             logger.debug(f"processing clique {ind}")
             for series in splice_graph(clique, ind, is_plot=False):
                 if len(series) == 1:
                     logger.warning(
                         f"Single Series {ind}: {series}{series[0].query_name}",
                     )
-                if series.is_all_node_sr_higher_than_threshold(options.support_reads):
-                    logger.debug(f"Output Clique{ind}: {series}")
-                    writers.write_series(series, ind)
+
+                logger.debug(f"Output Clique{ind}: {series}")
+                writers.write_series(series, ind)
 
 
-def _parse_splice_graph_for_cliques_par(
-    cliques: Any,
+def _parse_nlgraph_for_cluster_par(
+    cluster: Any,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     average_read_depth: int | None,
@@ -112,7 +112,7 @@ def _parse_splice_graph_for_cliques_par(
     )
 
     result_series = []
-    for ind, clique in enumerate(cliques, 1):
+    for ind, clique in enumerate(cluster, 1):
         series_list = []
         for series in splice_graph(clique, ind, is_plot=False):
             series_list.append(series)
@@ -120,8 +120,8 @@ def _parse_splice_graph_for_cliques_par(
     return result_series
 
 
-def parse_splice_graph_for_cliques_par(
-    cliques: Any,
+def parse_nlgraph_for_cluster_par(
+    cluster: Any,
     writers: Writers,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
@@ -131,7 +131,7 @@ def parse_splice_graph_for_cliques_par(
     """Parse splice graph for cliques."""
     parallel_workers = ParallelWorker(
         partial(
-            _parse_splice_graph_for_cliques_par,
+            _parse_nlgraph_for_cluster_par,
             options=options,
             node_rescued_sr_maximum=node_rescued_sr_maximum,
             average_read_depth=average_read_depth,
@@ -139,10 +139,10 @@ def parse_splice_graph_for_cliques_par(
         logger,
         options.parallel,
     )
-    cliques = [[list(clique)] for clique in cliques]
+    cluster = [[list(clique)] for clique in cluster]
     result = parallel_workers.map(
-        cliques,
-        chunksize=max(1, len(cliques) // parallel_workers.n_jobs),
+        cluster,
+        chunksize=max(1, len(cluster) // parallel_workers.n_jobs),
     )
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
@@ -151,9 +151,8 @@ def parse_splice_graph_for_cliques_par(
                     logger.warning(
                         f"Single Series {ind}: {series}{series[0].query_name}",
                     )
-                if series.is_all_node_sr_higher_than_threshold(options.support_reads):
-                    logger.debug(f"Output Clique{ind}: {series}")
-                    writers.write_series(series, ind)
+                logger.debug(f"Output Clique{ind}: {series}")
+                writers.write_series(series, ind)
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
@@ -243,9 +242,9 @@ def cli(options: argparse.Namespace | DefaultOptions):
         writers = get_writers(options.output, options.ref, in_bam_header)
 
         parse_splice_graph_for_cliques = (
-            parse_splice_graph_for_cliques_seq
+            parse_nlgraph_for_cluster_seq
             if options.parallel == 1
-            else parse_splice_graph_for_cliques_par
+            else parse_nlgraph_for_cluster_par
         )
 
         node_rescued_sr_max = 100
