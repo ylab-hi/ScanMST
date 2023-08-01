@@ -190,8 +190,6 @@ def merge_same_len_node_list(
     s2:                [ ] - [ ] - [ ]
     """
     logger.debug(f"merge: nlpath1:{path1} nlpath2:{path2}")
-    if len(path1) != len(path2):
-        raise ValueError
 
     merge_condition = MergeCondition(threashold)
 
