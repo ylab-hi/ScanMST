@@ -884,7 +884,6 @@ class NLPath:
         """Create a path from a list of nodes and edges.
 
         Args:
-        ----
             node_edges: list of nodes and edges
         """
         instance = cls(nodes=[])

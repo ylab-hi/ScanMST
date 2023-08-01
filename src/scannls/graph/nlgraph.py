@@ -58,7 +58,7 @@ class NLGraph:
 
         :param series_list: series list
 
-        :Example:
+        .. example:
 
         >>> from loguru import logger
         >>> splice_graph = SpliceGraph(logger)
@@ -85,6 +85,7 @@ class NLGraph:
 
         # trace path
         for node_list in self.trace():
+            self.logger.trace(f"Splice Graph Path: {len(node_list)}")
             yield NLPath.create_path_from_node_edge_list(
                 node_list,
             )
