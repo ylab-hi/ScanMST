@@ -347,6 +347,15 @@ class Node(BasicNode):
             f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
         )
 
+    def __hash__(self) -> int:
+        return (
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.strand)
+            ^ hash(self.exons)
+        )
+
     @property
     def self_identity(self) -> NodeIdentity | None:
         return self.identities.get(self.query_name, None)
