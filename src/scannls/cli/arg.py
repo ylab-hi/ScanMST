@@ -32,7 +32,7 @@ class DefaultOptions:
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 60
     ident_cutoff: float = 0.99
-    prune_threshold: int = 10
+    prune_threshold: int = 3
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8
