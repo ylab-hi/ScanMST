@@ -1128,7 +1128,7 @@ def check_end_node_is_ploya(
         msg = f"{node} has no start or end position"
         raise SystemExit(msg)
 
-    if node.strand == "+":
+    if node.strand.is_forward():
         seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
     else:
         seq = genome_fasta[node.chrom][

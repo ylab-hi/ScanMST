@@ -386,11 +386,8 @@ class ClusterFinder:
     @staticmethod
     def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]):
         """Check if nlpath1 can merge nlpath2."""
-        if len(merge_keys[path1.id]) == len(merge_keys[path2.id]):
-            # reduce duplication
-            return False
 
-        if len(merge_keys[path1.id]) > len(merge_keys[path2.id]):
+        if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
             return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys)
 
         msg = "nlpath1 is shorter than nlpath2"
@@ -405,7 +402,7 @@ class ClusterFinder:
                 nlpaths.append(current_nlpath)
 
             sorted_nlpaths = sort_cluster(nlpaths)
-            logger.debug(f"{len(sorted_nlpaths)=} {sorted_nlpaths=}")
+            logger.debug(f"{len(sorted_nlpaths)=} nlpaths for merge: {sorted_nlpaths}")
 
             merge_keys = self.creat_merge_indexs(sorted_nlpaths)
             new_cluster = []
