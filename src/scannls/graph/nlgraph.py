@@ -78,14 +78,13 @@ class NLGraph:
         self.construct()
 
         # sr rescuer
-        self.logger.trace(f"Splice Graph Node: {sum(1 for _ in self)}")
+        self.logger.trace(f"NLGraph Node: {sum(1 for _ in self)}")
 
         if is_plot:
             plot_graph(self, f"_{clique_ind}", is_matplotlib=False)
 
         # trace path
         for node_list in self.trace():
-            self.logger.trace(f"Splice Graph Path: {len(node_list)}")
             yield NLPath.create_path_from_node_edge_list(
                 node_list,
             )
@@ -185,6 +184,7 @@ class NLGraph:
             current_node,
         )
 
+        edges = []
         for edge in self.find_edges(current_node, successor):
             if edge.sr > self.prune_threshold:
                 edge_node_identity = self.get_node_identity_base_edge(
@@ -192,7 +192,9 @@ class NLGraph:
                     current_node,
                 )
                 if self.determine_edge(previous_edge_node_identity, edge_node_identity):
-                    yield edge
+                    edges.append(edge)
+
+        return edges
 
     def __contains__(self, node: Node) -> bool:
         """Check if node is in a graph.
@@ -274,14 +276,14 @@ class NLGraph:
             self.nodes[node.similar_key] = [node]
 
     @staticmethod
-    def _compare_is_merged_helper(node1: Node, node2: Node, threshold: int) -> bool:
+    def _compare_is_merged(node1: Node, node2: Node, threshold: int) -> bool:
         """Check if node1 and node2 can be merged.
 
         .. note::
             End note will not merge with start/middle node,
             since every end node has polyA tail in library preparation.
         """
-        if node1.strand != node2.strand:
+        if node1.strand != node2.strand or node1.chrom != node2.chrom:
             return False
 
         if node1.self_identity is None or node2.self_identity is None:
@@ -292,25 +294,11 @@ class NLGraph:
         node2_self_identity: NodeIdentity = node2.self_identity
         merge_condition = MergeCondition(threshold)
 
-        if (
-            node1_self_identity.is_tail() and node2_self_identity.is_head()
-        ):  # node1 is end node, node2 is start node
-            return merge_condition.head2tail(node1, node2)
-
-        if (
-            node1_self_identity.is_tail() and node2_self_identity.is_mid()
-        ):  # node1 is end node, node2 is middle node
-            return merge_condition.tail2tail(node1, node2)
-
+        # head
         if (
             node1_self_identity.is_head() and node2_self_identity.is_head()
         ):  # both are start nodes
             return merge_condition.head2head(node1, node2)
-
-        if (
-            node1_self_identity.is_tail() and node2_self_identity.is_tail()
-        ):  # both are end nodes   check first exon start
-            return merge_condition.tail2tail(node1, node2)
 
         if (
             node1_self_identity.is_head() and node2_self_identity.is_mid()
@@ -318,30 +306,43 @@ class NLGraph:
             return merge_condition.head2mid(node1, node2)
 
         if (
+            node1_self_identity.is_head() and node2_self_identity.is_tail()
+        ):  # node1 is start node, node2 is middle node
+            return merge_condition.head2tail(node1, node2)
+
+        # mid
+        if (
+            node1_self_identity.is_mid() and node2_self_identity.is_head()
+        ):  # both are middle nodes
+            return merge_condition.mid2head(node1, node2)
+
+        if (
             node1_self_identity.is_mid() and node2_self_identity.is_mid()
         ):  # both are middle nodes
             return merge_condition.mid2mid(node1, node2)
 
-        # swap node1 and node2 to check if they can be merged again
-        return False
+        if (
+            node1_self_identity.is_mid() and node2_self_identity.is_tail()
+        ):  # both are middle nodes
+            return merge_condition.mid2tail(node1, node2)
+        # tail
+        if (
+            node1_self_identity.is_tail() and node2_self_identity.is_head()
+        ):  # node1 is end node, node2 is start node
+            return merge_condition.tail2head(node1, node2)
 
-    @staticmethod
-    def _compare_is_merged(node1: Node, node2: Node, threshold: int) -> bool:
-        """Node1 is similar as node2 is precommit of the function.
+        if (
+            node1_self_identity.is_tail() and node2_self_identity.is_mid()
+        ):  # node1 is end node, node2 is middle node
+            return merge_condition.tail2mid(node1, node2)
 
-         compare if node1 can merge node2
-        :param node1: node1
-        :param node2: node2
-        :return:
-        """
-        # NOTE: may not swap order <04-24-23, Yangyang Li>
-        if NLGraph._compare_is_merged_helper(node1, node2, threshold):
-            return True
+        if (
+            node1_self_identity.is_tail() and node2_self_identity.is_tail()
+        ):  # both are end nodes   check first exon start
+            return merge_condition.tail2tail(node1, node2)
 
-        if NLGraph._compare_is_merged_helper(node2, node1, threshold):
-            return True
-
-        return False
+        msg = f"node1 {node1_self_identity} node2 {node2_self_identity}"
+        raise ValueError(msg)
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
@@ -417,7 +418,7 @@ class NLGraph:
         """Main function to construct graph."""
         # iterate all series
         merged_nodes_pool: set[Node] = set()
-        self.logger.debug(f"Input Clique {self.nlpaths=}")
+        self.logger.debug(f"Input Cluster {self.nlpaths=}")
         for nlpath in self.nlpaths:
             # iterate all nodes in series
             for index, current_node in enumerate(nlpath):
@@ -551,12 +552,12 @@ class NLGraph:
 
         for start_node in self.get_start_nodes():
             start_node.set_trace_id(1)
-            group_paths: Any = []
+            group_paths = []
             self._trace_forward(start_node, 2, [], group_paths)
             result_series_list.extend(group_paths)
 
         if not result_series_list:
-            self.logger.warning(
+            self.logger.info(
                 f"No path is found in graph {self.nodes.values()}",
             )
 

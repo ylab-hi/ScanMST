@@ -850,10 +850,6 @@ def detect_read_read_connections_from_cigar(
 
         if nm_sa < max_allowed_nm:
             mapq_list.append(mapq_sa)
-            if query_qualities_sa is None:
-                msg = "None value found in read"
-                raise ValueError(msg)
-
             chimeric_aln_list.append(
                 Read.new(
                     read.query_name,

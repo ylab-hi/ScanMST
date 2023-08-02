@@ -563,7 +563,7 @@ def _scan_bam_helper(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "
                         f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}",
                     )
-    logger.debug(f"Total Series: {nls_src_forms_list}")
+    logger.debug(f"Total nlpaths: {nls_src_forms_list}")
     logger.complete()
     in_bam_io_object.close()
     return nls_src_forms_list

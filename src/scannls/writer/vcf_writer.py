@@ -143,11 +143,11 @@ class VCFWriter(Writer):
         if not self.reference.exists():
             raise FastaNotFoundError
         self.reference_io: Fasta = Fasta(reference, sequence_always_upper=True)
-        self.series_id: int = 1
+        self.nlpath_id: int = 1
         self.bam_header = bam_header
         self.sample_name: str = self.file_path.stem
         self.hops_feature_in_series_list: list[Any] = []
-        self.clique_id: int = 1
+        self.cluster_id: int = 1
 
     @property
     def is_opened(self) -> bool:
@@ -203,13 +203,13 @@ class VCFWriter(Writer):
 
         :param data_object: Series to write to file.
         """
-        if clique_id != self.clique_id:
+        if clique_id != self.cluster_id:
             # next clique
             # write all features in the clique
             self.write_data_helper()
             # clear all features in the clique, start a new clique
             self.hops_feature_in_series_list.clear()
-            self.clique_id = clique_id
+            self.cluster_id = clique_id
 
         if len(data_object.nodes) == 0:
             logger.warning(
@@ -218,11 +218,11 @@ class VCFWriter(Writer):
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
         for _hop_vcf_feature in get_vcf_features_from_series(
             data_object,
-            self.series_id,
+            self.nlpath_id,
             self.reference_io,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
-        self.series_id += 1  # series/transcript id
+        self.nlpath_id += 1  # series/transcript id
 
     def write_data_helper(self) -> None:
         """Write series data for every clique."""
@@ -424,8 +424,8 @@ def get_vcf_features_from_series(
                     "REF": ".",
                     "ALT": f"<{current_edge.variation_type}>",
                     "SVTYPE": current_edge.variation_type,
-                    "SR": current_node.sr,
-                    "OSR": current_node.original_sr,
+                    "SR": current_edge.sr,
+                    "OSR": current_edge.sr,
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,

@@ -189,7 +189,8 @@ def merge_same_len_node_list(
     orignial s1: [ ] - [ ] - [ ] - [ ]
     s2:                [ ] - [ ] - [ ]
     """
-    logger.debug(f"merge: nlpath1:{path1} nlpath2:{path2}")
+    logger.debug(f"merge {path1=}")
+    logger.debug(f"merge {path2=}")
 
     merge_condition = MergeCondition(threashold)
 
@@ -363,14 +364,14 @@ class ClusterFinder:
         path2: NLPath,
         merge_keys: dict[int, list[str]],
     ) -> bool:
-        series_2_nodes_key = "".join(merge_keys[path2.id])
+        nlpath_2_nodes_key = "".join(merge_keys[path2.id])
 
         for start_index in range(0, len(path1) - len(path2) + 1):
-            series_1_nodes_key = "".join(
+            nlpath_1_nodes_key = "".join(
                 merge_keys[path1.id][start_index : start_index + len(path2)],
             )
 
-            if series_1_nodes_key == series_2_nodes_key and merge_same_len_node_list(
+            if nlpath_1_nodes_key == nlpath_2_nodes_key and merge_same_len_node_list(
                 path1,
                 path2,
                 start_index,
@@ -384,7 +385,7 @@ class ClusterFinder:
 
     @staticmethod
     def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]):
-        """Check if series1 can merge series2."""
+        """Check if nlpath1 can merge nlpath2."""
         if len(merge_keys[path1.id]) == len(merge_keys[path2.id]):
             # reduce duplication
             return False
@@ -392,7 +393,7 @@ class ClusterFinder:
         if len(merge_keys[path1.id]) > len(merge_keys[path2.id]):
             return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys)
 
-        msg = "series1 is shorter than series2"
+        msg = "nlpath1 is shorter than nlpath2"
         raise ValueError(msg)
 
     def merge_cluster(self):
@@ -404,7 +405,7 @@ class ClusterFinder:
                 nlpaths.append(current_nlpath)
 
             sorted_nlpaths = sort_cluster(nlpaths)
-            logger.debug(f"sorted_series:{len(sorted_nlpaths)} {sorted_nlpaths}")
+            logger.debug(f"{len(sorted_nlpaths)=} {sorted_nlpaths=}")
 
             merge_keys = self.creat_merge_indexs(sorted_nlpaths)
             new_cluster = []

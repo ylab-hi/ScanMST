@@ -42,9 +42,6 @@ class BasicNode:
         "is_in_graph",
         "is_traced",
         "trace_id",
-        "sr",
-        "harmonic_mean_sr",
-        "original_sr",
     )
 
     def __init__(self) -> None:
@@ -60,27 +57,10 @@ class BasicNode:
         self.previous_edge_in_nlapth: Edge | None = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
         self.trace_id: int = -1
-        self.sr: int = 1
-        self.original_sr: int = 1
-        self.harmonic_mean_sr: float = 1
 
     def __eq__(self, other) -> bool:
         """Compare two nodes in strict mode same memory address."""
         return id(self) == id(other)
-
-    def update_sr(self, key=1) -> None:
-        """Update the sr of a node."""
-        self.sr += key
-
-    def set_harmoic_mean_sr(self, sr: int) -> None:
-        """Get harmonic mean of current sr and predecessor.sr."""
-        harmoic_mean_sr = 1 / sr
-        _node_numbers = 1
-
-        for _node_numbers, node in enumerate(self.predecessors, 2):
-            harmoic_mean_sr += 1 / node.sr
-
-        self.harmonic_mean_sr = _node_numbers / harmoic_mean_sr
 
     def set_trace_id(self, trace_id: int) -> None:
         """Set trace_id."""
@@ -342,9 +322,8 @@ class Node(BasicNode):
         """Get a string representation of a node."""
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{self.exons_str},"
-            f"modes={self.modes}, "
-            f"SR={self.sr}, query_name={self.query_name.split(',')[:3]}, trace_id={self.trace_id})"
+            f"{self.exons_str}, "
+            f"query_name={self.query_name.split(',')[:3]})"
         )
 
     def __hash__(self) -> int:
@@ -512,6 +491,7 @@ class EdgeData:
     sr: int
     read_ids: list[str]
     insertion_info: Any | None = None
+    rescued_sr: int = 1
 
     @classmethod
     def from_event(cls, event: Event, read_id: str) -> EdgeData:
@@ -588,6 +568,10 @@ class Edge:
     def sr(self): return self.edge_data.sr
     @sr.setter
     def sr(self, value): self.edge_data.sr = value
+    @property
+    def rescued_sr(self): return self.edge_data.rescued_sr
+    @rescued_sr.setter
+    def rescued_sr(self, value): self.edge_data.rescued_sr = value
     @property
     def read_ids(self): return self.edge_data.read_ids
     # fmt: on
@@ -809,13 +793,12 @@ class NLPath:
 
     def __repr__(self) -> str:
         """Return the string representation of the event."""
-        _repr = "\nSeries("
+        string = "\nNLPath("
         space = " " * 4
         for n in self.nodes:
-            _repr += f"\n{space}{n!r}"
-
-        _repr += ")"
-        return _repr
+            string += f"\n{space}{n!r}"
+        string += ")"
+        return string
 
     def __iter__(self) -> Iterator[Node]:
         """Return an iterator over the events."""
@@ -888,7 +871,7 @@ class NLPath:
         """
         instance = cls(nodes=[])
 
-        for idx in range(len(node_edges), 2):
+        for idx in range(0, len(node_edges), 2):
             current_node = node_edges[idx]
             if not isinstance(current_node, Node):
                 msg = f"Expected Node, got {type(current_node)} from {current_node}"

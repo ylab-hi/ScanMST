@@ -155,7 +155,7 @@ class Read:
         mapq: int,
         nm: int,
         query_seq: str,
-        query_qualities: list[int],
+        query_qualities: list[int] | None,
     ) -> Read:
         """Calculate the features of the read and initialize the read."""
         parse_cigar_result = cppext.parseCigar(cigar_str)

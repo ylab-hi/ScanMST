@@ -4,17 +4,22 @@
 @Author:      YangyangLi
 @Time:        1/30/22 6:18 PM
 """
+from __future__ import annotations
+
 import copy
 from functools import singledispatchmethod
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
 
 from loguru import logger
 
 from scannls import MicroHomology, NovelInsertion
 from scannls.exception import ExonsNotFoundError
-from scannls.graph import NLPath, Node
+from scannls.graph import Edge, NLPath, Node
 
 from .writer import Writer
+
+if TYPE_CHECKING:
+    from scannls.graph import Edge, NLPath, Node  # noqa: F811
 
 
 class GTFWriter(Writer):
@@ -121,7 +126,7 @@ def get_nodes_gtf_features_from_series(
         insertion_info = None if edge is None else edge.insertion_info
 
         series_gtf_features.extend(
-            get_gtf_features_from_node(node, nlpath_id, node_id, insertion_info),
+            get_gtf_features_from_node(node, edge, nlpath_id, node_id),
         )
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):
             series_gtf_features.append(
@@ -156,9 +161,9 @@ def get_gtf_features_from_insertion(
 
 def get_gtf_features_from_node(
     node: Node,
+    edge: Edge | None,
     nlpath_id: int,
     node_id: int,
-    insertion_info,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
@@ -193,6 +198,18 @@ def get_gtf_features_from_node(
 
     copy_exons = copy.deepcopy(exons)
 
+    if edge is not None:
+        # WARN: should be changed after correcting sr <08-02-23, Yangyang Li>
+        # sr may be not exported in gtf file
+        node_sr, node_original_sr, insertion_info = (
+            edge.sr,
+            edge.sr,
+            edge.insertion_info,
+        )
+    else:
+        # WARN: last node has no edge <08-02-23, Yangyang Li>
+        node_sr, node_original_sr, insertion_info = 1, 1, None
+
     microhomology_sequence = ""
     if insertion_info and not insertion_info[0]:
         insertion = insertion_info[1]
@@ -210,9 +227,6 @@ def get_gtf_features_from_node(
         and exons.last.start + len(microhomology_sequence) < exons.last.end
     ):
         copy_exons.last.start += len(microhomology_sequence)
-
-    node_sr = node.sr
-    node_original_sr = node.original_sr
 
     nodes_gtf_features = []
 

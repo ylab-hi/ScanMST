@@ -77,15 +77,15 @@ def parse_nlgraph_for_cluster_seq(
 
     with writers.open():
         for ind, clique in enumerate(cluster, 1):
-            logger.debug(f"processing clique {ind}")
-            for series in splice_graph(clique, ind, is_plot=False):
-                if len(series) == 1:
+            logger.debug(f"Processing Cluter {ind=}")
+            for nlpath in splice_graph(clique, ind, is_plot=False):
+                if len(nlpath) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {series}{series[0].query_name}",
+                        f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
                     )
 
-                logger.debug(f"Output Clique{ind}: {series}")
-                writers.write_series(series, ind)
+                logger.debug(f"cluster {ind=} output {nlpath=} ")
+                writers.write_series(nlpath, ind)
 
 
 def _parse_nlgraph_for_cluster_par(
@@ -233,7 +233,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             logger.warning("No valid series found")
             raise SystemExit
 
-        logger.info(f"Total Series: {intact_nlpaths_len}")
+        logger.info(f"Total nlpaths: {intact_nlpaths_len}")
 
         cluster_finder = ClusterFinder(intact_nlpaths)
         # cliques is generator
