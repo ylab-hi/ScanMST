@@ -555,6 +555,11 @@ class NLGraph:
             self._trace_forward(start_node, 2, [], group_paths)
             result_series_list.extend(group_paths)
 
+        if not result_series_list:
+            self.logger.warning(
+                f"No path is found in graph {self.nodes.values()}",
+            )
+
         return result_series_list
 
     def check_circle_in_graph(self, nodes_keys: set[str]):
