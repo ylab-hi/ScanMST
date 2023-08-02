@@ -152,6 +152,8 @@ def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
 
 
 def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
+    logger.debug(f"merge {path1=}")
+    logger.debug(f"merge {path2=}")
     for idx, (updated_node, current_node) in enumerate(
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
     ):
@@ -189,8 +191,6 @@ def merge_same_len_node_list(
     orignial s1: [ ] - [ ] - [ ] - [ ]
     s2:                [ ] - [ ] - [ ]
     """
-    logger.debug(f"merge {path1=}")
-    logger.debug(f"merge {path2=}")
 
     merge_condition = MergeCondition(threashold)
 
