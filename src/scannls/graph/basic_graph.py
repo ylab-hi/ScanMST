@@ -960,19 +960,19 @@ class NLPath:
                         else event.mode1
                     )
                     logger.trace("nls reference for read1 and insertion")
-                    read1_insertion_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=read1,
-                            read_rt=insertion,
-                            lt_mode=event.mode1,
-                            rt_mode=insertion_mode,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                        ),
+
+                    read1_insertion_event = infer_nls_from_connected_reads(
+                        read_lt=read1,
+                        read_rt=insertion,
+                        lt_mode=event.mode1,
+                        rt_mode=insertion_mode,
+                        splice_bin=splice_bin,
+                        genome_fasta=genome_fasta,
+                        cvg=cvg,
+                        gene_iv=gene_iv,
+                        motif_required=motif_required,
                     )
+
                     # get type of insertion between insertion node and second node
                     insertion_mode = (
                         (2 if event.mode2 == 1 else 1)
@@ -981,24 +981,19 @@ class NLPath:
                     )
 
                     logger.trace("nls reference for read2 and insertion")
-                    insertion_read2_event = Event(
-                        infer_nls_from_connected_reads(
-                            read_lt=insertion,
-                            read_rt=read2,
-                            lt_mode=insertion_mode,
-                            rt_mode=event.mode2,
-                            splice_bin=splice_bin,
-                            genome_fasta=genome_fasta,
-                            cvg=cvg,
-                            gene_iv=gene_iv,
-                            motif_required=motif_required,
-                        ),
+                    insertion_read2_event = infer_nls_from_connected_reads(
+                        read_lt=insertion,
+                        read_rt=read2,
+                        lt_mode=insertion_mode,
+                        rt_mode=event.mode2,
+                        splice_bin=splice_bin,
+                        genome_fasta=genome_fasta,
+                        cvg=cvg,
+                        gene_iv=gene_iv,
+                        motif_required=motif_required,
                     )
 
-                    if (
-                        read1_insertion_event.is_type_na()
-                        or insertion_read2_event.is_type_na()
-                    ):
+                    if read1_insertion_event is None or insertion_read2_event is None:
                         # only add read1, False means that the insertion type (hit 1 insertion)
                         # are not added in series
                         event.update_node_info(read1_node)
@@ -1011,6 +1006,9 @@ class NLPath:
                     else:
                         # add read1 and insertion
                         # True means that the insertion type(hit 1 insertion) are added in series
+                        read1_insertion_event = Event(read1_insertion_event)
+                        insertion_read2_event = Event(insertion_read2_event)
+
                         read1_insertion_event.update_node_info(read1_node)
 
                         nodes.append(read1_node)
