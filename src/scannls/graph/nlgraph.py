@@ -289,66 +289,10 @@ class NLGraph:
             End note will not merge with start/middle node,
             since every end node has polyA tail in library preparation.
         """
-        if node1.strand != node2.strand or node1.chrom != node2.chrom:
+        if node1.strand != node2.strand:
             return False
-
-        if node1.self_identity is None or node2.self_identity is None:
-            msg = f"{node1} {node2} self_identity is None"
-            raise ValueError(msg)
-
-        node1_self_identity: NodeIdentity = node1.self_identity
-        node2_self_identity: NodeIdentity = node2.self_identity
         merge_condition = MergeCondition(threshold)
-
-        # head
-        if (
-            node1_self_identity.is_head() and node2_self_identity.is_head()
-        ):  # both are start nodes
-            return merge_condition.head2head(node1, node2)
-
-        if (
-            node1_self_identity.is_head() and node2_self_identity.is_mid()
-        ):  # node1 is start node, node2 is middle node
-            return merge_condition.head2mid(node1, node2)
-
-        if (
-            node1_self_identity.is_head() and node2_self_identity.is_tail()
-        ):  # node1 is start node, node2 is middle node
-            return merge_condition.head2tail(node1, node2)
-
-        # mid
-        if (
-            node1_self_identity.is_mid() and node2_self_identity.is_head()
-        ):  # both are middle nodes
-            return merge_condition.mid2head(node1, node2)
-
-        if (
-            node1_self_identity.is_mid() and node2_self_identity.is_mid()
-        ):  # both are middle nodes
-            return merge_condition.mid2mid(node1, node2)
-
-        if (
-            node1_self_identity.is_mid() and node2_self_identity.is_tail()
-        ):  # both are middle nodes
-            return merge_condition.mid2tail(node1, node2)
-        # tail
-        if (
-            node1_self_identity.is_tail() and node2_self_identity.is_head()
-        ):  # node1 is end node, node2 is start node
-            return merge_condition.tail2head(node1, node2)
-
-        if (
-            node1_self_identity.is_tail() and node2_self_identity.is_mid()
-        ):  # node1 is end node, node2 is middle node
-            return merge_condition.tail2mid(node1, node2)
-
-        if (
-            node1_self_identity.is_tail() and node2_self_identity.is_tail()
-        ):  # both are end nodes   check first exon start
-            return merge_condition.tail2tail(node1, node2)
-
-        msg = f"node1 {node1_self_identity} node2 {node2_self_identity}"
-        raise ValueError(msg)
+        return merge_condition.merged(node1, node2)
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(
         self,
