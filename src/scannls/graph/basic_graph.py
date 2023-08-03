@@ -281,7 +281,7 @@ class Node(BasicNode):
         self._ref_end = ref_end
 
         self.exons = exons
-        self._introns: Introns | None = None
+        self._introns = None if exons is None else exons.introns()
         self._exon_str = ""
 
         self.modes = modes
@@ -289,7 +289,6 @@ class Node(BasicNode):
 
         self.annotation_code = annot
         self.splicing_code = canonical
-        self._unique_key: str | None = None
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {}
@@ -297,6 +296,10 @@ class Node(BasicNode):
 
         if self.query_name != "" and identity is not None:
             self.identities[self.query_name] = identity
+
+        self._unique_key = (
+            f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}"
+        )
 
     @property
     def ref_start(self) -> int:
@@ -382,12 +385,6 @@ class Node(BasicNode):
 
     @property
     def unique_key(self) -> str:
-        if self._unique_key is None:
-            introns = self.introns
-            key = str(introns) if introns else "None"
-            key = f"{self.chrom}-{key}-{self.ref_start}-{self.ref_end}"
-            self._unique_key = key
-
         return self._unique_key
 
     def is_reverse(self) -> bool:

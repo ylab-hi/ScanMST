@@ -15,7 +15,6 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
-    SpliceType,
     update_node_with_other_node,
 )
 from .graphvis import plot_graph
@@ -171,27 +170,34 @@ class NLGraph:
         current_node: Node,
         successor: Node,
     ) -> Iterable[Edge]:
-        if not current_path:
-            return self.find_edges(current_node, successor)
+        if len(current_path) == 1:
+            previous_edge_node_identity = None
+        else:
+            previous_edge = current_path[-2]
+            if not isinstance(previous_edge, Edge):
+                msg = f"previous_edge is not instance of Edge: {previous_edge}"
+                raise TypeError(msg)
 
-        previous_edge = current_path[-1]
-        if not isinstance(previous_edge, Edge):
-            msg = f"previous_edge is not instance of Edge: {previous_edge}"
-            raise TypeError(msg)
-
-        previous_edge_node_identity = self.get_node_identity_base_edge(
-            previous_edge,
-            current_node,
-        )
+            previous_edge_node_identity = self.get_node_identity_base_edge(
+                previous_edge,
+                current_node,
+            )
 
         edges = []
         for edge in self.find_edges(current_node, successor):
-            if edge.sr > self.prune_threshold:
+            if edge.sr >= self.prune_threshold:
                 edge_node_identity = self.get_node_identity_base_edge(
                     edge,
                     current_node,
                 )
-                if self.determine_edge(previous_edge_node_identity, edge_node_identity):
+
+                if previous_edge_node_identity is not None:
+                    if self.determine_edge(
+                        previous_edge_node_identity,
+                        edge_node_identity,
+                    ):
+                        edges.append(edge)
+                else:
                     edges.append(edge)
 
         return edges
@@ -348,14 +354,11 @@ class NLGraph:
         self,
         current_node: Node,
         similar_key: str,
-        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
-        # get similar nodes in the graph
-        similar_nodes_in_graph = self.get_nodes_with_similar_key(similar_key)
 
         # iterate all similar nodes in the graph
-        for similar_node_in_graph in similar_nodes_in_graph:
+        for similar_node_in_graph in self.get_nodes_with_similar_key(similar_key):
             # check if the current node is merged into a similar node in the graph
             if NLGraph._compare_is_merged(
                 similar_node_in_graph,
@@ -372,7 +375,6 @@ class NLGraph:
 
                 # nodes in merged_parent_nodes are all in the graph
                 current_node.merged_parent_nodes.append(similar_node_in_graph)
-                merged_nodes_pool.add(current_node)
 
                 # only consider nodes that have been processed: previous node in current series
                 # keeps in mind the next node in current series is not processed yet!!!!
@@ -417,7 +419,6 @@ class NLGraph:
     def construct(self) -> None:
         """Main function to construct graph."""
         # iterate all series
-        merged_nodes_pool: set[Node] = set()
         self.logger.debug(f"Input Cluster {self.nlpaths=}")
         for nlpath in self.nlpaths:
             # iterate all nodes in series
@@ -433,9 +434,7 @@ class NLGraph:
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
                     current_node,
                     similar_key,
-                    merged_nodes_pool,
                 )
-
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
                     current_node,
                 )
@@ -454,12 +453,8 @@ class NLGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-        if start_node in path:
-            self.logger.warning(
-                f"A circle is found in the graph {start_node} in {path}",
-            )
 
-        if not start_node or start_node in path:
+        if not start_node:
             # successor be [] or None
             if not isinstance(path[-1], Node):
                 msg = f"Last element in path is not a node {path[-1]}"
@@ -473,7 +468,7 @@ class NLGraph:
                     self._trace_forward(
                         successor,
                         trace_id + 1,
-                        [*path, start_node, edge],
+                        [*path, edge, successor],
                         group_paths,
                     )
         else:
@@ -481,67 +476,9 @@ class NLGraph:
             self._trace_forward(
                 successors,  # type: ignore
                 trace_id + 1,
-                [*path, start_node],
+                [*path],
                 group_paths,
             )
-
-    def _trace_backward(
-        self,
-        end_node: Node,
-        trace_id: int,
-        path: list[Node | Edge],
-        group_paths: list[list[Node | Edge]],
-    ) -> None:
-        """Helper function to trace through graph and find all paths.
-
-        .. seealso::
-            :func:`SpliceGraph.trace`
-        """
-        if not end_node or end_node in path:
-            # successor be [] or None
-            group_paths.append(path)
-        elif predecessors := end_node.successors:
-            for predecessor in predecessors:
-                predecessor.set_trace_id(trace_id)
-                for edge in self.get_possible_edges(path, end_node, predecessor):
-                    self._trace_backward(
-                        predecessor,
-                        trace_id + 1,
-                        [*path, end_node, edge],
-                        group_paths,
-                    )
-        else:
-            # successor be [] or None
-            self._trace_backward(
-                predecessors,  # type: ignore
-                trace_id + 1,
-                [*path, end_node],
-                group_paths,
-            )
-
-    def _trace(self, direction: SpliceType) -> None:
-        """Trace splice graph but only mark node with trace_id.
-
-        :param direction: direction of trace, forward or backward
-
-        .. note::
-            before trace, you should call :func:`SpliceGraph.reset_trace_id` if
-            you have already traced splice graph.
-        """
-        if direction == SpliceType.forward:
-            for start_node in self.get_start_nodes():
-                start_node.set_trace_id(1)
-                self._trace_forward(start_node, 2, [], [])
-            return
-
-        if direction == SpliceType.backward:
-            for end_node in self.get_end_nodes():
-                end_node.set_trace_id(1)
-                self._trace_backward(end_node, 2, [], [])
-            return
-
-        msg = f"direction={direction!r} is not a valid direction[forward, backward]"
-        raise ValueError(msg)
 
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
@@ -553,7 +490,7 @@ class NLGraph:
         for start_node in self.get_start_nodes():
             start_node.set_trace_id(1)
             group_paths = []
-            self._trace_forward(start_node, 2, [], group_paths)
+            self._trace_forward(start_node, 2, [start_node], group_paths)
             result_series_list.extend(group_paths)
 
         if not result_series_list:
