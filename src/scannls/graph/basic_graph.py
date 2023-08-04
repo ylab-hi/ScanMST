@@ -180,14 +180,12 @@ class NodeIdentity(Enum):
         msg = f"Invalid value for NodeIdentity: {s}"
         raise ValueError(msg)
 
-    def is_head(self) -> bool:
-        return self == NodeIdentity.HEAD
-
-    def is_tail(self) -> bool:
-        return self == NodeIdentity.TAIL
-
-    def is_mid(self) -> bool:
-        return self == NodeIdentity.MID
+    # fmt: off
+    def is_head(self) -> bool: return self == NodeIdentity.HEAD
+    def is_tail(self) -> bool: return self == NodeIdentity.TAIL
+    def is_mid(self) -> bool: return self == NodeIdentity.MID
+    def __hash__(self): return hash(self.name)
+    # fmt: on
 
 
 class Node(BasicNode):
