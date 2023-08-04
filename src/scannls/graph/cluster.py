@@ -204,7 +204,7 @@ def merge_same_len_node_list(
 
         same_edge = True
         if node2_edge is not None and node1_edge is not None:
-            same_edge = node1_edge.is_merged(
+            same_edge = node1_edge.merged(
                 node2_edge,
                 compared_break_point=False,
             )

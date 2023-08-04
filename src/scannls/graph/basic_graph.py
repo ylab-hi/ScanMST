@@ -579,7 +579,7 @@ class Edge:
         if read_id not in self.edge_data.read_ids:
             self.edge_data.read_ids.append(read_id)
 
-    def updated(self, other: Edge):
+    def merge(self, other: Edge):
         # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
         self.break_point1 = other.break_point1
         self.break_point2 = other.break_point2
@@ -611,7 +611,7 @@ class Edge:
     ):
         return cls(node1.unique_key, node2.unique_key, edge_data)
 
-    def is_merged(
+    def merged(
         self,
         other_edge: Edge,
         *,

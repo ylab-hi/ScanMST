@@ -127,12 +127,12 @@ class NLGraph:
 
         is_merged = False
         for current_edge in self.edges[edge.key]:
-            if current_edge.is_merged(
+            if current_edge.merged(
                 edge,
                 compared_break_point=True,
                 break_point_threshold=self.prune_threshold,
             ):
-                current_edge.updated(edge)
+                current_edge.merge(edge)
                 is_merged = True
                 break
 
@@ -253,11 +253,6 @@ class NLGraph:
             msg = f"node.similar_key is None, {node.query_name}"
             raise ValueError(msg)
         self.get_nodes_with_similar_key(node.similar_key).remove(node)
-
-    def reset_trace_id(self) -> None:
-        """Reset trace id for all nodes."""
-        for node in self:
-            node.reset_trace_id()
 
     def get_node_with_unique_key(self, unique_key: str) -> Node | None:
         """Get node with unique key.
