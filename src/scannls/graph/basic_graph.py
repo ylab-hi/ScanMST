@@ -248,7 +248,6 @@ class Node(BasicNode):
         "insertion_info",
         "_unique_key",
         "is_polya",
-        "_exon_str",
         "cigartuples_without_soft",
         "identities",
         "read_ids",
@@ -280,7 +279,6 @@ class Node(BasicNode):
 
         self.exons = exons
         self._introns = None if exons is None else exons.introns()
-        self._exon_str = ""
 
         self.modes = modes
         self.genes = genes
@@ -323,7 +321,7 @@ class Node(BasicNode):
         """Get a string representation of a node."""
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{self.exons_str}, read_ids={self.read_ids})"
+            f"{self.exons}, read_ids={self.read_ids})"
         )
 
     def __hash__(self) -> int:
@@ -342,13 +340,6 @@ class Node(BasicNode):
     @self_identity.setter
     def self_identity(self, identity: NodeIdentity) -> None:
         self.identities[self.query_name] = identity
-
-    @property
-    def exons_str(self) -> str:
-        """Get a string representation of exons."""
-        if self._exon_str == "":
-            self._exon_str = str(self.exons)
-        return self._exon_str
 
     @property
     def introns(self) -> Introns | None:
