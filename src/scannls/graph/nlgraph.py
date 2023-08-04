@@ -10,6 +10,8 @@ import types
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
+from loguru import logger
+
 from .basic_graph import (
     Edge,
     NLPath,
@@ -152,8 +154,11 @@ class NLGraph:
         node: Node,
     ) -> dict[NodeIdentity, list[str]]:
         result = defaultdict(list)
+        logger.debug(f"{node=}")
         for read_id in edge.read_ids:
-            result[node.identities[read_id]].append(read_id)
+            node_identity = node.identities[read_id]
+            logger.debug(f"{node_identity=}")
+            result[node_identity].append(read_id)
         return result
 
     @staticmethod
