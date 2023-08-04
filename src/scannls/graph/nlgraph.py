@@ -566,7 +566,7 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
         ),
     )
 
-    updated_node.read_names.append(current_node.query_name)
+    updated_node.read_ids.append(current_node.query_name)
 
     if current_node.self_identity is None:
         msg = f"{current_node}'s self_identity is None"

@@ -251,7 +251,7 @@ class Node(BasicNode):
         "_exon_str",
         "cigartuples_without_soft",
         "identities",
-        "read_names",
+        "read_ids",
         *BasicNode.__slots__,
     )
 
@@ -290,7 +290,7 @@ class Node(BasicNode):
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {}
-        self.read_names = [self.query_name]
+        self.read_ids = [self.query_name]
 
         if self.query_name != "" and identity is not None:
             self.identities[self.query_name] = identity
@@ -323,8 +323,7 @@ class Node(BasicNode):
         """Get a string representation of a node."""
         return (
             f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{self.exons_str}, "
-            f"query_name={self.query_name.split(',')[:3]})"
+            f"{self.exons_str}, read_ids={self.read_ids})"
         )
 
     def __hash__(self) -> int:
@@ -588,7 +587,7 @@ class Edge:
         self.edge_data.read_ids.extend(other.read_ids)
         if self.edge_data.insertion_info and isinstance(
             self.edge_data.insertion_info[1],
-            NovelInsertion | MicroHomology,
+            (NovelInsertion, MicroHomology),
         ):
             self.edge_data.insertion_info[1].increment_ao()
 
