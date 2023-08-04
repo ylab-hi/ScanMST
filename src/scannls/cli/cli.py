@@ -71,6 +71,7 @@ def parse_nlgraph_for_cluster_seq(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
+        options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
     )
@@ -107,6 +108,7 @@ def _parse_nlgraph_for_cluster_par(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
+        options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
     )

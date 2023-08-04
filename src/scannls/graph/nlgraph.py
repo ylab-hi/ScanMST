@@ -37,11 +37,13 @@ class NLGraph:
         self,
         logger: LoggerType,
         rescuer: Any,
-        prune_threshold: int = 3,
+        prune_threshold: int = 10,
+        support_reads: int = 1,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.prune_threshold = prune_threshold
+        self.support_reads = support_reads
         self.dict_factory = NLGraph.dict_factory  # type: ignore
         self.list_factory = NLGraph.list_factory  # type: ignore
         self.rescuer = rescuer
@@ -98,6 +100,7 @@ class NLGraph:
         alignment_fraction: float,
         logger: LoggerType,
         prune_threshold: int,
+        support_reads: int,
         node_rescued_sr_maximum: int,
         average_read_depth: int | None,
     ) -> NLGraph:
@@ -112,7 +115,7 @@ class NLGraph:
             average_read_depth,
         )
 
-        return cls(logger, rescuer, prune_threshold)
+        return cls(logger, rescuer, prune_threshold, support_reads)
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
         """Add edge from node1 -> node2."""
@@ -185,7 +188,7 @@ class NLGraph:
 
         edges = []
         for edge in self.find_edges(current_node, successor):
-            if edge.sr >= self.prune_threshold:
+            if edge.sr >= self.support_reads:
                 edge_node_identity = self.get_node_identity_base_edge(
                     edge,
                     current_node,
