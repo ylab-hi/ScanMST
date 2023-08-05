@@ -47,6 +47,25 @@ class DefaultOptions:
     rt_switching_filter_len: int = 10
 
 
+COLOR = "bold magenta"
+BANNER = {
+    "   _____                  _   ____   _____": COLOR,
+    "  / ___/_________ _____  / | / / /  / ___/": COLOR,
+    "  \\__ \\/ ___/ __ `/ __ \\/  |/ / /   \\__ \\": COLOR,
+    " ___/ / /__/ /_/ / / / / /|  / /______/ /": COLOR,
+    "/____/\\___/\\__,_/_/ /_/_/ |_/_____/____/": COLOR,
+}
+
+
+def print_banner() -> None:
+    """Print banner."""
+    from rich.console import Console
+
+    console = Console()
+    for line, color in BANNER.items():
+        console.print(line, style=color)
+
+
 class RichArgParser(argparse.ArgumentParser):
     """RichArgParser."""
 
@@ -84,9 +103,6 @@ def parse_args() -> argparse.ArgumentParser:
         description="[red]scannls[/] :rocket: Nonlinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
-        #     """Authors: TingYou Wang and Yangyang Li,
-        #     Northwestern University, 2023"""
-        # ),
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
