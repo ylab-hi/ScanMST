@@ -174,7 +174,7 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
                 f"A circle in a path is detectd {current_node.query_name} is already",
             )
 
-        updated_node.read_ids.appnd(current_node.query_name)
+        updated_node.read_ids.append(current_node.query_name)
 
         updated_node.identities.update(current_node.identities)
 
