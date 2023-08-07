@@ -169,6 +169,9 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
             current_node.exons.last.end,
         )
 
+        updated_node.read_ids.add(current_node.query_name)
+        updated_node.identities.update(current_node.identities)
+
         # update edge data
         node1_edge = path1.next_edge(nodes=updated_node, nodes_idx=start_index + idx)
         node2_edge = path2.next_edge(nodes=current_node, nodes_idx=idx)

@@ -212,19 +212,19 @@ class Node(BasicNode):
         * annotation_code
         * splicing_code
 
-    :Example:
+    .. example::
 
-    >>> node1 = Node(
-                prev_bp=None,
-                next_bp='chr10:93636994',
-                strand='+',
-                chrom='chr10',
-                ref_start=93636994
-                ref_end=93637094,
-                exons=[(93636994, 93637094)],
-            )
-    >>> node1
-    Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
+        >>> node1 = Node(
+                    prev_bp=None,
+                    next_bp='chr10:93636994',
+                    strand='+',
+                    chrom='chr10',
+                    ref_start=93636994
+                    ref_end=93637094,
+                    exons=[(93636994, 93637094)],
+                )
+        >>> node1
+        Node(chr10:93636994-93637094:-, 93636994-93637094, TRA, None, chr10:93636994)
     """
 
     __slots__ = (
@@ -288,7 +288,7 @@ class Node(BasicNode):
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {}
-        self.read_ids = [self.query_name]
+        self.read_ids = {self.query_name}
 
         if self.query_name != "" and identity is not None:
             self.identities[self.query_name] = identity
@@ -320,8 +320,8 @@ class Node(BasicNode):
     def __repr__(self) -> str:
         """Get a string representation of a node."""
         return (
-            f"{self.__class__.__name__}({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
-            f"{self.exons}, read_ids={self.read_ids})"
+            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"{self.exons!s}, read_ids={self.read_ids})"
         )
 
     def __hash__(self) -> int:
@@ -474,7 +474,7 @@ class EdgeData:
     break_point1: BreakPoint
     break_point2: BreakPoint
     sr: int
-    read_ids: list[str]
+    read_ids: set[str]
     insertion_info: Any | None = None
     rescued_sr: int = 1
 
@@ -485,7 +485,7 @@ class EdgeData:
             break_point1=BreakPoint.from_str(event.bp1),
             break_point2=BreakPoint.from_str(event.bp2),
             sr=1,
-            read_ids=[read_id],
+            read_ids={read_id},
         )
 
     def equal(
@@ -567,7 +567,7 @@ class Edge:
 
     def add_read_id(self, read_id: str):
         if read_id not in self.edge_data.read_ids:
-            self.edge_data.read_ids.append(read_id)
+            self.edge_data.read_ids.add(read_id)
 
     def merge(self, other: Edge):
         # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
@@ -575,7 +575,8 @@ class Edge:
         self.break_point2 = other.break_point2
 
         self.sr += other.sr
-        self.edge_data.read_ids.extend(other.read_ids)
+        self.edge_data.read_ids.union(other.read_ids)
+
         if self.edge_data.insertion_info and isinstance(
             self.edge_data.insertion_info[1],
             (NovelInsertion, MicroHomology),
@@ -1029,7 +1030,7 @@ class NLPath:
                             break_point1=edge_prev_breakpoint,
                             break_point2=edge_next_breakpoint,
                             sr=1,
-                            read_ids=[insertion.query_name],
+                            read_ids={insertion.query_name},
                         )
 
                         logger.trace(f"Add Insertion {insertion_node=} to Series")

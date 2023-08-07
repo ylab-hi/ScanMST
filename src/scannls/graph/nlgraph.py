@@ -570,11 +570,11 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
             "modes",
         ),
     )
-
-    updated_node.read_ids.append(current_node.query_name)
+    updated_node.read_ids.add(current_node.query_name)
 
     if current_node.self_identity is None:
         msg = f"{current_node}'s self_identity is None"
         raise ValueError(msg)
 
-    updated_node.identities[current_node.query_name] = current_node.self_identity
+    # WARN: do not check if they have same key <Yangyang Li>
+    updated_node.identities.update(current_node.identities)

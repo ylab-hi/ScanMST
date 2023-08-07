@@ -232,7 +232,8 @@ class Intervals:
     """Exons is used to represent exons of a gene.
     :param exon_list: list of exons
 
-    :Example:
+    Example:
+
     >>> exons = Exons(exon_list=[Interval(0, 10), Interval(20, 30)])
     >>> exons
     Exons([0, 10), [20, 30))
