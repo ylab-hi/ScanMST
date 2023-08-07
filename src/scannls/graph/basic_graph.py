@@ -288,7 +288,7 @@ class Node(BasicNode):
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {}
-        self.read_ids = {self.query_name}
+        self.read_ids = [self.query_name]
 
         if self.query_name != "" and identity is not None:
             self.identities[self.query_name] = identity
@@ -474,7 +474,7 @@ class EdgeData:
     break_point1: BreakPoint
     break_point2: BreakPoint
     sr: int
-    read_ids: set[str]
+    read_ids: list[str]
     insertion_info: Any | None = None
     rescued_sr: int = 1
 
@@ -485,7 +485,7 @@ class EdgeData:
             break_point1=BreakPoint.from_str(event.bp1),
             break_point2=BreakPoint.from_str(event.bp2),
             sr=1,
-            read_ids={read_id},
+            read_ids=[read_id],
         )
 
     def equal(
@@ -567,7 +567,7 @@ class Edge:
 
     def add_read_id(self, read_id: str):
         if read_id not in self.edge_data.read_ids:
-            self.edge_data.read_ids.add(read_id)
+            self.edge_data.read_ids.append(read_id)
 
     def merge(self, other: Edge):
         # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
@@ -575,7 +575,7 @@ class Edge:
         self.break_point2 = other.break_point2
 
         self.sr += other.sr
-        self.edge_data.read_ids.union(other.read_ids)
+        self.edge_data.read_ids.extend(other.read_ids)
 
         if self.edge_data.insertion_info and isinstance(
             self.edge_data.insertion_info[1],
@@ -752,10 +752,6 @@ class NLPath:
     def is_minimum_node_length_larger_than_threshold(self, threshold: int = 10) -> bool:
         """Check if minimum length of all nodes in the series > threshold."""
         return min(_node.exons_length for _node in self.nodes) > threshold
-
-    def is_all_node_sr_higher_than_threshold(self, threshold: int) -> bool:
-        """Check if all nodes in the series have sr > threshold."""
-        return all(node.sr >= threshold for node in self.nodes[:-1])
 
     def sum_sr(self) -> int:
         """Get sum of sr for all nodes in the series."""

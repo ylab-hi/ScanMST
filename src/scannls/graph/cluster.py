@@ -169,7 +169,13 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
             current_node.exons.last.end,
         )
 
-        updated_node.read_ids.add(current_node.query_name)
+        if current_node.query_name in updated_node.read_ids:
+            logger.warning(
+                f"A circle in a path is detectd {current_node.query_name} is already",
+            )
+
+        updated_node.read_ids.appnd(current_node.query_name)
+
         updated_node.identities.update(current_node.identities)
 
         # update edge data

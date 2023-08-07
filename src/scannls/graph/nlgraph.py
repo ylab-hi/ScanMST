@@ -411,13 +411,18 @@ class NLGraph:
         elif successors := start_node.successors:
             for successor in successors:
                 successor.set_trace_id(trace_id)
-                for edge in self.get_possible_edges(path, start_node, successor):
-                    self._trace_forward(
-                        successor,
-                        trace_id + 1,
-                        [*path, edge, successor],
-                        group_paths,
+                if successor in path:
+                    self.logger.warning(
+                        f"A circle may exist in graph with nodes {self.nodes}",
                     )
+                else:
+                    for edge in self.get_possible_edges(path, start_node, successor):
+                        self._trace_forward(
+                            successor,
+                            trace_id + 1,
+                            [*path, edge, successor],
+                            group_paths,
+                        )
         else:
             # successor be [] or None
             self._trace_forward(
@@ -570,7 +575,12 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
             "modes",
         ),
     )
-    updated_node.read_ids.add(current_node.query_name)
+
+    if current_node.query_name in updated_node.read_ids:
+        logger.warning(
+            f"A circle in a path is detectd {current_node.query_name} is already",
+        )
+    updated_node.read_ids.append(current_node.query_name)
 
     if current_node.self_identity is None:
         msg = f"{current_node}'s self_identity is None"
