@@ -550,7 +550,10 @@ def _scan_bam_helper(
                             if circular_rna == "remove":
                                 if not circ_rna_filter.is_circrna(nlpath):
                                     nls_src_forms_list.append(nlpath)
-                                    logger.trace(f"{nlpath=}")
+                                else:
+                                    logger.trace(
+                                        f"{nlpath} is filtered out owing to CircRNAFilter"
+                                    )
                             elif circular_rna == "extract":
                                 if circ_rna_filter.is_circrna(nlpath):
                                     nls_src_forms_list.append(nlpath)

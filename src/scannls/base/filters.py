@@ -175,7 +175,7 @@ class CircRNAFilter:
             current_node, next_node = nodes
             current_edge = nlpath.next_edge(current_node, 0)
             return bool(
-                current_edge.variation_type == "TDUP"
+                current_edge.variation_type.is_tdup()
                 and (
                     current_node.introns
                     and next_node.introns
@@ -204,7 +204,8 @@ class CircRNAFilter:
         for _id, current_node in enumerate(nodes[:-1], 1):
             current_edge = nlpath.next_edge(current_node, _id - 1)
             next_node = nlpath[_id]
-            if current_edge.variation_type == "TDUP":
+            print(f"{current_edge.variation_type=}")
+            if current_edge.variation_type.is_tdup():
                 num_of_tdups += 1
 
             # first hop
@@ -249,6 +250,7 @@ class CircRNAFilter:
             ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
                 num_of_hops_satisfy_condition += 1
 
+        print(f"{num_of_hops_satisfy_condition=}; {num_of_hops=}; {num_of_tdups=}")
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
 
     def is_megaexon_superpose_with_annotated_exons(
