@@ -5,7 +5,6 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
-    SpliceType,
     VariationType,
 )
 from .cluster import ClusterFinder
@@ -19,7 +18,6 @@ __all__ = [
     "BasicNode",
     "NodeIdentity",
     "Node",
-    "SpliceType",
     "VariationType",
     "EdgeData",
     "Edge",

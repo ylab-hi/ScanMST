@@ -250,7 +250,6 @@ class Node(BasicNode):
         "is_polya",
         "cigartuples_without_soft",
         "identities",
-        "read_ids",
         *BasicNode.__slots__,
     )
 
@@ -261,13 +260,13 @@ class Node(BasicNode):
         strand: Strand | str,
         ref_start: int,
         ref_end: int,
+        identity: NodeIdentity,
         exons: Exons | None = None,
         annot: int | None = None,
         canonical: int | None = None,
         modes: list[int] | None = None,
         genes: tuple[str, str] | None = None,
         cigartuples_without_soft: list[int] | None = None,
-        identity: NodeIdentity | None = None,
     ) -> None:
         """Initialize a Node object."""
         super().__init__()
@@ -287,11 +286,7 @@ class Node(BasicNode):
         self.splicing_code = canonical
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
-        self.identities: dict[str, NodeIdentity] = {}
-        self.read_ids = [self.query_name]
-
-        if self.query_name != "" and identity is not None:
-            self.identities[self.query_name] = identity
+        self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
         self._unique_key = (
             f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}"
@@ -334,8 +329,12 @@ class Node(BasicNode):
         )
 
     @property
+    def read_ids(self):
+        return self.identities.keys()
+
+    @property
     def self_identity(self) -> NodeIdentity | None:
-        return self.identities.get(self.query_name, None)
+        return self.identities[self.query_name]
 
     @self_identity.setter
     def self_identity(self, identity: NodeIdentity) -> None:
@@ -422,16 +421,6 @@ class Node(BasicNode):
 
         msg = f"{other} is not Node"
         raise ValueError(msg)
-
-
-class SpliceType(Enum):
-    """Splice Type.
-
-    used in prune
-    """
-
-    forward = auto()
-    backward = auto()
 
 
 class VariationType(Enum):
@@ -907,9 +896,9 @@ class NLPath:
                 strand=event.strand1,
                 ref_start=event.read1_ref_start,
                 ref_end=event.read1_ref_end,
+                identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
                 exons=Exons.from_list(event.read1_exons),
                 cigartuples_without_soft=read1.cigartuples_without_soft,
-                identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
             )
 
             edge_data = EdgeData.from_event(event, read_id=read1.query_name)
@@ -1007,9 +996,9 @@ class NLPath:
                             strand=insertion.strand,
                             ref_start=insertion.ref_start,
                             ref_end=insertion.ref_end,
+                            identity=NodeIdentity.MID,
                             exons=insertion.get_exons(),
                             cigartuples_without_soft=insertion.cigartuples_without_soft,
-                            identity=NodeIdentity.MID,
                         )
 
                         insertion_read2_event.update_insertion_node_info(insertion_node)
@@ -1072,9 +1061,9 @@ class NLPath:
                     strand=event.strand2,
                     ref_start=event.read2_ref_start,
                     ref_end=event.read2_ref_end,
+                    identity=NodeIdentity.TAIL,
                     exons=Exons.from_list(event.read2_exons),
                     cigartuples_without_soft=read2.cigartuples_without_soft,
-                    identity=NodeIdentity.TAIL,
                 )
                 check_end_node_is_ploya(final_node, genome_fasta)
 

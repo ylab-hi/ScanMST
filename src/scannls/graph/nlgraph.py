@@ -580,11 +580,6 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
         logger.warning(
             f"A circle in a path is detectd {current_node.query_name} is already",
         )
-    updated_node.read_ids.append(current_node.query_name)
-
-    if current_node.self_identity is None:
-        msg = f"{current_node}'s self_identity is None"
-        raise ValueError(msg)
 
     # WARN: do not check if they have same key <Yangyang Li>
     updated_node.identities.update(current_node.identities)

@@ -817,7 +817,7 @@ def detect_read_read_connections_from_cigar(
     # filter reads in uncommon chromosome and mitochondrion
     if "_" in chrm_ra or chrm_ra in {"chrM", "MT"}:
         logger.debug(
-            f"{read.query_name=} does not pass uncommon chromosome and mitochondrion filter"
+            f"{read.query_name=} does not pass uncommon chromosome and mitochondrion filter",
         )
         return noreturn
 
@@ -852,7 +852,7 @@ def detect_read_read_connections_from_cigar(
         # filter reads in uncommon chromosome and mitochondrion
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
             logger.debug(
-                f"{read.query_name=} does not pass uncommon chromosome and mitochondrion filter"
+                f"{read.query_name=} does not pass uncommon chromosome and mitochondrion filter",
             )
             return noreturn
 
@@ -873,7 +873,7 @@ def detect_read_read_connections_from_cigar(
             )
         else:
             logger.debug(
-                f"{read.query_name=} does not pass number of mismatches filter"
+                f"{read.query_name=} does not pass number of mismatches filter",
             )
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
         min(mapq_list) < mapq_cutoff
@@ -883,7 +883,8 @@ def detect_read_read_connections_from_cigar(
 
     if is_reverse_transcription_artifacts(chimeric_aln_list):
         logger.debug(
-            f"{chimeric_aln_list=} has reverse transcription artifacts, {chimeric_aln_list[0].query_name=} does not pass RT transcription artifacts filter"
+            f"{chimeric_aln_list=} has reverse transcription artifacts"
+            f"{chimeric_aln_list[0].query_name=} does not pass RT transcription artifacts filter",
         )
         return noreturn
 
