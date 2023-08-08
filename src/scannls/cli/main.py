@@ -523,8 +523,22 @@ def _scan_bam_helper(
                                     event,
                                 ):
                                     nls_event_list.append(event)
-                            elif not rt_switching_filter.is_from_rt_switching(event):
-                                nls_event_list.append(event)
+                                else:
+                                    if rt_switching_filter.is_from_rt_switching(event):
+                                        logger.trace(
+                                            f"{event} is filtered out owing to RTSwitchingFilter"
+                                        )
+                                    else:
+                                        logger.trace(
+                                            f"{event} is filtered out owing to ExonFilter"
+                                        )
+                            else:
+                                if not rt_switching_filter.is_from_rt_switching(event):
+                                    nls_event_list.append(event)
+                                else:
+                                    logger.trace(
+                                        f"{event} is filtered out owing to RTSwitchingFilter"
+                                    )
 
                     # num of alignment segments should be equal to the number of hops + 1
                     # after exon, RT switching and other filtering, the condition may be not satisfied.

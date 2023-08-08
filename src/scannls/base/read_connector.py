@@ -816,6 +816,9 @@ def detect_read_read_connections_from_cigar(
 
     # filter reads in uncommon chromosome and mitochondrion
     if "_" in chrm_ra or chrm_ra in {"chrM", "MT"}:
+        logger.debug(
+            f"{read.query_name=} does not pass uncommon chromosome and mitochondrion filter"
+        )
         return noreturn
 
     if nm_ra < max_allowed_nm:  # type: ignore
@@ -833,6 +836,8 @@ def detect_read_read_connections_from_cigar(
                 query_qualities_ra,
             ),
         )
+    else:
+        logger.debug(f"{read.query_name=} does not pass number of mismatches filter")
 
     for sa_string in chimeric_aln:
         chrm_sa, pos_sa, strand_sa, cigar_sa, mapq_sa, nm_sa = format_sa_tag(sa_string)
@@ -846,6 +851,9 @@ def detect_read_read_connections_from_cigar(
 
         # filter reads in uncommon chromosome and mitochondrion
         if "_" in chrm_sa or chrm_sa in {"chrM", "MT"}:
+            logger.debug(
+                f"{read.query_name=} does not pass uncommon chromosome and mitochondrion filter"
+            )
             return noreturn
 
         if nm_sa < max_allowed_nm:
@@ -863,14 +871,20 @@ def detect_read_read_connections_from_cigar(
                     query_qualities_sa,
                 ),
             )
-
+        else:
+            logger.debug(
+                f"{read.query_name=} does not pass number of mismatches filter"
+            )
     if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
         min(mapq_list) < mapq_cutoff
     ):
+        logger.debug(f"{read.query_name=} does not pass MAPQ cutoff.")
         return noreturn
 
     if is_reverse_transcription_artifacts(chimeric_aln_list):
-        logger.debug(f"{chimeric_aln_list=} has reverse transcription artifacts")
+        logger.debug(
+            f"{chimeric_aln_list=} has reverse transcription artifacts, {chimeric_aln_list[0].query_name=} does not pass RT transcription artifacts filter"
+        )
         return noreturn
 
     logger.debug(f"{len(chimeric_aln_list)} {chimeric_aln_list=}")
