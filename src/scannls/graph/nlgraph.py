@@ -520,24 +520,7 @@ class NLGraph:
             )
 
 
-def update_exon_coord_name_mode(updated_node: Node, current_node: Node) -> None:
-    """Update exon coordinates of the updated node based on the current node.
-
-    :param updated_node: node has been inserted into graph
-    :param current_node: node has not been inserted into graph
-    :return: None
-    """
-    if updated_node.exons is None or current_node.exons is None:
-        msg = f"{updated_node} or {current_node} has no exons"
-        raise ValueError(msg)
-
-    _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-        updated_node,
-        current_node,
-    )
-
-
-def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
+def update_exon_coord_name_mode(
     updated_node: Node,
     current_node: Node,
 ) -> None:
@@ -549,9 +532,6 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     :param current_node: node has not been inserted into graph
     :return: None
     """
-    if updated_node.exons is None or current_node.exons is None:
-        msg = f"{current_node} or {updated_node} exons is None"
-        raise ValueError(msg)
 
     # update exon coordinates
     updated_node.ref_start = min(

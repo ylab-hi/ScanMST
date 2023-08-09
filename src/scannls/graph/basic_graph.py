@@ -261,7 +261,7 @@ class Node(BasicNode):
         ref_start: int,
         ref_end: int,
         identity: NodeIdentity,
-        exons: Exons | None = None,
+        exons: Exons,
         annot: int | None = None,
         canonical: int | None = None,
         modes: list[int] | None = None,
@@ -277,7 +277,7 @@ class Node(BasicNode):
         self._ref_end = ref_end
 
         self.exons = exons
-        self._introns = None if exons is None else exons.introns()
+        self._introns = exons.introns()
 
         self.modes = modes
         self.genes = genes
@@ -299,8 +299,7 @@ class Node(BasicNode):
     @ref_start.setter
     def ref_start(self, value: int) -> None:
         self._ref_start = value
-        if self.exons is not None:
-            self.exons.first.start = value
+        self.exons.first.start = value
 
     @property
     def ref_end(self) -> int:
@@ -309,8 +308,7 @@ class Node(BasicNode):
     @ref_end.setter
     def ref_end(self, value: int) -> None:
         self._ref_end = value
-        if self.exons is not None:
-            self.exons.last.end = value
+        self.exons.last.end = value
 
     def __repr__(self) -> str:
         """Get a string representation of a node."""
@@ -346,9 +344,6 @@ class Node(BasicNode):
         if self._introns is not None:
             return self._introns
 
-        if self.exons is None:
-            return None
-
         self._introns = self.exons.introns()
         return self._introns
 
@@ -364,10 +359,8 @@ class Node(BasicNode):
         return f"{self.chrom}_{key}"
 
     @property
-    def exons_length(self) -> int:
+    def exons_count(self) -> int:
         """Get total length of exon of a node."""
-        if self.exons is None:
-            return 0
         return sum(len(exon) for exon in self.exons)
 
     @property
@@ -740,7 +733,7 @@ class NLPath:
 
     def is_minimum_node_length_larger_than_threshold(self, threshold: int = 10) -> bool:
         """Check if minimum length of all nodes in the series > threshold."""
-        return min(_node.exons_length for _node in self.nodes) > threshold
+        return min(_node.exons_count for _node in self.nodes) > threshold
 
     def sum_sr(self) -> int:
         """Get sum of sr for all nodes in the series."""
