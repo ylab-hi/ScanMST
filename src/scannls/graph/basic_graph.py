@@ -331,12 +331,19 @@ class Node(BasicNode):
         return self.identities.keys()
 
     @property
-    def self_identity(self) -> NodeIdentity | None:
+    def self_identity(self) -> NodeIdentity:
         return self.identities[self.query_name]
 
     @self_identity.setter
     def self_identity(self, identity: NodeIdentity) -> None:
         self.identities[self.query_name] = identity
+
+    def identity(self, query_name: str) -> NodeIdentity | None:
+        ret = self.identities.get(query_name)
+        if ret is None:
+            logger.warning(f"Identity for {query_name} not found")
+
+        return ret
 
     @property
     def introns(self) -> Introns | None:
@@ -367,9 +374,45 @@ class Node(BasicNode):
     def unique_key(self) -> str:
         return self._unique_key
 
-    def is_reverse(self) -> bool:
-        """Check if a node is reverse."""
-        return self.strand.is_reverse()
+    def merge(
+        self,
+        other: Node,
+        optional_attributes=("splicing_code", "annotation_code", "genes", "modes"),
+    ) -> None:
+        """Merge two nodes.
+
+        Merge two nodes for ref_start, ref_end, and identities.
+        """
+        if isinstance(other, Node):
+            # update exon coordinates
+            self.ref_start = min(
+                self.exons.first.start,
+                other.exons.first.start,
+            )
+            # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
+            self.ref_end = max(
+                self.exons.last.end,
+                other.exons.last.end,
+            )
+
+            if other.query_name in self.read_ids:
+                logger.warning(
+                    f"A circle in a path is detectd {other.query_name} is already",
+                )
+
+            # WARN: do not check if they have same key <Yangyang Li>
+            self.identities.update(other.identities)
+
+            update_node_with_other_node(
+                self,
+                other,
+                optional_attributes,
+            )
+
+            return
+
+        msg = f"Cannot merge {self!r} and {other!r}"
+        raise TypeError(msg)
 
     def contains(
         self,

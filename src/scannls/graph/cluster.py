@@ -157,34 +157,18 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
     for idx, (updated_node, current_node) in enumerate(
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
     ):
-        # update exon coordinates
-        updated_node.ref_start = min(
-            updated_node.exons.first.start,
-            current_node.exons.first.start,
-        )
-
-        # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
-        updated_node.ref_end = max(
-            updated_node.exons.last.end,
-            current_node.exons.last.end,
-        )
-
-        if current_node.query_name in updated_node.read_ids:
-            logger.warning(
-                f"A circle in a path is detectd {current_node.query_name} is already",
-            )
-
-        updated_node.identities.update(current_node.identities)
+        updated_node.merge(current_node)
 
         # update edge data
-        node1_edge = path1.next_edge(nodes=updated_node, nodes_idx=start_index + idx)
-        node2_edge = path2.next_edge(nodes=current_node, nodes_idx=idx)
-
-        if node2_edge is not None and node1_edge is not None:
-            node1_edge.sr += node2_edge.sr
-            # WARN: Update break point in covering way <Yangyang Li>
-            node1_edge.break_point1 = node2_edge.break_point1
-            node1_edge.break_point2 = node2_edge.break_point2
+        if (
+            node1_edge := path1.next_edge(
+                nodes=updated_node,
+                nodes_idx=start_index + idx,
+            )
+        ) is not None and (
+            node2_edge := path2.next_edge(nodes=current_node, nodes_idx=idx)
+        ) is not None:
+            node1_edge.merge(node2_edge)
 
 
 def merge_same_len_node_list(

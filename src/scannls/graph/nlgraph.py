@@ -17,7 +17,6 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
-    update_node_with_other_node,
 )
 from .graphvis import plot_graph
 from .merge_condition import MergeCondition
@@ -156,8 +155,10 @@ class NLGraph:
         result = defaultdict(list)
         logger.debug(f"{node=}")
         for read_id in edge.read_ids:
-            node_identity = node.identities[read_id]
-            logger.debug(f"{node_identity=}")
+            node_identity = node.identity(read_id)
+            if node_identity is None:
+                msg = f"node={node!r} cannot find identiy for read_id={read_id!r}"
+                raise ValueError(msg)
             result[node_identity].append(read_id)
         return result
 
@@ -532,34 +533,4 @@ def update_exon_coord_name_mode(
     :param current_node: node has not been inserted into graph
     :return: None
     """
-
-    # update exon coordinates
-    updated_node.ref_start = min(
-        updated_node.exons.first.start,
-        current_node.exons.first.start,
-    )
-
-    # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
-    updated_node.ref_end = max(
-        updated_node.exons.last.end,
-        current_node.exons.last.end,
-    )
-
-    update_node_with_other_node(
-        updated_node,
-        current_node,
-        (
-            "splicing_code",
-            "annotation_code",
-            "genes",
-            "modes",
-        ),
-    )
-
-    if current_node.query_name in updated_node.read_ids:
-        logger.warning(
-            f"A circle in a path is detectd {current_node.query_name} is already",
-        )
-
-    # WARN: do not check if they have same key <Yangyang Li>
-    updated_node.identities.update(current_node.identities)
+    updated_node.merge(current_node)

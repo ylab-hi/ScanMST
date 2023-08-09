@@ -36,7 +36,7 @@ def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
         node.ref_start,
         node.ref_end,
         mode,
-        node.is_reverse(),
+        node.strand.is_reverse(),
         is_middle_node(node),
     )
 
