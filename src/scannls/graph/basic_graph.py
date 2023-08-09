@@ -759,6 +759,7 @@ class NLPath:
         self,
         nodes: Node,
         nodet: Node | None = None,
+        *,
         nodes_idx: int | None = None,
     ) -> Edge | None:
         """Get edge from the path."""
