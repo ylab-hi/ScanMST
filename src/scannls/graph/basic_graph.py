@@ -288,9 +288,7 @@ class Node(BasicNode):
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
-        self._unique_key = (
-            f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}"
-        )
+        self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.query_name}"
 
     @property
     def ref_start(self) -> int:
