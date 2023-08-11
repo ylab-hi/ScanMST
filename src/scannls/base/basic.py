@@ -268,7 +268,7 @@ class Intervals:
     def __contains__(self, item: Interval): return any(item == exon for exon in self.exon_list)
     def __iter__(self): return iter(self.exon_list)
     def __repr__(self) -> str: return f"Exons({self.exon_list})"
-    def __str__(self) -> str: return "_".join( [f"{interval.start}-{interval.end}" for interval in self.exon_list])
+    def __str__(self) -> str: return "[" + ",".join( [f"{interval.start}-{interval.end}" for interval in self.exon_list]) + "]"
     def reverse(self) -> None: self.exon_list[::-1]
     def reversed(self) -> Intervals: return Intervals(self.exon_list[::-1])
     @property

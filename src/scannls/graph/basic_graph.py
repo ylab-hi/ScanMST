@@ -313,7 +313,7 @@ class Node(BasicNode):
     def __repr__(self) -> str:
         """Get a string representation of a node."""
         return (
-            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, "
+            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.self_identity} "
             f"{self.exons!s}, read_ids={self.read_ids})"
         )
 
@@ -601,6 +601,9 @@ class Edge:
 
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
+        logger.trace(
+            f"Merge edge {self.key} {self.read_ids=} with {other.key} {other.read_ids=}.",
+        )
 
         if self.edge_data.insertion_info and isinstance(
             self.edge_data.insertion_info[1],

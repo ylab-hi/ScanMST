@@ -319,7 +319,7 @@ class NLGraph:
                     f"merging node {similar_node_in_graph} and {current_node})",
                 )
 
-                update_exon_coord_name_mode(similar_node_in_graph, current_node)
+                merge_nodes(similar_node_in_graph, current_node)
 
                 # nodes in merged_parent_nodes are all in the graph
                 current_node.merged_parent_nodes.append(similar_node_in_graph)
@@ -521,7 +521,7 @@ class NLGraph:
             )
 
 
-def update_exon_coord_name_mode(
+def merge_nodes(
     updated_node: Node,
     current_node: Node,
 ) -> None:
