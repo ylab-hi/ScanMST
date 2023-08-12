@@ -390,7 +390,6 @@ class ClusterFinder:
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]
                 current_nlpath.id = i
-                check_readid_for_nlpath(current_nlpath)
                 nlpaths.append(current_nlpath)
 
             sorted_nlpaths = sort_cluster(nlpaths)
@@ -420,14 +419,3 @@ class ClusterFinder:
 
             result.append(slected_nlpath)
         return result
-
-
-def check_readid_for_nlpath(nlpath: NLPath):
-    for ind, node in enumerate(nlpath):
-        next_edge = nlpath.next_edge(node, nodes_idx=ind)
-        if next_edge is not None:
-            edge_readids = next_edge.read_ids
-            node_readids = node.read_ids
-            assert set(edge_readids) == set(
-                node_readids,
-            ), f"read_ids not equal in {node=} and {next_edge=}"

@@ -1053,7 +1053,7 @@ class NLPath:
                             break_point1=edge_prev_breakpoint,
                             break_point2=edge_next_breakpoint,
                             sr=1,
-                            read_ids={insertion.query_name},
+                            read_ids=[insertion.query_name],
                         )
 
                         logger.trace(f"Add Insertion {insertion_node=} to Series")
