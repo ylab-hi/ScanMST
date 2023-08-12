@@ -35,7 +35,7 @@ pybind11 = "^2.11.1"
 pytest = "^7.4.0"
 coverage = { extras = ["toml"], version = "^7.2" }
 safety = "^2.1.1"
-mypy = "^1.4"
+mypy = "^1.5"
 typeguard = "^4.1.0"
 xdoctest = { extras = ["colors"], version = "^1.0.2" }
 sphinx = "^6.2.1"
