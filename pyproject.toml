@@ -33,7 +33,7 @@ pybind11 = "^2.11.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.4.0"
-coverage = { extras = ["toml"], version = "^7.2" }
+coverage = { extras = ["toml"], version = "^7.3" }
 safety = "^2.1.1"
 mypy = "^1.5"
 typeguard = "^4.1.0"
