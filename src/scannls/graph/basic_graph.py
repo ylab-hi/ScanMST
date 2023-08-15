@@ -555,7 +555,7 @@ class Edge:
         self.edge_data = edge_data
 
     def __repr__(self) -> str:
-        return f"Edge(key={self.key}, data={self.edge_data})"
+        return f"Edge(data={self.edge_data})"
 
     # fmt: off
     @property
@@ -804,8 +804,11 @@ class NLPath:
         """Return the string representation of the event."""
         string = "\nNLPath("
         space = " " * 4
-        for n in self.nodes:
-            string += f"\n{space}{n!r}"
+        for idx, n in enumerate(self.nodes):
+            string += f"\n{space}\u001b[36m{n!r}"
+            if idx < len(self.nodes) - 1:
+                edge = self.get_edge(n, nodes_idx=idx)
+                string += f"\n{space}\u001b[31m{edge!r}\u001b[36m"
         string += ")"
         return string
 
