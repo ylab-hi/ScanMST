@@ -404,10 +404,10 @@ class NLGraph:
 
         if not start_node:
             # successor be [] or None
-            if not isinstance(path[-1], Node):
-                msg = f"Last element in path is not a node {path[-1]}"
-                raise TypeError(msg)
-            group_paths.append(path)
+            if not path:
+                group_paths.clear()
+            else:
+                group_paths.append(path)
 
         elif successors := start_node.successors:
             for successor in successors:
@@ -415,6 +415,12 @@ class NLGraph:
                 if successor in path:
                     self.logger.warning(
                         f"A circle may exist in graph with nodes {self.nodes}",
+                    )
+                    self._trace_forward(
+                        [],  # type: ignore
+                        trace_id + 1,
+                        [],
+                        group_paths,
                     )
                 else:
                     for edge in self.get_possible_edges(path, start_node, successor):
@@ -444,6 +450,9 @@ class NLGraph:
             start_node.set_trace_id(1)
             group_paths = []
             self._trace_forward(start_node, 2, [start_node], group_paths)
+            if not group_paths:
+                result_series_list.clear()
+                break
             result_series_list.extend(group_paths)
 
         if not result_series_list:
