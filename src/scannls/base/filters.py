@@ -156,6 +156,14 @@ class CircRNAFilter:
        For multi-hop transcripts, the middle mega-exons should be identical.
        e.g., [3][4]->[1][2][3][4]
              [4]->[1][2][3][4]->[1][2][3][4]->[1].
+    3) there are inclusive relationship between mega-exons
+       e.g., [1][2][3] -> [1]
+
+    3) there are no inclusive relationship between mega-exons
+             [XXXX]-[XXXX]->
+             [2]      [1]
+             [XXXXX]-[XXXX]->
+             [3] [1]-[ 2  ]
     """
 
     def __init__(self, gtf_file: str, boundary_size: int) -> None:
