@@ -119,6 +119,7 @@ class MergeCondition:
         if node2_self_identity is None or node1_self_identity is None:
             msg = f"{node1} or {node2}'s self_identity is None"
             raise ValueError(msg)
+
         # merge will not work for nodes on the different chroms
         if node1.chrom != node2.chrom:
             return False

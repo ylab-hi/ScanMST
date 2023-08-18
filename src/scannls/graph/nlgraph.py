@@ -293,8 +293,11 @@ class NLGraph:
             End note will not merge with start/middle node,
             since every end node has polyA tail in library preparation.
         """
+        logger.trace(f"compare merge: {node1=}, {node2=}")
+
         if node1.strand != node2.strand:
             return False
+
         merge_condition = MergeCondition(threshold)
         return merge_condition.merged(node1, node2)
 

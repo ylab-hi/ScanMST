@@ -277,6 +277,11 @@ class Intervals:
     def last(self) -> Interval: return self.exon_list[-1]
     # fmt: on
 
+    def __eq__(self, other: Intervals) -> bool:
+        if isinstance(other, Intervals):
+            return self.exon_list == other.exon_list
+        return False
+
     def append(self, item: Interval | tuple[int, int]) -> None:
         """Append item to exon_list."""
         if isinstance(item, tuple):
