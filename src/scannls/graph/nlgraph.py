@@ -18,7 +18,7 @@ from .basic_graph import (
     Node,
     NodeIdentity,
 )
-from .graphvis import plot_graph
+from .graphvis import default_visitors
 from .merge_condition import MergeCondition
 from .sr_rescuer import SRRescuer
 
@@ -90,7 +90,7 @@ class NLGraph:
             )
 
         if is_plot and node_list:
-            plot_graph(self, f"{cluster_ind}", is_matplotlib=True)
+            default_visitors(self, f"{cluster_ind}", self.support_reads).visualize()
 
     @classmethod
     def create_graph(
@@ -400,45 +400,42 @@ class NLGraph:
         trace_id: int,
         path: list[Node | Edge],
         group_paths: list[list[Node | Edge]],
-    ) -> None:
+        *,
+        has_circle: bool,
+    ):
         """Helper function to trace through graph and find all paths.
 
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-        if not start_node:
+        if not start_node or has_circle:
             # successor be [] or None
-            if not path:
-                group_paths.clear()
-            else:
-                group_paths.append(path)
+            group_paths.append(path)
 
         elif successors := start_node.successors:
             for successor in successors:
                 successor.set_trace_id(trace_id)
+
                 if successor in path:
                     self.logger.warning(
                         f"A circle may exist in graph with nodes {self.nodes}",
                     )
+                    has_circle = True
+
+                for edge in self.get_possible_edges(
+                    path,
+                    start_node,
+                    successor,
+                    self.support_reads,
+                ):
                     self._trace_forward(
-                        [],  # type: ignore
-                        trace_id + 1,
-                        [],
-                        group_paths,
-                    )
-                else:
-                    for edge in self.get_possible_edges(
-                        path,
-                        start_node,
                         successor,
-                        self.support_reads,
-                    ):
-                        self._trace_forward(
-                            successor,
-                            trace_id + 1,
-                            [*path, edge, successor],
-                            group_paths,
-                        )
+                        trace_id + 1,
+                        [*path, edge, successor],
+                        group_paths,
+                        has_circle=has_circle,
+                    )
+
         else:
             # successor be [] or None
             self._trace_forward(
@@ -446,6 +443,7 @@ class NLGraph:
                 trace_id + 1,
                 [*path],
                 group_paths,
+                has_circle=has_circle,
             )
 
     def trace(self) -> Any:
@@ -455,13 +453,22 @@ class NLGraph:
         if not self.get_start_nodes() and len(self.nodes.values()) > 0:
             self.logger.warning(f"A circle may exist in graph {self.nodes.values()}")
 
+        has_circle = False
         for start_node in self.get_start_nodes():
             start_node.set_trace_id(1)
             group_paths = []
-            self._trace_forward(start_node, 2, [start_node], group_paths)
-            if not group_paths:
+            self._trace_forward(
+                start_node,
+                2,
+                [start_node],
+                group_paths,
+                has_circle=has_circle,
+            )
+
+            if has_circle:
                 result_series_list.clear()
                 break
+
             result_series_list.extend(group_paths)
 
         if not result_series_list:

@@ -321,7 +321,6 @@ class CircRNAFilter:
             common_transcripts = transcript_set1.intersection(transcript_set2)
 
             # no overlapping annotated transcript
-
             return len(common_transcripts) != 0
 
         print(f"anchr1 or anchor2 is not available!: {first_node=}, {second_node=}")
