@@ -50,6 +50,10 @@ class ExonInfo:
             ^ hash(self.strand)
         )
 
+    def obtain_trx_id(self):
+        """Get the transcript id of an exon."""
+        return self.trx_id
+
 
 class ExonFilter:
     """ExonFilter is used to filter out events with both breakpoints harbored in the same exon."""
@@ -159,11 +163,17 @@ class CircRNAFilter:
     3) there are inclusive relationship between mega-exons
        e.g., [1][2][3] -> [1]
 
-    3) there are no inclusive relationship between mega-exons
+    4) there are no inclusive relationship between mega-exons in the identical annotated transcript
              [XXXX]-[XXXX]->
-             [2]      [1]
+             [2]       [1]
              [XXXXX]-[XXXX]->
              [3] [1]-[ 2  ]
+
+           <-[XXXX]-[XXXX]
+             [1]       [2]
+           <-[XXXXX]-[XXXX]
+             [1] [3]-[ 2  ]
+
     """
 
     def __init__(self, gtf_file: str, boundary_size: int) -> None:
@@ -182,7 +192,8 @@ class CircRNAFilter:
             longest_node = CircRNAFilter.obtain_longest_mega_exon(nodes)
             current_node, next_node = nodes
             current_edge = nlpath.next_edge(current_node, 0)
-            return bool(
+            # high-confidence circular RNA
+            _circular_condition1 = bool(
                 current_edge.variation_type.is_tdup()
                 and (
                     current_node.introns
@@ -204,6 +215,16 @@ class CircRNAFilter:
                 )
                 and self.is_megaexon_superpose_with_annotated_exons(longest_node),
             )
+
+            # medium-confidence circular RNA
+            _circular_condition2 = bool(
+                current_edge.variation_type.is_tdup()
+                and self.is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
+                    current_node, next_node
+                )
+            )
+
+            return _circular_condition1 or _circular_condition2
 
         # multi-hop event
         num_of_tdups = 0
@@ -258,6 +279,55 @@ class CircRNAFilter:
                 num_of_hops_satisfy_condition += 1
 
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
+
+    def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
+        self, first_node, second_node
+    ) -> bool:
+        """Check if two DUP megaexons form a loop within an annotated transcript."""
+        strand_first = first_node.strand
+        strand_second = second_node.strand
+        exons_of_first_node = set(first_node.exons)
+        exons_of_second_node = set(second_node.exons)
+        # rule out duplicated exons and interspersed exons
+        if (
+            len(exons_of_first_node.intersection(exons_of_second_node)) > 0
+            or strand_first != strand_second
+            or first_node.chrom != second_node.chrom
+        ):
+            return False
+
+        chrom = first_node.chrom
+
+        anchor1 = None
+        anchor2 = None
+
+        if strand_first == strand_second and str(strand_first) == "+":
+            anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_end, "+")
+            anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_start, "+")
+
+        elif strand_first == strand_second and str(strand_first) == "-":
+            anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_start, "-")
+            anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_end, "-")
+
+        if anchor1 and anchor2:
+            exon_set1 = self.exons_gas[anchor1]
+            exon_set2 = self.exons_gas[anchor2]
+
+            #decoded_exon_set1 = list(exon_set1.values())[0]
+            #decoded_exon_set2 = list(exon_set2.values())[0]
+
+            transcript_set1 = {i.obtain_trx_id() for i in exon_set1}
+            transcript_set2 = {i.obtain_trx_id() for i in exon_set2}
+            common_transcripts = transcript_set1.intersection(transcript_set2)
+
+            # no overlapping annotated transcript
+            if len(common_transcripts) == 0:
+                return False
+            else:
+                return True
+        else:
+            print(f"anchr1 or anchor2 is not available!: {first_node=}, {second_node=}")
+            return False
 
     def is_megaexon_superpose_with_annotated_exons(
         self,
