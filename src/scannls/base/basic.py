@@ -262,6 +262,7 @@ class Intervals:
         self.exon_list = exon_list
 
     # fmt: off
+    def __hash__(self) -> int: return hash(tuple(self.exon_list))
     def __getitem__(self, index: int) -> Interval: return self.exon_list[index]
     def __setitem__(self, index: int, value: Interval) -> None: self.exon_list[index] = value
     def __len__(self): return len(self.exon_list)

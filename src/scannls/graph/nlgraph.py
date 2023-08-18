@@ -52,7 +52,7 @@ class NLGraph:
     def __call__(
         self,
         nlpath_list: Iterable[NLPath],
-        clique_ind: int,
+        cluster_ind: int,
         *,
         is_plot: bool,
     ) -> Iterable[NLPath]:
@@ -82,14 +82,15 @@ class NLGraph:
         # sr rescuer
         self.logger.trace(f"NLGraph Node: {sum(1 for _ in self)}")
 
-        if is_plot:
-            plot_graph(self, f"_{clique_ind}", is_matplotlib=False)
-
+        node_list = []
         # trace path
         for node_list in self.trace():
             yield NLPath.create_path_from_node_edge_list(
                 node_list,
             )
+
+        if is_plot and node_list:
+            plot_graph(self, f"{cluster_ind}", is_matplotlib=True)
 
     @classmethod
     def create_graph(
@@ -178,6 +179,7 @@ class NLGraph:
         current_path: list[Node | Edge],
         current_node: Node,
         successor: Node,
+        support_reads: int,
     ) -> Iterable[Edge]:
         if len(current_path) == 1:
             previous_edge_node_identity = None
@@ -194,7 +196,7 @@ class NLGraph:
 
         edges = []
         for edge in self.find_edges(current_node, successor):
-            if edge.sr >= self.support_reads:
+            if edge.sr >= support_reads:
                 edge_node_identity = self.get_node_identity_base_edge(
                     edge,
                     current_node,
@@ -404,7 +406,6 @@ class NLGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-
         if not start_node:
             # successor be [] or None
             if not path:
@@ -426,7 +427,12 @@ class NLGraph:
                         group_paths,
                     )
                 else:
-                    for edge in self.get_possible_edges(path, start_node, successor):
+                    for edge in self.get_possible_edges(
+                        path,
+                        start_node,
+                        successor,
+                        self.support_reads,
+                    ):
                         self._trace_forward(
                             successor,
                             trace_id + 1,

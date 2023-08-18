@@ -24,6 +24,7 @@ class DefaultOptions:
     closed: bool = True
     sleep: bool = True
     bound: bool = True
+    graph: bool = False
     log: str = "info"
     species: str = "human"
     species_choices: tuple[str, str] = ("human", "mouse")
@@ -233,7 +234,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.closed,
         help="close BLAT server when job has done (default: %(default)s)",
     )
-
     parser.add_argument(
         "--nsleep",
         action="store_false",
@@ -241,7 +241,13 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.sleep,
         help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
-
+    parser.add_argument(
+        "--graph",
+        action="store_true",
+        dest="graph",
+        default=DefaultOptions.graph,
+        help="if output graph (default: %(default)s)",
+    )
     parser.add_argument(
         "--nbound",
         action="store_false",
@@ -249,7 +255,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.bound,
         help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
     )
-
     parser.add_argument(
         "--port",
         action="store",
