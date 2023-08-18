@@ -2092,13 +2092,13 @@ telegram = ["requests"]
 
 [[package]]
 name = "typeguard"
-version = "4.1.0"
+version = "4.1.2"
 description = "Run-time type checker for Python"
 optional = false
 python-versions = ">=3.7.4"
 files = [
-    {file = "typeguard-4.1.0-py3-none-any.whl", hash = "sha256:94a8a8974eca6b980c0fd05a032f283914426ad9f2958b342075358e2744226a"},
-    {file = "typeguard-4.1.0.tar.gz", hash = "sha256:b05a54bb0276eefd28880df42e004a71e699c8081fcb9d0536b2ceb01019f60c"},
+    {file = "typeguard-4.1.2-py3-none-any.whl", hash = "sha256:e00775920d4c91e93a0db0ed473ecda9cfaca578aed3ce0ed3ba7f3cc38eab9c"},
+    {file = "typeguard-4.1.2.tar.gz", hash = "sha256:3be187945f9ef5a9f6d7a926dfe54babb7dfd807085ce05f9a5e8735f2487990"},
 ]
 
 [package.dependencies]
@@ -2217,4 +2217,4 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "ba78c2a26d6e4fc6b08731b966516e1a4114a8632f4e2776260d0936ce46644c"
+content-hash = "610435609b1ecc9095045b329e92fa5e9cd0d35f0d38d55b1dc44698b034718e"
