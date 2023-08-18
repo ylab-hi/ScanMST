@@ -220,8 +220,9 @@ class CircRNAFilter:
             _circular_condition2 = bool(
                 current_edge.variation_type.is_tdup()
                 and self.is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
-                    current_node, next_node
-                )
+                    current_node,
+                    next_node,
+                ),
             )
 
             return _circular_condition1 or _circular_condition2
@@ -281,7 +282,9 @@ class CircRNAFilter:
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
 
     def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
-        self, first_node, second_node
+        self,
+        first_node,
+        second_node,
     ) -> bool:
         """Check if two DUP megaexons form a loop within an annotated transcript."""
         strand_first = first_node.strand
@@ -313,21 +316,16 @@ class CircRNAFilter:
             exon_set1 = self.exons_gas[anchor1]
             exon_set2 = self.exons_gas[anchor2]
 
-            #decoded_exon_set1 = list(exon_set1.values())[0]
-            #decoded_exon_set2 = list(exon_set2.values())[0]
-
             transcript_set1 = {i.obtain_trx_id() for i in exon_set1}
             transcript_set2 = {i.obtain_trx_id() for i in exon_set2}
             common_transcripts = transcript_set1.intersection(transcript_set2)
 
             # no overlapping annotated transcript
-            if len(common_transcripts) == 0:
-                return False
-            else:
-                return True
-        else:
-            print(f"anchr1 or anchor2 is not available!: {first_node=}, {second_node=}")
-            return False
+
+            return len(common_transcripts) != 0
+
+        print(f"anchr1 or anchor2 is not available!: {first_node=}, {second_node=}")
+        return False
 
     def is_megaexon_superpose_with_annotated_exons(
         self,

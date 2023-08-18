@@ -106,6 +106,10 @@ def traverse_graph(
         traverse_graph(successors, [*path], nx_graph, graph, labels)
 
 
+# https://networkx.org/documentation/latest/auto_examples/drawing/plot_weighted_graph.html#sphx-glr-auto-examples-drawing-plot-weighted-graph-py
+# https://networkx.org/documentation/latest/reference/drawing.html
+
+
 def visualize_graph_via_matplot(graph, figure_name: str) -> None:
     from matplotlib import pyplot as plt  # type: ignore
 
@@ -114,10 +118,10 @@ def visualize_graph_via_matplot(graph, figure_name: str) -> None:
     options = {
         "font_size": 10,
         "node_size": 1000,
-        "node_color": "white",
+        "node_color": ["red" if "H" in n else "white" for n in graph],
         "edgecolors": "black",
         "linewidths": 2,
-        "width": 6,
+        "width": 3,
     }
 
     pos = nx.spring_layout(graph, seed=42)
