@@ -599,10 +599,17 @@ class Edge:
             self.edge_data.read_ids.append(read_id)
 
     def merge(self, other: Edge):
-        # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
-
-        self.break_point1 = other.break_point1
-        self.break_point2 = other.break_point2
+        # WARN: update breakpoint in cmparing way <07-03-23, Yangyang Li>
+        self.break_point1 = (
+            other.break_point1
+            if self.break_point1.pos >= other.break_point1.pos
+            else self.break_point1
+        )
+        self.break_point2 = (
+            self.break_point2
+            if self.break_point2.pos >= other.break_point2.pos
+            else other.break_point2
+        )
 
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
