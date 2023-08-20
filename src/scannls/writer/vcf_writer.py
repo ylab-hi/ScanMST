@@ -216,7 +216,7 @@ class VCFWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {clique_id} Series.",
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
-        for _hop_vcf_feature in get_vcf_features_from_series(
+        for _hop_vcf_feature in get_vcf_features_from_nlpath(
             data_object,
             self.nlpath_id,
             self.reference_io,
@@ -342,11 +342,11 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
     return "Unknown"
 
 
-def get_vcf_features_from_series(
+def get_vcf_features_from_nlpath(
     nlpath: NLPath,
     nlpath_id: int,
     reference_io: Fasta,
-) -> Any:
+):
     """Obtain hop vcf features from one series."""
     series_hops_features = []
 

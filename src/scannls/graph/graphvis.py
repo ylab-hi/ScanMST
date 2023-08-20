@@ -11,9 +11,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import networkx as nx
+from matplotlib import pyplot as plt  # type: ignore
 
 if TYPE_CHECKING:
-    from . import NLGraph, Node
+    from . import Edge, NLGraph, Node
 
 
 def default_visitors(graph: NLGraph, figure_name: str, support_reads: int) -> GraphVis:
@@ -24,7 +25,7 @@ def default_visitors(graph: NLGraph, figure_name: str, support_reads: int) -> Gr
 
 
 class GraphVis:
-    GRAPH_LINK_DATA: ClassVar = {
+    GRAPH_LINK_DATA: ClassVar[dict[str, str]] = {
         "link": "edges",
         "source": "from",
         "target": "to",
@@ -73,16 +74,40 @@ class GraphVis:
         head_node = "H" if node.is_start_node() else "T"
         return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}{node.strand}"
 
+    @staticmethod
+    def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
+        """Add node to graph."""
+        graph.add_node(
+            GraphVis.get_label_from_node(node),
+            chrom=node.chrom,
+            ref_start=node.ref_start,
+            ref_end=node.ref_end,
+            strand=node.strand,
+            is_head=node.is_start_node(),
+        )
+
+    @staticmethod
+    def add_edge_to_graph(
+        node1: Node,
+        node2: Node,
+        edge: Edge,
+        graph: nx.Graph,
+    ) -> None:
+        """Add edge to graph."""
+        graph.add_edge(
+            GraphVis.get_label_from_node(node1),
+            GraphVis.get_label_from_node(node2),
+            label=f"{edge.variation_type}_{edge.insertion_info}_{edge.sr}",
+            weight=edge.sr,
+            read_ids=edge.read_ids,
+        )
+
     def create_nxgraph(self) -> nx.DiGraph:
-        g = nx.DiGraph()
-        labels = {}
+        # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
+        g = nx.MultiDiGraph()
 
         for start_node in self.nlgraph.get_start_nodes():
-            if not start_node.successors:
-                g.add_node(self.get_label_from_node(start_node))
-            else:
-                labels.update({start_node: self.get_label_from_node(start_node)})
-                self._traverse_graph(start_node, [start_node], g, self.nlgraph, labels)  # type: ignore
+            self._traverse_graph(start_node, [start_node], g, self.nlgraph)  # type: ignore
 
         return g
 
@@ -92,31 +117,30 @@ class GraphVis:
         path,
         nx_graph: nx.Graph,
         graph,
-        labels: dict[Node, str],
     ) -> None:
         """Plot graph helper."""
         if not start_node:
             return
 
+        self.add_node_to_graph(start_node, nx_graph)
+
         if successors := start_node.successors:
             for successor in successors:
-                for edge in graph.get_possible_edges(path, start_node, successor, 1):
-                    labels.update({successor: self.get_label_from_node(successor)})
-                    nx_graph.add_edge(
-                        self.get_label_from_node(start_node),
-                        self.get_label_from_node(successor),
-                        weight=edge.sr,
-                    )
+                for edge in graph.get_possible_edges(
+                    path,
+                    start_node,
+                    successor,
+                    1,
+                    filter_edges=False,
+                ):
+                    self.add_node_to_graph(successor, nx_graph)
+                    self.add_edge_to_graph(start_node, successor, edge, nx_graph)
                     self._traverse_graph(
                         successor,
                         [*path, edge, successor],
                         nx_graph,
                         graph,
-                        labels,
                     )
-        else:
-            # successor be [] or None
-            self._traverse_graph(successors, [*path], nx_graph, graph, labels)
 
 
 # https://networkx.org/documentation/latest/auto_examples/drawing/plot_weighted_graph.html#sphx-glr-auto-examples-drawing-plot-weighted-graph-py
@@ -125,7 +149,7 @@ class GraphVis:
 
 class GraphVisitor(ABC):
     @abstractmethod
-    def visit(self, graph: nx.DiGraph) -> None:
+    def visit(self, graph: nx.DiGraph, *args, **kwargs) -> None:
         """Visit graph."""
 
 
@@ -161,41 +185,64 @@ class GraphExporter(GraphVisitor):
             json.dump(data, f, ensure_ascii=False, indent=4)
 
 
+def _cal_figure_size(nodes_size: int):
+    unit = 4
+    max_size = 25
+    size = min(nodes_size * unit, max_size)
+    return (size, size)
+
+
+def draw_multiedge_labels(graph, pos):
+    edge_labels = {}
+    for u, v, _key, data in graph.edges(keys=True, data=True):
+        if (u, v) not in edge_labels:
+            edge_labels[(u, v)] = []
+        edge_labels[(u, v)].append(str(data["label"]))
+
+    for (u, v), labels in edge_labels.items():
+        label = "\n".join(labels)
+        x_pos = (pos[u][0] + pos[v][0]) / 2
+        y_pos = (pos[u][1] + pos[v][1]) / 2
+        plt.text(x_pos, y_pos, label, horizontalalignment="center")
+
+
 def visualize_graph_via_matplot(
     graph: nx.DiGraph,
     figure_name: str,
     support_reads: int,
 ) -> None:
-    from matplotlib import pyplot as plt  # type: ignore
+    node_numbers = len(list(graph))
 
-    fig, ax = plt.subplots(figsize=(15, 15))
+    fig, ax = plt.subplots(figsize=_cal_figure_size(node_numbers))
 
     pos = nx.spring_layout(graph, seed=42)
-    edge_labels = nx.get_edge_attributes(graph, "weight")
+
+    edge_weight = nx.get_edge_attributes(graph, "weight")
+
     options = {
         "font_size": 10,
         "node_size": 1000,
         "node_color": ["red" if "H" in n else "white" for n in graph],
         "edgecolors": "black",
         "edge_color": [
-            "red" if weight >= support_reads else "black"
-            for weight in edge_labels.values()
+            "green" if weight >= support_reads else "black"
+            for weight in edge_weight.values()
         ],
         "linewidths": 2,
         "width": 3,
+        "connectionstyle": "arc3, rad = 0.1",
     }
 
     nx.draw_networkx(graph, pos=pos, arrows=True, **options)
+    draw_multiedge_labels(graph, pos)
 
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels)
-
-    ax.set_title(f"Node number: {len(list(graph))}")
+    ax.set_title(f"Node number: {node_numbers}")
     plt.axis("off")
     plt.tight_layout()
     plt.savefig(f"graph_{figure_name}.png")
 
 
-def visualize_graph_via_pyvis(graph: nx.DiGraph, figure_name: str | Path) -> None:
+def visualize_graph_via_pyvis(graph: nx.Graph, figure_name: str | Path) -> None:
     from pyvis.network import Network  # type: ignore
 
     nt = Network(height="750px", directed=True, width="100%")

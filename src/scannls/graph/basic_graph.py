@@ -126,20 +126,26 @@ class BasicNode:
                     edge_data,
                 )
 
+            # WARN: miss only add edge <Yangyang Li>
+
     def add_predecessor(self, predecessor, graph=None, edge_data=None) -> None:
         """Node must be in the graph if the function is called.
 
         :param predecessor: predecessor of Insertion object
         """
-        if predecessor is not None and predecessor not in self.predecessors:
-            if predecessor.is_in_graph:
-                self._add_predecessor(predecessor, graph, edge_data)
-            else:
-                self.add_predecessor_from_list(
-                    predecessor.merged_parent_nodes,
-                    graph,
-                    edge_data,
-                )
+        if predecessor is not None:
+            if predecessor not in self.predecessors:
+                if predecessor.is_in_graph:
+                    self._add_predecessor(predecessor, graph, edge_data)
+                else:
+                    self.add_predecessor_from_list(
+                        predecessor.merged_parent_nodes,
+                        graph,
+                        edge_data,
+                    )
+            elif graph is not None and edge_data is not None:
+                # only merge nodes in the same graph
+                graph.add_edge(predecessor, self, edge_data)
 
     def update_next_and_previous_node_in_nlpath(self, index: int, nlpath) -> None:
         """Update next and previous node in series."""
@@ -594,11 +600,13 @@ class Edge:
 
     def merge(self, other: Edge):
         # WARN: update breakpoint in covering way <07-03-23, Yangyang Li>
+
         self.break_point1 = other.break_point1
         self.break_point2 = other.break_point2
 
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
+
         logger.trace(
             f"Merge edge {self.key} {self.read_ids=} with {other.key} {other.read_ids=}.",
         )

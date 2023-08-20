@@ -80,7 +80,7 @@ class NLGraph:
         self.construct()
 
         # sr rescuer
-        self.logger.trace(f"NLGraph Node: {sum(1 for _ in self)}")
+        self.logger.trace(f"NLGraph Node: {len(self)}")
 
         node_list = []
         # trace path
@@ -124,21 +124,28 @@ class NLGraph:
         edge = Edge.from_nodes(node1, node2, edge_data)
 
         if self.edges.get(edge.key) is None:
+            self.logger.warning(f"add edge with {edge_data=}")
             self.edges[edge.key].append(edge)
             return
 
         is_merged = False
         for current_edge in self.edges[edge.key]:
+            if current_edge.read_ids == edge.read_ids:
+                # same edge
+                return
+
             if current_edge.merged(
                 edge,
                 compared_break_point=True,
                 break_point_threshold=self.prune_threshold,
             ):
+                logger.warning(f"merging {current_edge} and {edge}")
                 current_edge.merge(edge)
                 is_merged = True
                 break
 
         if not is_merged:
+            self.logger.warning(f"add edge with {edge_data=}")
             self.edges[edge.key].append(edge)
 
     def find_edges(self, node1: Node, node2: Node):
@@ -180,6 +187,8 @@ class NLGraph:
         current_node: Node,
         successor: Node,
         support_reads: int,
+        *,
+        filter_edges: bool = True,
     ) -> Iterable[Edge]:
         if len(current_path) == 1:
             previous_edge_node_identity = None
@@ -196,6 +205,12 @@ class NLGraph:
 
         edges = []
         for edge in self.find_edges(current_node, successor):
+            self.logger.trace(f"finding {edge=}")
+
+            if not filter_edges:
+                edges.append(edge)
+                continue
+
             if edge.sr >= support_reads:
                 edge_node_identity = self.get_node_identity_base_edge(
                     edge,
@@ -207,6 +222,7 @@ class NLGraph:
                         previous_edge_node_identity,
                         edge_node_identity,
                     ):
+                        self.logger.trace(f"adding {edge=}")
                         edges.append(edge)
                 else:
                     edges.append(edge)
@@ -233,6 +249,10 @@ class NLGraph:
         """Iterate over all nodes in graph."""
         for nodes in self.nodes.values():
             yield from nodes
+
+    def __len__(self) -> int:
+        """Get number of nodes in graph."""
+        return sum(1 for _ in self)
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
@@ -338,7 +358,6 @@ class NLGraph:
                     if current_node.previous_edge_in_nlapth is not None
                     else None
                 )
-
                 similar_node_in_graph.add_predecessor(
                     current_node.previous_node_in_nlpath,
                     self,
@@ -477,73 +496,6 @@ class NLGraph:
             )
 
         return result_series_list
-
-    def check_circle_in_graph(self, nodes_keys: set[str]):
-        """Check if there is a circle in graph."""
-        all_nodes_keys: set[str] = set()
-        result_paths: list[list[Node]] = []
-
-        for node in self:
-            if (key := node.unique_key) is not None:
-                all_nodes_keys.add(key)
-
-        self.check_circle_in_graph_helper(all_nodes_keys - nodes_keys, result_paths)
-        return result_paths
-
-    def check_circle_in_graph_helper(
-        self,
-        nodes_keys: set[str],
-        result_paths: list[list[Node]],
-    ) -> None:
-        """Check if there is a circle in graph."""
-        if (
-            nodes_keys
-            and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
-            is not None
-        ):
-            current_nodes_keys: set[str] = set()
-            self._trace_forward_record_node_unique_keys(
-                start_node,
-                [],
-                result_paths,
-                current_nodes_keys,
-            )
-            self.check_circle_in_graph_helper(
-                nodes_keys - current_nodes_keys,
-                result_paths,
-            )
-
-    def _trace_forward_record_node_unique_keys(
-        self,
-        start_node: Node,
-        path: list[Node],
-        group_paths: list[list[Node]],
-        nodes_keys: set[str],
-    ) -> None:
-        """Helper function to trace through graph and find all paths.
-
-        .. seealso::
-            :func:`SpliceGraph.trace`
-        """
-        if not start_node or start_node in path:
-            group_paths.append(path)
-        elif successors := start_node.successors:
-            for successor in successors:
-                if (key := successor.unique_key) is not None:
-                    nodes_keys.add(key)
-                self._trace_forward_record_node_unique_keys(
-                    successor,
-                    [*path, start_node],
-                    group_paths,
-                    nodes_keys,
-                )
-        else:
-            self._trace_forward_record_node_unique_keys(
-                successors,  # type: ignore
-                [*path, start_node],
-                group_paths,
-                nodes_keys,
-            )
 
 
 def merge_nodes(
