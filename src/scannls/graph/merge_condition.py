@@ -249,6 +249,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         -> [node1]
         -> [node2]
     """
+
     if node1.exons is None or node2.exons is None:
         msg = f"{node1.query_name} or {node2.query_name}"
         raise ExonsNotFoundError(msg)

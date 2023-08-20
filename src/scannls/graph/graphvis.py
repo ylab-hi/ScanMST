@@ -186,7 +186,7 @@ class GraphExporter(GraphVisitor):
 
 
 def _cal_figure_size(nodes_size: int):
-    unit = 4
+    unit = 5
     max_size = 25
     size = min(nodes_size * unit, max_size)
     return (size, size)
