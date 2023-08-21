@@ -232,15 +232,13 @@ class VCFWriter(Writer):
             if type_position_key not in out_vcf_dict:
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
-                out_vcf_dict[type_position_key]["SR"] = (
-                    out_vcf_dict[type_position_key]["SR"]
-                    + hop_feature[type_position_key]["SR"]
-                )
+                out_vcf_dict[type_position_key]["SR"] = hop_feature[type_position_key][
+                    "SR"
+                ]
 
-                out_vcf_dict[type_position_key]["OSR"] = (
-                    out_vcf_dict[type_position_key]["OSR"]
-                    + hop_feature[type_position_key]["OSR"]
-                )
+                out_vcf_dict[type_position_key]["OSR"] = hop_feature[type_position_key][
+                    "OSR"
+                ]
 
                 if out_vcf_dict[type_position_key]["SVTYPE"] in {"INS", "HOM"}:
                     out_vcf_dict[type_position_key]["AF"] = hop_feature[
