@@ -265,9 +265,6 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     elif abs(node1.ref_end - node2.ref_end) > threshold:
         return False
 
-    if node1.is_polya and node2.is_polya:
-        return node1.exons.first == node2.exons.first
-
     if node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():
             return node1.contains(node2, same_left=True)
@@ -278,10 +275,12 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
             return node2.contains(node1, same_left=True)
         return node2.contains(node1, same_right=True)
 
-    if not node1.is_polya and not node2.is_polya:
+    if (not node1.is_polya and not node2.is_polya) or (
+        node1.is_polya and node2.is_polya
+    ):
         if node1.strand.is_forward():
-            return node1.exons.first.start == node2.exons.first.start
-        return node1.exons.last.end == node2.exons.last.end
+            return abs(node1.exons.first.start - node2.exons.first.start) < threshold
+        return abs(node1.exons.last.end - node2.exons.last.end) < threshold
 
     return False
 

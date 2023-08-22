@@ -220,8 +220,8 @@ def visualize_graph_via_matplot(
     edge_weight = nx.get_edge_attributes(graph, "weight")
 
     options = {
-        "font_size": 10,
-        "node_size": 1000,
+        "font_size": 13,
+        "node_size": 1500,
         "node_color": ["red" if "H" in n else "white" for n in graph],
         "edgecolors": "black",
         "edge_color": [

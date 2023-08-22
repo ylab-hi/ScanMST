@@ -525,13 +525,7 @@ class EdgeData:
         break_point_threshold: int,
     ):
         """Check if two edges are equal."""
-        flag = (
-            self.variantion_type == self.variantion_type
-            and _check_insertion_conditions_for_compare_insertion(
-                self.insertion_info,
-                other.insertion_info,
-            )
-        )
+        flag = self.variantion_type == self.variantion_type
 
         if compared_break_point:
             return (
@@ -611,18 +605,14 @@ class Edge:
             else other.break_point2
         )
 
+        merge_insertion(self, other)
+
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
 
         logger.trace(
             f"Merge edge {self.key} {self.read_ids=} with {other.key} {other.read_ids=}.",
         )
-
-        if self.edge_data.insertion_info and isinstance(
-            self.edge_data.insertion_info[1],
-            (NovelInsertion, MicroHomology),
-        ):
-            self.edge_data.insertion_info[1].increment_ao()
 
     def get_nodes(self, graph):
         node1 = graph.get_node_with_unique_key(self.node1_key)
@@ -1195,3 +1185,21 @@ def _check_insertion_conditions_for_compare_insertion(
                 return True
 
     return False
+
+
+def merge_insertion(edge1: Edge, edge2: Edge):
+    """edge1 merge edge2."""
+    if edge1.insertion_info is None and edge2.insertion_info is None:
+        return
+
+    if not edge1.insertion_info and edge2.insertion_info:
+        if edge1.sr > edge2.sr:
+            return
+
+        if edge1.sr < edge2.sr:
+            edge1.insertion_info = edge2.insertion_info
+        elif isinstance(edge1.insertion_info[1], MicroHomology) and isinstance(
+            edge2.insertion_info[1],
+            NovelInsertion,
+        ):
+            edge1.insertion_info[1] = edge2.insertion_info[1]
