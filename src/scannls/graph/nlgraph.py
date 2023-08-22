@@ -38,8 +38,8 @@ class NLGraph:
         self,
         logger: LoggerType,
         rescuer: Any,
-        prune_threshold: int = 10,
-        support_reads: int = 1,
+        prune_threshold,
+        support_reads,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger

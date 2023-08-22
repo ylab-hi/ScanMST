@@ -1178,6 +1178,12 @@ def _check_insertion_conditions_for_compare_insertion(
             return True
 
         if not insertion_info1[0] and not insertion_info2[0]:
+            if isinstance(insertion_info1[1], MicroHomology) and isinstance(
+                insertion_info2[1],
+                MicroHomology,
+            ):
+                return True
+
             if (
                 isinstance(insertion_info1[1], NovelInsertion)
                 and isinstance(insertion_info2[1], NovelInsertion)
@@ -1185,12 +1191,6 @@ def _check_insertion_conditions_for_compare_insertion(
                     insertion_info1[1].query_sequence
                     == insertion_info2[1].query_sequence
                 )
-            ):
-                return True
-
-            if isinstance(insertion_info1[1], MicroHomology) and isinstance(
-                insertion_info2[1],
-                MicroHomology,
             ):
                 return True
 
