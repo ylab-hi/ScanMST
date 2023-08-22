@@ -248,3 +248,13 @@ def visualize_graph_via_pyvis(graph: nx.Graph, figure_name: str | Path) -> None:
     nt = Network(height="750px", directed=True, width="100%")
     nt.from_nx(graph)
     nt.save_graph(f"graph_{figure_name}.html")
+
+
+def visualize_graph_via_d3(graph: nx.Graph, figure_name: str | Path) -> None:
+    # https://d3blocks.github.io/d3blocks/pages/html/d3graph.html
+    # https://docs.bokeh.org/en/latest/docs/examples/topics/graph/from_networkx.html
+    # https://github.com/d3blocks/d3blocks
+    # https://docs.bokeh.org/en/latest/docs/examples/topics/graph/node_and_edge_attributes.html
+    # https://observablehq.com/@d3/force-directed-graph/2?intent=fork
+    # https://observablehq.com/@d3/gallery?utm_source=d3js-org&utm_medium=nav&utm_campaign=try-observable
+    raise NotImplementedError
