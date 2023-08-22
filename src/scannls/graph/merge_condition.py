@@ -161,9 +161,11 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         node2:    []-[]
 
     """
-    # WARN: Do not compare ref start <06-08-23, Yangyang Li>
-
-    if abs(node1.ref_end - node2.ref_end) > threshold:
+    # WARN:  compare break point, and edge still compare break point <06-08-23, Yangyang Li>
+    if node1.strand.is_forward():
+        if abs(node1.ref_end - node2.ref_end) > threshold:
+            return False
+    elif abs(node1.ref_start - node2.ref_start) > threshold:
         return False
 
     # no introns
@@ -232,7 +234,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     node1: Node,
     node2: Node,
-    threshold: float,  # noqa: ARG001
+    threshold: float,
 ) -> bool:
     """Check if two end nodes can be merged or not.
 
@@ -255,6 +257,12 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         raise ExonsNotFoundError(msg)
 
     if node1.introns != node2.introns:
+        return False
+
+    if node1.strand.is_forward():
+        if abs(node1.ref_start - node2.ref_start) > threshold:
+            return False
+    elif abs(node1.ref_end - node2.ref_end) > threshold:
         return False
 
     if node1.is_polya and node2.is_polya:
