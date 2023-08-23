@@ -570,6 +570,8 @@ class Edge:
     def break_point2(self, value: BreakPoint): self.edge_data.break_point2 = value
     @property
     def insertion_info(self): return self.edge_data.insertion_info
+    @insertion_info.setter
+    def insertion_info(self, value): self.edge_data.insertion_info = value
     @property
     def variation_type(self): return self.edge_data.variantion_type
     @property
@@ -1189,15 +1191,13 @@ def _check_insertion_conditions_for_compare_insertion(
 
 def merge_insertion(edge1: Edge, edge2: Edge):
     """edge1 merge edge2."""
-    if edge1.insertion_info is None and edge2.insertion_info is None:
-        return
-
-    if not edge1.insertion_info and edge2.insertion_info:
+    if edge1.insertion_info is not None and edge2.insertion_info is not None:
         if edge1.sr > edge2.sr:
             return
 
         if edge1.sr < edge2.sr:
             edge1.insertion_info = edge2.insertion_info
+
         elif isinstance(edge1.insertion_info[1], MicroHomology) and isinstance(
             edge2.insertion_info[1],
             NovelInsertion,
