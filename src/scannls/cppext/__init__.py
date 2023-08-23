@@ -7,7 +7,7 @@
 @license:     MIT Licence
 @Time:        2/21/22 9:07 PM
 """
-# from scannls._cppext.cppext import *  # type: ignore
+from scannls._cppext.cppext import *  # type: ignore
 
 __all__ = [
     "Aligner",
