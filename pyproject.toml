@@ -78,6 +78,7 @@ tqdm = "^4.64.0"
 
 [tool.poetry.build]
 script = "build.py"
+generate-setup-file = true
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"

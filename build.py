@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Build cpp extension.
 
 @Filename:    build.py
@@ -14,6 +13,7 @@ from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
 
+from pybind11.setup_helpers import ParallelCompile
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 
@@ -70,6 +70,18 @@ def get_hts_lib_path() -> tuple[Path, Path]:
     return htslib_library_dir, htslib_include_dir
 
 
+# Optional multithreaded build
+def get_thread_count():
+    try:
+        import multiprocessing
+
+        return multiprocessing.cpu_count()
+    except (ImportError, NotImplementedError):
+        pass
+    return 1
+
+
+ParallelCompile(f"{get_thread_count()}").install()
 # linking against a shared, externally installed htslib version, no
 # sources required for htslib
 htslib_sources = []
@@ -135,7 +147,6 @@ def build(setup_kwargs):
                 "src/scannls/cppext/src/rescuer.cpp",
                 "src/scannls/cppext/src/ssw.c",
                 "src/scannls/cppext/src/ssw_cpp.cpp",
-                # "src/scannls/cppext/src/binding.cpp",
                 *list(get_files(Path("src/scannls/cppext/bindings"), [".cpp", ".c"])),
             ],
             include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
