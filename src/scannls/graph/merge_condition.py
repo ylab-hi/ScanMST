@@ -124,6 +124,10 @@ class MergeCondition:
         if node1.chrom != node2.chrom:
             return False
 
+        # merge will not work for nodes on the different strands
+        if node1.strand != node2.strand:
+            return False
+
         if node1_self_identity.is_head() and node2_self_identity.is_head():
             return self.head2head(node1, node2)
         if node1_self_identity.is_head() and node2_self_identity.is_tail():
@@ -275,12 +279,17 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
             return node2.contains(node1, same_left=True)
         return node2.contains(node1, same_right=True)
 
-    if (not node1.is_polya and not node2.is_polya) or (
-        node1.is_polya and node2.is_polya
-    ):
+    if not node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():
             return abs(node1.exons.first.start - node2.exons.first.start) < threshold
         return abs(node1.exons.last.end - node2.exons.last.end) < threshold
+
+    # For nodes with polyA, a small difference in polyA positions is allowed.
+    if node1.is_polya and node2.is_polya:
+        return (
+            abs(node1.exons.first.start - node2.exons.first.start) < threshold
+            and abs(node1.exons.last.end - node2.exons.last.end) < threshold
+        )
 
     return False
 
