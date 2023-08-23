@@ -1195,11 +1195,11 @@ def merge_insertion(edge1: Edge, edge2: Edge):
         if edge1.sr > edge2.sr:
             return
 
-        if edge1.sr < edge2.sr:
-            edge1.insertion_info = edge2.insertion_info
-
-        elif isinstance(edge1.insertion_info[1], MicroHomology) and isinstance(
-            edge2.insertion_info[1],
-            NovelInsertion,
+        if (edge1.sr < edge2.sr) or (
+            isinstance(edge1.insertion_info[1], MicroHomology)
+            and isinstance(
+                edge2.insertion_info[1],
+                NovelInsertion,
+            )
         ):
-            edge1.insertion_info[1] = edge2.insertion_info[1]
+            edge1.insertion_info = edge2.insertion_info
