@@ -4,11 +4,15 @@
 @Author:      YangyangLi
 @Time:        12/15/21 1:58 PM
 """
+
 import multiprocessing
 import os
 from collections.abc import Callable
 from concurrent import futures
+from functools import partial
 from typing import Any
+
+from mpire import WorkerPool
 
 from scannls.type import LoggerType
 
@@ -67,22 +71,16 @@ class ParallelWorker:
 
     def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Using concurrent.future to parallel process."""
-        tasks = {}
-        result = {}
+        self.run_func = partial(self.func, **kwargs)
+
         self.logger.info(f"ParallelWorker: {self.n_jobs} jobs")
         m = multiprocessing.Manager()
         lock = m.Lock()  # add lock to protect blat log
-        with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
-            for key in args:
-                self.logger.debug(f"ParallelWorker: {key} submitted")
-                future = executor.submit(self.func, key, lock, **kwargs)
-                tasks[future] = key
 
-            for future in futures.as_completed(tasks):
-                self.logger.trace(f"ParallelWorker: {tasks[future]} done")
-                key = tasks[future]
-                result[key] = future.result()
-        return result
+        parameters = [(key, lock) for key in args]
+
+        with WorkerPool(self.n_jobs) as pool:
+            return pool.map(self.run_func, parameters)
 
     def map(self, *iterables, timeout=None, chunksize=1) -> Any:
         """Using concurrent.futures to parallel process."""

@@ -36,6 +36,7 @@ pybind11 = "^2.10.0"
 matplotlib = { extras = ["vis"], version = "^3.7.2" }
 pyvis = { extras = ["vis"], version = "^0.3.2" }
 maturin = { extras = ["rust"], version = "^1.1.0" }
+mpire = "^2.8.0"
 
 [tool.poetry.group.dev.dependencies]
 codespell = "^2.2.2"
