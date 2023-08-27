@@ -232,7 +232,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         intact_nlpaths_len = len(intact_nlpaths)
 
         if intact_nlpaths_len == 0:
-            logger.warning("No valid series found")
+            logger.warning("No valid path found")
             raise SystemExit
 
         logger.info(f"Total nlpaths: {intact_nlpaths_len}")
