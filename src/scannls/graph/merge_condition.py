@@ -169,6 +169,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     if node1.strand.is_forward():
         if abs(node1.ref_end - node2.ref_end) > threshold:
             return False
+
     elif abs(node1.ref_start - node2.ref_start) > threshold:
         return False
 

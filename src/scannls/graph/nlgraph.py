@@ -157,8 +157,8 @@ class NLGraph:
 
     @staticmethod
     def get_node_identity_base_edge(
-        edge: Edge,
         node: Node,
+        edge: Edge,
     ) -> dict[NodeIdentity, list[str]]:
         result = defaultdict(list)
         logger.debug(f"{node=}")
@@ -199,8 +199,8 @@ class NLGraph:
                 raise TypeError(msg)
 
             previous_edge_node_identity = self.get_node_identity_base_edge(
-                previous_edge,
                 current_node,
+                previous_edge,
             )
 
         edges = []
@@ -213,8 +213,8 @@ class NLGraph:
 
             if edge.sr >= support_reads:
                 edge_node_identity = self.get_node_identity_base_edge(
-                    edge,
                     current_node,
+                    edge,
                 )
 
                 if previous_edge_node_identity is not None:
@@ -358,11 +358,13 @@ class NLGraph:
                     if current_node.previous_edge_in_nlapth is not None
                     else None
                 )
+
                 similar_node_in_graph.add_predecessor(
                     current_node.previous_node_in_nlpath,
                     self,
                     edge_data,
                 )
+                break
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
         self,
