@@ -59,13 +59,11 @@ class VCFWriter(Writer):
         "CANONICAL": "Flag",
         "NONCANONICAL": "Flag",
         "BOUNDARY": "String",
-        "DP": "Integer",
         "DP1": "Integer",
         "DP2": "Integer",
         "SR": "Integer",
         "OSR": "Integer",
         "PSI": "Float",
-        "AF": "Float",
         "SVMETHOD": "String",
         "SVTYPE": "String",
         "SVLEN": "Integer",
@@ -95,7 +93,6 @@ class VCFWriter(Writer):
         "CANONICAL": "Canonical splice site",
         "NONCANONICAL": "Noncanonical splice site",
         "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
-        "DP": "Total read depth at the breakpoint for insertion",
         "DP1": "Total read depth at the breakpoint1",
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
@@ -111,7 +108,6 @@ class VCFWriter(Writer):
         "GENE2": "Overlapped coding gene for breakpoint2",
         "TRANSCRIPT_ID": "Transcript ID",
         "SVMETHOD": "Type of approach used to detect SV",
-        "STRAND": "Strand for insertion",
         "STRAND1": "Strand for breakpoint1",
         "STRAND2": "Strand for breakpoint2",
         "MODE1": "Mode for softclipped reads at breakpoint1",
@@ -427,8 +423,12 @@ def get_vcf_features_from_nlpath(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{nlpath_id}",
                     "SVMETHOD": "ScanNLS",
-                    "HOMSEQ": microhomology_sequence,
-                    "INSSEQ": microinsertion_sequence,
+                    "HOMSEQ": "."
+                    if not microhomology_sequence
+                    else microhomology_sequence,
+                    "INSSEQ": "."
+                    if not microinsertion_sequence
+                    else microinsertion_sequence,
                 },
             },
         )
@@ -446,7 +446,7 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
         f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
         f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
         f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
-        f'HOMSEQ={feature_dict["HOMSEQ"]};MODE2={feature_dict["INSSEQ"]};'
+        f'HOMSEQ={feature_dict["HOMSEQ"]};INSSEQ={feature_dict["INSSEQ"]};'
         f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
     )
 
