@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any, ClassVar
+from typing import IO, Any, ClassVar, Union
 
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
@@ -72,25 +72,23 @@ class VCFWriter(Writer):
         "CHR2": "String",
         "SVEND": "Integer",
         "END": "Integer",
-        "STRAND": "String",
         "STRAND1": "String",
         "STRAND2": "String",
         "MODE1": "String",
         "MODE2": "String",
-        "GENE": "String",
         "GENE1": "String",
         "GENE2": "String",
+        "HOMSEQ": "String",
+        "INSSEQ": "String",
         "TRANSCRIPT_ID": "String",
     }
     reserved_format: ClassVar[dict[str, str]] = {"GT": "String"}
     reserved_alt: ClassVar[list[str]] = [
-        "INS",
         "DEL",
         "TDUP",
         "IDUP",
         "INV",
         "TRA",
-        "HOM",
     ]
 
     description: ClassVar[dict[str, str]] = {
@@ -102,16 +100,13 @@ class VCFWriter(Writer):
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
         "OSR": "The number of support reads for the breakpoints before rescuer",
-        "AF": "Estimated allele frequency in the range (0,1], "
-        "representing the ratio of reads showing the alternative allele to all reads",
         "PSI": "Estimated Percent splice-in in the range (0,1], "
         "representing the percentage of NLS transcripts",
-        "SVTYPE": "The type of event, INS, HOM, DEL, TDUP, IDUP, INV, TRA.",
+        "SVTYPE": "The type of event, DEL, TDUP, IDUP, INV, TRA.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for END coordinate in case of a translocation",
         "SVEND": "2nd position of the structural variant",  # change to SVEND in order to meet vcf standard
         "END": "A placeholder for END coordinate in case of a translocation",
-        "GENE": "Overlapped coding gene for insertion",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
         "TRANSCRIPT_ID": "Transcript ID",
@@ -122,8 +117,8 @@ class VCFWriter(Writer):
         "MODE1": "Mode for softclipped reads at breakpoint1",
         "MODE2": "Mode for softclipped reads at breakpoint2",
         "GT": "Genotype",
-        "INS": "Insertion",
-        "HOM": "Homology",
+        "INSSEQ": "MicroInsertion sequence",
+        "HOMSEQ": "MicroHomology sequence",
         "DEL": "Deletion",
         "TDUP": "Tandem duplication",
         "IDUP": "Inverted duplication",
@@ -232,23 +227,7 @@ class VCFWriter(Writer):
             if type_position_key not in out_vcf_dict:
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
-                out_vcf_dict[type_position_key]["SR"] = hop_feature[type_position_key][
-                    "SR"
-                ]
-
-                out_vcf_dict[type_position_key]["OSR"] = hop_feature[type_position_key][
-                    "OSR"
-                ]
-
-                if out_vcf_dict[type_position_key]["SVTYPE"] in {"INS", "HOM"}:
-                    out_vcf_dict[type_position_key]["AF"] = hop_feature[
-                        type_position_key
-                    ]["AF"]
-                else:
-                    out_vcf_dict[type_position_key]["PSI"] = hop_feature[
-                        type_position_key
-                    ]["PSI"]
-
+                # multiple transcripts go through the same one hop
                 out_vcf_dict[type_position_key][
                     "TRANSCRIPT_ID"
                 ] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
@@ -380,10 +359,18 @@ def get_vcf_features_from_nlpath(
         _chrom2, _pos2 = current_edge.break_point2.to_tuple()
 
         microhomology_sequence = ""
-        if current_edge.insertion_info and not current_edge.insertion_info[0]:
-            insertion = current_edge.insertion_info[1]
-            if isinstance(insertion, MicroHomology):
-                microhomology_sequence += insertion.query_sequence
+        microinsertion_sequence = ""
+        if current_edge.insertion_info:
+            if isinstance(current_edge.insertion_info[1], NovelInsertion):
+                insertion = current_edge.insertion_info[1]
+                microinsertion_sequence = obtain_sequence_from_insertion(
+                    insertion, current_node
+                )
+            elif isinstance(current_edge.insertion_info[1], MicroHomology):
+                microhomology = current_edge.insertion_info[1]
+                microhomology_sequence = obtain_sequence_from_insertion(
+                    microhomology, current_node
+                )
 
         # correct the breakpoint position in order to obtain a precise "sv_distance"
         _pos1 = (
@@ -440,113 +427,28 @@ def get_vcf_features_from_nlpath(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{nlpath_id}",
                     "SVMETHOD": "ScanNLS",
+                    "HOMSEQ": microhomology_sequence,
+                    "INSSEQ": microinsertion_sequence,
                 },
             },
         )
-        if current_edge.insertion_info:
-            if isinstance(current_edge.insertion_info[1], NovelInsertion):
-                insertion = current_edge.insertion_info[1]
-                ref_allele, alt_allele = get_vcf_features_from_insertion(
-                    insertion,
-                    current_node,
-                    reference_io,
-                )
-                _af = 0 if _dp1 == 0 else insertion.ao / _dp1
-                sv_distance = len(alt_allele)
-                _sv_type = "INS"
-                anno_field = (
-                    "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
-                )
-                series_hops_features.append(
-                    {
-                        f"{_sv_type}_{_chrom1}|{_pos1 + 1}"
-                        f"_{_chrom1}|{_pos1 + 1}": {
-                            "CHROM": _chrom1,
-                            "POS": f"{_pos1 + 1}",
-                            "REF": f"{ref_allele}",
-                            "ALT": f"{alt_allele}",
-                            "SVTYPE": _sv_type,
-                            "SR": insertion.ao,
-                            "OSR": insertion.ao,
-                            "CAN": can_field,
-                            "BOUNDARY": anno_field,
-                            "CHR2": _chrom1,
-                            "SVEND": f"{_pos1 + 1}",
-                            "DP": f"{_dp1}",
-                            "AF": f"{_af:.3g}",
-                            "SVLEN": f"{sv_distance}",
-                            "GENE": f"{gene1}",
-                            "STRAND": f"{current_node.strand}",
-                            "TRANSCRIPT_ID": f"{nlpath_id}",
-                            "SVMETHOD": "ScanNLS",
-                        },
-                    },
-                )
-            elif isinstance(current_edge.insertion_info[1], MicroHomology):
-                microhomology = current_edge.insertion_info[1]
-                ref_allele, alt_allele = get_vcf_features_from_insertion(
-                    microhomology,
-                    current_node,
-                    reference_io,
-                )
-                _af = 0 if _dp1 == 0 else microhomology.ao / _dp1
-                sv_distance = len(alt_allele)
-                _sv_type = "HOM"
-                anno_field = (
-                    "NEITHER" if current_node.annotation_code in {0, 1} else "LEFT"
-                )
-                series_hops_features.append(
-                    {
-                        f"{_sv_type}_{_chrom1}|{_pos1 + 1}"
-                        f"_{_chrom1}|{_pos1 + 1}": {
-                            "CHROM": _chrom1,
-                            "POS": f"{_pos1 + 1}",
-                            "REF": f"{ref_allele}",
-                            "ALT": f"{alt_allele}",
-                            "SVTYPE": _sv_type,
-                            "SR": microhomology.ao,
-                            "OSR": microhomology.ao,
-                            "CAN": can_field,
-                            "BOUNDARY": anno_field,
-                            "CHR2": _chrom1,
-                            "SVEND": f"{_pos1 + 1}",
-                            "DP": f"{_dp1}",
-                            "AF": f"{_af:.3g}",
-                            "SVLEN": f"{sv_distance}",
-                            "GENE": f"{gene1}",
-                            "STRAND": f"{current_node.strand}",
-                            "TRANSCRIPT_ID": f"{nlpath_id}",
-                            "SVMETHOD": "ScanNLS",
-                        },
-                    },
-                )
 
     return series_hops_features
 
 
 def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]:
     """VCF feature transformer."""
-    if feature_dict["SVTYPE"] in {"INS", "HOM"}:
-        info_field = (
-            f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
-            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
-            f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP={feature_dict["DP"]};'
-            f'AF={feature_dict["AF"]};SVLEN={feature_dict["SVLEN"]};'
-            f'GENE={feature_dict["GENE"]};'
-            f'STRAND={feature_dict["STRAND"]};'
-            f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
-        )
-    else:
-        info_field = (
-            f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
-            f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
-            f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
-            f'DP2={feature_dict["DP2"]};PSI={feature_dict["PSI"]};SVLEN={feature_dict["SVLEN"]};'
-            f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
-            f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
-            f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
-            f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
-        )
+    info_field = (
+        f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
+        f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
+        f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
+        f'DP2={feature_dict["DP2"]};PSI={feature_dict["PSI"]};SVLEN={feature_dict["SVLEN"]};'
+        f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
+        f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
+        f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
+        f'HOMSEQ={feature_dict["HOMSEQ"]};MODE2={feature_dict["INSSEQ"]};'
+        f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+    )
 
     return [
         feature_dict["CHROM"],
@@ -562,35 +464,24 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
     ]
 
 
-def get_vcf_features_from_insertion(
-    insertion: NovelInsertion,
+def obtain_sequence_from_insertion(
+    insertion: Union[NovelInsertion, MicroHomology],
     node: Node,
-    reference_io: Fasta,
-) -> tuple[str, str]:
-    """Get novel insertion sequence of a node.
+) -> str:
+    """Get sequence of novel insertion or microhomology of a node.
 
     :param insertion:
     :param node: Node and InsertionType
-    :param reference_io: ReferenceIO object
-    :return: reference allele and alternative allele
+    :return: sequence of novel insertion or microhomology
     """
     # positive strand sequence for novel insertion
     novel_insertion_sequence = insertion.query_sequence
 
-    if node.exons is None:
-        raise ExonsNotFoundError(node.query_name)
-
-    _pos = node.exons[-1][1] if node.strand == "+" else node.exons[0][0]
-
-    ref_allele = reference_io.get_seq(node.chrom, _pos + 1, _pos + 1).seq  # 1-based
-
     if not novel_insertion_sequence:
-        return ref_allele, ""
+        return ""
 
-    alt_allele = (
+    return (
         novel_insertion_sequence
         if node.strand == "+"
         else reverse_complement(novel_insertion_sequence)
     )
-
-    return ref_allele, alt_allele
