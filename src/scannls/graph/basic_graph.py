@@ -244,8 +244,6 @@ class Node(BasicNode):
         "_ref_end",
         "exons",
         "_introns",
-        "sv_type",
-        "prev_sv_type",
         "modes",
         "genes",
         "query_name",
@@ -331,8 +329,8 @@ class Node(BasicNode):
         )
 
     @property
-    def read_ids(self):
-        return self.identities.keys()
+    def read_ids(self) -> list[str]:
+        return list(self.identities.keys())
 
     @property
     def self_identity(self) -> NodeIdentity:

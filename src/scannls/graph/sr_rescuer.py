@@ -22,12 +22,7 @@ MIN_SEQ_ALIGN_LEN = 10
 
 def is_middle_node(node: Node) -> bool:
     """Check if the node is middle node."""
-    self_identity = node.self_identity
-    if self_identity is None:
-        msg = f"node={node!r}"
-        raise ValueError(msg)
-
-    return self_identity.is_mid()
+    return node.self_identity.is_mid()
 
 
 def make_breakpoint(node: Node, mode: int) -> cppext.BreakPoint:
@@ -84,7 +79,7 @@ class SRRescuer:
         query_names_in_graph = set()
 
         for node in graph:
-            query_names_in_graph.update(node.query_name.split(","))
+            query_names_in_graph.update(node.read_ids())
 
         query_names_in_graph_list = list(query_names_in_graph)
 
@@ -92,6 +87,7 @@ class SRRescuer:
             node.original_sr = node.sr
             self.cppext_rescuer.reset_names_list(query_names_in_graph_list)
             self.update_sr(
+                graph,
                 node,
                 query_names_in_graph_list,
                 self.node_rescued_sr_maximum,
@@ -163,8 +159,8 @@ class SRRescuer:
 
     def update_sr(
         self,
+        graph: NLGraph,
         current_node: Node,
-        edge: Edge,
         query_names_in_graph: list[str],
         node_rescued_sr_maximum: int,
     ) -> None:
