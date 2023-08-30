@@ -81,6 +81,7 @@ class NLGraph:
 
         # sr rescuer
         self.logger.trace(f"NLGraph Node: {len(self)}")
+        self.rescuer(self)
 
         node_list = []
         # trace path

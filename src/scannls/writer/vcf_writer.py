@@ -407,7 +407,7 @@ def get_vcf_features_from_nlpath(
                     "ALT": f"<{current_edge.variation_type}>",
                     "SVTYPE": current_edge.variation_type,
                     "SR": current_edge.sr,
-                    "OSR": current_edge.sr,
+                    "OSR": current_edge.original_sr,
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,

@@ -79,7 +79,7 @@ class SRRescuer:
         query_names_in_graph = set()
 
         for node in graph:
-            query_names_in_graph.update(node.read_ids())
+            query_names_in_graph.update(node.read_ids)
 
         query_names_in_graph_list = list(query_names_in_graph)
 
@@ -157,8 +157,10 @@ class SRRescuer:
 
         for next_node in current_node.successors:
             edges = graph.find_edges(current_node, next_node)
+
             if len(edges) > 1:
                 logger.warning("detect multiple edges")
+
             for edge in edges[:1]:
                 edge.original_sr = edge.sr
                 edge.sr += current_node_rescued_sr
@@ -183,7 +185,6 @@ class SRRescuer:
                 )
 
                 query_name_next = next_node.read_ids
-
                 chrom = edge.break_point2.chrom
                 start = edge.break_point2.pos
                 if mode2.is_sm():
