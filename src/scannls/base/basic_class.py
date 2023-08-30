@@ -325,12 +325,12 @@ class Event:
         self.insertion_info = self.insertion_info[::-1]
 
     @property
-    def modes(self) -> list[int]:
+    def modes(self) -> list[MappingMode]:
         """Return the modes of the event.
 
         :return: the mode of read1 and read2 in the event
         """
-        return [self.mode1, self.mode2]
+        return list(map(MappingMode.from_int, [self.mode1, self.mode2]))
 
     @property
     def chrom1(self) -> str:

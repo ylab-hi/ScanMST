@@ -12,7 +12,20 @@ local: ## Sync to local
 remote: ## Sync to remote
 	rsync -avhP --exclude  "*egg*" --exclude "build"  --exclude "*.so"  --exclude "poetry.lock" --exclude ".*" --exclude  "__pycache__"  ./ quest:/projects/b1171/ylk4626/project/scannls
 
-clean: ## Clean up
+clean-stubs:
+	rm -rf stubs
+
+clean: clean-stubs ## Clean up
 	find .  \( -type f -name "*.py[co]" -o -type d -name "__pycache__" \) -delete && echo "Removed pycs and __pycache__"
 	rm -rf dist
 	rm -rf build
+
+
+compile-database: ## Compile database
+	bear -- poetry build
+
+stubs: clean-stubs ## Generate pybind11 stubs
+	echo "Generating pybind11 stubs"
+	pybind11-stubgen scannls._cppext
+	# cp stubs/pxblat/_extc/cppbinding-stubs/__init__.pyi src/pxblat/extc/__init__.pyi
+	# rm -rf stubs

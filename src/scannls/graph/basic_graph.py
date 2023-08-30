@@ -12,6 +12,7 @@ from scannls.base import (
     Event,
     Exons,
     Introns,
+    MappingMode,
     MicroHomology,
     NovelInsertion,
     Strand,
@@ -234,10 +235,6 @@ class Node(BasicNode):
     """
 
     __slots__ = (
-        "next_breakpoint",
-        "prev_breakpoint",
-        "prev_breakpoint_depth",
-        "next_breakpoint_depth",
         "strand",
         "chrom",
         "_ref_start",
@@ -249,7 +246,6 @@ class Node(BasicNode):
         "query_name",
         "annotation_code",
         "splicing_code",
-        "insertion_info",
         "_unique_key",
         "is_polya",
         "cigartuples_without_soft",
@@ -268,7 +264,7 @@ class Node(BasicNode):
         exons: Exons,
         annot: int | None = None,
         canonical: int | None = None,
-        modes: list[int] | None = None,
+        modes: list[MappingMode] | None = None,
         genes: tuple[str, str] | None = None,
         cigartuples_without_soft: list[int] | None = None,
     ) -> None:
@@ -503,7 +499,7 @@ class EdgeData:
     sr: int
     read_ids: list[str]
     insertion_info: Any | None = None
-    rescued_sr: int = 1
+    original_sr: int = 1
 
     @classmethod
     def from_event(cls, event: Event, read_id: str) -> EdgeData:
@@ -577,9 +573,9 @@ class Edge:
     @sr.setter
     def sr(self, value): self.edge_data.sr = value
     @property
-    def rescued_sr(self): return self.edge_data.rescued_sr
-    @rescued_sr.setter
-    def rescued_sr(self, value): self.edge_data.rescued_sr = value
+    def original_sr(self): return self.edge_data.original_sr
+    @original_sr.setter
+    def original_sr(self, value): self.edge_data.original_sr = value
     @property
     def read_ids(self): return self.edge_data.read_ids
     # fmt: on
@@ -973,6 +969,7 @@ class NLPath:
                         source_s=source_s,
                         source_strand=event.strand1,
                     )
+
                     logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
                     insertion_mode = (
                         (2 if event.mode1 == 1 else 1)

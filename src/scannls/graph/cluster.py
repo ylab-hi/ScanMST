@@ -357,7 +357,7 @@ class ClusterFinder:
     ) -> bool:
         nlpath_2_nodes_key = "".join(merge_keys[path2.id])
 
-        for start_index in range(0, len(path1) - len(path2) + 1):
+        for start_index in range(len(path1) - len(path2) + 1):
             nlpath_1_nodes_key = "".join(
                 merge_keys[path1.id][start_index : start_index + len(path2)],
             )

@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import IO, Any, ClassVar, Union
+from typing import IO, Any, ClassVar
 
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
@@ -17,7 +17,6 @@ from scannls import MicroHomology, NovelInsertion, __version__, reverse_compleme
 from scannls.exception import (
     AnnotationCodeNotFoundError,
     BreakpointNotFoundError,
-    ExonsNotFoundError,
     GenesNotFoundError,
     ModesNotFoundError,
     SplicingCodeNotFoundError,
@@ -360,12 +359,14 @@ def get_vcf_features_from_nlpath(
             if isinstance(current_edge.insertion_info[1], NovelInsertion):
                 insertion = current_edge.insertion_info[1]
                 microinsertion_sequence = obtain_sequence_from_insertion(
-                    insertion, current_node
+                    insertion,
+                    current_node,
                 )
             elif isinstance(current_edge.insertion_info[1], MicroHomology):
                 microhomology = current_edge.insertion_info[1]
                 microhomology_sequence = obtain_sequence_from_insertion(
-                    microhomology, current_node
+                    microhomology,
+                    current_node,
                 )
 
         # correct the breakpoint position in order to obtain a precise "sv_distance"
@@ -423,12 +424,10 @@ def get_vcf_features_from_nlpath(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{nlpath_id}",
                     "SVMETHOD": "ScanNLS",
-                    "HOMSEQ": "."
-                    if not microhomology_sequence
-                    else microhomology_sequence,
-                    "INSSEQ": "."
-                    if not microinsertion_sequence
-                    else microinsertion_sequence,
+                    "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
+                    "INSSEQ": microinsertion_sequence
+                    if microinsertion_sequence
+                    else ".",
                 },
             },
         )
@@ -465,7 +464,7 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
 
 
 def obtain_sequence_from_insertion(
-    insertion: Union[NovelInsertion, MicroHomology],
+    insertion: NovelInsertion | MicroHomology,
     node: Node,
 ) -> str:
     """Get sequence of novel insertion or microhomology of a node.
