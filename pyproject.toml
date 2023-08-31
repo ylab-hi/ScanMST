@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "scannls"
 version = "0.0.1"
-description = "ScanNLS"
+description = "Graph algorithm is used to detected non-linear transcripts in long-read data"
 authors = [
     "Yangyang Li <yangyang.li@northwestern.edu>",
     "Ting-You Wang <tingyou.wang@northwestern.edu>",
@@ -87,7 +87,6 @@ generate-setup-file = true
 
 [tool.poetry.scripts]
 scannls = "scannls.__main__:main"
-
 
 [tool.mypy]
 strict = false
