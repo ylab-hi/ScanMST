@@ -121,6 +121,22 @@ def get_nodes_gtf_features_from_series(
     :return: List of GTF features for node and insertions in the series.
     """
     series_gtf_features = []
+
+    nlpath_sr_list = []
+    nlpath_originla_sr_list = []
+    for node_id, node in enumerate(nlpath, 1):
+        edge = nlpath.next_edge(node, node_id - 1)
+        if edge is not None:
+            nlpath_sr_list.append(edge.sr)
+            nlpath_originla_sr_list.append(edge.original_sr)
+
+    nlpath_sr = min(nlpath_sr_list)
+    nlpath_originla_sr = min(nlpath_originla_sr_list)
+
+    series_gtf_features.append(
+        get_gtf_features_for_nlpath(nlpath_id, nlpath_sr, nlpath_originla_sr)
+    )
+
     for node_id, node in enumerate(nlpath, 1):
         edge = nlpath.next_edge(node, node_id - 1)
         insertion_info = None if edge is None else edge.insertion_info
@@ -137,6 +153,25 @@ def get_nodes_gtf_features_from_series(
                 ),
             )
     return series_gtf_features
+
+
+def get_gtf_features_for_nlpath(
+    nlpath_id: int, nlpath_sr: int, nlpath_originla_sr: int
+) -> list[str]:
+    """Get GTF features of transcript."""
+    return [
+        ".",
+        "scannls",
+        "transcript",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        f'transcript_id "{nlpath_id:0>6}"; '
+        f'sr "{nlpath_sr}"; '
+        f'osr "{nlpath_originla_sr}";',
+    ]
 
 
 def get_gtf_features_from_insertion(
@@ -203,12 +238,12 @@ def get_gtf_features_from_node(
         # sr may be not exported in gtf file
         node_sr, node_original_sr, insertion_info = (
             edge.sr,
-            edge.sr,
+            edge.original_sr,
             edge.insertion_info,
         )
     else:
         # WARN: last node has no edge <08-02-23, Yangyang Li>
-        node_sr, node_original_sr, insertion_info = 1, 1, None
+        node_sr, node_original_sr, insertion_info = 0, 0, None
 
     microhomology_sequence = ""
     if insertion_info and not insertion_info[0]:
@@ -231,13 +266,20 @@ def get_gtf_features_from_node(
     nodes_gtf_features = []
 
     for index, (start, end) in enumerate(copy_exons, 1):
-        info = [
-            f'transcript_id "{nlpath_id:0>6}"; '
-            f'mega_exon_id "{node_id:0>3}"; '
-            f'exon_id "{index:0>3}"; '
-            f'sr "{node_sr}"; '
-            f'osr "{node_original_sr}";',
-        ]
+        if node_sr + node_original_sr > 0:
+            info = [
+                f'transcript_id "{nlpath_id:0>6}"; '
+                f'mega_exon_id "{node_id:0>3}"; '
+                f'exon_id "{index:0>3}"; '
+                f'sr "{node_sr}"; '
+                f'osr "{node_original_sr}";',
+            ]
+        else:
+            info = [
+                f'transcript_id "{nlpath_id:0>6}"; '
+                f'mega_exon_id "{node_id:0>3}"; '
+                f'exon_id "{index:0>3}";',
+            ]
         nodes_gtf_features.append(
             [
                 f"{node.chrom}",
