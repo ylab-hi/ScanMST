@@ -60,7 +60,7 @@ class ExonFilter:
 
     def __init__(self, gtf_file: str, boundary_size: int) -> None:
         """Initialize the ExonFilter class."""
-        self.exons_gas = _extract_annotated_exons(
+        self.exons_gas, _ = _extract_annotated_exons(
             gtf_file,
             boundary_size,
             shrink=True,
@@ -89,7 +89,7 @@ def _extract_annotated_exons(
     *,
     shrink=False,
     consider_strand=False,
-) -> HTSeq.GenomicArrayOfSets:
+) -> tuple[HTSeq.GenomicArrayOfSets, HTSeq.GenomicArrayOfSets]:
     """Extract annotated exons from input GTF file.
 
     :param in_file: gene annotation file (GTF file)
@@ -100,7 +100,9 @@ def _extract_annotated_exons(
     """
     gtf_file = HTSeq.GFF_Reader(in_file)
     exons_gas = HTSeq.GenomicArrayOfSets("auto", stranded=False)
+    introns_gas = HTSeq.GenomicArrayOfSets("auto", stranded=False)
     trx_to_exon = defaultdict(list)
+    trx_to_intron = defaultdict(list)
 
     for feature in gtf_file:
         if feature.type == "exon":
@@ -112,10 +114,40 @@ def _extract_annotated_exons(
         exon_list.sort(key=lambda x: x.start)  # type: ignore
         first_exon = exon_list[0]
         strand = first_exon.strand
+
+        tmp_list = []
         for _exon in exon_list:
             chrom = _exon.chrom
             start = _exon.start
             end = _exon.end
+            tmp_list.append(start)
+            tmp_list.append(end)
+            tmp_list.pop(0)
+            tmp_list.pop(-1)
+            if len(tmp_list) >= 2:
+                for intron_start, intron_end in zip(tmp_list[0::2], tmp_list[1::2]):
+                    trx_to_intron[trx_id].append(
+                        HTSeq.GenomicInterval(chrom, intron_start, intron_end, strand)
+                    )
+                    intron_id = ExonInfo(
+                        chrom, Interval(intron_start, intron_end), strand, trx_id
+                    )
+                    if consider_strand:
+                        _iv = HTSeq.GenomicInterval(
+                            chrom,
+                            intron_start - boundary_size,
+                            intron_end + boundary_size,
+                            strand,
+                        )
+                    else:
+                        _iv = HTSeq.GenomicInterval(
+                            chrom,
+                            intron_start - boundary_size,
+                            intron_end + boundary_size,
+                            ".",
+                        )
+                    introns_gas[_iv] += intron_id
+
             if end - start >= minimum_exon_size:
                 exon_id = ExonInfo(chrom, Interval(start, end), strand, trx_id)
                 if shrink:
@@ -133,23 +165,24 @@ def _extract_annotated_exons(
                             end - boundary_size,
                             ".",
                         )
-                elif consider_strand:
-                    iv = HTSeq.GenomicInterval(
-                        chrom,
-                        start - boundary_size,
-                        end + boundary_size,
-                        strand,
-                    )
                 else:
-                    iv = HTSeq.GenomicInterval(
-                        chrom,
-                        start - boundary_size,
-                        end + boundary_size,
-                        ".",
-                    )
+                    if consider_strand:
+                        iv = HTSeq.GenomicInterval(
+                            chrom,
+                            start - boundary_size,
+                            end + boundary_size,
+                            strand,
+                        )
+                    else:
+                        iv = HTSeq.GenomicInterval(
+                            chrom,
+                            start - boundary_size,
+                            end + boundary_size,
+                            ".",
+                        )
 
                 exons_gas[iv] += exon_id
-    return exons_gas
+    return exons_gas, introns_gas
 
 
 class CircRNAFilter:
@@ -174,11 +207,17 @@ class CircRNAFilter:
            <-[XXXXX]-[XXXX]
              [1] [3]-[ 2  ]
 
+    5) two mega-exons within annotated intron
+          [XXXX]----------------------[XXXXX]->
+                 [ 2 ]             [1]
+
+         <-[XXXX]----------------------[XXXXX]
+                 [ 1 ]             [2]
     """
 
     def __init__(self, gtf_file: str, boundary_size: int) -> None:
         """Initialize the CircRNAFilter class."""
-        self.exons_gas = _extract_annotated_exons(
+        self.exons_gas, self.introns_gas = _extract_annotated_exons(
             gtf_file,
             boundary_size,
             shrink=False,
@@ -225,7 +264,16 @@ class CircRNAFilter:
                 ),
             )
 
-            return _circular_condition1 or _circular_condition2
+            # low-confidence circular RNA
+            _circular_condition3 = bool(
+                current_edge.variation_type.is_tdup()
+                and self.is_two_megaexon_within_annotated_intron(
+                    current_node,
+                    next_node,
+                ),
+            )
+
+            return _circular_condition1 or _circular_condition2 or _circular_condition3
 
         # multi-hop event
         num_of_tdups = 0
@@ -280,6 +328,55 @@ class CircRNAFilter:
                 num_of_hops_satisfy_condition += 1
 
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
+
+    def is_two_megaexon_within_annotated_intron(
+        self,
+        first_node,
+        second_node,
+    ) -> bool:
+        """Check if two DUP megaexons form a loop within an annotated intron."""
+        strand_first = first_node.strand
+        strand_second = second_node.strand
+        exons_of_first_node = set(first_node.exons)
+        exons_of_second_node = set(second_node.exons)
+        # rule out duplicated exons and interspersed exons
+        if (
+            len(exons_of_first_node.intersection(exons_of_second_node)) > 0
+            or strand_first != strand_second
+            or first_node.chrom != second_node.chrom
+        ):
+            return False
+
+        chrom = first_node.chrom
+
+        anchor1 = None
+        anchor2 = None
+
+        if (
+            strand_first == strand_second
+            and str(strand_first) == "+"
+            and first_node.ref_start > second_node.ref_end
+        ):
+            anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_end, "+")
+            anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_start, "+")
+
+        elif (
+            strand_first == strand_second
+            and str(strand_first) == "-"
+            and first_node.ref_end < second_node.ref_start
+        ):
+            anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_start, "-")
+            anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_end, "-")
+
+        if anchor1 and anchor2:
+            intron_set1 = self.introns_gas[anchor1]
+            intron_set2 = self.introns_gas[anchor2]
+            common_introns = intron_set1.intersection(intron_set2)
+
+            # no overlapping annotated transcript
+            return len(common_introns) != 0
+
+        return False
 
     def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
         self,
