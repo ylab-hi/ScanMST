@@ -141,7 +141,7 @@ class NLGraph:
                 break_point_threshold=self.prune_threshold,
             ):
                 logger.warning(f"merging {current_edge} and {edge}")
-                current_edge.merge(edge)
+                current_edge.merge(edge, node1.strand, node2.strand)
                 is_merged = True
                 break
 

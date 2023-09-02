@@ -19,7 +19,7 @@ class Ruler:
     using longer one as the reference
     """
 
-    def __init__(self, prune_threshold: int = 10) -> None:
+    def __init__(self, prune_threshold: int) -> None:
         """Initialize Ruler.
 
         :param logger: logger
@@ -168,7 +168,7 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
         ) is not None and (
             node2_edge := path2.next_edge(nodes=current_node, nodes_idx=idx)
         ) is not None:
-            node1_edge.merge(node2_edge)
+            node1_edge.merge(node2_edge, current_node.strand, path2[idx + 1].strand)
 
 
 def merge_same_len_node_list(
@@ -256,10 +256,11 @@ class ClusterFinder:
     def __init__(
         self,
         intact_nlpaths: list[NLPath],
+        prune_threshold: int,
         threshold: float = 0.2,
     ) -> None:
         """Initialize CliqueFinder."""
-        self.ruler = Ruler()
+        self.ruler = Ruler(prune_threshold)
         self.intact_nlpaths = intact_nlpaths
         self.intact_nlpaths_len = len(intact_nlpaths)
         self.threshold = threshold

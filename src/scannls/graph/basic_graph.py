@@ -539,7 +539,6 @@ class Edge:
         """Initializes a new instance of the Edge class.
 
         Args:
-        ----
             node1_key (str): The key of the first node connected by the edge.
             node2_key (str): The key of the second node connected by the edge.
             edge_data (EdgeData): The data of the edge.
@@ -588,17 +587,31 @@ class Edge:
         if read_id not in self.edge_data.read_ids:
             self.edge_data.read_ids.append(read_id)
 
-    def merge(self, other: Edge):
+    def merge(self, other: Edge, pnode_strand: Strand, nnode_strand: Strand):
         # WARN: update breakpoint in cmparing way <07-03-23, Yangyang Li>
-        self.break_point1 = (
-            other.break_point1
-            if self.break_point1.pos >= other.break_point1.pos
-            else self.break_point1
+
+        self.beak_point1 = (
+            min(
+                [self.break_point1, other.break_point1],
+                key=lambda x: x.pos,
+            )
+            if pnode_strand.is_forward()
+            else max(
+                [self.break_point1, other.break_point1],
+                key=lambda x: x.pos,
+            )
         )
+
         self.break_point2 = (
-            self.break_point2
-            if self.break_point2.pos >= other.break_point2.pos
-            else other.break_point2
+            min(
+                [self.break_point2, other.break_point2],
+                key=lambda x: x.pos,
+            )
+            if nnode_strand.is_forward()
+            else max(
+                [self.break_point2, other.break_point2],
+                key=lambda x: x.pos,
+            )
         )
 
         merge_insertion(self, other)

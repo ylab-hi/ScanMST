@@ -237,7 +237,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
         logger.info(f"Total nlpaths: {intact_nlpaths_len}")
 
-        cluster_finder = ClusterFinder(intact_nlpaths)
+        cluster_finder = ClusterFinder(intact_nlpaths, options.prune_threshold)
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
