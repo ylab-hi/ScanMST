@@ -79,6 +79,7 @@ flake8-2020 = "^1.6.1"
 flake8-alfred = "^1.1.1"
 cohesion = "^1.0.0"
 tqdm = "^4.64.0"
+wily = "^1.24.2"
 
 
 [tool.poetry.build]

@@ -28,4 +28,8 @@ stubs: clean-stubs ## Generate pybind11 stubs
 	echo "Generating pybind11 stubs"
 	pybind11-stubgen scannls._cppext
 	# cp stubs/pxblat/_extc/cppbinding-stubs/__init__.pyi src/pxblat/extc/__init__.pyi
-	# rm -rf stubs
+	rm -rf stubs
+
+
+metric:
+	wily report src
