@@ -55,7 +55,7 @@ def get_writers(
 
 
 def parse_nlgraph_for_cluster_seq(
-    cluster: Any,
+    clusters: Any,
     writers: Writers,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
@@ -77,9 +77,9 @@ def parse_nlgraph_for_cluster_seq(
     )
 
     with writers.open():
-        for ind, clique in enumerate(cluster, 1):
+        for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Processing Cluter {ind=}")
-            for nlpath in splice_graph(clique, ind, is_plot=options.graph):
+            for nlpath in splice_graph(cluster, ind, is_plot=options.graph):
                 if len(nlpath) == 1:
                     logger.warning(
                         f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
@@ -123,7 +123,7 @@ def _parse_nlgraph_for_cluster_par(
 
 
 def parse_nlgraph_for_cluster_par(
-    cluster: Any,
+    clusters: Any,
     writers: Writers,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
@@ -141,20 +141,20 @@ def parse_nlgraph_for_cluster_par(
         logger,
         options.parallel,
     )
-    cluster = [[list(clique)] for clique in cluster]
+    clusters = [[list(cluster)] for cluster in clusters]
     result = parallel_workers.map(
-        cluster,
-        chunksize=max(1, len(cluster) // parallel_workers.n_jobs),
+        clusters,
+        chunksize=max(1, len(clusters) // parallel_workers.n_jobs),
     )
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
-            for series in clique[0]:  # reduce list depth
-                if len(series) == 1:
+            for nlpath in clique[0]:  # reduce list depth
+                if len(nlpath) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {series}{series[0].query_name}",
+                        f"Single Series {ind}: {nlpath}{nlpath[0].query_name}",
                     )
-                logger.debug(f"Output Clique{ind}: {series}")
-                writers.write_series(series, ind)
+                logger.debug(f"Output Clique{ind}: {nlpath}")
+                writers.write_series(nlpath, ind)
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
