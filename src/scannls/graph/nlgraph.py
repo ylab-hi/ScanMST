@@ -83,6 +83,7 @@ class NLGraph:
         self.logger.trace(f"NLGraph Node: {len(self)}")
         self.rescuer(self)
 
+        self._trace_id = 0
         node_list = []
         # trace path
         for node_list in self.trace():
@@ -119,6 +120,11 @@ class NLGraph:
         )
 
         return cls(logger, rescuer, prune_threshold, support_reads)
+
+    @property
+    def trace_id(self) -> int:
+        self._trace_id += 1
+        return self._trace_id
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
         """Add edge from node1 -> node2."""
@@ -419,7 +425,6 @@ class NLGraph:
     def _trace_forward(
         self,
         start_node: Node,
-        trace_id: int,
         path: list[Node | Edge],
         group_paths: list[list[Node | Edge]],
         *,
@@ -436,8 +441,6 @@ class NLGraph:
 
         elif successors := start_node.successors:
             for successor in successors:
-                successor.set_trace_id(trace_id)
-
                 if successor in path:
                     self.logger.warning(
                         f"A circle may exist in graph with nodes {self.nodes}",
@@ -450,9 +453,9 @@ class NLGraph:
                     successor,
                     self.support_reads,
                 ):
+                    successor.set_trace_id(self.trace_id)
                     self._trace_forward(
                         successor,
-                        trace_id + 1,
                         [*path, edge, successor],
                         group_paths,
                         has_circle=has_circle,
@@ -462,7 +465,6 @@ class NLGraph:
             # successor be [] or None
             self._trace_forward(
                 successors,  # type: ignore
-                trace_id + 1,
                 [*path],
                 group_paths,
                 has_circle=has_circle,
@@ -477,11 +479,10 @@ class NLGraph:
 
         has_circle = False
         for start_node in self.get_start_nodes():
-            start_node.set_trace_id(1)
+            start_node.set_trace_id(self.trace_id)
             group_paths = []
             self._trace_forward(
                 start_node,
-                2,
                 [start_node],
                 group_paths,
                 has_circle=has_circle,

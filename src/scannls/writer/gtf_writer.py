@@ -134,7 +134,7 @@ def get_nodes_gtf_features_from_series(
     nlpath_originla_sr = min(nlpath_originla_sr_list)
 
     series_gtf_features.append(
-        get_gtf_features_for_nlpath(nlpath_id, nlpath_sr, nlpath_originla_sr),
+        format_gtf_features_for_nlpath(nlpath_id, nlpath_sr, nlpath_originla_sr),
     )
 
     for node_id, node in enumerate(nlpath, 1):
@@ -155,7 +155,7 @@ def get_nodes_gtf_features_from_series(
     return series_gtf_features
 
 
-def get_gtf_features_for_nlpath(
+def format_gtf_features_for_nlpath(
     nlpath_id: int,
     nlpath_sr: int,
     nlpath_originla_sr: int,

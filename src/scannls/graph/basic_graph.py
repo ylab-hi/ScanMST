@@ -311,9 +311,11 @@ class Node(BasicNode):
     def __repr__(self) -> str:
         """Get a string representation of a node."""
         return (
-            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.self_identity} "
+            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.trace_id=} {self.self_identity} "
             f"{self.exons!s}, read_ids={self.read_ids})"
         )
+
+    __str__ = __repr__
 
     def __hash__(self) -> int:
         return (
