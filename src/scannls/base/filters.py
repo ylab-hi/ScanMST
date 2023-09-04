@@ -401,25 +401,43 @@ class CircRNAFilter:
 
         chrom = first_node.chrom
 
+        # outer breakpoints
         anchor1 = None
         anchor2 = None
+        # inner breakpoints
+        anchor3 = None
+        anchor4 = None
 
         if strand_first == strand_second and str(strand_first) == "+":
             anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_end, "+")
             anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_start, "+")
 
+            anchor3 = HTSeq.GenomicPosition(chrom, first_node.ref_start, "+")
+            anchor4 = HTSeq.GenomicPosition(chrom, second_node.ref_end, "+")
+
         elif strand_first == strand_second and str(strand_first) == "-":
             anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_start, "-")
             anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_end, "-")
 
-        if anchor1 and anchor2:
+            anchor3 = HTSeq.GenomicPosition(chrom, first_node.ref_end, "-")
+            anchor4 = HTSeq.GenomicPosition(chrom, second_node.ref_start, "-")
+
+        if anchor1 and anchor2 and anchor3 and anchor4:
             exon_set1 = self.exons_gas[anchor1]
             exon_set2 = self.exons_gas[anchor2]
 
             transcript_set1 = {i.obtain_trx_id() for i in exon_set1}
             transcript_set2 = {i.obtain_trx_id() for i in exon_set2}
-            common_transcripts = transcript_set1.intersection(transcript_set2)
+            common_transcripts_1 = transcript_set1.intersection(transcript_set2)
 
+            exon_set3 = self.exons_gas[anchor3]
+            exon_set4 = self.exons_gas[anchor4]
+
+            transcript_set3 = {i.obtain_trx_id() for i in exon_set3}
+            transcript_set4 = {i.obtain_trx_id() for i in exon_set4}
+            common_transcripts_2 = transcript_set3.intersection(transcript_set4)
+
+            common_transcripts = common_transcripts_1.intersection(common_transcripts_2)
             # no overlapping annotated transcript
             return len(common_transcripts) != 0
 
