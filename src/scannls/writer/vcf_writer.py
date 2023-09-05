@@ -75,12 +75,12 @@ class VCFWriter(Writer):
         "MODE2": "String",
         "GENE1": "String",
         "GENE2": "String",
-        "NODE1": "String",
-        "NODE2": "String",
+        "MEGAEXON1": "String",
+        "MEGAEXON2": "String",
         "HOMSEQ": "String",
         "INSSEQ": "String",
         "TRANSCRIPT_ID": "String",
-        "GRAPH_ID": "String",
+        "GENE_ID": "String",
     }
     reserved_format: ClassVar[dict[str, str]] = {"GT": "String"}
     reserved_alt: ClassVar[list[str]] = [
@@ -108,10 +108,10 @@ class VCFWriter(Writer):
         "END": "A placeholder for END coordinate in case of a translocation",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
-        "NODE1": "Node ID for source node",
-        "NODE2": "Node ID for target node",
+        "MEGAEXON1": "ID for source mega exon",
+        "MEGAEXON2": "ID for target mega exon",
         "TRANSCRIPT_ID": "Transcript ID",
-        "GRAPH_ID": "Graph ID",
+        "GENE_ID": "Gene ID",
         "SVMETHOD": "Type of approach used to detect SV",
         "STRAND1": "Strand for breakpoint1",
         "STRAND2": "Strand for breakpoint2",
@@ -215,6 +215,7 @@ class VCFWriter(Writer):
         for _hop_vcf_feature in get_vcf_features_from_nlpath(
             data_object,
             self.nlpath_id,
+            cluster_id
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
         self.nlpath_id += 1  # series/transcript id
@@ -423,14 +424,14 @@ def get_vcf_features_from_nlpath(
                     "SVLEN": f"{sv_distance}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
-                    "NODE1": f"{current_node.trace_id}",
-                    "NODE2": f"{next_node.trace_id}",
+                    "MEGAEXON1": f"{current_node.trace_id}",
+                    "MEGAEXON2": f"{next_node.trace_id}",
                     "STRAND1": f"{current_node.strand}",
                     "STRAND2": f"{next_node.strand}",
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{nlpath_id}",
-                    "GRAPH_ID": f"{cluster_id}",
+                    "GENE_ID": f"{cluster_id}",
                     "SVMETHOD": "ScanNLS",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
                     "INSSEQ": microinsertion_sequence
@@ -451,11 +452,11 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
         f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
         f'DP2={feature_dict["DP2"]};PSI={feature_dict["PSI"]};SVLEN={feature_dict["SVLEN"]};'
         f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
-        f'NODE1={feature_dict["NODE1"]};NODE2={feature_dict["NODE2"]};'
+        f'MEGAEXON1={feature_dict["MEGAEXON1"]};MEGAEXON2={feature_dict["MEGAEXON2"]};'
         f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
         f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
         f'HOMSEQ={feature_dict["HOMSEQ"]};INSSEQ={feature_dict["INSSEQ"]};'
-        f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};GRAPH_ID={feature_dict["GRAPH_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};GENE_ID={feature_dict["GENE_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
     )
 
     return [

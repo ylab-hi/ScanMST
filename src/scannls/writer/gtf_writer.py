@@ -122,7 +122,7 @@ def get_nodes_gtf_features_from_series(
 
     :return: List of GTF features for node and insertions in the series.
     """
-    nlpath_gtf_features = []
+    nlpath_gtf_features = [None]
 
     min_nlpath_sr = float("inf")
     min_nlpath_originla_sr = float("inf")
@@ -136,37 +136,44 @@ def get_nodes_gtf_features_from_series(
             min_nlpath_originla_sr = min(min_nlpath_originla_sr, edge.original_sr)
 
         nlpath_gtf_features.extend(
-            [
-                *get_gtf_features_from_node(node, edge, nlpath_id),
-                f'graph_id "{cluster_id}";',
-            ],
+            list(
+                map(
+                    lambda x: add_info_to_attribute_column(
+                        x, f'gene_id "{cluster_id}";'
+                    ),
+                    get_gtf_features_from_node(node, edge, nlpath_id),
+                )
+            )
         )
 
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):
             nlpath_gtf_features.append(
-                [
-                    *get_gtf_features_from_insertion(
+                add_info_to_attribute_column(
+                    get_gtf_features_from_insertion(
                         insertion_info[1],
                         nlpath_id,
                         node.trace_id,
                     ),
-                    f'graph_id "{cluster_id}";',
-                ],
+                    f'gene_id "{cluster_id}";',
+                ),
             )
 
-    nlpath_gtf_features.insert(
-        0,
-        [
-            *format_gtf_features_for_nlpath(
-                nlpath_id,
-                min_nlpath_sr,
-                min_nlpath_originla_sr,
-            ),
-            f'graph_id "{cluster_id}";',
-        ],
+    nlpath_gtf_features[0] = add_info_to_attribute_column(
+        format_gtf_features_for_nlpath(
+            nlpath_id,
+            min_nlpath_sr,
+            min_nlpath_originla_sr,
+        ),
+        f'gene_id "{cluster_id}";',
     )
 
     return nlpath_gtf_features
+
+
+def add_info_to_attribute_column(col_list: list[str], add_info: str):
+    """Add additional info. to the 9th column of GTF."""
+    col_list[-1] = col_list[-1] + add_info
+    return col_list
 
 
 def format_gtf_features_for_nlpath(
@@ -184,8 +191,8 @@ def format_gtf_features_for_nlpath(
         ".",
         ".",
         ".",
-        f'sr "{nlpath_sr}"; ',
-        f'osr "{nlpath_originla_sr}"; ',
+        f'sr "{nlpath_sr}"; '
+        f'osr "{nlpath_originla_sr}"; '
         f'transcript_id "{nlpath_id:0>6}"; ',
     ]
 
@@ -205,7 +212,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'node_id "{node_id:0>3}"; transcript_id "{nlpath_id:0>6}"; '
+        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id:0>6}"; '
         f'sequence "{insertion.query_sequence}"; ',
     ]
 
@@ -284,8 +291,8 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; ',
-                f'node_id "{node.trace_id:0>4}"; ',
+                f'exon_id "{index:0>3}"; '
+                f'mega_exon_id "{node.trace_id:0>4}"; '
                 f'transcript_id "{nlpath_id:0>6}"; ',
             ],
         )
