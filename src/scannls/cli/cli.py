@@ -86,7 +86,7 @@ def parse_nlgraph_for_cluster_seq(
                     )
 
                 logger.debug(f"cluster {ind=} output {nlpath=} ")
-                writers.write_series(nlpath, ind)
+                writers.write_series(nlpath, f"{ind}")
 
 
 def _parse_nlgraph_for_cluster_par(
@@ -154,7 +154,7 @@ def parse_nlgraph_for_cluster_par(
                         f"Single Series {ind}: {nlpath}{nlpath[0].query_name}",
                     )
                 logger.debug(f"Output Clique{ind}: {nlpath}")
-                writers.write_series(nlpath, ind)
+                writers.write_series(nlpath, f"{ind}")
 
 
 def cli(options: argparse.Namespace | DefaultOptions):

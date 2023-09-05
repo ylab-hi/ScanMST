@@ -29,7 +29,7 @@ class Writer(ABC):
         self.io: IO | None = None
 
     @abstractmethod
-    def write_data(self, data_object: Any, object_id: int):
+    def write_data(self, data_object: Any, object_id: str):
         """Write data to file.
 
         :param: data_object: Data to write to file.
@@ -61,7 +61,7 @@ class Writers:
         """Init writers."""
         self.writers_list = writers
 
-    def write_series(self, series: NLPath, clique_id: int) -> None:
+    def write_series(self, series: NLPath, clique_id: str) -> None:
         """Write series.
 
         .. note::

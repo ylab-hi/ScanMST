@@ -68,14 +68,14 @@ class FastaWriter(Writer):
             logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
-    def write_data(self, data_object: Any, object_id: int):  # type: ignore
+    def write_data(self, data_object: Any, object_id: str):  # type: ignore
         """Write data to file.
 
         :param: data_object: Data to write to file.
         """
 
     @write_data.register
-    def _(self, data_object: NLPath, object_id: int = -1):
+    def _(self, data_object: NLPath, object_id: str = str(-1)):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
             logger.warning(

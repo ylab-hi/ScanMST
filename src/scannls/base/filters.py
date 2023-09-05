@@ -168,21 +168,20 @@ def _extract_annotated_exons(
                             end - boundary_size,
                             ".",
                         )
+                elif consider_strand:
+                    iv = HTSeq.GenomicInterval(
+                        chrom,
+                        start - boundary_size,
+                        end + boundary_size,
+                        strand,
+                    )
                 else:
-                    if consider_strand:
-                        iv = HTSeq.GenomicInterval(
-                            chrom,
-                            start - boundary_size,
-                            end + boundary_size,
-                            strand,
-                        )
-                    else:
-                        iv = HTSeq.GenomicInterval(
-                            chrom,
-                            start - boundary_size,
-                            end + boundary_size,
-                            ".",
-                        )
+                    iv = HTSeq.GenomicInterval(
+                        chrom,
+                        start - boundary_size,
+                        end + boundary_size,
+                        ".",
+                    )
 
                 exons_gas[iv] += exon_id
     return exons_gas, introns_gas

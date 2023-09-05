@@ -83,14 +83,14 @@ class GTFWriter(Writer):
             logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
-    def write_data(self, data_object: Any, object_id: int) -> None:  # type: ignore
+    def write_data(self, data_object: Any, object_id: str) -> None:  # type: ignore
         """Write data to file.
 
         :param: data_object: Data to write to file.
         """
 
     @write_data.register
-    def _(self, data_object: NLPath, object_id: int) -> None:
+    def _(self, data_object: NLPath, object_id: str) -> None:
         """Write Series to GTF file.
 
         :param data_object:
@@ -104,6 +104,7 @@ class GTFWriter(Writer):
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object,
             self.id,
+            str(object_id),
         ):
             self.write_line(self.formatter(node_gtf_feature))
         self.id += 1
@@ -112,6 +113,7 @@ class GTFWriter(Writer):
 def get_nodes_gtf_features_from_series(
     nlpath: NLPath,
     nlpath_id: int,
+    cluster_id: str,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
@@ -120,45 +122,57 @@ def get_nodes_gtf_features_from_series(
 
     :return: List of GTF features for node and insertions in the series.
     """
-    series_gtf_features = []
+    nlpath_gtf_features = []
 
-    nlpath_sr_list = []
-    nlpath_originla_sr_list = []
-    for node_id, node in enumerate(nlpath, 1):
-        edge = nlpath.next_edge(node, node_id - 1)
-        if edge is not None:
-            nlpath_sr_list.append(edge.sr)
-            nlpath_originla_sr_list.append(edge.original_sr)
+    min_nlpath_sr = float("inf")
+    min_nlpath_originla_sr = float("inf")
 
-    nlpath_sr = min(nlpath_sr_list)
-    nlpath_originla_sr = min(nlpath_originla_sr_list)
-
-    series_gtf_features.append(
-        format_gtf_features_for_nlpath(nlpath_id, nlpath_sr, nlpath_originla_sr),
-    )
-
-    for node_id, node in enumerate(nlpath, 1):
-        edge = nlpath.next_edge(node, node_id - 1)
+    for idx, node in enumerate(nlpath, 1):
+        edge = nlpath.next_edge(node, idx - 1)
         insertion_info = None if edge is None else edge.insertion_info
 
-        series_gtf_features.extend(
-            get_gtf_features_from_node(node, edge, nlpath_id, node_id),
+        if edge is not None:
+            min_nlpath_sr = min(min_nlpath_sr, edge.sr)
+            min_nlpath_originla_sr = min(min_nlpath_originla_sr, edge.original_sr)
+
+        nlpath_gtf_features.extend(
+            [
+                *get_gtf_features_from_node(node, edge, nlpath_id),
+                f'graph_id "{cluster_id}";',
+            ],
         )
+
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):
-            series_gtf_features.append(
-                get_gtf_features_from_insertion(
-                    insertion_info[1],
-                    nlpath_id,
-                    node_id,
-                ),
+            nlpath_gtf_features.append(
+                [
+                    *get_gtf_features_from_insertion(
+                        insertion_info[1],
+                        nlpath_id,
+                        node.trace_id,
+                    ),
+                    f'graph_id "{cluster_id}";',
+                ],
             )
-    return series_gtf_features
+
+    nlpath_gtf_features.insert(
+        0,
+        [
+            *format_gtf_features_for_nlpath(
+                nlpath_id,
+                min_nlpath_sr,
+                min_nlpath_originla_sr,
+            ),
+            f'graph_id "{cluster_id}";',
+        ],
+    )
+
+    return nlpath_gtf_features
 
 
 def format_gtf_features_for_nlpath(
     nlpath_id: int,
-    nlpath_sr: int,
-    nlpath_originla_sr: int,
+    nlpath_sr: float,
+    nlpath_originla_sr: float,
 ) -> list[str]:
     """Get GTF features of transcript."""
     return [
@@ -170,9 +184,9 @@ def format_gtf_features_for_nlpath(
         ".",
         ".",
         ".",
-        f'transcript_id "{nlpath_id:0>6}"; '
-        f'sr "{nlpath_sr}"; '
-        f'osr "{nlpath_originla_sr}";',
+        f'sr "{nlpath_sr}"; ',
+        f'osr "{nlpath_originla_sr}"; ',
+        f'transcript_id "{nlpath_id:0>6}"; ',
     ]
 
 
@@ -191,8 +205,8 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'transcript_id "{nlpath_id:0>6}"; mega_exon_id "{node_id:0>3}"; '
-        f'sequence "{insertion.query_sequence}";',
+        f'node_id "{node_id:0>3}"; transcript_id "{nlpath_id:0>6}"; '
+        f'sequence "{insertion.query_sequence}"; ',
     ]
 
 
@@ -200,7 +214,6 @@ def get_gtf_features_from_node(
     node: Node,
     edge: Edge | None,
     nlpath_id: int,
-    node_id: int,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
@@ -235,20 +248,13 @@ def get_gtf_features_from_node(
 
     copy_exons = copy.deepcopy(exons)
 
+    insertion_info = None
     if edge is not None:
-        # WARN: should be changed after correcting sr <08-02-23, Yangyang Li>
         # sr may be not exported in gtf file
-        node_sr, node_original_sr, insertion_info = (
-            edge.sr,
-            edge.original_sr,
-            edge.insertion_info,
-        )
-    else:
-        # WARN: last node has no edge <08-02-23, Yangyang Li>
-        node_sr, node_original_sr, insertion_info = 0, 0, None
+        insertion_info = edge.insertion_info
 
     microhomology_sequence = ""
-    if insertion_info and not insertion_info[0]:
+    if insertion_info is not None and not insertion_info[0]:
         insertion = insertion_info[1]
         if isinstance(insertion, MicroHomology):
             microhomology_sequence += insertion.query_sequence
@@ -268,20 +274,6 @@ def get_gtf_features_from_node(
     nodes_gtf_features = []
 
     for index, (start, end) in enumerate(copy_exons, 1):
-        if node_sr + node_original_sr > 0:
-            info = [
-                f'transcript_id "{nlpath_id:0>6}"; '
-                f'mega_exon_id "{node_id:0>3}"; '
-                f'exon_id "{index:0>3}"; '
-                f'sr "{node_sr}"; '
-                f'osr "{node_original_sr}";',
-            ]
-        else:
-            info = [
-                f'transcript_id "{nlpath_id:0>6}"; '
-                f'mega_exon_id "{node_id:0>3}"; '
-                f'exon_id "{index:0>3}";',
-            ]
         nodes_gtf_features.append(
             [
                 f"{node.chrom}",
@@ -292,7 +284,10 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                *info,
+                f'exon_id "{index:0>3}"; ',
+                f'node_id "{node.trace_id:0>4}"; ',
+                f'transcript_id "{nlpath_id:0>6}"; ',
             ],
         )
+
     return nodes_gtf_features
