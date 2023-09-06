@@ -113,13 +113,11 @@ def _parse_nlgraph_for_cluster_par(
         average_read_depth,
     )
 
-    result_series = []
+    result = []
     for ind, clique in enumerate(cluster, 1):
-        series_list = []
-        for series in splice_graph(clique, ind, is_plot=False):
-            series_list.append(series)
-        result_series.append(series_list)
-    return result_series
+        result.append(list(splice_graph(clique, ind, is_plot=False)))
+
+    return result
 
 
 def parse_nlgraph_for_cluster_par(
@@ -146,6 +144,7 @@ def parse_nlgraph_for_cluster_par(
         clusters,
         chunksize=max(1, len(clusters) // parallel_workers.n_jobs),
     )
+
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
             for nlpath in clique[0]:  # reduce list depth

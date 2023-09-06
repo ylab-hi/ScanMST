@@ -213,7 +213,9 @@ class VCFWriter(Writer):
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
         for _hop_vcf_feature in get_vcf_features_from_nlpath(
-            data_object, self.nlpath_id, cluster_id,
+            data_object,
+            self.nlpath_id,
+            cluster_id,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
         self.nlpath_id += 1  # series/transcript id

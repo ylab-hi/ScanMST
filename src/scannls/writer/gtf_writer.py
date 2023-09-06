@@ -136,9 +136,13 @@ def get_nodes_gtf_features_from_series(
             min_nlpath_originla_sr = min(min_nlpath_originla_sr, edge.original_sr)
 
         nlpath_gtf_features.extend(
-            [add_info_to_attribute_column(
-                        x, f'gene_id "{cluster_id}";',
-                    ) for x in get_gtf_features_from_node(node, edge, nlpath_id)],
+            [
+                add_info_to_attribute_column(
+                    x,
+                    f'gene_id "{cluster_id}";',
+                )
+                for x in get_gtf_features_from_node(node, edge, nlpath_id)
+            ],
         )
 
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):

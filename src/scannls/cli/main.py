@@ -2,7 +2,9 @@
 import copy
 import inspect
 import math
+import operator
 import re
+from functools import reduce
 from itertools import chain
 from pathlib import Path
 
@@ -663,10 +665,7 @@ def scanbam_run(
     else:
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)
-
-        for contig in contigs:
-            contig_series_list = result[contig]
-            intact_series_list.extend(contig_series_list)
+        intact_series_list = reduce(operator.concat, result)
 
     bam_scanner.in_bam.close()
     return intact_series_list, bam_scanner.header, avg_cov
