@@ -83,7 +83,6 @@ class NLGraph:
         self.logger.trace(f"NLGraph Node: {len(self)}")
         self.rescuer(self)
 
-        self._trace_id = 0
         node_list = []
         # trace path
         for node_list in self.trace():
@@ -472,6 +471,8 @@ class NLGraph:
 
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
+        self._trace_id = 0
+
         result_series_list = []
 
         if not self.get_start_nodes() and len(self.nodes.values()) > 0:
