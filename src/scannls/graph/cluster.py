@@ -54,7 +54,6 @@ class Ruler:
 
         middle_nodes_a: list[Node] = nlpath_a[1:-1]  # type: ignore
         middle_nodes_b: list[Node] = nlpath_b[1:-1]  # type: ignore
-        connection = False
         merge_condition: MergeCondition = MergeCondition(self.prune_threshold)
 
         if (
@@ -67,27 +66,23 @@ class Ruler:
                 middle_nodes_b,
             )
         ):
-            connection = True
+            return 1.0
 
-        if not connection:
-            for _middle_node_b in middle_nodes_b:
-                if merge_condition.head2mid(head_node_a, _middle_node_b):
-                    connection = True
-                    break
-                if merge_condition.tail2mid(tail_node_a, _middle_node_b):
-                    connection = True
-                    break
+        for middle_node_b in middle_nodes_b:
+            if merge_condition.head2mid(
+                head_node_a,
+                middle_node_b,
+            ) or merge_condition.tail2mid(tail_node_a, middle_node_b):
+                return 1.0
 
-            if not connection:
-                for _middle_node_a in middle_nodes_a:
-                    if merge_condition.head2mid(head_node_a, _middle_node_a):
-                        connection = True
-                        break
-                    if merge_condition.tail2mid(tail_node_b, _middle_node_a):
-                        connection = True
-                        break
+        for middle_node_a in middle_nodes_a:
+            if merge_condition.head2mid(
+                head_node_b,
+                middle_node_a,
+            ) or merge_condition.tail2mid(tail_node_b, middle_node_a):
+                return 1.0
 
-        return 0.0 if connection else 1.0
+        return 0.0
 
 
 def create_merge_key_for_node(node: Node):
@@ -127,11 +122,8 @@ def sort_cluster(cluster, key=lambda x: creat_sort_key_for_nlpath(x), *, reverse
 
 def middle_node_signature(node: Node) -> str:
     """Middle node signature using chrom, exons and strand."""
-    chrom = node.chrom
-    exons = node.exons
-    strand = node.strand
-    exons_string = (f"{x[0]}-{x[1]}" for x in exons)  # type: ignore
-    return f"{chrom}:{';'.join(exons_string)};{strand}"
+    exons_string = (f"{x[0]}-{x[1]}" for x in node.exons)  # type: ignore
+    return f"{node.chrom}:{';'.join(exons_string)};{node.strand}"
 
 
 def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(

@@ -10,8 +10,6 @@ from enum import Enum, auto
 from itertools import zip_longest
 from typing import TYPE_CHECKING
 
-from scannls.exception import ExonsNotFoundError
-
 if TYPE_CHECKING:
     from .basic_graph import Node
 
@@ -272,11 +270,6 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         -> [node1]
         -> [node2]
     """
-
-    if node1.exons is None or node2.exons is None:
-        msg = f"{node1.query_name} or {node2.query_name}"
-        raise ExonsNotFoundError(msg)
-
     if node1.introns != node2.introns:
         return False
 
@@ -326,10 +319,6 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
              [ node1 ] ->
         -> [  node2  ] ->
     """
-    if node1.exons is None or node2.exons is None:
-        msg = f"{node1.query_name} or {node2.query_name}"
-        raise ExonsNotFoundError(msg)
-
     # limit all introns
     if node1.introns != node2.introns:
         return False
@@ -361,10 +350,6 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
         -> [ node1 ]
         -> [  node2  ] ->
     """
-    if node1.exons is None or node2.exons is None:
-        msg = f"{node1.query_name} or {node2.query_name}"
-        raise ExonsNotFoundError(msg)
-
     if node1.introns != node2.introns:
         return False
 
