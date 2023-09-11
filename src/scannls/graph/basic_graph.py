@@ -423,9 +423,6 @@ class Node(BasicNode):
         check_introns=False,
     ):
         if isinstance(other, Node):
-            if self.exons is None or other.exons is None:
-                return False
-
             if check_introns and self.introns != other.introns:
                 return False
 

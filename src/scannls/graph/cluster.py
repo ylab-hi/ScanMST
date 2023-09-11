@@ -131,7 +131,6 @@ def middle_node_signature(node: Node) -> str:
     exons = node.exons
     strand = node.strand
     exons_string = (f"{x[0]}-{x[1]}" for x in exons)  # type: ignore
-
     return f"{chrom}:{';'.join(exons_string)};{strand}"
 
 
