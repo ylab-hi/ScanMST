@@ -81,6 +81,7 @@ class VCFWriter(Writer):
         "INSSEQ": "String",
         "TRANSCRIPT_ID": "String",
         "GENE_ID": "String",
+        "SR_ID": "String",
     }
     reserved_format: ClassVar[dict[str, str]] = {"GT": "String"}
     reserved_alt: ClassVar[list[str]] = [
@@ -112,6 +113,7 @@ class VCFWriter(Writer):
         "MEGAEXON2": "ID for target mega exon",
         "TRANSCRIPT_ID": "Transcript ID",
         "GENE_ID": "Gene ID",
+        "SR_ID": "Support read ID",
         "SVMETHOD": "Type of approach used to detect SV",
         "STRAND1": "Strand for breakpoint1",
         "STRAND2": "Strand for breakpoint2",
@@ -326,7 +328,7 @@ def get_vcf_features_from_nlpath(
     cluster_id: str,
 ):
     """Obtain hop vcf features from one series."""
-    series_hops_features = []
+    path_hops_features = []
 
     can_field_dict = {0: "NONCANONICAL", 1: "CANONICAL"}
     anno_field_dict = {0: "NEITHER", 1: "RIGHT", 2: "LEFT"}
@@ -403,7 +405,7 @@ def get_vcf_features_from_nlpath(
             else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
         )
 
-        series_hops_features.append(
+        path_hops_features.append(
             {
                 f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}"
                 f"_{_chrom2}|{_pos2 + 1}": {
@@ -432,6 +434,7 @@ def get_vcf_features_from_nlpath(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{nlpath_id}",
                     "GENE_ID": f"{cluster_id}",
+                    "SR_ID": f"{','.join(current_edge.read_ids)}",
                     "SVMETHOD": "ScanNLS",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
                     "INSSEQ": microinsertion_sequence
@@ -441,7 +444,7 @@ def get_vcf_features_from_nlpath(
             },
         )
 
-    return series_hops_features
+    return path_hops_features
 
 
 def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]:
@@ -456,7 +459,8 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
         f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
         f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
         f'HOMSEQ={feature_dict["HOMSEQ"]};INSSEQ={feature_dict["INSSEQ"]};'
-        f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};GENE_ID={feature_dict["GENE_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};GENE_ID={feature_dict["GENE_ID"]};'
+        f'SR_ID={feature_dict["SR_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
     )
 
     return [
