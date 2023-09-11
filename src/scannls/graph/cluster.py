@@ -310,27 +310,8 @@ class ClusterFinder:
         if not self.intact_nlpaths[ind_y].is_in_graph:
             self._graph.add_node(ind_y)
 
-    def find_cluster(self):
-        """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
-
-        :return:  every clique in graph as a iterator (List[Series])
-
-        :Example:
-
-        >>> from loguru import logger
-        >>> clique_finder = CliqueFinder([], logger)
-        >>> cliques = clique_finder.find_clique()
-        >>> for clique in cliques:
-        ...     for series_list in clique:
-        ...         assert isinstance(series_list, Series)
-        """
-        self._create_graph_for_nlpath()
-
-        for clique_index in connected_components(self._graph):
-            yield (self.intact_nlpaths[i] for i in clique_index)
-
     def find_cluster_index(self):
-        """Find clique in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
+        """Find cluster in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
         :return:  every clique in graph as a iterator (List[int])
         """
