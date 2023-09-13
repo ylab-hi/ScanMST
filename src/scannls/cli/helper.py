@@ -654,7 +654,7 @@ def insertion2chimeric_alignment(
     if flag:
         # BLAT unique HSP
         chrom_blat = insertion_info.chrom
-        strand_blat = insertion_info.strand
+        strand_blat = str(insertion_info.strand)
         pos_blat = insertion_info.ref_start
         ref_end_blat = insertion_info.ref_end
         cigar_blat = insertion_info.cigarstring
