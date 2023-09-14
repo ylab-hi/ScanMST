@@ -8,6 +8,7 @@ from itertools import combinations
 import networkx as nx
 from loguru import logger
 from networkx import connected_components
+
 from .basic_graph import NLPath, Node
 from .merge_condition import MergeCondition
 
@@ -274,7 +275,7 @@ class ClusterFinder:
         dist = self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
 
         self.writer.write(
-            f"{self.intact_nlpaths[x].nodes[0].query_name}\t{self.intact_nlpaths[y].nodes[0].query_name}\t{dist}\n"
+            f"{self.intact_nlpaths[x].nodes[0].query_name}\t{self.intact_nlpaths[y].nodes[0].query_name}\t{dist}\n",
         )
 
         return dist

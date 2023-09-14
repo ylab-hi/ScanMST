@@ -245,23 +245,17 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
         logger.warning(f"Total clusters: {num_clusters}")
 
-        # writers = get_writers(options.output, options.ref, in_bam_header)
 
-        # parse_splice_graph_for_cluster = (
         #     parse_nlgraph_for_cluster_seq
         #     if options.parallel == 1
         #     else parse_nlgraph_for_cluster_par
-        # )
 
-        # node_rescued_sr_max = 100
         # parse_splice_graph_for_cluster(
         #     clusters,
         #     writers,
         #     options,
         #     node_rescued_sr_max,
-        #     logger,  # type: ignore
         #     avg_cov,
-        # )
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
