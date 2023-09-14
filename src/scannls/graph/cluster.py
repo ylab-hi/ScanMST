@@ -8,7 +8,6 @@ from itertools import combinations
 import networkx as nx
 from loguru import logger
 from networkx import connected_components
-
 from .basic_graph import NLPath, Node
 from .merge_condition import MergeCondition
 
@@ -66,23 +65,23 @@ class Ruler:
                 middle_nodes_b,
             )
         ):
-            return 1.0
+            return 0.0
 
         for middle_node_b in middle_nodes_b:
             if merge_condition.head2mid(
                 head_node_a,
                 middle_node_b,
             ) or merge_condition.tail2mid(tail_node_a, middle_node_b):
-                return 1.0
+                return 0.0
 
         for middle_node_a in middle_nodes_a:
             if merge_condition.head2mid(
                 head_node_b,
                 middle_node_a,
             ) or merge_condition.tail2mid(tail_node_b, middle_node_a):
-                return 1.0
+                return 0.0
 
-        return 0.0
+        return 1.0
 
 
 def create_merge_key_for_node(node: Node):
@@ -135,6 +134,9 @@ def _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
     :param node_list2:  node_list2
     :return:  True if two node list have shared node, otherwise False.
     """
+    if len(node_list1) == 0 and len(node_list2) == 0:
+        return False
+
     shared_middle_nodes = set(map(middle_node_signature, node_list1)) & set(
         map(middle_node_signature, node_list2),
     )
@@ -257,6 +259,7 @@ class ClusterFinder:
         self.threshold = threshold
         self.distance_dict: dict[tuple[int, int], float] = {}
         self._graph = nx.Graph()
+        self.writer = open("distance.txt", "w")
 
     def _calculate_distance(self, x: int, y: int) -> float:
         """Calculate distance between two series. If distance has been calculated before.
@@ -268,7 +271,13 @@ class ClusterFinder:
         :param y: nlpath y
         :return: is_calculated, distance value
         """
-        return self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
+        dist = self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
+
+        self.writer.write(
+            f"{self.intact_nlpaths[x].nodes[0].query_name}\t{self.intact_nlpaths[y].nodes[0].query_name}\t{dist}\n"
+        )
+
+        return dist
 
     def _add_edge_between_two_nlpath(self, x: int, y: int) -> None:
         if self._calculate_distance(x, y) < self.threshold:
@@ -308,6 +317,7 @@ class ClusterFinder:
         :return:  every clique in graph as a iterator (List[int])
         """
         self._create_graph_for_nlpath()
+        self.writer.close()
         yield from connected_components(self._graph)
 
     def creat_merge_indexs(self, cluster) -> dict[int, list[str]]:
