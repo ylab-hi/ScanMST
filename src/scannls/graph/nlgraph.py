@@ -85,10 +85,12 @@ class NLGraph:
 
         node_list = []
         # trace path
-        for node_list in self.trace():
-            yield NLPath.create_path_from_node_edge_list(
+        for idx, node_list in enumerate(self.trace(), 1):
+            current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
+            current_path.id = idx
+            yield current_path
 
         if is_plot and node_list:
             default_visitors(self, f"{cluster_ind}", self.support_reads).visualize()

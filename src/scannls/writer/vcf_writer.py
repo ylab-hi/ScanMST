@@ -216,11 +216,9 @@ class VCFWriter(Writer):
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
         for _hop_vcf_feature in get_vcf_features_from_nlpath(
             data_object,
-            self.nlpath_id,
             cluster_id,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
-        self.nlpath_id += 1  # series/transcript id
 
     def write_data_helper(self) -> None:
         """Write series data for every clique."""
@@ -324,7 +322,6 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 
 def get_vcf_features_from_nlpath(
     nlpath: NLPath,
-    nlpath_id: int,
     cluster_id: str,
 ):
     """Obtain hop vcf features from one series."""
@@ -432,7 +429,7 @@ def get_vcf_features_from_nlpath(
                     "STRAND2": f"{next_node.strand}",
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
-                    "TRANSCRIPT_ID": f"{nlpath_id}",
+                    "TRANSCRIPT_ID": f"{nlpath.id}",
                     "GENE_ID": f"{cluster_id}",
                     "SR_ID": f"{','.join(current_edge.read_ids)}",
                     "SVMETHOD": "ScanNLS",

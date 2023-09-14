@@ -240,23 +240,23 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
-        list_clusters = list(clusters)
-        num_clusters = len(list_clusters)
 
-        logger.warning(f"Total clusters: {num_clusters}")
+        writers = get_writers(options.output, options.ref, in_bam_header)
+        parse_splice_graph_for_cluster = (
+            parse_nlgraph_for_cluster_seq
+            if options.parallel == 1
+            else parse_nlgraph_for_cluster_par
+        )
 
-
-        #     parse_nlgraph_for_cluster_seq
-        #     if options.parallel == 1
-        #     else parse_nlgraph_for_cluster_par
-
-        # parse_splice_graph_for_cluster(
-        #     clusters,
-        #     writers,
-        #     options,
-        #     node_rescued_sr_max,
-        #     avg_cov,
-
+        node_rescued_sr_max = 100
+        parse_splice_graph_for_cluster(
+            clusters,
+            writers,
+            options,
+            node_rescued_sr_max,
+            logger,  # type: ignore
+            avg_cov,
+        )
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
     except KeyboardInterrupt:

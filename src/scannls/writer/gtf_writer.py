@@ -44,7 +44,6 @@ class GTFWriter(Writer):
     def __init__(self, file_path: str) -> None:
         """Initialize GTFWriter object."""
         super().__init__(file_path)
-        self.id = 1
 
     @property
     def is_opened(self) -> bool:
@@ -103,16 +102,13 @@ class GTFWriter(Writer):
 
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object,
-            self.id,
             str(object_id),
         ):
             self.write_line(self.formatter(node_gtf_feature))
-        self.id += 1
 
 
 def get_nodes_gtf_features_from_series(
     nlpath: NLPath,
-    nlpath_id: int,
     cluster_id: str,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
@@ -141,7 +137,7 @@ def get_nodes_gtf_features_from_series(
                     x,
                     f'gene_id "{cluster_id}";',
                 )
-                for x in get_gtf_features_from_node(node, edge, nlpath_id)
+                for x in get_gtf_features_from_node(node, edge, nlpath.id)
             ],
         )
 
@@ -150,7 +146,7 @@ def get_nodes_gtf_features_from_series(
                 add_info_to_attribute_column(
                     get_gtf_features_from_insertion(
                         insertion_info[1],
-                        nlpath_id,
+                        nlpath.id,
                         node.trace_id,
                     ),
                     f'gene_id "{cluster_id}";',
@@ -159,7 +155,7 @@ def get_nodes_gtf_features_from_series(
 
     nlpath_gtf_features[0] = add_info_to_attribute_column(
         format_gtf_features_for_nlpath(
-            nlpath_id,
+            nlpath.id,
             min_nlpath_sr,
             min_nlpath_originla_sr,
         ),
