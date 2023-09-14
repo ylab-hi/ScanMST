@@ -260,7 +260,6 @@ class ClusterFinder:
         self.threshold = threshold
         self.distance_dict: dict[tuple[int, int], float] = {}
         self._graph = nx.Graph()
-        self.writer = open("distance.txt", "w")
 
     def _calculate_distance(self, x: int, y: int) -> float:
         """Calculate distance between two series. If distance has been calculated before.
@@ -272,13 +271,7 @@ class ClusterFinder:
         :param y: nlpath y
         :return: is_calculated, distance value
         """
-        dist = self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
-
-        self.writer.write(
-            f"{self.intact_nlpaths[x].nodes[0].query_name}\t{self.intact_nlpaths[y].nodes[0].query_name}\t{dist}\n",
-        )
-
-        return dist
+        return self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
 
     def _add_edge_between_two_nlpath(self, x: int, y: int) -> None:
         if self._calculate_distance(x, y) < self.threshold:
@@ -318,7 +311,6 @@ class ClusterFinder:
         :return:  every clique in graph as a iterator (List[int])
         """
         self._create_graph_for_nlpath()
-        self.writer.close()
         yield from connected_components(self._graph)
 
     def creat_merge_indexs(self, cluster) -> dict[int, list[str]]:

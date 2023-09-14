@@ -240,7 +240,6 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
-
         writers = get_writers(options.output, options.ref, in_bam_header)
         parse_splice_graph_for_cluster = (
             parse_nlgraph_for_cluster_seq
@@ -257,6 +256,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             logger,  # type: ignore
             avg_cov,
         )
+
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
     except KeyboardInterrupt:
