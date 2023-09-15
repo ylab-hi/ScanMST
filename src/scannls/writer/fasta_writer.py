@@ -75,7 +75,7 @@ class FastaWriter(Writer):
         """
 
     @write_data.register
-    def _(self, data_object: NLPath, object_id: str = str(-1)):
+    def _(self, data_object: NLPath, object_id: str):
         """Write Series to fasta file."""
         if len(data_object.nodes) == 0:
             logger.warning(
@@ -86,7 +86,9 @@ class FastaWriter(Writer):
             reference_io=self.reference_io,
         )
 
-        self.write_line(self.formatter(f"{self.id} {node_length_str}", sequence))
+        self.write_line(
+            self.formatter(f"{object_id}{data_object.id} {node_length_str}", sequence),
+        )
 
 
 def get_nodes_sequence_from_series(
