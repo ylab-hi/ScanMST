@@ -137,7 +137,11 @@ def get_nodes_gtf_features_from_series(
                     x,
                     f'gene_id "{cluster_id}";',
                 )
-                for x in get_gtf_features_from_node(node, edge, nlpath.id)
+                for x in get_gtf_features_from_node(
+                    node,
+                    edge,
+                    f"{cluster_id}{nlpath.id}",
+                )
             ],
         )
 
@@ -146,7 +150,7 @@ def get_nodes_gtf_features_from_series(
                 add_info_to_attribute_column(
                     get_gtf_features_from_insertion(
                         insertion_info[1],
-                        nlpath.id,
+                        f"{cluster_id}{nlpath.id}",
                         node.trace_id,
                     ),
                     f'gene_id "{cluster_id}";',
@@ -155,7 +159,7 @@ def get_nodes_gtf_features_from_series(
 
     nlpath_gtf_features[0] = add_info_to_attribute_column(
         format_gtf_features_for_nlpath(
-            nlpath.id,
+            f"{cluster_id}{nlpath.id}",
             min_nlpath_sr,
             min_nlpath_originla_sr,
         ),
@@ -172,7 +176,7 @@ def add_info_to_attribute_column(col_list: list[str], add_info: str):
 
 
 def format_gtf_features_for_nlpath(
-    nlpath_id: int,
+    nlpath_id: str,
     nlpath_sr: float,
     nlpath_originla_sr: float,
 ) -> list[str]:
@@ -188,13 +192,13 @@ def format_gtf_features_for_nlpath(
         ".",
         f'sr "{nlpath_sr}"; '
         f'osr "{nlpath_originla_sr}"; '
-        f'transcript_id "{nlpath_id:0>6}"; ',
+        f'transcript_id "{nlpath_id}"; ',
     ]
 
 
 def get_gtf_features_from_insertion(
     insertion: NovelInsertion,
-    nlpath_id: int,
+    nlpath_id: str,
     node_id: int,
 ) -> list[str]:
     """Get GTF features of novel insertion."""
@@ -207,7 +211,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id:0>6}"; '
+        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; '
         f'sequence "{insertion.query_sequence}"; ',
     ]
 
@@ -215,7 +219,7 @@ def get_gtf_features_from_insertion(
 def get_gtf_features_from_node(
     node: Node,
     edge: Edge | None,
-    nlpath_id: int,
+    nlpath_id: str,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
@@ -288,7 +292,7 @@ def get_gtf_features_from_node(
                 ".",
                 f'exon_id "{index:0>3}"; '
                 f'mega_exon_id "{node.trace_id:0>4}"; '
-                f'transcript_id "{nlpath_id:0>6}"; ',
+                f'transcript_id "{nlpath_id}"; ',
             ],
         )
 
