@@ -409,7 +409,7 @@ def _scan_bam_helper(
                 ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
 
                 ret = get_softclip_length(read, mode=MappingMode.Type0)
-                if ret is not None and ret[1] != "" and len(ret[1]) >= min_soft_seg_len:
+                if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
                     soft_seq_ori = (
                         reverse_complement(ret[1]) if read.is_reverse else ret[1]
                     )

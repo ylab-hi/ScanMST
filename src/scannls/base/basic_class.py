@@ -220,7 +220,7 @@ class BreakPoint:
     @classmethod
     def from_str(cls, breakpoint_str: str, depth: int | None = None) -> BreakPoint:
         """Create BreakPoint object from string."""
-        if breakpoint_str == "":
+        if not breakpoint_str:
             msg = "breakpoint_str can not be empty string"
             raise ValueError(msg)
         chrom, pos = breakpoint_str.split(":")

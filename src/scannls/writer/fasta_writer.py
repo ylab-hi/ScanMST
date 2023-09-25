@@ -37,7 +37,7 @@ class FastaWriter(Writer):
 
     def formatter(self, seq_id: str, sequence: str) -> str:
         """Formatter for writing data."""
-        if sequence == "":
+        if not sequence:
             logger.warning(
                 f"{self.__class__.__name__}: Sequence ID or sequence is empty.",
             )

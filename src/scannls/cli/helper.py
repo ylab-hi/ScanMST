@@ -454,9 +454,9 @@ def splicing_confirmation(
 
     # Non-annotated coding exon boundary
     if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin: pos_do + splice_bin].seq
         acceptor_seq = genome_fasta[chrm_ac][
-            pos_ac - splice_bin : pos_ac + splice_bin
+            pos_ac - splice_bin: pos_ac + splice_bin
         ].seq
         if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
             return True, 0, 1
@@ -466,7 +466,7 @@ def splicing_confirmation(
     # pos1 in annotated coding exon boundary, pos2 not.
     if motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
         acceptor_seq = genome_fasta[chrm_ac][
-            pos_ac - splice_bin : pos_ac + splice_bin
+            pos_ac - splice_bin: pos_ac + splice_bin
         ].seq
         if splice_motif_dict[motif_do] in acceptor_seq:
             return True, 2, 1
@@ -475,7 +475,7 @@ def splicing_confirmation(
 
     # pos2 in annotated coding exon boundary, pos1 not.
     if motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
-        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin: pos_do + splice_bin].seq
 
         if possible_donors[motif_ac] in donor_seq:
             return True, 1, 1
@@ -569,7 +569,7 @@ def obtain_insertion_surrouding_cigarstrings(
     else:
         surrounding_cigar = (
             cigar_str[:ins_idx],
-            cigar_str[ins_idx + len(insertion_str) :],
+            cigar_str[ins_idx + len(insertion_str):],
         )
     return surrounding_cigar
 
@@ -753,18 +753,18 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
         if mode == MappingMode.SM:  # SM
             bp_region_seq = read_seq[: read.lt_soft_len][-bp_region_seq_len:]
         elif mode == MappingMode.MS:  # MS
-            bp_region_seq = read_seq[-read.rt_soft_len :][:bp_region_seq_len]
+            bp_region_seq = read_seq[-read.rt_soft_len:][:bp_region_seq_len]
         bp_region_seq = "+" + bp_region_seq
     # microhomology
     elif bp_region_seq_len < 0:
         if mode == MappingMode.SM:  # SM
             bp_region_seq = genome_fasta[chrom][
-                read.ref_start : read.ref_start - bp_region_seq_len
+                read.ref_start: read.ref_start - bp_region_seq_len
             ].seq
 
         elif mode == MappingMode.MS:  # MS
             bp_region_seq = genome_fasta[chrom][
-                read.ref_end + bp_region_seq_len : read.ref_end
+                read.ref_end + bp_region_seq_len: read.ref_end
             ].seq
 
         bp_region_seq = "-" + bp_region_seq

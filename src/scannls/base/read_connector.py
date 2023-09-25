@@ -307,7 +307,7 @@ class ReadsConnector:
 
         next_read_mode = MappingMode.SM
         read_match_sequence = start_read.adhocseq[
-            _lt_len_r1 : _lt_len_r1 + _read_match_r1
+            _lt_len_r1: _lt_len_r1 + _read_match_r1
         ]
 
         read_match_sequence = ReadsConnector.update_query_sequence(
@@ -352,7 +352,7 @@ class ReadsConnector:
         # second case
         next_read_mode = MappingMode.MS
         read_match_sequence = start_read.adhocseq[
-            _lt_len_r1 : _lt_len_r1 + _read_match_r1
+            _lt_len_r1: _lt_len_r1 + _read_match_r1
         ]
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
@@ -512,7 +512,7 @@ class ReadsConnector:
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
             if read.mode == MappingMode.MS
-            else read.query_sequence[len(read.query_sequence) - read.rt_soft_len :]
+            else read.query_sequence[len(read.query_sequence) - read.rt_soft_len:]
         )
 
         ret = self.__double_check_blat_query(
@@ -745,12 +745,12 @@ def detect_read_read_connections_from_cigar(
             else:
                 mean_qualities_read1_match = mean(
                     read1.query_qualities[
-                        read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)
+                        read1.lt_soft_len: (read1.query_length - read1.rt_soft_len)
                     ],
                 )
                 mean_qualities_read2_match = mean(
                     read2.query_qualities[
-                        read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
+                        read2.lt_soft_len: (read2.query_length - read2.rt_soft_len)
                     ],
                 )
             if (

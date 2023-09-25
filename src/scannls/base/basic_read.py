@@ -226,14 +226,14 @@ class Read:
         can_sites = {"GT-AG", "GC-AG", "AT-AC"}
         for start, end in introns:
             donor_site = (
-                genome_fasta[self.chrom][end - 2 : end].reverse.complement.seq
+                genome_fasta[self.chrom][end - 2: end].reverse.complement.seq
                 if self.strand.is_reverse()
-                else genome_fasta[self.chrom][start : start + 2].seq
+                else genome_fasta[self.chrom][start: start + 2].seq
             )
             acceptor_site = (
-                genome_fasta[self.chrom][start : start + 2].reverse.complement.seq
+                genome_fasta[self.chrom][start: start + 2].reverse.complement.seq
                 if self.strand.is_reverse()
-                else genome_fasta[self.chrom][end - 2 : end].seq
+                else genome_fasta[self.chrom][end - 2: end].seq
             )
 
             if f"{donor_site}-{acceptor_site}" in can_sites:

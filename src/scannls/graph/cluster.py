@@ -149,7 +149,7 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
     logger.debug(f"merge {path1=}")
     logger.debug(f"merge {path2=}")
     for idx, (updated_node, current_node) in enumerate(
-        zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
+        zip(path1[start_index: start_index + len(path2)], path2),  # type: ignore
     ):
         updated_node.merge(current_node)
 
@@ -182,7 +182,7 @@ def merge_same_len_node_list(
     flag = True
 
     for idx, (node1, node2) in enumerate(
-        zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
+        zip(path1[start_index: start_index + len(path2)], path2),  # type: ignore
     ):
         node1_edge = path1.next_edge(nodes=node1, nodes_idx=start_index + idx)
         node2_edge = path2.next_edge(nodes=node2, nodes_idx=idx)
@@ -335,7 +335,7 @@ class ClusterFinder:
 
         for start_index in range(len(path1) - len(path2) + 1):
             nlpath_1_nodes_key = "".join(
-                merge_keys[path1.id][start_index : start_index + len(path2)],
+                merge_keys[path1.id][start_index: start_index + len(path2)],
             )
 
             if nlpath_1_nodes_key == nlpath_2_nodes_key and merge_same_len_node_list(

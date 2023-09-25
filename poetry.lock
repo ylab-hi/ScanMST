@@ -1174,6 +1174,19 @@ files = [
 ]
 
 [[package]]
+name = "intervaltree"
+version = "3.1.0"
+description = "Editable interval tree data structure for Python 2 and 3"
+optional = false
+python-versions = "*"
+files = [
+    {file = "intervaltree-3.1.0.tar.gz", hash = "sha256:902b1b88936918f9b2a19e0e5eb7ccb430ae45cde4f39ea4b36932920d33952d"},
+]
+
+[package.dependencies]
+sortedcontainers = ">=2.0,<3.0"
+
+[[package]]
 name = "ipdb"
 version = "0.13.13"
 description = "IPython-enabled pdb"
@@ -2936,6 +2949,17 @@ files = [
 ]
 
 [[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+description = "Sorted Containers -- Sorted List, Sorted Dict, Sorted Set"
+optional = false
+python-versions = "*"
+files = [
+    {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
+    {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
+]
+
+[[package]]
 name = "sphinx"
 version = "5.3.0"
 description = "Python documentation generator"
@@ -3403,4 +3427,4 @@ vis = ["matplotlib", "pyvis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "8831465041f56bc30f034fa82d89563d03668323dee437155ecbf3a866c6d398"
+content-hash = "5dbf7d7e3d47b07d935f6cf62bf8b7db229f604c1cfa9cb2fbc69e5df66f3c32"
