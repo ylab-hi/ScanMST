@@ -1042,7 +1042,6 @@ class NLPath:
 
                         nodes.append(read1_node)
                         edge_data.insertion_info = (True, insertion)
-                        edges_data.append(edge_data)
 
                         #  creat node for insertion
                         insertion_node = Node(
@@ -1067,15 +1066,19 @@ class NLPath:
                             variantion_type=VariationType.from_str(
                                 insertion_read2_event.sv_type,
                             ),
-                            break_point1=edge_prev_breakpoint,
-                            break_point2=edge_next_breakpoint,
+                            break_point1=edge_next_breakpoint,
+                            break_point2=edge_data.break_point2,
                             sr=1,
                             read_ids=[insertion.query_name],
                         )
 
+                        edge_data.break_point2 = edge_prev_breakpoint
+                        edges_data.append(edge_data)
+
                         logger.trace(f"Add Insertion {insertion_node=} to Series")
 
                         nodes.append(insertion_node)
+
                         edges_data.append(insertion_edge_data)
 
                 else:  # no hits or multiple hits
@@ -1153,10 +1156,10 @@ def check_end_node_is_ploya(
         raise SystemExit(msg)
 
     if node.strand.is_forward():
-        seq = genome_fasta[node.chrom][node.ref_end: node.ref_end + length].seq
+        seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
     else:
         seq = genome_fasta[node.chrom][
-            node.ref_start - length: node.ref_start
+            node.ref_start - length : node.ref_start
         ].reverse.complement.seq
 
     counter: dict[str, int] = Counter(seq)
