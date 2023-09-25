@@ -270,13 +270,7 @@ def gene_annotation(
     :param pos1: position for breakpoint1
     :param pos2: position for breakpoint2
     :param gene_iv: gene annotations in HTSeq.GenomicArrayOfSets
-    :type chrm1: str
-    :type chrm2: str
-    :type pos1: int
-    :type pos2: int
-    :type gene_iv: HTSeq.GenomicArrayOfSets
     :return: overlapped genes for breakpoints
-    :rtype: tuple
     """
     gene1, gene2 = None, None
     try:
@@ -285,6 +279,7 @@ def gene_annotation(
         gene1 = ""
     except TypeError:
         pass
+
     try:
         gene2 = "&".join(list(gene_iv[HTSeq.GenomicPosition(chrm2, pos2)]))
     except IndexError:
@@ -296,6 +291,7 @@ def gene_annotation(
         gene1 = "INTERGENIC"
     if not gene2:
         gene2 = "INTERGENIC"
+
     return gene1, gene2
 
 

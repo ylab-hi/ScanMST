@@ -66,7 +66,7 @@ def annotate_node(node: Node, interval_trees: dict[str, intervaltree.IntervalTre
     if len(genes) == 0:
         return
 
-    node.gene_name = [gene.data for gene in genes]
+    node.gene_names = [gene.data for gene in genes]
 
 
 def annotate_graph(graph: NLGraph, node: Node, annotation_source: Path):

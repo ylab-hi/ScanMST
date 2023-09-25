@@ -242,7 +242,8 @@ class Node(BasicNode):
         "exons",
         "_introns",
         "modes",
-        "genes",
+        "genes",  # WARN: delete and move to edge
+        "gene_names",
         "query_name",
         "annotation_code",
         "splicing_code",
@@ -281,6 +282,7 @@ class Node(BasicNode):
 
         self.modes = modes
         self.genes = genes
+        self.gene_names: list[str] = []
 
         self.annotation_code = annot
         self.splicing_code = canonical
@@ -1156,10 +1158,10 @@ def check_end_node_is_ploya(
         raise SystemExit(msg)
 
     if node.strand.is_forward():
-        seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
+        seq = genome_fasta[node.chrom][node.ref_end: node.ref_end + length].seq
     else:
         seq = genome_fasta[node.chrom][
-            node.ref_start - length : node.ref_start
+            node.ref_start - length: node.ref_start
         ].reverse.complement.seq
 
     counter: dict[str, int] = Counter(seq)
