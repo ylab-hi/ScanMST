@@ -11,7 +11,7 @@ from loguru import logger
 from scannls.type import LoggerType
 from scannls.utils import cigar_validity
 
-from .basic import MappingMode
+from .basic import MappingMode, Strand
 from .basic_class import reverse_complement
 from .basic_read import Read
 from .blat import Blat
@@ -407,7 +407,7 @@ class ReadsConnector:
     @staticmethod
     def _double_check_for_start_end_read_determine_new_read_mode(
         read: Read,
-        new_read_strand: str,
+        new_read_strand: Strand,
     ) -> MappingMode:
         """Double check for start and end read determine new read mode."""
         read.mode = MappingMode.MS if read.mode == MappingMode.SM else MappingMode.SM
@@ -428,6 +428,7 @@ class ReadsConnector:
             len(query_seq),
         )
 
+        strand = Strand.from_str(strand)
         lt_s_len = hsp.query_start
         rt_s_len = len(query_seq) - hsp.query_end
         new_read_mode = (
@@ -509,13 +510,14 @@ class ReadsConnector:
 
         To see if there are True first read or True end read.
         """
+
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
             if read.mode == MappingMode.MS
             else read.query_sequence[len(read.query_sequence) - read.rt_soft_len:]
         )
 
-        if read.strand.is_reverse:
+        if read.strand.is_reverse():
             query_sequence = reverse_complement(query_sequence)
 
         ret = self.__double_check_blat_query(
@@ -653,7 +655,6 @@ class ReadsConnector:
                     f"{start_read.query_name}",
                 )
                 return is_connected
-
             self._double_check_for_start_end_read(end_read, "end")
 
         return is_connected
