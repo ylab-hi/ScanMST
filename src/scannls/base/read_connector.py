@@ -515,6 +515,9 @@ class ReadsConnector:
             else read.query_sequence[len(read.query_sequence) - read.rt_soft_len:]
         )
 
+        if read.strand.is_reverse:
+            query_sequence = reverse_complement(query_sequence)
+
         ret = self.__double_check_blat_query(
             query_sequence,
             self.align_len_threshold,
@@ -657,12 +660,12 @@ class ReadsConnector:
 
 
 def detect_read_read_connections_from_cigar(
-    read: Any,
+    read,
     mapq_cutoff: int,
     max_allowed_nm: int,
     blat: Blat,
     logger: LoggerType,
-) -> Any:
+):
     """Detecting read-read connections with chimeric alignments CIGAR string.
 
     :param logger:

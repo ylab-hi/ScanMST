@@ -1077,7 +1077,7 @@ class NLPath:
                         edge_data.break_point2 = edge_prev_breakpoint
                         edges_data.append(edge_data)
 
-                        logger.trace(f"Add Insertion {insertion_node=} to Series")
+                        logger.trace(f"Add Insertion {insertion_node=} to path")
 
                         nodes.append(insertion_node)
 

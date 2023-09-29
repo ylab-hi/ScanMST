@@ -240,25 +240,25 @@ def detect_sv_from_cigar(
         event_list: list[Event] = []
         # every chain is a group of connected reads
         # every chain may have a list of events
-        for _lt, _rt in zip(read_chains[:], read_chains[1:]):
-            if (_lt, _rt) in reads_pair_mode_dict:
-                _lt_mode, _rt_mode = reads_pair_mode_dict[(_lt, _rt)]
-            elif (_rt, _lt) in reads_pair_mode_dict:
-                _rt_mode, _lt_mode = reads_pair_mode_dict[(_rt, _lt)]
+        for lt, rt in zip(read_chains[:], read_chains[1:]):
+            if (lt, rt) in reads_pair_mode_dict:
+                lt_mode, rt_mode = reads_pair_mode_dict[(lt, rt)]
+            elif (rt, lt) in reads_pair_mode_dict:
+                rt_mode, lt_mode = reads_pair_mode_dict[(rt, lt)]
             else:
-                logger.warning(f"{_lt=}, {_rt=} are not in {reads_pair_mode_dict}")
+                logger.warning(f"{lt=}, {rt=} are not in {reads_pair_mode_dict}")
                 raise ValueError
 
-            if not strand_mode_checker(_lt.strand, _rt.strand, _lt_mode, _rt_mode):
+            if not strand_mode_checker(lt.strand, rt.strand, lt_mode, rt_mode):
                 logger.warning(
-                    f"{_lt.strand=}, {_rt.strand=}, {_lt_mode=}, {_rt_mode=}",
+                    f"{lt.strand=}, {rt.strand=}, {lt_mode=}, {rt_mode=}",
                 )
 
             event_type = infer_nls_from_connected_reads(
-                read_lt=_lt,
-                read_rt=_rt,
-                lt_mode=_lt_mode,
-                rt_mode=_rt_mode,
+                read_lt=lt,
+                read_rt=rt,
+                lt_mode=lt_mode,
+                rt_mode=rt_mode,
                 splice_bin=splice_bin,
                 genome_fasta=genome_fasta,
                 cvg=cvg,
