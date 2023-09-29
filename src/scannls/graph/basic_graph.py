@@ -942,6 +942,9 @@ class NLPath:
 
         events_len = len(events)
 
+        import ipdb
+
+        ipdb.set_trace()
         for index, event in enumerate(events):
             read1: Read = event.read1(read_chains)
             read2: Read = event.read2(read_chains)
@@ -1042,7 +1045,10 @@ class NLPath:
 
                         read1_insertion_event.update_node_info(read1_node)
 
-                        nodes.append(read1_node)
+                        edge_data = EdgeData.from_event(
+                            read1_insertion_event,
+                            read1.query_name,
+                        )
                         edge_data.insertion_info = (True, insertion)
 
                         #  creat node for insertion
@@ -1059,28 +1065,15 @@ class NLPath:
 
                         insertion_read2_event.update_insertion_node_info(insertion_node)
 
-                        (
-                            edge_prev_breakpoint,
-                            edge_next_breakpoint,
-                        ) = BreakPoint.from_node(insertion_node)
-
-                        insertion_edge_data = EdgeData(
-                            variantion_type=VariationType.from_str(
-                                insertion_read2_event.sv_type,
-                            ),
-                            break_point1=edge_next_breakpoint,
-                            break_point2=edge_data.break_point2,
-                            sr=1,
-                            read_ids=[insertion.query_name],
+                        insertion_edge_data = EdgeData.from_event(
+                            insertion_read2_event, read1.query_name,
                         )
 
-                        edge_data.break_point2 = edge_prev_breakpoint
-                        edges_data.append(edge_data)
-
+                        nodes.append(read1_node)
                         logger.trace(f"Add Insertion {insertion_node=} to path")
-
                         nodes.append(insertion_node)
 
+                        edges_data.append(edge_data)
                         edges_data.append(insertion_edge_data)
 
                 else:  # no hits or multiple hits
