@@ -942,9 +942,6 @@ class NLPath:
 
         events_len = len(events)
 
-        import ipdb
-
-        ipdb.set_trace()
         for index, event in enumerate(events):
             read1: Read = event.read1(read_chains)
             read2: Read = event.read2(read_chains)
@@ -1066,7 +1063,8 @@ class NLPath:
                         insertion_read2_event.update_insertion_node_info(insertion_node)
 
                         insertion_edge_data = EdgeData.from_event(
-                            insertion_read2_event, read1.query_name,
+                            insertion_read2_event,
+                            read1.query_name,
                         )
 
                         nodes.append(read1_node)
