@@ -368,7 +368,7 @@ class Node(BasicNode):
         return f"{self.chrom}_{key}"
 
     @property
-    def exons_count(self) -> int:
+    def exons_length(self) -> int:
         """Get total length of exon of a node."""
         return sum(len(exon) for exon in self.exons)
 
@@ -793,7 +793,7 @@ class NLPath:
 
     def is_minimum_node_length_larger_than_threshold(self, threshold: int = 10) -> bool:
         """Check if minimum length of all nodes in the series > threshold."""
-        return min(_node.exons_count for _node in self.nodes) > threshold
+        return min(_node.exons_length for _node in self.nodes) > threshold
 
     def sum_sr(self) -> int:
         """Get sum of sr for all nodes in the series."""

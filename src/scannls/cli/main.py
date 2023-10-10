@@ -350,7 +350,7 @@ def _scan_bam_helper(
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
-                    f"Pre-checking: {read.query_name= } has SA; supplementary read: "
+                    f"Pre-checking: {read.query_name=} has SA; supplementary read: "
                     f"{read.is_supplementary}",
                 )
 
@@ -425,7 +425,7 @@ def _scan_bam_helper(
 
                     if chimeric_aln_str:
                         logger.trace(
-                            f"Pre-checking: {read.query_name= } "
+                            f"Pre-checking: {read.query_name=} "
                             f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it "
                             f"has one SA tag ",
                         )
@@ -451,7 +451,7 @@ def _scan_bam_helper(
 
                     if primary_aln_cigarstring:
                         logger.trace(
-                            f"Pre-checking: {read.query_name= } "
+                            f"Pre-checking: {read.query_name=} "
                             f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag",
                         )
 
@@ -466,7 +466,7 @@ def _scan_bam_helper(
             # select reads with SA tags (original or newly-added), ignore supplementary alignment
             if read.has_tag("SA"):
                 logger.trace(
-                    f"{read.query_name= } has SA; supplementary read: {read.is_supplementary}",
+                    f"{read.query_name=} has SA; supplementary read: {read.is_supplementary}",
                 )
 
                 nm = read.get_tag("NM")

@@ -49,8 +49,8 @@ Options::self &Options::min_seq_align_len(int min_seq_align_len) {
   min_seq_align_len_ = min_seq_align_len;
   return *this;
 }
-[[maybe_unused]] Options::self &
-Options::average_read_depth(int average_read_depth) {
+[[maybe_unused]] Options::self &Options::average_read_depth(
+    int average_read_depth) {
   average_read_depth_ = average_read_depth;
   return *this;
 }
@@ -72,8 +72,10 @@ Options::average_read_depth(int average_read_depth) {
 }
 
 Rescuer::Rescuer(const Options &options)
-    : bam_reader(options.file_), min_mapq(options.mapq_),
-      min_soft_len(options.soft_len_), min_mismatch(options.mismatch_),
+    : bam_reader(options.file_),
+      min_mapq(options.mapq_),
+      min_soft_len(options.soft_len_),
+      min_mismatch(options.mismatch_),
       min_identity(options.identity_),
       min_seq_align_len(options.min_seq_align_len_),
       average_read_depth(options.average_read_depth_) {}
@@ -89,8 +91,20 @@ int Rescuer::calculate_sr(
       add_align_seqs(candidate_list, reference_list, region, break_point,
                      current_query_name, cigartuples_without_soft);
 
-  if (candidate_list.empty() || reference_list.empty())
+  std::cout << "candidate list" << '\n';
+  for (auto const &i : candidate_list) {
+    std::cout << i << '\n';
+  }
+
+  std::cout << "reference list" << '\n';
+  for (auto const &i : reference_list) {
+    std::cout << i << '\n';
+  }
+
+  if (candidate_list.empty() || reference_list.empty()) {
     return 0;
+  }
+
   return calculate_incremented_sr(candidate_list, reference_list,
                                   sr_list_names);
 }
@@ -107,8 +121,9 @@ int Rescuer::calculate_incremented_sr(
     bool is_sr_increment{false};
 
     for (const auto &reference : reference_list) {
-      if (!check_rescue(candidate, reference))
+      if (!check_rescue(candidate, reference)) {
         continue;
+      }
 
       // candidate can be rescued
       ++num_increment_sr;
@@ -137,9 +152,8 @@ int Rescuer::calculate_incremented_sr(
   return bam_reader.count(t_chrom.c_str(), t_start, t_end);
 }
 
-std::optional<double>
-Rescuer::calculate_identity(std::string_view query,
-                            std::string_view target) const {
+std::optional<double> Rescuer::calculate_identity(
+    std::string_view query, std::string_view target) const {
   auto const target_len{static_cast<int>(target.length())};
   int const masklen{std::max(target_len >> 1, 15)};
 
@@ -150,7 +164,7 @@ Rescuer::calculate_identity(std::string_view query,
                                           m_alignment.query_begin + 1) /
                       static_cast<double>(query.length())};
       return_value) {
-    return identity; // do not align
+    return identity;  // do not align
   } else {
     return {};
   }
@@ -159,8 +173,9 @@ Rescuer::calculate_identity(std::string_view query,
 bool Rescuer::check_identity(std::string_view query, std::string_view target,
                              double threshold) const {
   if (auto const identity{calculate_identity(query, target)};
-      identity.has_value() && identity.value() >= threshold)
+      identity.has_value() && identity.value() >= threshold) {
     return true;
+  }
 
   return false;
 }
@@ -197,8 +212,9 @@ bool Rescuer::check_rescue_condition(std::string_view query,
   if (auto const identity{calculate_identity(query, target)};
       identity.has_value() && identity.value() >= min_identity &&
       m_alignment.mismatches <= min_mismatch &&
-      m_alignment.query_begin + m_alignment.ref_begin <= 2)
+      m_alignment.query_begin + m_alignment.ref_begin <= 2) {
     return true;
+  }
   return false;
 }
 
@@ -246,13 +262,15 @@ std::vector<std::string> Rescuer::add_align_seqs(
 
       if (!check_read_pos(iterator, break_point) ||
           !check_if_same_isform(cigartuples_without_soft,
-                                cigar_result.cigartuples_without_soft))
+                                cigar_result.cigartuples_without_soft)) {
         continue;
+      }
 
       auto align_sequence =
           get_align_sequences(iterator, break_point, cigar_result);
-      if (!align_sequence.has_value())
+      if (!align_sequence.has_value()) {
         continue;
+      }
 
       if (auto read_name{iterator.read_name()};
           find(current_names.begin(), current_names.end(), read_name) !=
@@ -271,21 +289,21 @@ std::vector<std::string> Rescuer::add_align_seqs(
 
 std::optional<int> Rescuer::get_align_seq_len(uint seq_size,
                                               uint min_align_len) {
-  if (seq_size >= max_align_seq_len)
+  if (seq_size >= max_align_seq_len) {
     return max_align_seq_len;
-
-  if (seq_size < min_align_len) {
-    return {}; // read length is too short skip
   }
 
-  return {seq_size}; // has value not skip
+  if (seq_size < min_align_len) {
+    return {};  // read length is too short skip
+  }
+
+  return {seq_size};  // has value not skip
 }
 
 // may need to change
-std::optional<Seqs>
-Rescuer::get_align_sequences(BamReader::Iterator const &iterator,
-                             BreakPoint const &break_point,
-                             CigarResult const &cigar_result) const {
+std::optional<Seqs> Rescuer::get_align_sequences(
+    BamReader::Iterator const &iterator, BreakPoint const &break_point,
+    CigarResult const &cigar_result) const {
   Seqs seqs{};
 
   std::string const read_seq = iterator.sequence();
@@ -297,8 +315,9 @@ Rescuer::get_align_sequences(BamReader::Iterator const &iterator,
         cigar_result.rt_soft_len, static_cast<uint>(min_seq_align_len));
 
     // check if seq length is too short
-    if (!lt_seq_len.has_value() || !rt_seq_len.has_value())
+    if (!lt_seq_len.has_value() || !rt_seq_len.has_value()) {
       return {};
+    }
 
     seqs.seq1.assign(read_seq.begin(), read_seq.begin() + lt_seq_len.value());
     seqs.seq2 = {read_seq.rbegin(), read_seq.rbegin() + rt_seq_len.value()};
@@ -311,8 +330,9 @@ Rescuer::get_align_sequences(BamReader::Iterator const &iterator,
     auto const rt_seq_len = get_align_seq_len(
         cigar_result.rt_soft_len, static_cast<uint>(min_seq_align_len));
 
-    if (!rt_seq_len.has_value())
+    if (!rt_seq_len.has_value()) {
       return {};
+    }
     seqs.seq1.assign(read_seq.substr(
         cigar_result.query_len - cigar_result.rt_soft_len, rt_seq_len.value()));
 
@@ -323,8 +343,9 @@ Rescuer::get_align_sequences(BamReader::Iterator const &iterator,
     // left soft clipped
     auto const lt_seq_len = get_align_seq_len(
         cigar_result.lt_soft_len, static_cast<uint>(min_seq_align_len));
-    if (!lt_seq_len.has_value())
+    if (!lt_seq_len.has_value()) {
       return {};
+    }
 
     auto &&temp = read_seq.substr(cigar_result.lt_soft_len - lt_seq_len.value(),
                                   lt_seq_len.value());
@@ -345,19 +366,23 @@ bool Rescuer::check_if_same_isform(
   auto const right_size = right_cigartuples_without_soft.size();
 
   for (std::vector<int>::size_type i = 0; i < left_size; i += 2) {
-    if (left_cigartuples_without_soft[i] == BAM_CREF_SKIP)
+    if (left_cigartuples_without_soft[i] == BAM_CREF_SKIP) {
       left_result.push_back(left_cigartuples_without_soft[i + 1]);
+    }
   }
 
   for (std::vector<int>::size_type i = 0; i < right_size; i += 2) {
-    if (right_cigartuples_without_soft[i] == BAM_CREF_SKIP)
+    if (right_cigartuples_without_soft[i] == BAM_CREF_SKIP) {
       right_result.push_back(right_cigartuples_without_soft[i + 1]);
+    }
   }
 
-  if (left_result.size() != right_result.size())
+  if (left_result.size() != right_result.size()) {
     return false;
-  if (left_result.empty())
+  }
+  if (left_result.empty()) {
     return true;
+  }
 
   return std::equal(left_result.begin(), left_result.end(),
                     right_result.begin());
@@ -390,37 +415,39 @@ CigarResult parser_cigar(const uint32_t *t_cigar_str, size_t t_cigar_len) {
     result.cigartuples.insert(result.cigartuples.end(), {op, len});
 
     switch (op) {
-    case BAM_CMATCH:
-      result.ref_match += len;
-      result.read_match += len;
-      result.query_len += len;
-      result.cigartuples_without_soft.insert(
-          result.cigartuples_without_soft.end(), {op, len});
-      break;
-    case BAM_CINS:
-      result.indel_len -= static_cast<int>(len);
-      result.read_match += len;
-      result.query_len += len;
-      result.cigartuples_without_soft.insert(
-          result.cigartuples_without_soft.end(), {op, len});
-      break;
-    case BAM_CDEL:
-    case BAM_CREF_SKIP:
-      result.indel_len += static_cast<int>(len);
-      result.ref_match += len;
-      result.cigartuples_without_soft.insert(
-          result.cigartuples_without_soft.end(), {op, len});
-      break;
-    case BAM_CSOFT_CLIP:
-      result.query_len += len;
-      break;
+      case BAM_CMATCH:
+        result.ref_match += len;
+        result.read_match += len;
+        result.query_len += len;
+        result.cigartuples_without_soft.insert(
+            result.cigartuples_without_soft.end(), {op, len});
+        break;
+      case BAM_CINS:
+        result.indel_len -= static_cast<int>(len);
+        result.read_match += len;
+        result.query_len += len;
+        result.cigartuples_without_soft.insert(
+            result.cigartuples_without_soft.end(), {op, len});
+        break;
+      case BAM_CDEL:
+      case BAM_CREF_SKIP:
+        result.indel_len += static_cast<int>(len);
+        result.ref_match += len;
+        result.cigartuples_without_soft.insert(
+            result.cigartuples_without_soft.end(), {op, len});
+        break;
+      case BAM_CSOFT_CLIP:
+        result.query_len += len;
+        break;
     }
   }
 
-  if (result.cigartuples[0] == BAM_CSOFT_CLIP)
+  if (result.cigartuples[0] == BAM_CSOFT_CLIP) {
     result.lt_soft_len = result.cigartuples[1];
-  if (result.cigartuples[2 * t_cigar_len - 2] == BAM_CSOFT_CLIP)
+  }
+  if (result.cigartuples[2 * t_cigar_len - 2] == BAM_CSOFT_CLIP) {
     result.rt_soft_len = result.cigartuples[2 * t_cigar_len - 1];
+  }
   return result;
 }
 
@@ -430,8 +457,11 @@ CigarResult parser_cigar(BamReader::Iterator const &iterator) {
 
 BreakPoint::BreakPoint(long read_start_, long read_end_, int mode_,
                        bool is_reverse_, bool is_middle_)
-    : read_start{read_start_}, read_end{read_end_}, mode{mode_},
-      is_reverse{is_reverse_}, is_middle{is_middle_} {}
+    : read_start{read_start_},
+      read_end{read_end_},
+      mode{mode_},
+      is_reverse{is_reverse_},
+      is_middle{is_middle_} {}
 
 [[maybe_unused]] std::string BreakPoint::to_string() const {
   std::stringstream ss{};
@@ -463,4 +493,4 @@ Seqs::Seqs(std::string_view seq1_) : seq1{seq1_} {}
 
   return ss.str();
 }
-} // namespace cppext
+}  // namespace cppext
