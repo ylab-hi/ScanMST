@@ -91,15 +91,15 @@ int Rescuer::calculate_sr(
       add_align_seqs(candidate_list, reference_list, region, break_point,
                      current_query_name, cigartuples_without_soft);
 
-  std::cout << "candidate list" << '\n';
-  for (auto const &i : candidate_list) {
-    std::cout << i << '\n';
-  }
+  // std::cout << "candidate list" << '\n';
+  // for (auto const &i : candidate_list) {
+  //   std::cout << i << '\n';
+  // }
 
-  std::cout << "reference list" << '\n';
-  for (auto const &i : reference_list) {
-    std::cout << i << '\n';
-  }
+  // std::cout << "reference list" << '\n';
+  // for (auto const &i : reference_list) {
+  //   std::cout << i << '\n';
+  // }
 
   if (candidate_list.empty() || reference_list.empty()) {
     return 0;
@@ -155,7 +155,7 @@ int Rescuer::calculate_incremented_sr(
 std::optional<double> Rescuer::calculate_identity(
     std::string_view query, std::string_view target) const {
   auto const target_len{static_cast<int>(target.length())};
-  int const masklen{std::max(target_len >> 1, 15)};
+  int const masklen{std::max(target_len / 2, 15)};
 
   bool return_value{m_aligner.Align(query.data(), target.data(), target_len,
                                     m_filter, &m_alignment, masklen)};
@@ -184,6 +184,7 @@ bool Rescuer::check_rescue(const Seqs &query, const Seqs &target) const {
   bool flag_1{check_identity(query.seq1.substr(0, min_seq_align_len),
                              target.seq1.substr(0, min_seq_align_len),
                              min_identity)};
+
   if (query.seq2.has_value() && target.seq2.has_value()) {
     if (bool flag_2{check_identity(
             query.seq2.value().substr(0, min_seq_align_len),
@@ -250,7 +251,7 @@ std::vector<std::string> Rescuer::add_align_seqs(
     Region const &region, BreakPoint const &break_point,
     std::vector<std::string> &current_names,
     const std::vector<uint> &cigartuples_without_soft) const {
-  std::vector<std::string> candidate_list_names;
+  std::vector<std::string> candidate_list_names{};
 
   for (auto iterator = bam_reader.query(region);
        !iterator.is_end() && iterator.same_strand_with(break_point.is_reverse);

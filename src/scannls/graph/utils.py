@@ -4,14 +4,12 @@ from pathlib import Path
 import HTSeq
 import intervaltree
 
-from .nlgraph import NLGraph, Node
 
-
-def get_neighbors(node: Node) -> list[Node]:
+def get_neighbors(node):
     return node.predecessors + node.successors
 
 
-def is_weakly_connected(graph: NLGraph) -> bool:
+def is_weakly_connected(graph) -> bool:
     """Check if the graph is weakly connected."""
     visited = set()
     start_node = list(graph.get_start_nodes())
@@ -55,7 +53,7 @@ def build_interval_tree(
     return interval_trees
 
 
-def annotate_node(node: Node, interval_trees: dict[str, intervaltree.IntervalTree]):
+def annotate_node(node, interval_trees: dict[str, intervaltree.IntervalTree]):
     """Annotate a node with a string."""
     interval_tree = interval_trees[node.chrom]
     if interval_tree.is_empty():
@@ -69,7 +67,7 @@ def annotate_node(node: Node, interval_trees: dict[str, intervaltree.IntervalTre
     node.gene_names = [gene.data for gene in genes]
 
 
-def annotate_graph(graph: NLGraph, node: Node, annotation_source: Path):
+def annotate_graph(graph, node, annotation_source: Path):
     """Annotate a node with a string.
 
     .. note::

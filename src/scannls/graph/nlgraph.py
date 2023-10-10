@@ -21,6 +21,7 @@ from .basic_graph import (
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition
 from .sr_rescuer import SRRescuer
+from .utils import is_weakly_connected
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -82,6 +83,9 @@ class NLGraph:
         # sr rescuer
         self.logger.trace(f"NLGraph Node: {len(self)}")
         self.rescuer(self)
+
+        if not is_weakly_connected(self):
+            logger.warning(f"Graph {self.nodes=} is not weakly connected")
 
         node_list = []
         # trace path
