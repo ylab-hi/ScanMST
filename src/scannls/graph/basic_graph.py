@@ -241,7 +241,6 @@ class Node(BasicNode):
         "_ref_end",
         "exons",
         "_introns",
-        "modes",
         "genes",  # WARN: delete and move to edge
         "gene_names",
         "query_name",
@@ -265,7 +264,6 @@ class Node(BasicNode):
         exons: Exons,
         annot: int | None = None,
         canonical: int | None = None,
-        modes: list[MappingMode] | None = None,
         genes: tuple[str, str] | None = None,
         cigartuples_without_soft: list[int] | None = None,
     ) -> None:
@@ -280,7 +278,6 @@ class Node(BasicNode):
         self.exons = exons
         self._introns = exons.introns()
 
-        self.modes = modes
         self.genes = genes
         self.gene_names: list[str] = []
 
@@ -379,7 +376,7 @@ class Node(BasicNode):
     def merge(
         self,
         other: Node,
-        optional_attributes=("splicing_code", "annotation_code", "genes", "modes"),
+        optional_attributes=("splicing_code", "annotation_code", "genes"),
     ) -> None:
         """Merge two nodes.
 
@@ -499,6 +496,8 @@ class EdgeData:
     break_point2: BreakPoint
     sr: int
     read_ids: list[str]
+    mode1: MappingMode
+    mode2: MappingMode
     insertion_info: Any | None = None
     original_sr: int = 1
 
@@ -510,6 +509,8 @@ class EdgeData:
             break_point2=BreakPoint.from_str(event.bp2),
             sr=1,
             read_ids=[read_id],
+            mode1=MappingMode.from_int(event.mode1),
+            mode2=MappingMode.from_int(event.mode2),
         )
 
     def equal(
@@ -578,6 +579,12 @@ class Edge:
     def original_sr(self, value): self.edge_data.original_sr = value
     @property
     def read_ids(self): return self.edge_data.read_ids
+    @property
+    def mode1(self): return self.edge_data.mode1
+    @property
+    def mode2(self): return self.edge_data.mode2
+    @property
+    def modes(self): return self.mode1, self.mode2
     # fmt: on
 
     @staticmethod
@@ -739,7 +746,6 @@ class NLPath:
         """Initialize a nlpath object."""
         self.nodes = nodes
         self.edges: dict[str, Edge] = {}
-
         self.is_in_graph = False
         self.id = -1
         self.merge_factor = 1

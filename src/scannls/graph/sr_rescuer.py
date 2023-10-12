@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from scannls import cppext
-from scannls.exception import ModesNotFoundError
 
 if TYPE_CHECKING:
     from scannls.base import MappingMode
@@ -109,23 +108,11 @@ class SRRescuer:
 
         return node.chrom, next_pos
 
-    def update_sr(
+    def update_predecessor_sr(
         self,
-        graph: NLGraph,
         current_node: Node,
-        query_names_in_graph: list[str],
-        node_rescued_sr_maximum: int,
-    ) -> None:
-        """Update SR for input node."""
-        if current_node.is_end_node():
-            return
-
-        if current_node.modes is None:
-            msg = f"{current_node.query_name}"
-            raise ModesNotFoundError(msg)
-
-        mode1, mode2 = current_node.modes
-
+        mode1: MappingMode,
+    ) -> int:
         query_name_current = current_node.read_ids
         chrom, start = SRRescuer.obtain_region_for_rescue_sr(
             current_node,
@@ -135,8 +122,7 @@ class SRRescuer:
         logger.trace(
             f"{chrom=} {start=} {mode1=}  {current_node.strand=} {current_node.ref_start=} "
             f"{current_node.ref_end=} {is_middle_node(current_node)} "
-            f"{current_node.cigartuples_without_soft=} {query_name_current=} "
-            f"{query_names_in_graph=} ",
+            f"{current_node.cigartuples_without_soft=} {query_name_current=} ",
         )
 
         region = cppext.Region(chrom, start - 1, start)
@@ -156,6 +142,18 @@ class SRRescuer:
         )
 
         logger.trace(f"{current_node_rescued_sr=}")
+        return current_node_rescued_sr
+
+    def update_sr(
+        self,
+        graph: NLGraph,
+        current_node: Node,
+        query_names_in_graph: list[str],
+        node_rescued_sr_maximum: int,
+    ) -> None:
+        """Update SR for input node."""
+        rescued_pre = False
+        current_node_rescued_sr = 0
 
         for next_node in current_node.successors:
             edges = graph.find_edges(current_node, next_node)
@@ -164,12 +162,23 @@ class SRRescuer:
                 logger.warning("detect multiple edges")
 
             for edge in edges[:1]:
+                mode1, mode2 = edge.modes
+
+                if not rescued_pre:
+                    current_node_rescued_sr = self.update_predecessor_sr(
+                        current_node,
+                        mode1,
+                    )
+                    rescued_pre = True
+
                 edge.original_sr = edge.sr
                 edge.sr += current_node_rescued_sr
                 # update depth for breakpoint1 of edge
                 chrom_n, pos_n = edge.break_point1.to_tuple()
+
                 if mode1.is_ms():
                     pos_n -= 1
+
                 edge.break_point1.depth = self.cppext_rescuer.count_reads(
                     chrom_n,
                     pos_n,

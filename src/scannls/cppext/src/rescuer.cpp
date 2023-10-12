@@ -91,15 +91,15 @@ int Rescuer::calculate_sr(
       add_align_seqs(candidate_list, reference_list, region, break_point,
                      current_query_name, cigartuples_without_soft);
 
-  // std::cout << "candidate list" << '\n';
-  // for (auto const &i : candidate_list) {
-  //   std::cout << i << '\n';
-  // }
+  std::cout << "candidate list" << '\n';
+  for (auto const &i : candidate_list) {
+    std::cout << i << '\n';
+  }
 
-  // std::cout << "reference list" << '\n';
-  // for (auto const &i : reference_list) {
-  //   std::cout << i << '\n';
-  // }
+  std::cout << "reference list" << '\n';
+  for (auto const &i : reference_list) {
+    std::cout << i << '\n';
+  }
 
   if (candidate_list.empty() || reference_list.empty()) {
     return 0;

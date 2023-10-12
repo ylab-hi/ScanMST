@@ -18,7 +18,6 @@ from scannls.exception import (
     AnnotationCodeNotFoundError,
     BreakpointNotFoundError,
     GenesNotFoundError,
-    ModesNotFoundError,
     SplicingCodeNotFoundError,
 )
 from scannls.graph import NLPath, Node  # noqa: TCH001
@@ -345,12 +344,9 @@ def get_vcf_features_from_nlpath(
             raise GenesNotFoundError(current_node.query_name)
         gene1, gene2 = current_node.genes
 
-        if current_node.modes is None:
-            raise ModesNotFoundError(current_node.query_name)
-
-        _mode1, _mode2 = current_node.modes
-        mode1 = "MS" if _mode1 == 1 else "SM"
-        mode2 = "MS" if _mode2 == 1 else "SM"
+        _mode1, _mode2 = current_edge.modes
+        mode1 = _mode1.to_str()
+        mode2 = _mode2.to_str()
 
         if current_edge is None:
             raise BreakpointNotFoundError(current_node.query_name)

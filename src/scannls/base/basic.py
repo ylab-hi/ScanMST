@@ -15,6 +15,7 @@ class MappingMode(IntEnum):
     def reversed(self): return self.SM if self == self.MS else self.MS
     def is_sm(self): return self == self.SM
     def is_ms(self): return self == self.MS
+    def to_str(self): return "SM" if self == self.SM else "MS"
     # fmt: on
 
     @classmethod

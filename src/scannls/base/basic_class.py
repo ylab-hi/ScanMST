@@ -445,7 +445,7 @@ class Event:
         """
         new_node = self.update_specific_info_within_event(
             new_node,
-            ["annotation_code", "splicing_code", "modes", "genes"],
+            ["annotation_code", "splicing_code", "genes"],
         )
 
     def update_insertion_node_info(self, insertion_node):
