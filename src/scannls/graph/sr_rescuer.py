@@ -67,6 +67,7 @@ class SRRescuer:
 
         self.cppext_rescuer = cppext.Rescuer(options)
         self.node_rescued_sr_maximum = node_rescued_sr_maximum
+        self.cache = {}
 
     def __call__(self, graph) -> None:
         """Rescue SR from soft-clipped non-chimeric reads.
@@ -76,6 +77,7 @@ class SRRescuer:
         :param nodes_in_graph: Series
         """
         query_names_in_graph = set()
+        self.cache.clear()
 
         for node in graph:
             query_names_in_graph.update(node.read_ids)
@@ -96,7 +98,6 @@ class SRRescuer:
     @staticmethod
     def obtain_region_for_rescue_sr(node: Node, mode: MappingMode):
         """Obtain region from rescue."""
-
         next_pos = (
             node.exons.last.end if node.strand.is_forward() else node.exons.first.start
         )
@@ -128,8 +129,6 @@ class SRRescuer:
         region = cppext.Region(chrom, start - 1, start)
         break_point = make_breakpoint(current_node, int(mode1))
 
-        logger.warning(f"{break_point.to_string()}")
-
         if current_node.cigartuples_without_soft is None:
             msg = f"{current_node.query_name} with None value"
             raise ValueError(msg)
@@ -152,7 +151,6 @@ class SRRescuer:
         node_rescued_sr_maximum: int,
     ) -> None:
         """Update SR for input node."""
-        rescued_pre = False
         current_node_rescued_sr = 0
 
         for next_node in current_node.successors:
@@ -164,12 +162,14 @@ class SRRescuer:
             for edge in edges[:1]:
                 mode1, mode2 = edge.modes
 
-                if not rescued_pre:
+                if current_node not in self.cache:
                     current_node_rescued_sr = self.update_predecessor_sr(
                         current_node,
                         mode1,
                     )
-                    rescued_pre = True
+                    self.cache[current_node] = current_node_rescued_sr
+                else:
+                    current_node_rescued_sr = self.cache[current_node]
 
                 edge.original_sr = edge.sr
                 edge.sr += current_node_rescued_sr
@@ -214,9 +214,11 @@ class SRRescuer:
 
                 region = cppext.Region(chrom, start - 1, start)
                 break_point = make_breakpoint(next_node, mode2)
-                edge.sr += self.cppext_rescuer.calculate_sr(
+                increased_sr = self.cppext_rescuer.calculate_sr(
                     region,
                     break_point,
                     query_name_next,
                     next_node.cigartuples_without_soft,
                 )
+                edge.sr += increased_sr
+                self.cache[next_node] = increased_sr

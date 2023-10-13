@@ -91,6 +91,7 @@ int Rescuer::calculate_sr(
       add_align_seqs(candidate_list, reference_list, region, break_point,
                      current_query_name, cigartuples_without_soft);
 
+#ifdef SCDEBUG
   std::cout << "candidate list" << '\n';
   for (auto const &i : candidate_list) {
     std::cout << i << '\n';
@@ -100,6 +101,7 @@ int Rescuer::calculate_sr(
   for (auto const &i : reference_list) {
     std::cout << i << '\n';
   }
+#endif
 
   if (candidate_list.empty() || reference_list.empty()) {
     return 0;
@@ -273,11 +275,23 @@ std::vector<std::string> Rescuer::add_align_seqs(
         continue;
       }
 
+#ifdef SCDEBUG
+      std::cout << '\n' << "read name: " << iterator.read_name() << '\n';
+      std::cout << "current names" << '\n';
+      for (auto const &current_name : current_names) {
+        std::cout << current_name << '\n';
+      }
+
+      std::cout << "m_names_list" << '\n';
+      for (auto const &m_names_list_name : m_names_list) {
+        std::cout << m_names_list_name << '\n';
+      }
+#endif
+
       if (auto read_name{iterator.read_name()};
           find(current_names.begin(), current_names.end(), read_name) !=
           current_names.end()) {
         reference_seqs.push_back(std::move(align_sequence.value()));
-
       } else if (find(m_names_list.begin(), m_names_list.end(), read_name) ==
                  m_names_list.end()) {
         candidate_list_names.push_back(std::move(read_name));
@@ -320,8 +334,23 @@ std::optional<Seqs> Rescuer::get_align_sequences(
       return {};
     }
 
-    seqs.seq1.assign(read_seq.begin(), read_seq.begin() + lt_seq_len.value());
-    seqs.seq2 = {read_seq.rbegin(), read_seq.rbegin() + rt_seq_len.value()};
+    auto &&temp = read_seq.substr(cigar_result.lt_soft_len - lt_seq_len.value(),
+                                  lt_seq_len.value());
+    seqs.seq1.assign(temp.rbegin(), temp.rend());
+
+    seqs.seq2 = read_seq.substr(
+        cigar_result.query_len - cigar_result.rt_soft_len, rt_seq_len.value());
+
+#ifdef SCDEBUG
+    std::cout << '\n' << "get seqs:" << '\n';
+    std::cout << "read name: " << iterator.read_name() << '\n';
+    std::cout << "read seq len: " << read_seq.length() << '\n';
+    std::cout << "left seq len: " << lt_seq_len.value() << '\n';
+    std::cout << "right seq len: " << rt_seq_len.value() << '\n';
+    std::cout << "read seq len: " << read_seq.length() << '\n';
+    std::cout << "read seq: " << read_seq << '\n';
+    std::cout << "seq: " << seqs.to_string() << '\n';
+#endif
 
     return seqs;
   }
