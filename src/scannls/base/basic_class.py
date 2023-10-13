@@ -456,7 +456,7 @@ class Event:
         """
         self.update_specific_info_within_event(
             insertion_node,
-            ["annotation_code", "splicing_code", "modes", "genes"],
+            ["annotation_code", "splicing_code", "genes"],
         )
 
 
