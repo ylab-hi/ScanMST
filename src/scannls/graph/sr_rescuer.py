@@ -77,7 +77,6 @@ class SRRescuer:
         :param nodes_in_graph: Series
         """
         query_names_in_graph = set()
-        self.cache.clear()
 
         for node in graph:
             query_names_in_graph.update(node.read_ids)
@@ -152,6 +151,7 @@ class SRRescuer:
     ) -> None:
         """Update SR for input node."""
         current_node_rescued_sr = 0
+        rescued_pre = False
 
         for next_node in current_node.successors:
             edges = graph.find_edges(current_node, next_node)
@@ -162,14 +162,12 @@ class SRRescuer:
             for edge in edges[:1]:
                 mode1, mode2 = edge.modes
 
-                if current_node not in self.cache:
+                if not rescued_pre:
+                    rescued_pre = True
                     current_node_rescued_sr = self.update_predecessor_sr(
                         current_node,
                         mode1,
                     )
-                    self.cache[current_node] = current_node_rescued_sr
-                else:
-                    current_node_rescued_sr = self.cache[current_node]
 
                 edge.original_sr = edge.sr
                 edge.sr += current_node_rescued_sr
@@ -221,4 +219,3 @@ class SRRescuer:
                     next_node.cigartuples_without_soft,
                 )
                 edge.sr += increased_sr
-                self.cache[next_node] = increased_sr

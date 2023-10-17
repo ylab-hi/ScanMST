@@ -323,48 +323,25 @@ std::optional<Seqs> Rescuer::get_align_sequences(
 
   std::string const read_seq = iterator.sequence();
 
-  if (break_point.is_middle) {
-    auto const lt_seq_len = get_align_seq_len(
-        cigar_result.lt_soft_len, static_cast<uint>(min_seq_align_len));
-    auto const rt_seq_len = get_align_seq_len(
-        cigar_result.rt_soft_len, static_cast<uint>(min_seq_align_len));
-
-    // check if seq length is too short
-    if (!lt_seq_len.has_value() || !rt_seq_len.has_value()) {
-      return {};
-    }
-
-    auto &&temp = read_seq.substr(cigar_result.lt_soft_len - lt_seq_len.value(),
-                                  lt_seq_len.value());
-    seqs.seq1.assign(temp.rbegin(), temp.rend());
-
-    seqs.seq2 = read_seq.substr(
-        cigar_result.query_len - cigar_result.rt_soft_len, rt_seq_len.value());
-
-#ifdef SCDEBUG
-    std::cout << '\n' << "get seqs:" << '\n';
-    std::cout << "read name: " << iterator.read_name() << '\n';
-    std::cout << "read seq len: " << read_seq.length() << '\n';
-    std::cout << "left seq len: " << lt_seq_len.value() << '\n';
-    std::cout << "right seq len: " << rt_seq_len.value() << '\n';
-    std::cout << "read seq len: " << read_seq.length() << '\n';
-    std::cout << "read seq: " << read_seq << '\n';
-    std::cout << "seq: " << seqs.to_string() << '\n';
-#endif
-
-    return seqs;
-  }
-
   if (break_point.mode == 1) {
     // right soft clipped
     auto const rt_seq_len = get_align_seq_len(
         cigar_result.rt_soft_len, static_cast<uint>(min_seq_align_len));
-
     if (!rt_seq_len.has_value()) {
       return {};
     }
     seqs.seq1.assign(read_seq.substr(
         cigar_result.query_len - cigar_result.rt_soft_len, rt_seq_len.value()));
+
+#ifdef SCDEBUG
+    std::cout << '\n' << "get seqs:" << '\n';
+    std::cout << "read name: " << iterator.read_name() << '\n';
+    std::cout << "read seq len: " << read_seq.length() << '\n';
+    std::cout << "right seq len: " << rt_seq_len.value() << '\n';
+    std::cout << "read seq len: " << read_seq.length() << '\n';
+    std::cout << "read seq: " << read_seq << '\n';
+    std::cout << "seq: " << seqs.to_string() << '\n';
+#endif
 
     return seqs;
   }
@@ -376,10 +353,19 @@ std::optional<Seqs> Rescuer::get_align_sequences(
     if (!lt_seq_len.has_value()) {
       return {};
     }
-
     auto &&temp = read_seq.substr(cigar_result.lt_soft_len - lt_seq_len.value(),
                                   lt_seq_len.value());
     seqs.seq1.assign(temp.rbegin(), temp.rend());
+
+#ifdef SCDEBUG
+    std::cout << '\n' << "get seqs:" << '\n';
+    std::cout << "read name: " << iterator.read_name() << '\n';
+    std::cout << "read seq len: " << read_seq.length() << '\n';
+    std::cout << "right seq len: " << rt_seq_len.value() << '\n';
+    std::cout << "read seq len: " << read_seq.length() << '\n';
+    std::cout << "read seq: " << read_seq << '\n';
+    std::cout << "seq: " << seqs.to_string() << '\n';
+#endif
 
     return seqs;
   }
