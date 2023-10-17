@@ -3460,4 +3460,4 @@ vis = ["matplotlib", "pyvis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "f84acc6677dd4d48468e9054dab443d4ee2830dcaa9128cb51733d4f17aebfe4"
+content-hash = "b5d2efe086fe8a164786f5b19f94e8601c4567d27c9ec5feb83240edaf715871"
