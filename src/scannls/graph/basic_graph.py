@@ -396,7 +396,7 @@ class Node(BasicNode):
 
             if other.query_name in self.read_ids:
                 logger.warning(
-                    f"A circle in a path is detectd {other.query_name} is already",
+                    f"A circle in a path is detectd {other.query_name}",
                 )
 
             # WARN: do not check if they have same key <Yangyang Li>

@@ -95,14 +95,16 @@ class GTFWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
         for node_gtf_feature in get_nodes_gtf_features_from_series(
-            data_object, self.id,
+            data_object,
+            self.id,
         ):
             self.write_line(self.formatter(node_gtf_feature))
         self.id += 1
 
 
 def get_nodes_gtf_features_from_series(
-    series: Series, series_id: int,
+    series: Series,
+    series_id: int,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
@@ -117,14 +119,18 @@ def get_nodes_gtf_features_from_series(
         if node.insertion_info and isinstance(node.insertion_info[1], NovelInsertion):
             series_gtf_features.append(
                 get_gtf_features_from_insertion(
-                    node.insertion_info[1], series_id, node_id,
+                    node.insertion_info[1],
+                    series_id,
+                    node_id,
                 ),
             )
     return series_gtf_features
 
 
 def get_gtf_features_from_insertion(
-    insertion: NovelInsertion, series_id: int, node_id: int,
+    insertion: NovelInsertion,
+    series_id: int,
+    node_id: int,
 ) -> list[str]:
     """Get GTF features of novel insertion."""
     return [
@@ -142,7 +148,9 @@ def get_gtf_features_from_insertion(
 
 
 def get_gtf_features_from_node(
-    node: Node, series_id: int, node_id: int,
+    node: Node,
+    series_id: int,
+    node_id: int,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
