@@ -1,17 +1,15 @@
-# !/usr/bin/env python
 """Basic Read Class.
 
 @Filename:    basicRead.py
 @Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
+@contact:     yangyang.li@northwestern.edu
 @Time:        1/9/22 12:13 PM
 """
-from typing import Any
-from typing import List
-from typing import Optional
+from __future__ import annotations
 
 from scannls import cppext
+
+from .basic import CigarCode, Intervals, MappingMode, Strand
 
 
 class Read:
@@ -84,7 +82,7 @@ class Read:
         query_name: str,
         chrom: str,
         ref_start: int,
-        strand: str,
+        strand: str | Strand,
         cigarstring: str,
         mapq: int,
         nm: int,
@@ -94,15 +92,15 @@ class Read:
         read_match_size: int,
         reference_match_size: int,
         indel_size: int,
-        cigartuples_without_soft: List[int],
+        cigartuples_without_soft: list[int],
         query_length: int,
-        query_qualities: Optional[List[int]] = None,
+        query_qualities: list[int] | None = None,
     ) -> None:
         """Initialize a read class."""
         self.query_name = query_name
         self.chrom = chrom
         self.ref_start = ref_start
-        self.strand = strand
+        self.strand = Strand.from_str(strand)
         self.cigarstring = cigarstring
         self.mapq = mapq
         self.nm = nm
@@ -118,9 +116,9 @@ class Read:
         self.ref_end = self.ref_start + self.reference_match_size
 
         self.sms = self.lt_soft_len, self.read_match_size, self.rt_soft_len
-        self.adhocsms: Any = None
-        self.adhocseq: Any = None
-        self.mode: Any = None
+        self.adhocsms = None
+        self.adhocseq = None
+        self.mode: MappingMode | None = None
 
     def __hash__(self) -> int:
         """Get the hash value of the read.
@@ -142,23 +140,23 @@ class Read:
         :return: representation of the read
         """
         return (
-            f"Read({self.chrom}, {self.ref_start}, {self.ref_end}, "
-            f"{self.strand}, {self.mapq}, {self.nm})"
+            f"Read({self.query_name=}, {self.chrom=}, {self.ref_start=}, {self.ref_end=}, {self.sms=} "
+            f"{self.mode=}, {self.strand=}, {self.mapq=}, {self.nm=})"
         )
 
     @classmethod
-    def init(
+    def new(
         cls,
         query_name: str,
         chrom: str,
         ref_start: int,
-        strand: str,
+        strand: str | Strand,
         cigar_str: str,
         mapq: int,
         nm: int,
         query_seq: str,
-        query_qualities: List[int],
-    ) -> "Read":
+        query_qualities: list[int] | None,
+    ) -> Read:
         """Calculate the features of the read and initialize the read."""
         parse_cigar_result = cppext.parseCigar(cigar_str)
 
@@ -181,7 +179,7 @@ class Read:
             query_qualities,
         )
 
-    def get_exons_and_introns(self) -> Any:
+    def get_exons(self) -> Intervals:
         """Get the coordinates for reads matched part (without softclipping).
 
         :return: exons coordinates and introns coordinates
@@ -195,26 +193,15 @@ class Read:
             op_code = self.cigartuples_without_soft[ind]
             _len = self.cigartuples_without_soft[ind + 1]
 
-            if op_code in {0, 2}:  # M, D
+            if op_code in {CigarCode.Match, CigarCode.Del}:  # M, D
                 current_pos = current_pos + _len
-            elif op_code == 3:  # N
+            elif op_code == CigarCode.Ref_skip:  # N
                 exons.append((start_pos, current_pos))
                 current_pos = current_pos + _len
                 start_pos = current_pos
 
         exons.append((start_pos, current_pos))
-
-        introns = []
-        # No 'N' in the cigar
-        if len(exons) > 1:
-            _positions = []
-            for i, j in exons:
-                _positions.extend([i, j])
-            _positions.sort()
-            _positions.pop(0)
-            _positions.pop(-1)
-            introns = [(x, y) for x, y in zip(_positions[::2], _positions[1::2])]
-        return exons, introns
+        return Intervals.from_list(exons)
 
     def splice_site_checker(self, genome_fasta, fraction_cutoff=0.6) -> bool:
         """Check whether the fraction of canonical splice site usage.
@@ -228,9 +215,10 @@ class Read:
         :return: using canonical splice sites OR not
         :rtype: bool
         """
-        exons, introns = self.get_exons_and_introns()
+        exons = self.get_exons()
+        introns = exons.introns()
 
-        if len(introns) == 0:
+        if introns is None:
             return True
 
         intron_count = len(introns)
@@ -238,14 +226,14 @@ class Read:
         can_sites = {"GT-AG", "GC-AG", "AT-AC"}
         for start, end in introns:
             donor_site = (
-                genome_fasta[self.chrom][end - 2 : end].reverse.complement.seq
-                if self.strand == "-"
-                else genome_fasta[self.chrom][start : start + 2].seq
+                genome_fasta[self.chrom][end - 2: end].reverse.complement.seq
+                if self.strand.is_reverse()
+                else genome_fasta[self.chrom][start: start + 2].seq
             )
             acceptor_site = (
-                genome_fasta[self.chrom][start : start + 2].reverse.complement.seq
-                if self.strand == "-"
-                else genome_fasta[self.chrom][end - 2 : end].seq
+                genome_fasta[self.chrom][start: start + 2].reverse.complement.seq
+                if self.strand.is_reverse()
+                else genome_fasta[self.chrom][end - 2: end].seq
             )
 
             if f"{donor_site}-{acceptor_site}" in can_sites:

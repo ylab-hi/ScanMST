@@ -8,7 +8,6 @@
 @Time:        2/1/22 9:50 PM
 """
 import pytest
-
 from scannls import Node
 
 

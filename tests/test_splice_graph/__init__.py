@@ -7,13 +7,15 @@
 @license:     MIT Licence
 @Time:        1/20/22 6:58 PM
 """
-from typing import Sequence
+from collections.abc import Sequence
 
 from scannls import Node
 
 
 def add_edge_according_order(
-    nodes: Sequence[Node], parent_order: int, child_order: int
+    nodes: Sequence[Node],
+    parent_order: int,
+    child_order: int,
 ):
     """Add edge according order.
 
