@@ -7,15 +7,16 @@ from dataclasses import dataclass
 import HTSeq  # type: ignore
 import pytest
 from pyfaidx import Fasta  # type: ignore
-
-from scannls.core.helper import cigar_validity
-from scannls.core.helper import diff_chrom_diff_strand_handler
-from scannls.core.helper import diff_chrom_same_strand_mode21_handler
-from scannls.core.helper import extract_splice_sites
-from scannls.core.helper import gene_annotation
-from scannls.core.helper import same_chrom_diff_strand_handler
-from scannls.core.helper import same_chrom_same_strand_mode21_handler
-from scannls.core.helper import splicing_confirmation
+from scannls.core.helper import (
+    cigar_validity,
+    diff_chrom_diff_strand_handler,
+    diff_chrom_same_strand_mode21_handler,
+    extract_splice_sites,
+    gene_annotation,
+    same_chrom_diff_strand_handler,
+    same_chrom_same_strand_mode21_handler,
+    splicing_confirmation,
+)
 
 path = os.path.dirname(__file__)
 os.chdir(path)
@@ -118,14 +119,22 @@ def test_splicing_confirmation(prepare_fasta_and_gtf, one_pair_pbs):
     _fasta, _cvg, _gene_iv = prepare_fasta_and_gtf
     bps, _expect = one_pair_pbs
     _result = splicing_confirmation(
-        bps.chrm1, bps.pos1, bps.chrm2, bps.pos2, 5, _fasta, _cvg, False, True
+        bps.chrm1,
+        bps.pos1,
+        bps.chrm2,
+        bps.pos2,
+        5,
+        _fasta,
+        _cvg,
+        False,
+        True,
     )
 
     assert _result == _expect
 
 
 @pytest.mark.parametrize(
-    "chrm1, pos1, chrm2, pos2, expected_result",
+    ("chrm1", "pos1", "chrm2", "pos2", "expected_result"),
     [
         ("chr20", 391287, "chr20", 410025, ("TRIB3", "RBCK1")),
         ("chr17", 172536, "chr17", 247286, ("DOC2B", "RPH3AL")),
@@ -138,7 +147,9 @@ def test_gene_annotation(gtf_setup, chrm1, pos1, chrm2, pos2, expected_result):
 
 
 def test_same_chrom_same_strand_mode21_handler(
-    prepare_fasta_and_gtf, tdup_reads, fake_logger
+    prepare_fasta_and_gtf,
+    tdup_reads,
+    fake_logger,
 ):
     """Test same_chrom_same_strand_mode21_handler func."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
@@ -173,7 +184,9 @@ def test_same_chrom_same_strand_mode21_handler(
 
 
 def test_diff_chrom_same_strand_mode21_handler(
-    prepare_fasta_and_gtf, trans_same_strand_reads, fake_logger
+    prepare_fasta_and_gtf,
+    trans_same_strand_reads,
+    fake_logger,
 ):
     """Test diff_chrom_same_strand_mode21_handler func (TRA)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
@@ -212,7 +225,9 @@ def test_diff_chrom_same_strand_mode21_handler(
 
 
 def test_diff_chrom_diff_strand_handler(
-    prepare_fasta_and_gtf, trans_diff_strand_reads, fake_logger
+    prepare_fasta_and_gtf,
+    trans_diff_strand_reads,
+    fake_logger,
 ):
     """Test diff_chrom_diff_strand_handler func (TRA)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf

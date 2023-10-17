@@ -1,10 +1,11 @@
-# !/usr/bin/env python
 """Build cpp extension.
 
 @Filename:    build.py
 @author:      Yangyang Li
 @Time:        1/7/22 3:00 PM
 """
+from __future__ import annotations
+
 import os
 import shlex
 import typing
@@ -12,8 +13,7 @@ from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
 
-from pybind11.setup_helpers import build_ext
-from pybind11.setup_helpers import Pybind11Extension
+from pybind11.setup_helpers import ParallelCompile, Pybind11Extension, build_ext
 
 
 def remove_env(key: str):
@@ -24,20 +24,23 @@ def remove_env(key: str):
 
     for flag in flags:
         if flag.startswith(key):
-            raise RuntimeError(f"Please remove {key} from CFLAGS and CPPFLAGS.")
+            msg = f"Please remove {key} from CFLAGS and CPPFLAGS."
+            raise RuntimeError(msg)
 
 
 def check_conda_env() -> None:
     """Check if conda env is activated."""
     if "CONDA_PREFIX" not in os.environ:
-        raise RuntimeError("Please activate conda env first.")
+        msg = "Please activate conda env first."
+        raise RuntimeError(msg)
 
 
 def check_hts_path(hts_lib_path: Path, hts_include_path: Path) -> None:
     """Check if htslib path is valid."""
     header_path = hts_include_path / "htslib"
     if not header_path.exists():
-        raise RuntimeError("Please install htslib first.")
+        msg = "Please install htslib first."
+        raise RuntimeError(msg)
 
     lib_path_linux = hts_lib_path / "libhts.so"
     lib_path_macos = hts_lib_path / "libhts.dylib"
@@ -48,10 +51,11 @@ def check_hts_path(hts_lib_path: Path, hts_include_path: Path) -> None:
         and not lib_path_static.exists()
         and not lib_path_macos.exists()
     ):
-        raise RuntimeError("Please install htslib first.")
+        msg = "Please install htslib first."
+        raise RuntimeError(msg)
 
 
-def get_hts_lib_path() -> (Path, Path):
+def get_hts_lib_path() -> tuple[Path, Path]:
     """Get htslib path."""
     remove_env("-g")
     check_conda_env()
@@ -65,6 +69,18 @@ def get_hts_lib_path() -> (Path, Path):
     return htslib_library_dir, htslib_include_dir
 
 
+# Optional multithreaded build
+def get_thread_count():
+    try:
+        import multiprocessing
+
+        return multiprocessing.cpu_count()
+    except (ImportError, NotImplementedError):
+        pass
+    return 1
+
+
+ParallelCompile(f"{get_thread_count()}").install()
 # linking against a shared, externally installed htslib version, no
 # sources required for htslib
 htslib_sources = []
@@ -81,7 +97,7 @@ external_htslib_libraries = ["z", "hts"]
 @contextmanager
 def change_dir(path: str):
     """Change directory."""
-    save_dir = os.getcwd()
+    save_dir = Path.cwd()
     os.chdir(path)
     try:
         yield
@@ -105,12 +121,13 @@ def change_env(key: str, value: str):
     return decorator
 
 
-def get_files(
-    path: typing.Union[Path, str], suffix: typing.List[str]
-) -> typing.Iterator[str]:
+def get_files(path: Path | None, suffix: list[str]) -> typing.Iterator[str]:
     """Get bindings."""
     if isinstance(path, str):
         path = Path(path)
+
+    if path is None:
+        raise ValueError
 
     for file in path.iterdir():
         if file.is_dir():
@@ -129,18 +146,18 @@ def build(setup_kwargs):
                 "src/scannls/cppext/src/rescuer.cpp",
                 "src/scannls/cppext/src/ssw.c",
                 "src/scannls/cppext/src/ssw_cpp.cpp",
-                # "src/scannls/cppext/src/binding.cpp",
-            ]
-            + list(get_files("src/scannls/cppext/bindings", [".cpp", ".c"])),
-            include_dirs=htslib_include_dirs + ["src/scannls/cppext/include"],
+                *list(get_files(Path("src/scannls/cppext/bindings"), [".cpp", ".c"])),
+            ],
+            include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,
-        )
+            extra_compile_args=[],
+        ),
     ]
     setup_kwargs.update(
         {
             "ext_modules": ext_modules,
             "cmdclass": {"build_ext": build_ext},
             "zip_safe": False,
-        }
+        },
     )

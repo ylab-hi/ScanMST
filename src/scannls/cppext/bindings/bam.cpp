@@ -9,13 +9,13 @@
 #include <locale>
 #include <memory>
 #include <ostream>
-#include <sstream>  // __str__
+#include <sstream> // __str__
 #include <streambuf>
 #include <string>
 #include <string_view>
 
 #ifndef BINDER_PYBIND11_TYPE_CASTER
-#  define BINDER_PYBIND11_TYPE_CASTER
+#define BINDER_PYBIND11_TYPE_CASTER
 PYBIND11_DECLARE_HOLDER_TYPE(T, std::shared_ptr<T>)
 PYBIND11_DECLARE_HOLDER_TYPE(T, T *)
 PYBIND11_MAKE_OPAQUE(std::shared_ptr<void>)

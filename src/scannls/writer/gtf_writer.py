@@ -1,19 +1,25 @@
-# !/usr/bin/env python
 """GTF writer class.
 
 @Filename:    gtfWriter.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        1/30/22 6:18 PM
 """
+from __future__ import annotations
+
 import copy
 from functools import singledispatchmethod
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
 
-from ..basicClass import MicroHomology, Node, NovelInsertion, Series
-from ..exception import ExonsNotFoundError
-from ..type import LoggerType
+from loguru import logger
+
+from scannls import MicroHomology, NovelInsertion
+from scannls.exception import ExonsNotFoundError
+from scannls.graph import Edge, NLPath, Node
+
 from .writer import Writer
+
+if TYPE_CHECKING:
+    from scannls.graph import Edge, NLPath, Node  # noqa: F811
 
 
 class GTFWriter(Writer):
@@ -35,10 +41,9 @@ class GTFWriter(Writer):
 
     num_fields: int = 9
 
-    def __init__(self, file_path: str, logger: LoggerType) -> None:
+    def __init__(self, file_path: str) -> None:
         """Initialize GTFWriter object."""
-        super().__init__(file_path, logger)
-        self.id = 1
+        super().__init__(file_path)
 
     @property
     def is_opened(self) -> bool:
@@ -48,7 +53,7 @@ class GTFWriter(Writer):
     def formatter(self, fields: list[str], delimiter: str = "\t") -> str:
         """Formatter for writing data."""
         if fields is None or len(fields) != GTFWriter.num_fields:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: Number of fields is not equal to 9.",
             )
         return delimiter.join(fields) + "\n"
@@ -56,7 +61,7 @@ class GTFWriter(Writer):
     def open(self, mode: str = "w") -> IO:
         """Open file."""
         if self.is_opened:
-            self.logger.warning(f"{self.__class__.__name__}: File is already opened.")
+            logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = self.file_path.open(mode)
         if hasattr(self, "write_header"):
             self.write_header()  # type: ignore
@@ -65,7 +70,7 @@ class GTFWriter(Writer):
     def close(self) -> None:
         """Close file."""
         if self.is_opened:
-            self.logger.trace(f"{self.__class__.__name__}: Closing file.")
+            logger.trace(f"{self.__class__.__name__}: Closing file.")
             self.io.close()  # type: ignore
             self.io = None
 
@@ -74,35 +79,37 @@ class GTFWriter(Writer):
         if self.is_opened:
             self.io.write(line)  # type: ignore
         else:
-            self.logger.warning(f"{self.__class__.__name__}: File is not opened.")
+            logger.warning(f"{self.__class__.__name__}: File is not opened.")
 
     @singledispatchmethod
-    def write_data(self, data_object: Any, object_id: int) -> None:  # type: ignore
+    def write_data(self, data_object: Any, object_id: str) -> None:  # type: ignore
         """Write data to file.
 
         :param: data_object: Data to write to file.
         """
 
     @write_data.register
-    def _(self, data_object: Series, object_id: int) -> None:
+    def _(self, data_object: NLPath, object_id: str) -> None:
         """Write Series to GTF file.
 
         :param data_object:
         :return:
         """
         if len(data_object.nodes) == 0:
-            self.logger.warning(
+            logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
+
         for node_gtf_feature in get_nodes_gtf_features_from_series(
-            data_object, self.id,
+            data_object,
+            str(object_id),
         ):
             self.write_line(self.formatter(node_gtf_feature))
-        self.id += 1
 
 
 def get_nodes_gtf_features_from_series(
-    series: Series, series_id: int,
+    nlpath: NLPath,
+    cluster_id: str,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
@@ -111,20 +118,88 @@ def get_nodes_gtf_features_from_series(
 
     :return: List of GTF features for node and insertions in the series.
     """
-    series_gtf_features = []
-    for node_id, node in enumerate(series, 1):
-        series_gtf_features.extend(get_gtf_features_from_node(node, series_id, node_id))
-        if node.insertion_info and isinstance(node.insertion_info[1], NovelInsertion):
-            series_gtf_features.append(
-                get_gtf_features_from_insertion(
-                    node.insertion_info[1], series_id, node_id,
+    nlpath_gtf_features = [None]
+
+    min_nlpath_sr = float("inf")
+    min_nlpath_originla_sr = float("inf")
+
+    for idx, node in enumerate(nlpath, 1):
+        edge = nlpath.next_edge(node, idx - 1)
+        insertion_info = None if edge is None else edge.insertion_info
+
+        if edge is not None:
+            min_nlpath_sr = min(min_nlpath_sr, edge.sr)
+            min_nlpath_originla_sr = min(min_nlpath_originla_sr, edge.original_sr)
+
+        nlpath_gtf_features.extend(
+            [
+                add_info_to_attribute_column(
+                    x,
+                    f'gene_id "{cluster_id}";',
+                )
+                for x in get_gtf_features_from_node(
+                    node,
+                    edge,
+                    f"{cluster_id}{nlpath.id}",
+                )
+            ],
+        )
+
+        if insertion_info and isinstance(insertion_info[1], NovelInsertion):
+            nlpath_gtf_features.append(
+                add_info_to_attribute_column(
+                    get_gtf_features_from_insertion(
+                        insertion_info[1],
+                        f"{cluster_id}{nlpath.id}",
+                        node.trace_id,
+                    ),
+                    f'gene_id "{cluster_id}";',
                 ),
             )
-    return series_gtf_features
+
+    nlpath_gtf_features[0] = add_info_to_attribute_column(
+        format_gtf_features_for_nlpath(
+            f"{cluster_id}{nlpath.id}",
+            min_nlpath_sr,
+            min_nlpath_originla_sr,
+        ),
+        f'gene_id "{cluster_id}";',
+    )
+
+    return nlpath_gtf_features
+
+
+def add_info_to_attribute_column(col_list: list[str], add_info: str):
+    """Add additional info. to the 9th column of GTF."""
+    col_list[-1] = col_list[-1] + add_info
+    return col_list
+
+
+def format_gtf_features_for_nlpath(
+    nlpath_id: str,
+    nlpath_sr: float,
+    nlpath_originla_sr: float,
+) -> list[str]:
+    """Get GTF features of transcript."""
+    return [
+        ".",
+        "scannls",
+        "transcript",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        f'sr "{nlpath_sr}"; '
+        f'osr "{nlpath_originla_sr}"; '
+        f'transcript_id "{nlpath_id}"; ',
+    ]
 
 
 def get_gtf_features_from_insertion(
-    insertion: NovelInsertion, series_id: int, node_id: int,
+    insertion: NovelInsertion,
+    nlpath_id: str,
+    node_id: int,
 ) -> list[str]:
     """Get GTF features of novel insertion."""
     return [
@@ -136,13 +211,15 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>3}"; '
-        f'sequence "{insertion.query_sequence}";',
+        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; '
+        f'sequence "{insertion.query_sequence}"; ',
     ]
 
 
 def get_gtf_features_from_node(
-    node: Node, series_id: int, node_id: int,
+    node: Node,
+    edge: Edge | None,
+    nlpath_id: str,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
@@ -164,39 +241,45 @@ def get_gtf_features_from_node(
                   of a codon, and so on..
         9. attribute: a semicolon-separated list of tag-value pairs (separated by spaces)
     """
-    if node.exons is None:
-        raise ExonsNotFoundError(f"{node.query_name}")
 
-    exons = node.exons[::-1] if node.strand == "-" else node.exons
+    if node.exons is None:
+        msg = f"{node.query_name}"
+        raise ExonsNotFoundError(msg)
+
+    exons = node.exons.reversed() if node.strand.is_reverse() else node.exons
+
+    if exons is None:
+        msg = f"{node.query_name}"
+        raise ExonsNotFoundError(msg)
+
     copy_exons = copy.deepcopy(exons)
 
+    insertion_info = None
+    if edge is not None:
+        # sr may be not exported in gtf file
+        insertion_info = edge.insertion_info
+
     microhomology_sequence = ""
-    if node.insertion_info and not node.insertion_info[0]:
-        insertion = node.insertion_info[1]
+    if insertion_info is not None and not insertion_info[0]:
+        insertion = insertion_info[1]
         if isinstance(insertion, MicroHomology):
             microhomology_sequence += insertion.query_sequence
 
     # last exon end position needs a correction if there is a microhomology.
-    if node.strand == "+" and exons[-1][0] < exons[-1][1] - len(microhomology_sequence):
-        copy_exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
-    elif (
-        node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]
+    if node.strand.is_forward() and exons.last.start < exons.last.end - len(
+        microhomology_sequence,
     ):
-        copy_exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
+        copy_exons.last.end -= len(microhomology_sequence)
 
-    node_sr = node.sr
-    node_original_sr = node.original_sr
+    elif (
+        node.strand.is_reverse()
+        and exons.last.start + len(microhomology_sequence) < exons.last.end
+    ):
+        copy_exons.last.start += len(microhomology_sequence)
 
     nodes_gtf_features = []
 
     for index, (start, end) in enumerate(copy_exons, 1):
-        info = [
-            f'transcript_id "{series_id:0>6}"; '
-            f'mega_exon_id "{node_id:0>3}"; '
-            f'exon_id "{index:0>3}"; '
-            f'sr "{node_sr}"; '
-            f'osr "{node_original_sr}";',
-        ]
         nodes_gtf_features.append(
             [
                 f"{node.chrom}",
@@ -207,7 +290,10 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-            ]
-            + info,
+                f'exon_id "{index:0>3}"; '
+                f'mega_exon_id "{node.trace_id:0>4}"; '
+                f'transcript_id "{nlpath_id}"; ',
+            ],
         )
+
     return nodes_gtf_features

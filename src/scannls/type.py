@@ -1,31 +1,21 @@
-# !/usr/bin/env python
 """Type of the scannls.
 
 @Filename:    type.py
 @Author:      Yangyang Li
-@license:     MIT Licence
 @Time:        12/30/21 2:20 PM
 """
-from typing import Any
-from typing import List
-from typing import NewType
-from typing import Protocol
-from typing import Tuple
+from typing import Any, Protocol
 
-from .basicRead import Read
-
-ReadType = NewType("ReadType", Read)
-
-EventType = Tuple[
+EventType = tuple[
     str,
     int,
     int,
-    Tuple[str, str, int, int],
-    Tuple[int, int, Any],
-    Tuple[int, int, Any],
-    Tuple[str, str],
-    Tuple[str, str],
-    List[str],
+    tuple[str, str, int, int],
+    tuple[int, int, Any],
+    tuple[int, int, Any],
+    tuple[str, str],
+    tuple[str, str],
+    list[str],
 ]
 
 

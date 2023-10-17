@@ -25,6 +25,21 @@ You can install _ScanNLS_ via **pip** from **PyPI**:
 $ pip install scannls
 ```
 
+## Development
+
+Download rust binding
+
+```bash
+git submodule update --remote --merge
+```
+
+Install rust binding
+
+```bash
+cd ./dependency/rscannls/
+make install
+```
+
 ## Usage
 
 Please see the [Command-line Reference] for details.

@@ -1,68 +1,69 @@
-# !/usr/bin/env python
 """CLi for scannls.
 
 @Filename:    cli.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        1/11/22 4:28 PM
 """
-import argparse
+from __future__ import annotations
+
 import os
 import sys
 import tempfile
 import time
 from functools import partial
-from typing import Any
-from typing import Optional
-from typing import Union
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from .. import Blat
-from .. import CliqueFinder
-from .. import FastaWriter
-from .. import GTFWriter
-from .. import LoggerType
-from .. import MyLogger
-from .. import ParallelWorker
-from .. import SpliceGraph
-from .. import VCFWriter
-from .. import Writers
-from ..core.main import scanbam_run
-from ..utils import find_2bit_file
-from ..utils import sleep
-from .arg import DefaultOptions
+from scannls import (
+    Blat,
+    FastaWriter,
+    GTFWriter,
+    MyLogger,
+    ParallelWorker,
+    VCFWriter,
+    Writers,
+)
+from scannls.graph import ClusterFinder, NLGraph
+from scannls.utils import find_2bit_file, sleep
+
+from .main import scanbam_run
+
+if TYPE_CHECKING:
+    import argparse
+
+    from scannls.type import LoggerType
+
+    from .arg import DefaultOptions
 
 
 def get_writers(
     output_prefix: str,
     ref_path: str,
     bam_header: Any,
-    logger: LoggerType,
 ) -> Writers:
     """Get writers."""
-    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, logger)
-    gtf_writer = GTFWriter(f"{output_prefix}.gtf", logger)
+    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path)
+    gtf_writer = GTFWriter(f"{output_prefix}.gtf")
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
         ref_path,
         bam_header,
-        logger,
     )
 
     return Writers((fasta_writer, gtf_writer, vcf_writer))
 
 
-def parse_splice_graph_for_cliques_seq(
-    cliques: Any,
+def parse_nlgraph_for_cluster_seq(
+    clusters: Any,
     writers: Writers,
-    options: Union[DefaultOptions, argparse.Namespace],
+    options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: Optional[int] = None,
+    average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
-    splice_graph = SpliceGraph.create_splice_graph(
+    splice_graph = NLGraph.create_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -70,35 +71,36 @@ def parse_splice_graph_for_cliques_seq(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
+        options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
     )
 
-    with writers.open() as _:
-        for ind, clique in enumerate(cliques, 1):
-            logger.debug(f"processing clique {ind}")
-            for series in splice_graph(clique, ind, is_plot=False):
-                if len(series) == 1:
+    with writers.open():
+        for ind, cluster in enumerate(clusters, 1):
+            logger.debug(f"Processing Cluster {ind=}")
+            for nlpath in splice_graph(cluster, ind, is_plot=options.graph):
+                if len(nlpath) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {series}{series[0].query_name}"
+                        f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
                     )
-                if series.is_all_node_sr_higher_than_threshold(options.support_reads):
-                    logger.debug(f"Output Clique{ind}: {series}")
-                    writers.write_series(series, ind)
+
+                logger.debug(f"cluster {ind=} output {nlpath=} ")
+                writers.write_series(nlpath, f"{ind}")
 
 
-def _parse_splice_graph_for_cliques_par(
-    cliques: Any,
-    options: Union[DefaultOptions, argparse.Namespace],
+def _parse_nlgraph_for_cluster_par(
+    cluster: Any,
+    options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
-    average_read_depth: Optional[int],
+    average_read_depth: int | None,
 ):
     """Parse splice graph for cliques."""
     from loguru import logger
 
     logger = MyLogger(f"PID-{os.getpid()}", logger)  # type: ignore
 
-    splice_graph = SpliceGraph.create_splice_graph(
+    splice_graph = NLGraph.create_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -106,31 +108,30 @@ def _parse_splice_graph_for_cliques_par(
         options.alignment_fraction,
         logger,
         options.prune_threshold,
+        options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
     )
 
-    result_series = []
-    for ind, clique in enumerate(cliques, 1):
-        series_list = []
-        for series in splice_graph(clique, ind, is_plot=False):
-            series_list.append(series)
-        result_series.append(series_list)
-    return result_series
+    result = []
+    for ind, clique in enumerate(cluster, 1):
+        result.append(list(splice_graph(clique, ind, is_plot=False)))
+
+    return result
 
 
-def parse_splice_graph_for_cliques_par(
-    cliques: Any,
+def parse_nlgraph_for_cluster_par(
+    clusters: Any,
     writers: Writers,
-    options: Union[DefaultOptions, argparse.Namespace],
+    options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
-    average_read_depth: Optional[int] = None,
+    average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
     parallel_workers = ParallelWorker(
         partial(
-            _parse_splice_graph_for_cliques_par,
+            _parse_nlgraph_for_cluster_par,
             options=options,
             node_rescued_sr_maximum=node_rescued_sr_maximum,
             average_read_depth=average_read_depth,
@@ -138,35 +139,47 @@ def parse_splice_graph_for_cliques_par(
         logger,
         options.parallel,
     )
-    cliques = [[list(clique)] for clique in cliques]
+    clusters = [[list(cluster)] for cluster in clusters]
     result = parallel_workers.map(
-        cliques, chunksize=max(1, len(cliques) // parallel_workers.n_jobs)
+        clusters,
+        chunksize=max(1, len(clusters) // parallel_workers.n_jobs),
     )
+
     with writers.open() as _:
         for ind, clique in enumerate(result, 1):
-            for series in clique[0]:  # reduce list depth
-                if len(series) == 1:
+            for nlpath in clique[0]:  # reduce list depth
+                if len(nlpath) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {series}{series[0].query_name}"
+                        f"Single Series {ind}: {nlpath}{nlpath[0].query_name}",
                     )
-                if series.is_all_node_sr_higher_than_threshold(options.support_reads):
-                    logger.debug(f"Output Clique{ind}: {series}")
-                    writers.write_series(series, ind)
+                logger.debug(f"Output Clique{ind}: {nlpath}")
+                writers.write_series(nlpath, f"{ind}")
 
 
-def cli(options: Union[argparse.Namespace, DefaultOptions]):
+def cli(options: argparse.Namespace | DefaultOptions):
     """Cli function."""
     start = time.perf_counter()
-    # add logger
     logger.remove()
-    logger.add(
-        sys.stdout,
-        level=options.log.upper(),
-        enqueue=True,
-        colorize=True,
-        backtrace=False,
-        diagnose=True,
-    )
+    if options.log.upper() == "INFO":
+        info_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+        logger.add(
+            sys.stdout,
+            level=options.log.upper(),
+            format=info_format,
+            enqueue=True,
+            colorize=True,
+            backtrace=False,
+            diagnose=True,
+        )
+    else:
+        logger.add(
+            sys.stdout,
+            level=options.log.upper(),
+            enqueue=True,
+            colorize=True,
+            backtrace=False,
+            diagnose=True,
+        )
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
@@ -176,8 +189,8 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     tmp_dir = tempfile.TemporaryDirectory()
     # find 2bit file
     if options.two_bit is None:
-        options.two_bit = find_2bit_file(options.ref, logger)
-    blat = Blat(options.two_bit, logger, options.port, tmp_dir.name)
+        options.two_bit = find_2bit_file(options.ref)
+    blat = Blat(options.two_bit, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
     if options.sleep:
         sleep(options.input)
@@ -186,7 +199,7 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_series_list, in_bam_header, avg_cov = scanbam_run(
+        intact_nlpaths, in_bam_header, avg_cov = scanbam_run(
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
@@ -208,33 +221,40 @@ def cli(options: Union[argparse.Namespace, DefaultOptions]):
             substitutions_fraction=options.substitutions_fraction,
             indels_fraction=options.indel_fraction,
             species=options.species,
+            circular_rna=options.circular_rna,
+            exon_filter=options.exon_filter,
+            rt_switching_filter_len=options.rt_switching_filter_len,
         )
 
         avg_cov = None if not options.bound else avg_cov
 
-        intact_series_list_len = len(intact_series_list)
+        intact_nlpaths_len = len(intact_nlpaths)
 
-        if intact_series_list_len == 0:
-            logger.warning("No valid series found")
+        if intact_nlpaths_len == 0:
+            logger.warning("No valid path found")
             raise SystemExit
 
-        logger.info(f"Total Series: {intact_series_list_len}")
+        logger.info(f"Total nlpaths: {intact_nlpaths_len}")
 
-        clique_finder = CliqueFinder(intact_series_list, intact_series_list_len, logger)
+        cluster_finder = ClusterFinder(intact_nlpaths, options.prune_threshold)
         # cliques is generator
-        cliques = clique_finder.find_clique()
+        clusters = cluster_finder.merge_cluster()
 
-        writers = get_writers(options.output, options.ref, in_bam_header, logger)
-
-        parse_splice_graph_for_cliques = (
-            parse_splice_graph_for_cliques_seq
+        writers = get_writers(options.output, options.ref, in_bam_header)
+        parse_splice_graph_for_cluster = (
+            parse_nlgraph_for_cluster_seq
             if options.parallel == 1
-            else parse_splice_graph_for_cliques_par
+            else parse_nlgraph_for_cluster_par
         )
 
         node_rescued_sr_max = 100
-        parse_splice_graph_for_cliques(
-            cliques, writers, options, node_rescued_sr_max, logger, avg_cov
+        parse_splice_graph_for_cluster(
+            clusters,
+            writers,
+            options,
+            node_rescued_sr_max,
+            logger,  # type: ignore
+            avg_cov,
         )
 
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")

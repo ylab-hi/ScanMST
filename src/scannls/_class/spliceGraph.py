@@ -9,35 +9,16 @@
 import copy
 import types
 from collections import defaultdict
-from enum import auto
-from enum import Enum
-from typing import Any
-from typing import Dict
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
+from collections.abc import Iterable, Iterator
+from enum import Enum, auto
+from typing import Any, Optional
 
-from .basicClass import BreakPoint
-from .basicClass import MicroHomology
-from .basicClass import Node
-from .basicClass import NovelInsertion
-from .basicClass import Series
+from .basicClass import BreakPoint, MicroHomology, Node, NovelInsertion, Series
 from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode,
-)
-from .mergeCondition import (
     _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode,
 )
 from .srRescuer import SRRescuer
@@ -61,7 +42,7 @@ class SpliceGraph:
     list_factory = list
 
     def __init__(
-        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 10
+        self, logger: LoggerType, rescuer: Any, prune_threshold: int = 10,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -93,7 +74,7 @@ class SpliceGraph:
         self.series_list = copy.deepcopy(series_list)
 
         del series_list  # remove reference to series_list
-        self.nodes: Dict[str, List[Node]] = self.dict_factory()
+        self.nodes: dict[str, list[Node]] = self.dict_factory()
         # construct splice graph
         self.construct()
         # sr rescuer
@@ -104,17 +85,17 @@ class SpliceGraph:
         self.prune()
 
         # trace path
-        current_nodes_keys: Set[str] = set()
+        current_nodes_keys: set[str] = set()
         for node_list in self.trace():
             yield Series.create_series_from_node_list(
-                node_list, self.logger, current_nodes_keys, is_add_key=False
+                node_list, self.logger, current_nodes_keys, is_add_key=False,
             )
 
         if is_check_circle:
             # check circle in graph
             for node_list in self.check_circle_in_graph(current_nodes_keys):
                 yield Series.create_series_from_node_list(
-                    node_list, self.logger, set(), is_add_key=False
+                    node_list, self.logger, set(), is_add_key=False,
                 )
 
     @classmethod
@@ -213,7 +194,7 @@ class SpliceGraph:
                 return node
         return None
 
-    def get_nodes_with_similar_key(self, similar_key: str) -> List[Node]:
+    def get_nodes_with_similar_key(self, similar_key: str) -> list[Node]:
         """Get nodes in graph with similar key."""
         return self.nodes.get(similar_key, [])
 
@@ -247,34 +228,34 @@ class SpliceGraph:
                 node1.next_breakpoint is None and node2.prev_breakpoint is None
             ):  # node1 is end node, node2 is start node
                 return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-                    node1, node2
+                    node1, node2,
                 )
             elif (
                 node1.next_breakpoint is None and node2.next_breakpoint is not None
             ):  # node1 is end node, node2 is middle node
                 return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-                    node1, node2
+                    node1, node2,
                 )
         # condition is TRUE
         if (
             node1.prev_breakpoint is None and node2.prev_breakpoint is None
         ):  # both are start nodes
             return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
-                node1, node2, threshold
+                node1, node2, threshold,
             )
 
         elif (
             node1.next_breakpoint is None and node2.next_breakpoint is None
         ):  # both are end nodes  # check first exon start
             return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
-                node1, node2, threshold
+                node1, node2, threshold,
             )
 
         elif (
             node1.prev_breakpoint is None and node2.prev_breakpoint is not None
         ):  # node1 is start node, node2 is middle node
             return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-                node1, node2
+                node1, node2,
             )
 
         elif (
@@ -283,7 +264,6 @@ class SpliceGraph:
             and node2.prev_breakpoint is not None
             and node2.next_breakpoint is not None
         ):  # both are middle nodes
-
             return (
                 node1.exons[0][0] == node2.exons[0][0]  # type: ignore
                 and node1.exons[-1][1] == node2.exons[-1][1]  # type: ignore
@@ -312,7 +292,7 @@ class SpliceGraph:
         self,
         current_node: Node,
         similar_key: str,
-        merged_nodes_pool: Set[Node],
+        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
         # get similar nodes in the graph
@@ -322,12 +302,12 @@ class SpliceGraph:
         for similar_node_in_graph in similar_nodes_in_graph:
             # check if the current node is merged into a similar node in the graph
             if SpliceGraph._compare_is_merged(
-                similar_node_in_graph, current_node, self.prune_threshold
+                similar_node_in_graph, current_node, self.prune_threshold,
             ):
                 current_node.is_merged = True
 
                 update_exon_coord_sr_svtype_breakpoints_name_mode(
-                    similar_node_in_graph, current_node
+                    similar_node_in_graph, current_node,
                 )
 
                 merged_nodes_pool.add(current_node)
@@ -339,18 +319,17 @@ class SpliceGraph:
                 # keeps in mind the next node in current series is not processed yet!!!!
                 # a -> b and b <- a
                 similar_node_in_graph.add_predecessor(
-                    current_node.previous_node_in_series
+                    current_node.previous_node_in_series,
                 )
 
     def _check_if_current_node_added_in_graph_and_update_predecessor_successor(
         self,
         current_node: Node,
         similar_key: str,
-        merged_nodes_pool: Set[Node],
+        merged_nodes_pool: set[Node],
     ) -> None:
         """Check if the current node is added in graph and update a predecessor and successor."""
         if not current_node.is_merged:  # false
-
             current_node.is_in_graph = True  # check if node is in graph
             self.add_node_with_similar_key(current_node)
 
@@ -365,10 +344,10 @@ class SpliceGraph:
                 if merge_node.similar_key == similar_key
             ]:
                 if SpliceGraph._compare_is_merged(
-                    merge_node, current_node, self.prune_threshold
+                    merge_node, current_node, self.prune_threshold,
                 ):
                     update_exon_coord_sr_svtype_breakpoints_name_mode(
-                        current_node, merge_node
+                        current_node, merge_node,
                     )
                     merge_node.merged_parent_nodes.append(current_node)
                     # for merge node whose previous node and next node in series
@@ -379,7 +358,7 @@ class SpliceGraph:
     def construct(self) -> None:
         """Main function to construct graph."""
         # iterate all series
-        merged_nodes_pool: Set[Node] = set()
+        merged_nodes_pool: set[Node] = set()
         self.logger.debug(f"Input Clique {self.series_list=}")
         for series in self.series_list:
             # iterate all nodes in series
@@ -393,11 +372,11 @@ class SpliceGraph:
                 # get a similar key(chrom and intron) of current node
                 similar_key = current_node.similar_key
                 self._check_if_current_node_is_merged_in_similar_nodes_in_graph(
-                    current_node, similar_key, merged_nodes_pool
+                    current_node, similar_key, merged_nodes_pool,
                 )
 
                 self._check_if_current_node_added_in_graph_and_update_predecessor_successor(
-                    current_node, similar_key, merged_nodes_pool
+                    current_node, similar_key, merged_nodes_pool,
                 )
                 current_node.clear_next_and_previous_node_in_series()
 
@@ -405,8 +384,8 @@ class SpliceGraph:
         self,
         start_node: Node,
         trace_id: int,
-        path: List[Node],
-        group_paths: List[List[Node]],
+        path: list[Node],
+        group_paths: list[list[Node]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -415,7 +394,7 @@ class SpliceGraph:
         """
         if start_node in path:
             self.logger.warning(
-                f"A circle is found in the graph {start_node} in {path}"
+                f"A circle is found in the graph {start_node} in {path}",
             )
 
         if not start_node or start_node in path:
@@ -426,7 +405,7 @@ class SpliceGraph:
                     successor.set_trace_id(trace_id)
                     successor.set_harmoic_mean_sr(successor.sr)
                     self._trace_forward(
-                        successor, trace_id + 1, path + [start_node], group_paths
+                        successor, trace_id + 1, path + [start_node], group_paths,
                     )
             else:
                 # successor be [] or None
@@ -441,8 +420,8 @@ class SpliceGraph:
         self,
         end_node: Node,
         trace_id: int,
-        path: List[Node],
-        group_paths: List[List[Node]],
+        path: list[Node],
+        group_paths: list[list[Node]],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -457,7 +436,7 @@ class SpliceGraph:
                     predecessor.set_trace_id(trace_id)
                     predecessor.set_harmoic_mean_sr(predecessor.sr)
                     self._trace_backward(
-                        predecessor, trace_id + 1, path + [end_node], group_paths
+                        predecessor, trace_id + 1, path + [end_node], group_paths,
                     )
             else:
                 # predecessor be [] or None
@@ -507,12 +486,12 @@ class SpliceGraph:
 
         return result_series_list
 
-    def create_same_level_node_list(self) -> List[List[Node]]:
+    def create_same_level_node_list(self) -> list[list[Node]]:
         """Create node trace id dict.
 
         :return: trace_id: List[node] dict
         """
-        node_trace_id_dict: Dict[int, List[Node]] = defaultdict(list)
+        node_trace_id_dict: dict[int, list[Node]] = defaultdict(list)
         for node in self:
             node_trace_id_dict[node.trace_id].append(node)
 
@@ -570,21 +549,21 @@ class SpliceGraph:
 
         if node_a.prev_breakpoint is None and node_b.prev_breakpoint is None:
             return SpliceGraph._check_can_battle_condition(
-                node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
+                node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold,
             )
 
         if node_a.next_breakpoint is None and node_b.next_breakpoint is None:
             return SpliceGraph._check_can_battle_condition(
-                node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
+                node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold,
             )
 
         return SpliceGraph._check_can_battle_condition(
-            node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold
+            node_a.prev_breakpoint, node_b.prev_breakpoint, self.prune_threshold,
         ) and SpliceGraph._check_can_battle_condition(
-            node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold
+            node_a.next_breakpoint, node_b.next_breakpoint, self.prune_threshold,
         )
 
-    def _begin_battle(self, node_a: Node, node_b: Node) -> Tuple[bool, ...]:
+    def _begin_battle(self, node_a: Node, node_b: Node) -> tuple[bool, ...]:
         """Begin battle between two nodes.
 
         :return: Two bool values:
@@ -592,7 +571,7 @@ class SpliceGraph:
                 value2: if node_a is winner, return True, else return False
         """
         self.logger.trace(
-            f"{node_a.harmonic_mean_sr=:.2f}\t{node_b.harmonic_mean_sr=:.2f}"
+            f"{node_a.harmonic_mean_sr=:.2f}\t{node_b.harmonic_mean_sr=:.2f}",
         )
         if (
             node_a.harmonic_mean_sr == node_b.harmonic_mean_sr
@@ -608,7 +587,7 @@ class SpliceGraph:
         self._rule_out(node_b, node_a)
         return True, False
 
-    def battle(self, same_level_node_list: List[List[Node]]) -> None:
+    def battle(self, same_level_node_list: list[list[Node]]) -> None:
         """Nodes with same trace id battle each other.
 
         Node with larger number of sr wins, otherwise lose.
@@ -616,7 +595,6 @@ class SpliceGraph:
         Loser will be rule out.
         """
         for node_list in same_level_node_list:
-
             while node_list:
                 current_node = node_list.pop()
                 for other_node in node_list:
@@ -654,10 +632,10 @@ class SpliceGraph:
         self.reset_trace_id()
         self._prune(SpliceType.backward)
 
-    def check_circle_in_graph(self, nodes_keys: Set[str]):
+    def check_circle_in_graph(self, nodes_keys: set[str]):
         """Check if there is a circle in graph."""
-        all_nodes_keys: Set[str] = set()
-        result_paths: List[List[Node]] = []
+        all_nodes_keys: set[str] = set()
+        result_paths: list[list[Node]] = []
 
         for node in self:
             if (key := node.unique_key) is not None:
@@ -667,7 +645,7 @@ class SpliceGraph:
         return result_paths
 
     def check_circle_in_graph_helper(
-        self, nodes_keys: Set[str], result_paths: List[List[Node]]
+        self, nodes_keys: set[str], result_paths: list[list[Node]],
     ) -> None:
         """Check if there is a circle in graph."""
         if (
@@ -675,20 +653,20 @@ class SpliceGraph:
             and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
             is not None
         ):
-            current_nodes_keys: Set[str] = set()
+            current_nodes_keys: set[str] = set()
             self._trace_forward_record_node_unique_keys(
-                start_node, [], result_paths, current_nodes_keys
+                start_node, [], result_paths, current_nodes_keys,
             )
             self.check_circle_in_graph_helper(
-                nodes_keys - current_nodes_keys, result_paths
+                nodes_keys - current_nodes_keys, result_paths,
             )
 
     def _trace_forward_record_node_unique_keys(
         self,
         start_node: Node,
-        path: List[Node],
-        group_paths: List[List[Node]],
-        nodes_keys: Set[str],
+        path: list[Node],
+        group_paths: list[list[Node]],
+        nodes_keys: set[str],
     ) -> None:
         """Helper function to trace through graph and find all paths.
 
@@ -703,7 +681,7 @@ class SpliceGraph:
                     if (key := successor.unique_key) is not None:
                         nodes_keys.add(key)
                     self._trace_forward_record_node_unique_keys(
-                        successor, path + [start_node], group_paths, nodes_keys
+                        successor, path + [start_node], group_paths, nodes_keys,
                     )
             else:
                 # successor be [] or None
@@ -716,7 +694,7 @@ class SpliceGraph:
 
 
 def update_exon_coord_sr_svtype_breakpoints_name_mode(
-    updated_node: Node, current_node: Node
+    updated_node: Node, current_node: Node,
 ) -> None:
     """Update exon coordinates of the updated node based on the current node.
 
@@ -730,16 +708,16 @@ def update_exon_coord_sr_svtype_breakpoints_name_mode(
     # merge condition is true with same number of exons
     if len(updated_node.exons) < len(current_node.exons):
         _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
-            updated_node, current_node
+            updated_node, current_node,
         )
     else:
         _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-            updated_node, current_node
+            updated_node, current_node,
         )
 
 
 def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
-    updated_node: Node, current_node: Node
+    updated_node: Node, current_node: Node,
 ) -> None:
     """Update exon coordinates of the updated node based on the current node.
 
@@ -756,12 +734,12 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_different_exons(
     )
 
     _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-        updated_node, current_node
+        updated_node, current_node,
     )
 
 
 def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
-    updated_node: Node, current_node: Node
+    updated_node: Node, current_node: Node,
 ) -> None:
     """Update exon coordinates of the updated node based on the current node.
 
@@ -773,12 +751,12 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     """
     # update exon coordinates
     updated_node.ref_start = min(  # type: ignore
-        updated_node.exons[0][0], current_node.exons[0][0]  # type: ignore
+        updated_node.exons[0][0], current_node.exons[0][0],  # type: ignore
     )
     updated_node.exons[0] = updated_node.ref_start, updated_node.exons[0][1]  # type: ignore
 
     updated_node.ref_end = max(  # type: ignore
-        updated_node.exons[-1][1], current_node.exons[-1][1]  # type: ignore
+        updated_node.exons[-1][1], current_node.exons[-1][1],  # type: ignore
     )
     updated_node.exons[-1] = updated_node.exons[-1][0], updated_node.ref_end  # type: ignore
 
@@ -786,7 +764,7 @@ def _update_exon_coord_sr_svtype_breakpoints_name_mode_in_same_exons(
     updated_node.update_sr(current_node.sr)
 
     if updated_node.insertion_info and isinstance(
-        updated_node.insertion_info[1], (NovelInsertion, MicroHomology)
+        updated_node.insertion_info[1], (NovelInsertion, MicroHomology),
     ):
         # update novel insertion ao or microhomology ao
         updated_node.insertion_info[1].increment_ao()
@@ -833,7 +811,7 @@ def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
             ):
                 return flag
             elif isinstance(insertion_info1[1], MicroHomology) and isinstance(
-                insertion_info2[1], MicroHomology
+                insertion_info2[1], MicroHomology,
             ):
                 return True
 
@@ -841,7 +819,7 @@ def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
 
 
 def update_node_with_other_node(
-    node: Node, other_node: Node, features: Iterable[str]
+    node: Node, other_node: Node, features: Iterable[str],
 ) -> None:
     """Update node with another node.
 

@@ -10,14 +10,11 @@ import os
 from pathlib import Path
 
 import pytest
-
-from scannls import cli
-from scannls import DefaultOptions
-from scannls import ToolNotFoundError
+from scannls import DefaultOptions, ToolNotFoundError, cli
 
 
 @pytest.mark.parametrize(
-    "data_name, parallel",
+    ("data_name", "parallel"),
     [("INV_TDUP", 1), ("TDUP_TRA", 1), ("TDUP_TRA", 2), ("INV_TDUP", 2)],
 )
 def test_cli(tmpdir, data_name, parallel):
@@ -41,9 +38,9 @@ def test_cli(tmpdir, data_name, parallel):
     with pytest.raises(ToolNotFoundError):
         cli.cli(op)
         with open(f"{out_dir}/{data_name}.fasta") as of, open(
-            f"{out_dir}/{data_name}.gtf"
+            f"{out_dir}/{data_name}.gtf",
         ) as og, open(f"{data_dir}/{data_name}.fasta") as ef, open(
-            f"{data_dir}/{data_name}.gtf"
+            f"{data_dir}/{data_name}.gtf",
         ) as eg:
             out_fasta = of.readlines()
             out_gtf = og.readlines()

@@ -13,11 +13,17 @@ class TestInsertion:
     """Test Insertion."""
 
     def test_update_cigarstring_sms(
-        self, insertion, sms=(5, 10, 2), source_s="left", source_strand="+"
+        self,
+        insertion,
+        sms=(5, 10, 2),
+        source_s="left",
+        source_strand="+",
     ):
         """Test update cirgarstring sms."""
         insertion.update_cigarstring_sms(
-            sms=sms, source_s=source_s, source_strand=source_strand
+            sms=sms,
+            source_s=source_s,
+            source_strand=source_strand,
         )
         assert insertion.sms == (1, 4, 12)
         assert insertion.cigarstring == "2S2M13S"

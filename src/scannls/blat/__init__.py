@@ -2,16 +2,14 @@
 
 @Filename:    __init__.py
 @Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
 @Time:        5/23/22 10:35 AM
-@source: https://hgdownload.soe.ucsc.edu/admin/exe/
+@source:      https://hgdownload.soe.ucsc.edu/admin/exe/
 """
 import platform
-from importlib import resources
+import sys
 from pathlib import Path
 
-from .. import __PACKAGE_NAME__
+from scannls import __PACKAGE_NAME__
 
 
 def load_blat() -> Path:
@@ -19,11 +17,12 @@ def load_blat() -> Path:
 
     @return: Path object.
     """
-    with resources.path(__PACKAGE_NAME__, "blat") as f:
-        blat_path = f
+    blat_path = Path(sys.modules[__PACKAGE_NAME__].__file__).parent / "blat"
+
     system = platform.system()
     if system == "Windows":
-        raise NotImplementedError("Windows is not supported for blat.")
+        msg = "Windows is not supported for blat."
+        raise NotImplementedError(msg)
     return blat_path / system.lower()
 
 
@@ -50,7 +49,8 @@ def load_gfclient() -> Path:
 def load_fa2bit():
     """Load fa2bit.
 
-    Returns:
+    Returns
+    -------
         fa2bit: fa2bit object.
     """
     path = load_blat() / "faToTwoBit"
