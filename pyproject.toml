@@ -23,7 +23,7 @@ exclude = ["src/scannls/cppext/cmake-*"]
 Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 biopython = "^1.81"
 pysam = "0.19.0"
 HTSeq = "^2.0.4"
@@ -33,7 +33,7 @@ loguru = "^0.7.0"
 rich = "^13.5.2"
 networkx = "^3.0"
 pybind11 = "^2.11.1"
-matplotlib = { version = "^3.7.2", optional = true }
+matplotlib = {version = "^3.8"}
 pyvis = { version = "^0.3.2", optional = true }
 maturin = { version = "^1.1.0", optional = true }
 intervaltree = "^3.1.0"
