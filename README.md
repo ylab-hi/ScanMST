@@ -1,7 +1,12 @@
 # ScanNLS: A powerful tool for detecting non-co-linear transcripts with long reads and nonlinear splicing graphs
 [![pypi](https://img.shields.io/pypi/v/scannls.svg?style=for-the-badge)][pypi]
 ![conda](https://img.shields.io/conda/vn/bioconda/scannls?style=for-the-badge)
-![publication](https://img.shields.io/badge/published%20in-Nature-green.svg)
+[![publication](https://img.shields.io/badge/published%20in-Nature-green.svg?style=for-the-badge)][paper]
+
+[paper]: www.www
+
+
+
 ## What is ScanNLS?
 ScanNLS is a non-co-linear transcript caller for third-generation sequencing reads.
 It is able to detect and classify the non-co-linear transcripts with the following four forms of nonlinear splicing junctions: reversed junctions, inverted junctions, translocated junctions (same strand), and translocated junctions (different strand) (see the figure below).
