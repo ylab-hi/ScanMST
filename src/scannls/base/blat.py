@@ -1,4 +1,3 @@
-# !/usr/bin/env python
 """Module for BLAT.
 
 @Filename:    blat.py
@@ -15,17 +14,14 @@ import time
 from multiprocessing import Process
 from pathlib import Path
 from typing import Any
-from typing import List
-from typing import Tuple
 
 import psutil
 from Bio import SearchIO
+from loguru import logger
 
-from ..blat import load_gfclient
-from ..blat import load_gfserver
-from .basicClass import Insertion
-from .basicClass import NovelInsertion
-from .type import LoggerType
+from scannls.blat import load_gfclient, load_gfserver
+
+from .basic_class import Insertion, NovelInsertion
 
 
 class Blat:
@@ -63,9 +59,9 @@ class Blat:
     def __init__(
         self,
         ref_2bit: str,
-        logger: LoggerType,
         port: int,
         output_dir: str,
+        *,
         fix_log_file=None,
         is_start_server=False,
         lock=None,
@@ -76,7 +72,6 @@ class Blat:
         self.ran_id = secrets.randbits(42)
         self.is_start_server = is_start_server
         self.is_stop_server = False
-        self.logger = logger
         self.fix_log_file = fix_log_file
         self.handle_process = None
         self.gfserver = load_gfserver()
@@ -91,13 +86,13 @@ class Blat:
         """
         if self.ref_2bit.startswith("~"):
             abs_2bit = os.path.join(
-                os.path.expanduser("~"), self.ref_2bit.replace("~/", "")
+                os.path.expanduser("~"),
+                self.ref_2bit.replace("~/", ""),
             )
-            ref_dir = os.path.dirname(abs_2bit)
-        else:
-            abs_2bit = os.path.abspath(self.ref_2bit)
-            ref_dir = os.path.dirname(abs_2bit)
-        return ref_dir
+            return os.path.dirname(abs_2bit)
+
+        abs_2bit = os.path.abspath(self.ref_2bit)
+        return os.path.dirname(abs_2bit)
 
     @property
     def log_file_path(self) -> str:
@@ -116,11 +111,11 @@ class Blat:
         """
         if not os.path.exists(self.log_file_path):
             raise RuntimeError(
-                f"the process start server but the log file is not exist: {self.log_file_path}"
+                f"the process start server but the log file is not exist: {self.log_file_path}",
             )
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
-        self.logger.debug("check if the server starts by reading the log file")
+        logger.debug("check if the server starts by reading the log file")
         with this_lock, open(self.log_file_path) as f:
             return any("Server ready" in line for line in f)
 
@@ -137,7 +132,7 @@ class Blat:
                 proc.kill()
         return flag
 
-    def _search_processing(self) -> List[psutil.Process]:
+    def _search_processing(self) -> list[psutil.Process]:
         """Function for searching the process of blat server.
 
         in current system
@@ -145,7 +140,7 @@ class Blat:
         :return: the list of process of blat server
         """
         result = []
-        self.logger.debug("searching server service")
+        logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
             with contextlib.suppress(psutil.NoSuchProcess):
                 if "gfServer".lower() == proc.name().lower() and proc.cmdline():
@@ -169,27 +164,27 @@ class Blat:
         where gfServer gfClient and hg38.2bit located.
         """
         self.is_start_server = True
-        self.logger.debug(f"start server service{self.is_start_server=}")
+        logger.debug(f"start server service{self.is_start_server=}")
         cwd = Path.cwd().absolute()
-        self.logger.debug(Path.cwd().as_posix())
+        logger.debug(Path.cwd().as_posix())
 
         # change to use_blat directory
         os.chdir(self.ref_dir)
-        self.logger.trace(f"{self.ref_dir=}")
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{self.ref_dir=}")
+        logger.trace(f"{Path().cwd()}")
 
         cmd = (
             f"{self.gfserver} -canStop -log={self.log_file_path} -stepSize=5 start "
             f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
         )
-        self.logger.trace(f"{cmd=}")
+        logger.trace(f"{cmd=}")
         self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
         if self.handle_process is None:
             raise ValueError("handle process is None")
         self.handle_process.start()
-        self.logger.debug("starting server service")
+        logger.debug("starting server service")
         os.chdir(cwd)
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{Path().cwd()}")
 
     def start_server(self) -> None:
         """Function for starting the server service, if the server is not running.
@@ -205,9 +200,9 @@ class Blat:
     def stop_server(self) -> None:
         """Function for stopping the server service, if the server is running."""
         # self open then self close
-        self.logger.trace(f"{self.is_start_server=}")
+        logger.trace(f"{self.is_start_server=}")
         if self.is_start_server:
-            self.logger.info("Stopping  server service")
+            logger.info("Stopping  server service")
 
             for proc in self._search_processing():
                 proc.kill()
@@ -223,7 +218,7 @@ class Blat:
         :param in_seq: sequence of softclipped segment
         :return: the path for PSL file
         """
-        self.logger.debug("querying the sequence")
+        logger.debug("querying the sequence")
         ran_id = secrets.randbits(42)
         in_fasta = os.path.join(self.output_dir, f"{ran_id}.fasta")
         with open(in_fasta, "w", buffering=1) as fasta_file:
@@ -233,21 +228,24 @@ class Blat:
         out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
 
         cwd = Path.cwd().absolute()
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{Path().cwd()}")
 
         os.chdir(self.ref_dir)
-        self.logger.trace(f"{self.ref_dir=}")
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{self.ref_dir=}")
+        logger.trace(f"{Path().cwd()}")
         cmd = (
             f"{self.gfclient} -minScore=20 -minIdentity={mini_identity} localhost {self.port} . "
             f"{in_fasta} {out_psl}"
         )
-        self.logger.trace(f"{cmd=}")
+        logger.trace(f"{cmd=}")
         subprocess.check_call(
-            cmd, stderr=subprocess.STDOUT, shell=True, stdout=subprocess.DEVNULL
+            cmd,
+            stderr=subprocess.STDOUT,
+            shell=True,
+            stdout=subprocess.DEVNULL,
         )
         os.chdir(cwd)
-        self.logger.trace(f"{Path().cwd()}")
+        logger.trace(f"{Path().cwd()}")
         self._remove(in_fasta)
 
         return out_psl
@@ -288,7 +286,10 @@ class Blat:
 
     @staticmethod
     def _query_insertion(
-        blat_result: Any, insert_seq: str, threshold_identity: float, top: int
+        blat_result: Any,
+        insert_seq: str,
+        threshold_identity: float,
+        top: int,
     ) -> Any:
         """Helper function for querying insertion sequence."""
         hsps = blat_result.hsps
@@ -297,7 +298,7 @@ class Blat:
         keep_hsp = []
         for hsp in hsps:
             if (sum(hsp.hit_span_all) - hsp.mismatch_num) / len(
-                insert_seq
+                insert_seq,
             ) > threshold_identity:
                 keep_hsp.append(hsp)
         hit = len(keep_hsp)
@@ -327,13 +328,17 @@ class Blat:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)
+
         try:
             blat_result = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         hit, keep_hsp = Blat._query_insertion(
-            blat_result, insert_seq, threshold_identity, top
+            blat_result,
+            insert_seq,
+            threshold_identity,
+            top,
         )
 
         if hit == 1:
@@ -341,8 +346,10 @@ class Blat:
             flag = True
 
             ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
-                top_hsp, in_seq_len=len(insert_seq)
+                top_hsp,
+                in_seq_len=len(insert_seq),
             )
+
             dummy_qualities = array.array("B", [40] * len(insert_seq))
             return flag, Insertion(
                 hit_num=1,
@@ -369,6 +376,9 @@ class Blat:
     @staticmethod
     def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float) -> int:
         """Function is used to calculate map quality of the insertion.
+        We adapted the way of calculation in TopHat.
+        reference: 1) https://www.biostars.org/p/69773/
+                   2) https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/v.
 
         :param hsps: the list of hsp after aligning the insertion sequence
         :param in_seq_len: the length of the input sequence
@@ -405,7 +415,7 @@ class Blat:
         try:
             blat = SearchIO.read(psl_file, "blat-psl")
         except ValueError:
-            self.logger.warning(f"No Blat hit found {in_seq[:10]}...")
+            logger.warning(f"No Blat hit found {in_seq[:10]}...")
             return None, None
         else:
             hsps = blat.hsps
@@ -416,7 +426,7 @@ class Blat:
         return top_hsp, mapq
 
     @staticmethod
-    def psl2sam(hsp: Any, in_seq_len: int) -> Tuple[str, int, str, str, int]:
+    def psl2sam(hsp: Any, in_seq_len: int) -> tuple[str, int, str, str, int]:
         """Convert the top HSP in PSL file to SAM fields chrom, reference_start.
 
         strand, cigarstring, num_of_mismatch. The function try to implement
@@ -454,8 +464,10 @@ class Blat:
             y = [
                 item[0] for item in hsp.query_range_all
             ]  # may need replace by query_start_all when the bug is fixed in Biopython
+
         z = hsp.hit_start_all
         y0, z0 = y[0], z[0]
+
         for i in range(1, len(hsp)):
             ly = y[i] - y[i - 1] - x[i - 1]
             lz = z[i] - z[i - 1] - x[i - 1]

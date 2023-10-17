@@ -1,8 +1,7 @@
 """Test suite for the ScanNLS package."""
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
-from typing import Mapping
-from typing import Tuple
 
 from scannls import Node
 
@@ -24,7 +23,7 @@ def assign_value_for_instance(node: Node, **kwargs: Mapping[str, object]):
 class FakeLogger:
     """Fake logger."""
 
-    def __init__(self, name: str = "fake_logger"):
+    def __init__(self, name: str = "fake_logger") -> None:
         """Initialize fake logger."""
         self.name = name
 
@@ -61,8 +60,8 @@ class FakeBlat:
         name: str = "fake_blat",
         query_return: str = "query_return",
         query_insertion_return: str = "query_insertion_return",
-        psl2sam_return: Tuple[Any, ...] = ("psl2sam_return",),
-    ):
+        psl2sam_return: tuple[Any, ...] = ("psl2sam_return",),
+    ) -> None:
         """Init."""
         self.name = name
         self.query_return = query_return
@@ -77,7 +76,7 @@ class FakeBlat:
         """Query insertion."""
         return self.query_insertion_return
 
-    def psl2sam(self, *_) -> Tuple[Any, ...]:
+    def psl2sam(self, *_) -> tuple[Any, ...]:
         """PSL2SAM."""
         return self.psl2sam_return
 

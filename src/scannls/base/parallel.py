@@ -1,22 +1,17 @@
-# !/usr/bin/env python
 """Module for parallel worker.
 
 @Filename:    parallel.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        12/15/21 1:58 PM
 """
+
 import multiprocessing
 import os
+from collections.abc import Callable
 from concurrent import futures
 from typing import Any
-from typing import Callable
-from typing import Dict
 
-from .type import LoggerType
-
-
-# TODO: add asyncio support
+from scannls.type import LoggerType
 
 
 class ParallelWorker:
@@ -45,7 +40,10 @@ class ParallelWorker:
     """
 
     def __init__(
-        self, func: Callable[..., Any], logger: LoggerType, n_jobs: int = 1
+        self,
+        func: Callable[..., Any],
+        logger: LoggerType,
+        n_jobs: int = 1,
     ) -> None:
         """Initialize the ParallelWorker class."""
         self.func = func
@@ -62,12 +60,13 @@ class ParallelWorker:
 
         if n_jobs > current_max_processor:
             self.logger.warning(
-                f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}"
+                f"ParallelWorker: {n_jobs} > current_max_processor {current_max_processor}",
             )
-            n_jobs = current_max_processor
+            return current_max_processor
+
         return n_jobs  # the max processor is decided by ProcessPoolExecutor
 
-    def run(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+    def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Using concurrent.future to parallel process."""
         tasks = {}
         result = {}
@@ -90,5 +89,8 @@ class ParallelWorker:
         """Using concurrent.futures to parallel process."""
         with futures.ProcessPoolExecutor(max_workers=self.n_jobs) as executor:
             return executor.map(
-                self.func, *iterables, timeout=timeout, chunksize=chunksize
+                self.func,
+                *iterables,
+                timeout=timeout,
+                chunksize=chunksize,
             )

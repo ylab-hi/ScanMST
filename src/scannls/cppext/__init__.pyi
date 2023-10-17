@@ -1,5 +1,5 @@
-"""Cpp extension for BAM file parser"""
 from __future__ import annotations
+
 import typing
 
 class Aligner:
@@ -31,12 +31,12 @@ class Alignment:
     def best_score2(self, arg0: int) -> None:
         pass
     @property
-    def cigar(self) -> typing.List[int]:
+    def cigar(self) -> list[int]:
         """
-        :type: typing.List[int]
+        :type: typing.List[int].
         """
     @cigar.setter
-    def cigar(self, arg0: typing.List[int]) -> None:
+    def cigar(self, arg0: list[int]) -> None:
         pass
     @property
     def cigar_string(self) -> str:
@@ -137,9 +137,9 @@ class Filter:
 
 class Region:
     @typing.overload
-    def __init__(self): ...
+    def __init__(self) -> None: ...
     @typing.overload
-    def __init__(self, chrom: str, start: int, end: int): ...
+    def __init__(self, chrom: str, start: int, end: int) -> None: ...
     @property
     def chrom(self) -> str: ...
     @property
@@ -171,27 +171,26 @@ class Rescuer:
     def calculate_sr(
         region: Region,
         mode: int,
-        strand: typing.Optional[str],
         read_start: int,
-        current_names: typing.List[str],
-        cigartuples_without_soft: typing.List[int],
+        current_names: list[str],
+        cigartuples_without_soft: list[int],
     ) -> int: ...
     @staticmethod
-    def reset_names_list(names_in_graph: typing.List[str]) -> None: ...
+    def reset_names_list(names_in_graph: list[str]) -> None: ...
     @staticmethod
     def count_reads(chrom: str, start: int, end: int) -> int: ...
 
 class parseCigarResult:
     def __repr__(self) -> str: ...
     @property
-    def cigartuples(self) -> typing.List[int]:
+    def cigartuples(self) -> list[int]:
         """
-        :type: typing.List[int]
+        :type: typing.List[int].
         """
     @property
-    def cigartuples_without_soft(self) -> typing.List[int]:
+    def cigartuples_without_soft(self) -> list[int]:
         """
-        :type: typing.List[int]
+        :type: typing.List[int].
         """
     @property
     def indel_len(self) -> int:

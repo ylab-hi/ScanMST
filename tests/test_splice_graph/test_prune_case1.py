@@ -7,15 +7,14 @@
 """
 import pytest
 from loguru import logger
+from scannls import NLGraph, Node, SpliceType
+
+from tests import assign_value_for_instance
 
 from . import add_edge_according_order
-from .. import assign_value_for_instance
-from scannls import Node
-from scannls import SpliceGraph
-from scannls import SpliceType
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def graph_for_prun():
     """Create a splice graph for testing pruning.
 
@@ -288,12 +287,12 @@ def graph_for_prun():
     add_edge_according_order(nodes, 11, 12)  # n11 -> n12
     add_edge_according_order(nodes, 12, 13)  # n12 -> n13
 
-    graph = SpliceGraph(logger, None)
+    graph = NLGraph(logger, None)
     graph.nodes = graph.dict_factory()
     for node in nodes:
         graph.add_node_with_similar_key(node)
 
-    yield graph
+    return graph
 
 
 @pytest.fixture(autouse=True)
@@ -306,6 +305,7 @@ def start_node_with_name_onetwo(graph_for_prun):
     for start_node in graph_for_prun.get_start_nodes():
         if start_node.query_name == "one,two":
             return start_node
+    return None
 
 
 @pytest.fixture(autouse=True)
@@ -314,6 +314,7 @@ def end_node_with_name_onetwo(graph_for_prun):
     for end_node in graph_for_prun.get_end_nodes():
         if end_node.query_name == "one,two":
             return end_node
+    return None
 
 
 @pytest.fixture(autouse=True)

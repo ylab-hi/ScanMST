@@ -5,36 +5,31 @@
 @license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """
-from abc import ABC
-from abc import abstractmethod
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
-from typing import IO
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import IO, TYPE_CHECKING, Any
 
-from ..basicClass import Series
-from ..type import LoggerType
+from loguru import logger
 
-
-# todo: add asyncio support
+if TYPE_CHECKING:
+    from scannls.graph import NLPath
 
 
 class Writer(ABC):
     """Abstract class for writing object to file."""
 
-    def __init__(self, file_path: str, logger: LoggerType):
+    def __init__(self, file_path: str) -> None:
         """Initialize Writer object."""
-        self.logger = logger
         self.file_path = Path(file_path)
         if self.file_path.exists():
-            self.logger.warning(f"{self.file_path} exists, will be overwritten.")
-        self.io: Optional[IO] = None
+            logger.warning(f"{self.file_path} exists, will be overwritten.")
+        self.io: IO | None = None
 
     @abstractmethod
-    def write_data(self, data_object: Any, object_id: int):
+    def write_data(self, data_object: Any, object_id: str):
         """Write data to file.
 
         :param: data_object: Data to write to file.
@@ -62,11 +57,11 @@ class Writer(ABC):
 class Writers:
     """Writers."""
 
-    def __init__(self, writers: Tuple["Writer", ...]):
+    def __init__(self, writers: tuple[Writer, ...]) -> None:
         """Init writers."""
         self.writers_list = writers
 
-    def write_series(self, series: Series, clique_id: int) -> None:
+    def write_series(self, series: NLPath, clique_id: str) -> None:
         """Write series.
 
         .. note::
@@ -75,7 +70,7 @@ class Writers:
         for writer in self.writers_list:
             writer.write_data(series, clique_id)
 
-    def open_writers(self, mode: str = "w") -> List[IO]:
+    def open_writers(self, mode: str = "w") -> list[IO]:
         """Open writers."""
         writers_list = []
         for writer in self.writers_list:

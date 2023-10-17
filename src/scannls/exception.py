@@ -1,8 +1,5 @@
-#!/usr/bin/env python3
 """Module for the exception class.
 
-@version: 0.0.1
-@license: MIT Licence
 @file: exception.py
 @time: 16/11/2021 11:28
 """
@@ -10,8 +7,6 @@
 
 class ScannlsExceptionError(Exception):
     """Base class for exceptions in this module."""
-
-    pass
 
 
 class ToolNotFoundError(ScannlsExceptionError):
@@ -68,7 +63,7 @@ class ModesNotEqualError(ScannlsExceptionError):
     def __init__(self, msg: str) -> None:
         """Initialize the exception."""
         super().__init__(
-            f"modes not equal in the same chrom and the different strands from reads {msg}"
+            f"modes not equal in the same chrom and the different strands from reads {msg}",
         )
 
 

@@ -7,8 +7,7 @@ from textwrap import dedent
 import nox
 
 try:
-    from nox_poetry import Session
-    from nox_poetry import session
+    from nox_poetry import Session, session
 except ImportError:
     message = f"""\
     Nox failed to import the 'nox-poetry' package.
@@ -16,7 +15,7 @@ except ImportError:
     Please install it using the following command:
 
     {sys.executable} -m pip install nox-poetry"""
-    raise SystemExit(dedent(message))
+    raise SystemExit(dedent(message)) from ImportError
 
 package = "scannls"
 python_versions = ["3.8", "3.9", "3.10"]
@@ -41,6 +40,7 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
     that environment when invoked from git.
 
     Args:
+    ----
         session: The Session object.
     """
     if session.bin is None:
@@ -77,7 +77,7 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
                 {session.bin!r},
                 os.environ.get("PATH", ""),
             ))
-            """
+            """,
         )
 
         lines.insert(1, header)
@@ -166,7 +166,7 @@ def refurb(session: Session) -> None:
     args = session.posargs or ["src", "tests", "docs/conf.py"]
     session.install("pybind11", "setuptools")
     session.install(".")
-    session.install("refurb")
+    session.install("refurb", *args)
 
 
 @session(python=python_versions)
