@@ -6,16 +6,11 @@
 @license:     MIT Licence
 @Time:        1/30/22 6:18 PM
 """
-from functools import singledispatchmethod
-from typing import Any
-from typing import IO
-from typing import List
 import copy
+from functools import singledispatchmethod
+from typing import IO, Any
 
-from ..basicClass import Node
-from ..basicClass import NovelInsertion
-from ..basicClass import MicroHomology
-from ..basicClass import Series
+from ..basicClass import MicroHomology, Node, NovelInsertion, Series
 from ..exception import ExonsNotFoundError
 from ..type import LoggerType
 from .writer import Writer
@@ -50,11 +45,11 @@ class GTFWriter(Writer):
         """Check if file is opened."""
         return self.io is not None and not self.io.closed
 
-    def formatter(self, fields: List[str], delimiter: str = "\t") -> str:
+    def formatter(self, fields: list[str], delimiter: str = "\t") -> str:
         """Formatter for writing data."""
         if fields is None or len(fields) != GTFWriter.num_fields:
             self.logger.warning(
-                f"{self.__class__.__name__}: Number of fields is not equal to 9."
+                f"{self.__class__.__name__}: Number of fields is not equal to 9.",
             )
         return delimiter.join(fields) + "\n"
 
@@ -97,18 +92,18 @@ class GTFWriter(Writer):
         """
         if len(data_object.nodes) == 0:
             self.logger.warning(
-                f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series."
+                f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
         for node_gtf_feature in get_nodes_gtf_features_from_series(
-            data_object, self.id
+            data_object, self.id,
         ):
             self.write_line(self.formatter(node_gtf_feature))
         self.id += 1
 
 
 def get_nodes_gtf_features_from_series(
-    series: Series, series_id: int
-) -> List[List[str]]:
+    series: Series, series_id: int,
+) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
     :param series: Series including nodes.
@@ -122,15 +117,15 @@ def get_nodes_gtf_features_from_series(
         if node.insertion_info and isinstance(node.insertion_info[1], NovelInsertion):
             series_gtf_features.append(
                 get_gtf_features_from_insertion(
-                    node.insertion_info[1], series_id, node_id
-                )
+                    node.insertion_info[1], series_id, node_id,
+                ),
             )
     return series_gtf_features
 
 
 def get_gtf_features_from_insertion(
-    insertion: NovelInsertion, series_id: int, node_id: int
-) -> List[str]:
+    insertion: NovelInsertion, series_id: int, node_id: int,
+) -> list[str]:
     """Get GTF features of novel insertion."""
     return [
         ".",
@@ -147,8 +142,8 @@ def get_gtf_features_from_insertion(
 
 
 def get_gtf_features_from_node(
-    node: Node, series_id: int, node_id: int
-) -> List[List[str]]:
+    node: Node, series_id: int, node_id: int,
+) -> list[list[str]]:
     """Get exon gtf features of a node.
 
     :param node_id: node id
@@ -200,7 +195,7 @@ def get_gtf_features_from_node(
             f'mega_exon_id "{node_id:0>3}"; '
             f'exon_id "{index:0>3}"; '
             f'sr "{node_sr}"; '
-            f'osr "{node_original_sr}";'
+            f'osr "{node_original_sr}";',
         ]
         nodes_gtf_features.append(
             [
@@ -213,6 +208,6 @@ def get_gtf_features_from_node(
                 f"{node.strand}",
                 ".",
             ]
-            + info
+            + info,
         )
     return nodes_gtf_features
