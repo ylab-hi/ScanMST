@@ -8,7 +8,7 @@
 """
 from loguru._logger import Logger
 
-from .type import LoggerType
+from scannls.type import LoggerType
 
 
 class MyLogger(LoggerType):
@@ -19,7 +19,7 @@ class MyLogger(LoggerType):
     Hence, it is difficult to debug in parallel mode
     """
 
-    def __init__(self, contig: str, logger: Logger):
+    def __init__(self, contig: str, logger: Logger) -> None:
         """Initialize logger with contig name."""
         self.logger = logger
         self.contig = contig

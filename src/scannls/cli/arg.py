@@ -1,18 +1,9 @@
-# !/usr/bin/env python
-"""Parse command line arguments.
+"""Parse command line arguments."""
+from __future__ import annotations
 
-@Filename:    arg.py
-@Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        3/25/22 9:01 AM
-"""
 import argparse
-import textwrap
 from dataclasses import dataclass
 from typing import Any
-from typing import Optional
-from typing import Tuple
 
 from scannls import __version__
 
@@ -21,7 +12,7 @@ from scannls import __version__
 class DefaultOptions:
     """Cli default options."""
 
-    input: str
+    input: str  # noqa: A003
     ref: str
     gtf: str
     output: str
@@ -33,28 +24,53 @@ class DefaultOptions:
     closed: bool = True
     sleep: bool = True
     bound: bool = True
+    graph: bool = False
     log: str = "info"
     species: str = "human"
-    species_choices: Tuple[str, ...] = ("human", "mouse")
+    species_choices: tuple[str, str] = ("human", "mouse")
     parallel: int = 1
     port: int = 88888
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 60
     ident_cutoff: float = 0.99
-    prune_threshold: int = 10
+    prune_threshold: int = 3
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8
     long_indel_length: int = 5
-    substitutions_num: int = 10
+    substitutions_num: int = 20
     substitutions_fraction: float = 0.1
     indel_fraction: float = 0.1
+    circular_rna: str = "remove"
+    circular_rna_choices: tuple[str, ...] = ("remove", "keep", "extract")
+    # junctions within one annotated exon filter
+    exon_filter: bool = True
+    rt_switching_filter_len: int = 10
+
+
+COLOR = "bold magenta"
+BANNER = {
+    "   _____                  _   ____   _____": COLOR,
+    "  / ___/_________ _____  / | / / /  / ___/": COLOR,
+    "  \\__ \\/ ___/ __ `/ __ \\/  |/ / /   \\__ \\": COLOR,
+    " ___/ / /__/ /_/ / / / / /|  / /______/ /": COLOR,
+    "/____/\\___/\\__,_/_/ /_/_/ |_/_____/____/": COLOR,
+}
+
+
+def print_banner() -> None:
+    """Print banner."""
+    from rich.console import Console
+
+    console = Console()
+    for line, color in BANNER.items():
+        console.print(line, style=color)
 
 
 class RichArgParser(argparse.ArgumentParser):
     """RichArgParser."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """RichArgParser."""
         from rich.console import Console
 
@@ -69,7 +85,7 @@ class RichArgParser(argparse.ArgumentParser):
         pattern = re.compile(r"(?P<arg>-{1,2}[-|\w]+)")
         return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
 
-    def _print_message(self, message: Optional[str], file: Any = None) -> None:
+    def _print_message(self, message: str | None, _file: Any = None) -> None:
         if message:
             self.console.print(self._color_message(message))
 
@@ -77,7 +93,7 @@ class RichArgParser(argparse.ArgumentParser):
 class RichHelpFormatter(argparse.HelpFormatter):
     """RichHelpFormatter."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """RichHelpFormatter."""
         super().__init__(*args, max_help_position=42, **kwargs)  # type: ignore
 
@@ -88,14 +104,12 @@ def parse_args() -> argparse.ArgumentParser:
         description="[red]scannls[/] :rocket: Nonlinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
-        epilog=textwrap.dedent(
-            """Authors: TingYou Wang and Yangyang Li, Hormel Institute,
-            University of Minnesota, 2022"""
-        ),
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
 
     parser.add_argument(
@@ -182,7 +196,30 @@ def parse_args() -> argparse.ArgumentParser:
         choices=DefaultOptions.species_choices,
         default=DefaultOptions.species,
     )
+    parser.add_argument(
+        "--circular-rna-filter",
+        action="store",
+        dest="circular_rna",
+        help="The way of dealing with circular RNAs (default: %(default)s)",
+        choices=DefaultOptions.circular_rna_choices,
+        default=DefaultOptions.circular_rna,
+    )
+    parser.add_argument(
+        "--off-exon-filter",
+        action="store_false",
+        dest="exon_filter",
+        default=DefaultOptions.exon_filter,
+        help="Turn on exon filter (default: %(default)s)",
+    )
 
+    parser.add_argument(
+        "--rt-switching-filter",
+        action="store",
+        dest="rt_switching_filter_len",
+        type=int,
+        default=DefaultOptions.rt_switching_filter_len,
+        help="Set RT switching filter (default length: %(default)s)",
+    )
     parser.add_argument(
         "--ncan",
         action="store_true",
@@ -197,7 +234,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.closed,
         help="close BLAT server when job has done (default: %(default)s)",
     )
-
     parser.add_argument(
         "--nsleep",
         action="store_false",
@@ -205,7 +241,13 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.sleep,
         help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
-
+    parser.add_argument(
+        "--graph",
+        action="store_true",
+        dest="graph",
+        default=DefaultOptions.graph,
+        help="if output graph (default: %(default)s)",
+    )
     parser.add_argument(
         "--nbound",
         action="store_false",
@@ -213,7 +255,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.bound,
         help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
     )
-
     parser.add_argument(
         "--port",
         action="store",
