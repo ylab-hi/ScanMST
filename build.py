@@ -151,7 +151,7 @@ def build(setup_kwargs):
             include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,
-            extra_compile_args=[],
+            extra_compile_args=["-DNSCDEBUG"],
         ),
     ]
     setup_kwargs.update(
