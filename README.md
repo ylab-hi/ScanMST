@@ -3,7 +3,7 @@
 ![conda](https://img.shields.io/conda/vn/bioconda/scannls?style=for-the-badge)
 [![publication](https://img.shields.io/badge/published%20in-Nature-green.svg?style=for-the-badge)][paper]
 
-[paper]: www.www
+[paper]:https://www.nature.com/articles/d41586-023-03067-6
 
 
 
