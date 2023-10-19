@@ -337,7 +337,7 @@ def _scan_bam_helper(
     pat_right_s = re.compile(r"(\d+)S$")
 
     # Circular RNA filter
-    circ_rna_filter = CircRNAFilter(gtf, 10)
+    circ_rna_filter = CircRNAFilter(gtf, 10, 10)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
         if (

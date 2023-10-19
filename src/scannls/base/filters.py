@@ -215,9 +215,19 @@ class CircRNAFilter:
 
          <-[XXXX]----------------------[XXXXX]
                  [ 1 ]             [2]
+    6) no overlapping with annotations
+         ------------------------------------------->
+                                 [   1    ]
+                [          2              ]
+                [  3 ]
+        ----------------------------------->
+                                 [   1    ]
+                [          2              ]
     """
 
-    def __init__(self, gtf_file: str, boundary_size: int) -> None:
+    def __init__(
+        self, gtf_file: str, boundary_size: int, breakpoint_diff_threshold: int = 10
+    ) -> None:
         """Initialize the CircRNAFilter class."""
         self.exons_gas, self.introns_gas = _extract_annotated_exons(
             gtf_file,
@@ -225,6 +235,7 @@ class CircRNAFilter:
             shrink=False,
             consider_strand=True,
         )
+        self.breakpoint_diff_threshold = breakpoint_diff_threshold
 
     def is_circrna(self, nlpath) -> bool:
         nodes = nlpath.nodes
@@ -265,9 +276,21 @@ class CircRNAFilter:
                     next_node,
                 ),
             )
+            # medium-confidence circular RNA
+            _circular_condition3 = bool(
+                current_edge.variation_type.is_tdup()
+                and not current_node.introns
+                and not next_node.introns
+                and (
+                    abs(current_node.ref_start - next_node.ref_start)
+                    <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end)
+                    <= self.breakpoint_diff_threshold
+                )
+            )
 
             # low-confidence circular RNA
-            _circular_condition3 = bool(
+            _circular_condition4 = bool(
                 current_edge.variation_type.is_tdup()
                 and self.is_two_megaexon_within_annotated_intron(
                     current_node,
@@ -275,7 +298,12 @@ class CircRNAFilter:
                 ),
             )
 
-            return _circular_condition1 or _circular_condition2 or _circular_condition3
+            return (
+                _circular_condition1
+                or _circular_condition2
+                or _circular_condition3
+                or _circular_condition4
+            )
 
         # multi-hop event
         num_of_tdups = 0
@@ -287,6 +315,17 @@ class CircRNAFilter:
             if current_edge.variation_type.is_tdup():
                 num_of_tdups += 1
 
+            if (
+                not current_node.introns
+                and not next_node.introns
+                and (
+                    abs(current_node.ref_start - next_node.ref_start)
+                    <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end)
+                    <= self.breakpoint_diff_threshold
+                )
+            ):
+                num_of_hops_satisfy_condition += 1
             # first hop
             if _id == 1:
                 if (
