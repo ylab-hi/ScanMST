@@ -49,8 +49,8 @@ Options::self &Options::min_seq_align_len(int min_seq_align_len) {
   min_seq_align_len_ = min_seq_align_len;
   return *this;
 }
-[[maybe_unused]] Options::self &Options::average_read_depth(
-    int average_read_depth) {
+[[maybe_unused]] Options::self &
+Options::average_read_depth(int average_read_depth) {
   average_read_depth_ = average_read_depth;
   return *this;
 }
@@ -72,10 +72,8 @@ Options::self &Options::min_seq_align_len(int min_seq_align_len) {
 }
 
 Rescuer::Rescuer(const Options &options)
-    : bam_reader(options.file_),
-      min_mapq(options.mapq_),
-      min_soft_len(options.soft_len_),
-      min_mismatch(options.mismatch_),
+    : bam_reader(options.file_), min_mapq(options.mapq_),
+      min_soft_len(options.soft_len_), min_mismatch(options.mismatch_),
       min_identity(options.identity_),
       min_seq_align_len(options.min_seq_align_len_),
       average_read_depth(options.average_read_depth_) {}
@@ -154,8 +152,9 @@ int Rescuer::calculate_incremented_sr(
   return bam_reader.count(t_chrom.c_str(), t_start, t_end);
 }
 
-std::optional<double> Rescuer::calculate_identity(
-    std::string_view query, std::string_view target) const {
+std::optional<double>
+Rescuer::calculate_identity(std::string_view query,
+                            std::string_view target) const {
   auto const target_len{static_cast<int>(target.length())};
   int const masklen{std::max(target_len / 2, 15)};
 
@@ -166,7 +165,7 @@ std::optional<double> Rescuer::calculate_identity(
                                           m_alignment.query_begin + 1) /
                       static_cast<double>(query.length())};
       return_value) {
-    return identity;  // do not align
+    return identity; // do not align
   } else {
     return {};
   }
@@ -255,10 +254,18 @@ std::vector<std::string> Rescuer::add_align_seqs(
     const std::vector<uint> &cigartuples_without_soft) const {
   std::vector<std::string> candidate_list_names{};
 
-  for (auto iterator = bam_reader.query(region);
-       !iterator.is_end() && iterator.same_strand_with(break_point.is_reverse);
+  for (auto iterator = bam_reader.query(region); !iterator.is_end();
        iterator.next()) {
-    //    get read seq
+    //  get read seq
+
+#ifdef SCDEBUG
+    std::cout << '\n' << "fetching region: " << region.to_string() << '\n';
+    std::cout << "fetching read: " << iterator.to_string() << '\n';
+#endif
+
+    if (!iterator.same_strand_with(break_point.is_reverse)) {
+      continue;
+    }
 
     if (iterator.quality_eq_than(min_mapq)) {
       CigarResult cigar_result{parser_cigar(iterator)};
@@ -309,16 +316,17 @@ std::optional<int> Rescuer::get_align_seq_len(uint seq_size,
   }
 
   if (seq_size < min_align_len) {
-    return {};  // read length is too short skip
+    return {}; // read length is too short skip
   }
 
-  return {seq_size};  // has value not skip
+  return {seq_size}; // has value not skip
 }
 
 // may need to change
-std::optional<Seqs> Rescuer::get_align_sequences(
-    BamReader::Iterator const &iterator, BreakPoint const &break_point,
-    CigarResult const &cigar_result) const {
+std::optional<Seqs>
+Rescuer::get_align_sequences(BamReader::Iterator const &iterator,
+                             BreakPoint const &break_point,
+                             CigarResult const &cigar_result) const {
   Seqs seqs{};
 
   std::string const read_seq = iterator.sequence();
@@ -361,7 +369,7 @@ std::optional<Seqs> Rescuer::get_align_sequences(
     std::cout << '\n' << "get seqs:" << '\n';
     std::cout << "read name: " << iterator.read_name() << '\n';
     std::cout << "read seq len: " << read_seq.length() << '\n';
-    std::cout << "right seq len: " << rt_seq_len.value() << '\n';
+    std::cout << "left seq len: " << lt_seq_len.value() << '\n';
     std::cout << "read seq len: " << read_seq.length() << '\n';
     std::cout << "read seq: " << read_seq << '\n';
     std::cout << "seq: " << seqs.to_string() << '\n';
@@ -431,30 +439,30 @@ CigarResult parser_cigar(const uint32_t *t_cigar_str, size_t t_cigar_len) {
     result.cigartuples.insert(result.cigartuples.end(), {op, len});
 
     switch (op) {
-      case BAM_CMATCH:
-        result.ref_match += len;
-        result.read_match += len;
-        result.query_len += len;
-        result.cigartuples_without_soft.insert(
-            result.cigartuples_without_soft.end(), {op, len});
-        break;
-      case BAM_CINS:
-        result.indel_len -= static_cast<int>(len);
-        result.read_match += len;
-        result.query_len += len;
-        result.cigartuples_without_soft.insert(
-            result.cigartuples_without_soft.end(), {op, len});
-        break;
-      case BAM_CDEL:
-      case BAM_CREF_SKIP:
-        result.indel_len += static_cast<int>(len);
-        result.ref_match += len;
-        result.cigartuples_without_soft.insert(
-            result.cigartuples_without_soft.end(), {op, len});
-        break;
-      case BAM_CSOFT_CLIP:
-        result.query_len += len;
-        break;
+    case BAM_CMATCH:
+      result.ref_match += len;
+      result.read_match += len;
+      result.query_len += len;
+      result.cigartuples_without_soft.insert(
+          result.cigartuples_without_soft.end(), {op, len});
+      break;
+    case BAM_CINS:
+      result.indel_len -= static_cast<int>(len);
+      result.read_match += len;
+      result.query_len += len;
+      result.cigartuples_without_soft.insert(
+          result.cigartuples_without_soft.end(), {op, len});
+      break;
+    case BAM_CDEL:
+    case BAM_CREF_SKIP:
+      result.indel_len += static_cast<int>(len);
+      result.ref_match += len;
+      result.cigartuples_without_soft.insert(
+          result.cigartuples_without_soft.end(), {op, len});
+      break;
+    case BAM_CSOFT_CLIP:
+      result.query_len += len;
+      break;
     }
   }
 
@@ -473,11 +481,8 @@ CigarResult parser_cigar(BamReader::Iterator const &iterator) {
 
 BreakPoint::BreakPoint(long read_start_, long read_end_, int mode_,
                        bool is_reverse_, bool is_middle_)
-    : read_start{read_start_},
-      read_end{read_end_},
-      mode{mode_},
-      is_reverse{is_reverse_},
-      is_middle{is_middle_} {}
+    : read_start{read_start_}, read_end{read_end_}, mode{mode_},
+      is_reverse{is_reverse_}, is_middle{is_middle_} {}
 
 [[maybe_unused]] std::string BreakPoint::to_string() const {
   std::stringstream ss{};
@@ -509,4 +514,4 @@ Seqs::Seqs(std::string_view seq1_) : seq1{seq1_} {}
 
   return ss.str();
 }
-}  // namespace cppext
+} // namespace cppext
