@@ -14,6 +14,9 @@ def is_weakly_connected(graph) -> bool:
     visited = set()
     start_node = list(graph.get_start_nodes())
 
+    if len(graph) == 0:
+        return True
+
     if len(start_node) == 0:
         return False
 
@@ -27,7 +30,7 @@ def is_weakly_connected(graph) -> bool:
             if neighbor not in visited:
                 queue.append(neighbor)
 
-    return len(visited) == len(graph.nodes)
+    return len(visited) == len(graph)
 
 
 def build_interval_tree(

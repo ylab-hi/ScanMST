@@ -226,7 +226,10 @@ class CircRNAFilter:
     """
 
     def __init__(
-        self, gtf_file: str, boundary_size: int, breakpoint_diff_threshold: int = 10
+        self,
+        gtf_file: str,
+        boundary_size: int,
+        breakpoint_diff_threshold: int = 10,
     ) -> None:
         """Initialize the CircRNAFilter class."""
         self.exons_gas, self.introns_gas = _extract_annotated_exons(
@@ -286,7 +289,7 @@ class CircRNAFilter:
                     <= self.breakpoint_diff_threshold
                     or abs(current_node.ref_end - next_node.ref_end)
                     <= self.breakpoint_diff_threshold
-                )
+                ),
             )
 
             # low-confidence circular RNA
