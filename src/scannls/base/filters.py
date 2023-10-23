@@ -226,7 +226,10 @@ class CircRNAFilter:
     """
 
     def __init__(
-        self, gtf_file: str, boundary_size: int, breakpoint_diff_threshold: int = 10,
+        self,
+        gtf_file: str,
+        boundary_size: int,
+        breakpoint_diff_threshold: int = 10,
     ) -> None:
         """Initialize the CircRNAFilter class."""
         self.exons_gas, self.introns_gas = _extract_annotated_exons(

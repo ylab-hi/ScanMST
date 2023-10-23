@@ -777,7 +777,11 @@ class NLPath:
         return None
 
     def remove_edge(
-        self, nodes: Node, nodet: Node | None = None, *, nodes_idx: int | None = None,
+        self,
+        nodes: Node,
+        nodet: Node | None = None,
+        *,
+        nodes_idx: int | None = None,
     ):
         if nodet is not None:
             key = Edge.create_key_from_node(nodes, nodet)
