@@ -840,9 +840,22 @@ class NLPath:
             next_node = self.nodes[idx + 1]
 
             if edge.variation_type.is_del():
-                prev_node.exons.extend(next_node.exons)
+                # new_exons = next_node.exons - next_node.ref_start
+                # prev_node.exons.extend(new_exons + prev_node.ref_end)
+                logger.warning(f"{prev_node.exons} add {next_node.exons}")
+
+                import ipdb
+
+                ipdb.set_trace()
+                if prev_node.exons.first.start < next_node.exons.first.start:
+                    prev_node.exons.extend(next_node.exons)
+                else:
+                    pass
+
                 prev_node._introns = None
-                prev_node.ref_end = next_node.ref_end
+
+                prev_node.ref_end = max(next_node.ref_end, prev_node.ref_end)
+                prev_node.ref_start = min(next_node.ref_start, prev_node.ref_start)
 
                 # WARN: cigartuples_without_soft is not update <Yangyang Li>
 
