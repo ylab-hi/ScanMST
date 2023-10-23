@@ -235,6 +235,7 @@ def detect_sv_from_cigar(
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
+
         event_list: list[Event] = []
         # every chain is a group of connected reads
         # every chain may have a list of events
@@ -480,7 +481,7 @@ def _scan_bam_helper(
                     long_indel_length,
                 )
 
-                subs_fraction = 0 if nm == 0 else num_of_subs / nm
+                subs_fraction = 0 if nm == 0 else num_of_subs / int(nm)
 
                 if (
                     not (
@@ -500,7 +501,7 @@ def _scan_bam_helper(
                         gene_iv=gene_iv,
                         motif_required=motif_required,
                         blat=blat,
-                        logger=logger,
+                        logger=logger,  # type: ignore
                     ):
                         event_lists, read_chains, num_added_reads = ret
                         logger.trace(f"{read_chains=}")
@@ -555,6 +556,9 @@ def _scan_bam_helper(
                             motif_required=motif_required,
                             blat=blat,
                         )
+
+                        nlpath.squeeze()
+
                         if (
                             not nlpath.is_all_type_del()
                             and nlpath.is_minimum_node_length_larger_than_threshold()

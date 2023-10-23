@@ -407,7 +407,6 @@ class Node(BasicNode):
                 other,
                 optional_attributes,
             )
-
             return
 
         msg = f"Cannot merge {self!r} and {other!r}"
@@ -777,6 +776,20 @@ class NLPath:
 
         return None
 
+    def remove_edge(
+        self, nodes: Node, nodet: Node | None = None, *, nodes_idx: int | None = None,
+    ):
+        if nodet is not None:
+            key = Edge.create_key_from_node(nodes, nodet)
+            self.edges.pop(key)
+        else:
+            if nodes_idx is None:
+                nodes_idx = self.nodes.index(nodes)
+
+            if nodes_idx < len(self.nodes) - 1:
+                key = Edge.create_key_from_node(nodes, self.nodes[nodes_idx + 1])
+                self.edges.pop(key)
+
     def get_edge(
         self,
         nodes: Node,
@@ -796,6 +809,51 @@ class NLPath:
         return all(
             edge.variation_type == VariationType.DEL for edge in self.edges.values()
         )
+
+    def squeeze(self) -> None:
+        """Squeeze nodes whose edge is del in the path."""
+
+        if not self.nodes:
+            return
+
+        if not any(
+            edge.variation_type == VariationType.DEL for edge in self.edges.values()
+        ):
+            return
+
+        edges = []
+        for idx, node in enumerate(self.nodes):
+            edge = self.get_edge(node, nodes_idx=idx)
+            if edge is not None:
+                edges.append(edge)
+
+        new_edges = []
+        new_nodes = []
+        new_nodes.append(self.nodes[0])
+
+        for idx, edge in enumerate(edges):
+            prev_node = new_nodes[-1]
+            next_node = self.nodes[idx + 1]
+
+            if edge.variation_type.is_del():
+                prev_node.exons.extend(next_node.exons)
+                prev_node._introns = None
+                prev_node.ref_end = next_node.ref_end
+
+                # WARN: cigartuples_without_soft is not update <Yangyang Li>
+
+            else:
+                new_edges.append(edge)
+                new_nodes.append(next_node)
+
+        self.nodes = new_nodes
+        self.edges.clear()
+
+        for idx, node in enumerate(self.nodes[:-1]):
+            next_node = self.nodes[idx + 1]
+            edge_key = Edge.create_key_from_node(node, next_node)
+            edge = new_edges[idx]
+            self.edges[edge_key] = edge
 
     def is_minimum_node_length_larger_than_threshold(self, threshold: int = 10) -> bool:
         """Check if minimum length of all nodes in the series > threshold."""
