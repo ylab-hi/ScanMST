@@ -294,6 +294,14 @@ class Intervals:
             msg = f"item: {item} is not Interval or tuple"
             raise TypeError(msg)
 
+    def extend(self, item: Intervals) -> None:
+        """Extend exon_list with item."""
+        if isinstance(item, Intervals):
+            self.exon_list.extend(item.exon_list)
+        else:
+            msg = f"item: {item} is not Intervals"
+            raise TypeError(msg)
+
     @classmethod
     def from_list(cls, item: list[list[int] | tuple[int, int]]):
         """Create Exons from list."""

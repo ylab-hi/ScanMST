@@ -305,6 +305,9 @@ class Event:
             f"{self.insertion_info})"
         )
 
+    def merge(self, event: Event) -> None:
+        pass
+
     def reverse(self) -> None:
         """Reverse breakpoint1 and breakpoint2."""
         if self.annotation_code == AnnotationCode.Type1:
