@@ -184,7 +184,8 @@ class SpliceGraph:
         :param node: node to be removed
         """
         if node.similar_key is None:
-            raise ValueError(f"node.similar_key is None, {node.query_name}")
+            msg = f"node.similar_key is None, {node.query_name}"
+            raise ValueError(msg)
         self.get_nodes_with_similar_key(node.similar_key).remove(node)
 
     def reset_trace_id(self) -> None:
@@ -433,7 +434,7 @@ class SpliceGraph:
                     self._trace_forward(
                         successor,
                         trace_id + 1,
-                        path + [start_node],
+                        [*path, start_node],
                         group_paths,
                     )
             else:
@@ -441,7 +442,7 @@ class SpliceGraph:
                 self._trace_forward(
                     successors,  # type: ignore
                     trace_id + 1,
-                    path + [start_node],
+                    [*path, start_node],
                     group_paths,
                 )
 
@@ -467,7 +468,7 @@ class SpliceGraph:
                     self._trace_backward(
                         predecessor,
                         trace_id + 1,
-                        path + [end_node],
+                        [*path, end_node],
                         group_paths,
                     )
             else:
@@ -475,7 +476,7 @@ class SpliceGraph:
                 self._trace_backward(
                     predecessors,  # type: ignore
                     trace_id + 1,
-                    path + [end_node],
+                    [*path, end_node],
                     group_paths,
                 )
 
@@ -501,7 +502,8 @@ class SpliceGraph:
                 self._trace_backward(end_node, 2, [], [])
             return
 
-        raise ValueError(f"{direction=} is not a valid direction[forward, backward]")
+        msg = f"{direction=} is not a valid direction[forward, backward]"
+        raise ValueError(msg)
 
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
@@ -728,7 +730,7 @@ class SpliceGraph:
                         nodes_keys.add(key)
                     self._trace_forward_record_node_unique_keys(
                         successor,
-                        path + [start_node],
+                        [*path, start_node],
                         group_paths,
                         nodes_keys,
                     )
@@ -736,7 +738,7 @@ class SpliceGraph:
                 # successor be [] or None
                 self._trace_forward_record_node_unique_keys(
                     successors,  # type: ignore
-                    path + [start_node],
+                    [*path, start_node],
                     group_paths,
                     nodes_keys,
                 )
@@ -753,7 +755,8 @@ def update_exon_coord_sr_svtype_breakpoints_name_mode(
     :return: None
     """
     if updated_node.exons is None or current_node.exons is None:
-        raise ValueError(f"{updated_node} or {current_node} has no exons")
+        msg = f"{updated_node} or {current_node} has no exons"
+        raise ValueError(msg)
 
     # merge condition is true with same number of exons
     if len(updated_node.exons) < len(current_node.exons):
