@@ -136,6 +136,26 @@ class Interval:
     def __hash__(self) -> int:
         return hash(self.start) ^ hash(self.end)
 
+    def __add__(self, other: Interval | int) -> Interval:
+        if isinstance(other, int):
+            return Interval(self.start + other, self.end + other)
+
+        if isinstance(other, Interval):
+            return Interval(self.start + other.start, self.end + other.end)
+
+        msg = f"{other} is not Interval or int"
+        raise TypeError(msg)
+
+    def __sub__(self, other: Interval | int) -> Interval:
+        if isinstance(other, int):
+            return Interval(self.start - other, self.end - other)
+
+        if isinstance(other, Interval):
+            return Interval(self.start - other.start, self.end - other.end)
+
+        msg = f"{other} is not Interval or int"
+        raise TypeError(msg)
+
     def __setitem__(self, index: int, value: int):
         if index == 0:
             self.start = value
@@ -278,6 +298,36 @@ class Intervals:
     @property
     def last(self) -> Interval: return self.exon_list[-1]
     # fmt: on
+
+    def __add__(self, other: int | Intervals) -> Intervals:
+        if isinstance(other, int):
+            return Intervals([exon + other for exon in self.exon_list])
+
+        if isinstance(other, Intervals):
+            return Intervals(
+                [
+                    exon + other_exon
+                    for exon, other_exon in zip(self.exon_list, other.exon_list)
+                ],
+            )
+
+        message = f"{other} is not int or Intervals"
+        raise TypeError(message)
+
+    def __sub__(self, other: int | Intervals) -> Intervals:
+        if isinstance(other, int):
+            return Intervals([exon - other for exon in self.exon_list])
+
+        if isinstance(other, Intervals):
+            return Intervals(
+                [
+                    exon - other_exon
+                    for exon, other_exon in zip(self.exon_list, other.exon_list)
+                ],
+            )
+
+        message = f"{other} is not int or Intervals"
+        raise TypeError(message)
 
     def __eq__(self, other: Intervals) -> bool:
         if isinstance(other, Intervals):
