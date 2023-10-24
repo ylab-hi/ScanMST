@@ -840,12 +840,17 @@ class NLPath:
             next_node = self.nodes[idx + 1]
 
             if edge.variation_type.is_del():
-                prev_node.exons.extend(next_node.exons)
-                prev_node._introns = None
-                prev_node.ref_end = next_node.ref_end
+                if prev_node.strand.is_forward():
+                    prev_node.exons.extend(next_node.exons)
+                    prev_node.ref_end = next_node.ref_end
+                    prev_node._introns = None
+                else:
+                    next_node.exons.extend(prev_node.exons)
+                    next_node.ref_end = prev_node.ref_end
+                    next_node._introns = None
+                    new_nodes[-1] = next_node
 
                 # WARN: cigartuples_without_soft is not update <Yangyang Li>
-
             else:
                 new_edges.append(edge)
                 new_nodes.append(next_node)

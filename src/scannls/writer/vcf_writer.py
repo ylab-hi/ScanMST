@@ -222,7 +222,7 @@ class VCFWriter(Writer):
         """Write series data for every clique."""
         out_vcf_dict = {}
         for hop_feature in self.hops_feature_in_series_list:
-            type_position_key = [*hop_feature][0]
+            type_position_key = next(iter(hop_feature))
             if type_position_key not in out_vcf_dict:
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
