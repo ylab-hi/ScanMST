@@ -340,9 +340,11 @@ class CircRNAFilter:
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issubset(set(next_node.introns))
                     )
-                    or current_node.ref_start == next_node.ref_start
-                    or current_node.ref_end == next_node.ref_end
-                ) and self.is_megaexon_superpose_with_annotated_exons(next_node):
+                    or abs(current_node.ref_start - next_node.ref_start)
+                    <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end)
+                    <= self.breakpoint_diff_threshold
+                ):
                     num_of_hops_satisfy_condition += 1
 
             # last hop
@@ -356,19 +358,20 @@ class CircRNAFilter:
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issuperset(set(next_node.introns))
                     )
-                    or current_node.ref_start == next_node.ref_start
-                    or current_node.ref_end == next_node.ref_end
-                ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
+                    or abs(current_node.ref_start - next_node.ref_start)
+                    <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end)
+                    <= self.breakpoint_diff_threshold
+                ):
                     num_of_hops_satisfy_condition += 1
 
             # middle hops
-            elif (
-                set(current_node.exons) == set(next_node.exons)
-                or (
-                    current_node.ref_start == next_node.ref_start
-                    and current_node.ref_end == next_node.ref_end
-                )
-            ) and self.is_megaexon_superpose_with_annotated_exons(current_node):
+            elif set(current_node.exons) == set(next_node.exons) or (
+                abs(current_node.ref_start - next_node.ref_start)
+                <= self.breakpoint_diff_threshold
+                and abs(current_node.ref_end - next_node.ref_end)
+                <= self.breakpoint_diff_threshold
+            ):
                 num_of_hops_satisfy_condition += 1
 
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
