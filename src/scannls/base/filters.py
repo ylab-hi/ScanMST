@@ -369,7 +369,6 @@ class CircRNAFilter:
             ):
                 num_of_hops_satisfy_condition += 1
 
-        print(num_of_hops_satisfy_condition, num_of_tdups, num_of_hops)
         return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
 
     def is_two_megaexon_within_annotated_intron(
