@@ -318,17 +318,6 @@ class CircRNAFilter:
             if current_edge.variation_type.is_tdup():
                 num_of_tdups += 1
 
-            if (
-                not current_node.introns
-                and not next_node.introns
-                and (
-                    abs(current_node.ref_start - next_node.ref_start)
-                    <= self.breakpoint_diff_threshold
-                    or abs(current_node.ref_end - next_node.ref_end)
-                    <= self.breakpoint_diff_threshold
-                )
-            ):
-                num_of_hops_satisfy_condition += 1
             # first hop
             if _id == 1:
                 if (
@@ -340,10 +329,13 @@ class CircRNAFilter:
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issubset(set(next_node.introns))
                     )
-                    or abs(current_node.ref_start - next_node.ref_start)
-                    <= self.breakpoint_diff_threshold
-                    or abs(current_node.ref_end - next_node.ref_end)
-                    <= self.breakpoint_diff_threshold
+                    or (not current_node.introns)
+                    and (
+                        abs(current_node.ref_start - next_node.ref_start)
+                        <= self.breakpoint_diff_threshold
+                        or abs(current_node.ref_end - next_node.ref_end)
+                        <= self.breakpoint_diff_threshold
+                    )
                 ):
                     num_of_hops_satisfy_condition += 1
 
@@ -358,10 +350,13 @@ class CircRNAFilter:
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issuperset(set(next_node.introns))
                     )
-                    or abs(current_node.ref_start - next_node.ref_start)
-                    <= self.breakpoint_diff_threshold
-                    or abs(current_node.ref_end - next_node.ref_end)
-                    <= self.breakpoint_diff_threshold
+                    or (not next_node.introns)
+                    and (
+                        abs(current_node.ref_start - next_node.ref_start)
+                        <= self.breakpoint_diff_threshold
+                        or abs(current_node.ref_end - next_node.ref_end)
+                        <= self.breakpoint_diff_threshold
+                    )
                 ):
                     num_of_hops_satisfy_condition += 1
 
