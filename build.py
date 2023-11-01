@@ -46,11 +46,7 @@ def check_hts_path(hts_lib_path: Path, hts_include_path: Path) -> None:
     lib_path_macos = hts_lib_path / "libhts.dylib"
     lib_path_static = hts_lib_path / "libhts.a"
 
-    if (
-        not lib_path_linux.exists()
-        and not lib_path_static.exists()
-        and not lib_path_macos.exists()
-    ):
+    if not lib_path_linux.exists() and not lib_path_static.exists() and not lib_path_macos.exists():
         msg = "Please install htslib first."
         raise RuntimeError(msg)
 

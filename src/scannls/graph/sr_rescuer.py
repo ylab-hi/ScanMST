@@ -97,9 +97,7 @@ class SRRescuer:
     @staticmethod
     def obtain_region_for_rescue_sr(node: Node, mode: MappingMode):
         """Obtain region from rescue."""
-        next_pos = (
-            node.exons.last.end if node.strand.is_forward() else node.exons.first.start
-        )
+        next_pos = node.exons.last.end if node.strand.is_forward() else node.exons.first.start
 
         if mode.is_sm():
             next_pos += 1

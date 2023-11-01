@@ -145,10 +145,7 @@ class SpliceGraph:
             node.unique_key is not None.
 
         """
-        return any(
-            other_node.unique_key == node.unique_key
-            for other_node in self.get_nodes_with_similar_key(node.similar_key)
-        )
+        return any(other_node.unique_key == node.unique_key for other_node in self.get_nodes_with_similar_key(node.similar_key))
 
     def __iter__(self) -> Iterator[Node]:
         """Iterate over all nodes in graph."""
@@ -162,21 +159,11 @@ class SpliceGraph:
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
-        return (
-            node
-            for nodes in self.nodes.values()
-            for node in nodes
-            if node.is_start_node()
-        )
+        return (node for nodes in self.nodes.values() for node in nodes if node.is_start_node())
 
     def get_end_nodes(self) -> Iterable[Node]:
         """Get end nodes based if node has successors."""
-        return (
-            node
-            for nodes in self.nodes.values()
-            for node in nodes
-            if node.is_end_node()
-        )
+        return (node for nodes in self.nodes.values() for node in nodes if node.is_end_node())
 
     def remove_node(self, node: Node) -> None:
         """Remove node from graph.
@@ -229,47 +216,34 @@ class SpliceGraph:
         if node1.strand != node2.strand:
             return False
 
-        condition = (
-            node1.sv_type == node2.sv_type
-            and _check_insertion_conditions_for_compare(node1, node2)
-        )
+        condition = node1.sv_type == node2.sv_type and _check_insertion_conditions_for_compare(node1, node2)
         if not condition:
-            if (
-                node1.next_breakpoint is None and node2.prev_breakpoint is None
-            ):  # node1 is end node, node2 is start node
+            if node1.next_breakpoint is None and node2.prev_breakpoint is None:  # node1 is end node, node2 is start node
                 return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
                     node1,
                     node2,
                 )
-            elif (
-                node1.next_breakpoint is None and node2.next_breakpoint is not None
-            ):  # node1 is end node, node2 is middle node
+            elif node1.next_breakpoint is None and node2.next_breakpoint is not None:  # node1 is end node, node2 is middle node
                 return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
                     node1,
                     node2,
                 )
         # condition is TRUE
-        if (
-            node1.prev_breakpoint is None and node2.prev_breakpoint is None
-        ):  # both are start nodes
+        if node1.prev_breakpoint is None and node2.prev_breakpoint is None:  # both are start nodes
             return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
                 node1,
                 node2,
                 threshold,
             )
 
-        elif (
-            node1.next_breakpoint is None and node2.next_breakpoint is None
-        ):  # both are end nodes  # check first exon start
+        elif node1.next_breakpoint is None and node2.next_breakpoint is None:  # both are end nodes  # check first exon start
             return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
                 node1,
                 node2,
                 threshold,
             )
 
-        elif (
-            node1.prev_breakpoint is None and node2.prev_breakpoint is not None
-        ):  # node1 is start node, node2 is middle node
+        elif node1.prev_breakpoint is None and node2.prev_breakpoint is not None:  # node1 is start node, node2 is middle node
             return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
                 node1,
                 node2,
@@ -358,11 +332,7 @@ class SpliceGraph:
             current_node.add_predecessor(current_node.previous_node_in_series)
 
             # check merged node to see if merge node can be merged into current node
-            for merge_node in [
-                merge_node
-                for merge_node in merged_nodes_pool
-                if merge_node.similar_key == similar_key
-            ]:
+            for merge_node in [merge_node for merge_node in merged_nodes_pool if merge_node.similar_key == similar_key]:
                 if SpliceGraph._compare_is_merged(
                     merge_node,
                     current_node,
@@ -615,10 +585,7 @@ class SpliceGraph:
         self.logger.trace(
             f"{node_a.harmonic_mean_sr=:.2f}\t{node_b.harmonic_mean_sr=:.2f}",
         )
-        if (
-            node_a.harmonic_mean_sr == node_b.harmonic_mean_sr
-            or not self.check_can_battle(node_a, node_b)
-        ):
+        if node_a.harmonic_mean_sr == node_b.harmonic_mean_sr or not self.check_can_battle(node_a, node_b):
             return False, False
 
         if node_a.harmonic_mean_sr > node_b.harmonic_mean_sr:
@@ -692,11 +659,7 @@ class SpliceGraph:
         result_paths: list[list[Node]],
     ) -> None:
         """Check if there is a circle in graph."""
-        if (
-            nodes_keys
-            and (start_node := self.get_node_with_unique_key(nodes_keys.pop()))
-            is not None
-        ):
+        if nodes_keys and (start_node := self.get_node_with_unique_key(nodes_keys.pop())) is not None:
             current_nodes_keys: set[str] = set()
             self._trace_forward_record_node_unique_keys(
                 start_node,
@@ -865,10 +828,7 @@ def _check_insertion_conditions_for_compare(node1: Node, node2: Node) -> bool:
             if (
                 isinstance(insertion_info1[1], NovelInsertion)
                 and isinstance(insertion_info2[1], NovelInsertion)
-                and (
-                    insertion_info1[1].query_sequence
-                    == insertion_info2[1].query_sequence
-                )
+                and (insertion_info1[1].query_sequence == insertion_info2[1].query_sequence)
             ):
                 return flag
             elif isinstance(insertion_info1[1], MicroHomology) and isinstance(

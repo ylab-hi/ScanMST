@@ -190,9 +190,7 @@ def format_gtf_features_for_nlpath(
         ".",
         ".",
         ".",
-        f'sr "{nlpath_sr}"; '
-        f'osr "{nlpath_originla_sr}"; '
-        f'transcript_id "{nlpath_id}"; ',
+        f'sr "{nlpath_sr}"; ' f'osr "{nlpath_originla_sr}"; ' f'transcript_id "{nlpath_id}"; ',
     ]
 
 
@@ -211,8 +209,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; '
-        f'sequence "{insertion.query_sequence}"; ',
+        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; ' f'sequence "{insertion.query_sequence}"; ',
     ]
 
 
@@ -271,10 +268,7 @@ def get_gtf_features_from_node(
     ):
         copy_exons.last.end -= len(microhomology_sequence)
 
-    elif (
-        node.strand.is_reverse()
-        and exons.last.start + len(microhomology_sequence) < exons.last.end
-    ):
+    elif node.strand.is_reverse() and exons.last.start + len(microhomology_sequence) < exons.last.end:
         copy_exons.last.start += len(microhomology_sequence)
 
     nodes_gtf_features = []
@@ -290,9 +284,7 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; '
-                f'mega_exon_id "{node.trace_id:0>4}"; '
-                f'transcript_id "{nlpath_id}"; ',
+                f'exon_id "{index:0>3}"; ' f'mega_exon_id "{node.trace_id:0>4}"; ' f'transcript_id "{nlpath_id}"; ',
             ],
         )
 

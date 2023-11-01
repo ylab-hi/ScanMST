@@ -142,8 +142,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>3}"; '
-        f'sequence "{insertion.query_sequence}";',
+        f'transcript_id "{series_id:0>6}"; mega_exon_id "{node_id:0>3}"; ' f'sequence "{insertion.query_sequence}";',
     ]
 
 
@@ -188,9 +187,7 @@ def get_gtf_features_from_node(
     # last exon end position needs a correction if there is a microhomology.
     if node.strand == "+" and exons[-1][0] < exons[-1][1] - len(microhomology_sequence):
         copy_exons[-1] = exons[-1][0], exons[-1][1] - len(microhomology_sequence)
-    elif (
-        node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]
-    ):
+    elif node.strand == "-" and exons[-1][0] + len(microhomology_sequence) < exons[-1][1]:
         copy_exons[-1] = exons[-1][0] + len(microhomology_sequence), exons[-1][1]
 
     node_sr = node.sr

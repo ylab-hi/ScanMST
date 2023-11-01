@@ -252,10 +252,7 @@ class NLGraph:
             node.unique_key is not None.
 
         """
-        return any(
-            other_node.unique_key == node.unique_key
-            for other_node in self.get_nodes_with_similar_key(node.similar_key)
-        )
+        return any(other_node.unique_key == node.unique_key for other_node in self.get_nodes_with_similar_key(node.similar_key))
 
     def __iter__(self) -> Iterator[Node]:
         """Iterate over all nodes in graph."""
@@ -268,21 +265,11 @@ class NLGraph:
 
     def get_start_nodes(self) -> Iterable[Node]:
         """Get start nodes based if node has predecessors."""
-        return (
-            node
-            for nodes in self.nodes.values()
-            for node in nodes
-            if node.is_start_node()
-        )
+        return (node for nodes in self.nodes.values() for node in nodes if node.is_start_node())
 
     def get_end_nodes(self) -> Iterable[Node]:
         """Get end nodes based if node has successors."""
-        return (
-            node
-            for nodes in self.nodes.values()
-            for node in nodes
-            if node.is_end_node()
-        )
+        return (node for nodes in self.nodes.values() for node in nodes if node.is_end_node())
 
     def remove_node(self, node: Node) -> None:
         """Remove node from graph.
@@ -366,9 +353,7 @@ class NLGraph:
                 # a -> b and b <- a
 
                 edge_data = (
-                    current_node.previous_edge_in_nlapth.edge_data
-                    if current_node.previous_edge_in_nlapth is not None
-                    else None
+                    current_node.previous_edge_in_nlapth.edge_data if current_node.previous_edge_in_nlapth is not None else None
                 )
 
                 similar_node_in_graph.add_predecessor(
@@ -391,9 +376,7 @@ class NLGraph:
             # keeps in mind the next node in series is not processed yet!!!!
 
             edge_data = (
-                current_node.previous_edge_in_nlapth.edge_data
-                if current_node.previous_edge_in_nlapth is not None
-                else None
+                current_node.previous_edge_in_nlapth.edge_data if current_node.previous_edge_in_nlapth is not None else None
             )
 
             current_node.add_predecessor(

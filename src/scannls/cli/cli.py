@@ -241,11 +241,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         clusters = cluster_finder.merge_cluster()
 
         writers = get_writers(options.output, options.ref, in_bam_header)
-        parse_splice_graph_for_cluster = (
-            parse_nlgraph_for_cluster_seq
-            if options.parallel == 1
-            else parse_nlgraph_for_cluster_par
-        )
+        parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
 
         node_rescued_sr_max = 100
         parse_splice_graph_for_cluster(

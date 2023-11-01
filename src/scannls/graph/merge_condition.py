@@ -87,10 +87,7 @@ class MergeCondition:
         if node1.exons is None or node2.exons is None:
             raise ValueError
 
-        return (
-            node1.exons.first.start == node2.exons.first.start
-            and node1.exons.last.end == node2.exons.last.end
-        )
+        return node1.exons.first.start == node2.exons.first.start and node1.exons.last.end == node2.exons.last.end
 
     def mid2tail(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(

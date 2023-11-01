@@ -98,8 +98,7 @@ class VCFWriter(Writer):
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
         "OSR": "The number of support reads for the breakpoints before rescuer",
-        "PSI": "Estimated Percent splice-in in the range (0,1], "
-        "representing the percentage of NLS transcripts",
+        "PSI": "Estimated Percent splice-in in the range (0,1], " "representing the percentage of NLS transcripts",
         "SVTYPE": "The type of event, DEL, TDUP, IDUP, INV, TRA.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for END coordinate in case of a translocation",
@@ -227,9 +226,7 @@ class VCFWriter(Writer):
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
                 # multiple transcripts go through the same one hop
-                out_vcf_dict[type_position_key][
-                    "TRANSCRIPT_ID"
-                ] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
+                out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -241,10 +238,7 @@ class VCFWriter(Writer):
 
         date = datetime.datetime.today().strftime("%Y%m%d")
         source = f"ScanNLS v{__version__}"
-        reference = (
-            f"<CMD={obtain_reference_from_bam_header(self.bam_header)},"
-            'Description="Alignment parameters">'
-        )
+        reference = f"<CMD={obtain_reference_from_bam_header(self.bam_header)}," 'Description="Alignment parameters">'
 
         header_lines = [
             "##fileformat=VCFv4.3",
@@ -281,10 +275,7 @@ class VCFWriter(Writer):
 
     def get_contigs(self) -> list[str]:
         """Get contigs from BAM file header."""
-        return [
-            f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>"
-            for contig_dict in self.bam_header["SQ"]
-        ]
+        return [f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>" for contig_dict in self.bam_header["SQ"]]
 
 
 def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
@@ -370,37 +361,18 @@ def get_vcf_features_from_nlpath(
                 )
 
         # correct the breakpoint position in order to obtain a precise "sv_distance"
-        _pos1 = (
-            _pos1 - len(microhomology_sequence)
-            if current_node.strand == "+"
-            else _pos1 + len(microhomology_sequence)
-        )
+        _pos1 = _pos1 - len(microhomology_sequence) if current_node.strand == "+" else _pos1 + len(microhomology_sequence)
 
-        sv_distance = (
-            abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
-        )
-        _dp1 = (
-            0
-            if current_edge.break_point1.depth is None
-            else current_edge.break_point1.depth
-        )
+        sv_distance = abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
+        _dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
 
-        _dp2 = (
-            0
-            if current_edge.break_point2.depth is None
-            else current_edge.break_point2.depth
-        )
+        _dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
 
-        _pso = (
-            0
-            if _dp1 == 0 or _dp2 == 0
-            else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
-        )
+        _pso = 0 if _dp1 == 0 or _dp2 == 0 else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
 
         path_hops_features.append(
             {
-                f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}"
-                f"_{_chrom2}|{_pos2 + 1}": {
+                f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}" f"_{_chrom2}|{_pos2 + 1}": {
                     "CHROM": _chrom1,
                     "POS": f"{_pos1 + 1}",
                     "REF": ".",
@@ -429,9 +401,7 @@ def get_vcf_features_from_nlpath(
                     "SR_ID": f"{','.join(current_edge.read_ids)}",
                     "SVMETHOD": "ScanNLS",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
-                    "INSSEQ": microinsertion_sequence
-                    if microinsertion_sequence
-                    else ".",
+                    "INSSEQ": microinsertion_sequence if microinsertion_sequence else ".",
                 },
             },
         )
@@ -485,8 +455,4 @@ def obtain_sequence_from_insertion(
     if not novel_insertion_sequence:
         return ""
 
-    return (
-        novel_insertion_sequence
-        if node.strand == "+"
-        else reverse_complement(novel_insertion_sequence)
-    )
+    return novel_insertion_sequence if node.strand == "+" else reverse_complement(novel_insertion_sequence)

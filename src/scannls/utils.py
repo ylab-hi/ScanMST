@@ -112,9 +112,7 @@ def get_softclip_length(
         if parse_result.lt_soft_len < parse_result.rt_soft_len:
             return (
                 parse_result.rt_soft_len,
-                read.query_sequence[
-                    parse_result.query_len - parse_result.rt_soft_len:
-                ],
+                read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
                 ref_end,
                 MappingMode.MS,
             )
@@ -123,7 +121,7 @@ def get_softclip_length(
     if mode == MappingMode.MS:
         return (
             parse_result.rt_soft_len,
-            read.query_sequence[parse_result.query_len - parse_result.rt_soft_len:],
+            read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
             ref_end,
             mode,
         )
@@ -233,7 +231,7 @@ def get_longest_insertion_sequence(
         key=lambda x: x[2],
         reverse=True,
     )[0]
-    ins_seq = read.query_sequence[ins_read_pos: (ins_read_pos + ins_length)]
+    ins_seq = read.query_sequence[ins_read_pos : (ins_read_pos + ins_length)]
     # update `ins_ref_pos` if insertion has adjacent N (100I500N)
     pattern = re.compile(re.escape(f"{ins_length}I") + r"(\d+)N")
 

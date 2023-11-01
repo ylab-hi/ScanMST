@@ -224,10 +224,7 @@ def visualize_graph_via_matplot(
         "node_size": 1500,
         "node_color": ["red" if "H" in n else "white" for n in graph],
         "edgecolors": "black",
-        "edge_color": [
-            "green" if weight >= support_reads else "black"
-            for weight in edge_weight.values()
-        ],
+        "edge_color": ["green" if weight >= support_reads else "black" for weight in edge_weight.values()],
         "linewidths": 2,
         "width": 3,
         "connectionstyle": "arc3, rad = 0.1",

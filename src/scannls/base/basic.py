@@ -305,10 +305,7 @@ class Intervals:
 
         if isinstance(other, Intervals):
             return Intervals(
-                [
-                    exon + other_exon
-                    for exon, other_exon in zip(self.exon_list, other.exon_list)
-                ],
+                [exon + other_exon for exon, other_exon in zip(self.exon_list, other.exon_list)],
             )
 
         message = f"{other} is not int or Intervals"
@@ -320,10 +317,7 @@ class Intervals:
 
         if isinstance(other, Intervals):
             return Intervals(
-                [
-                    exon - other_exon
-                    for exon, other_exon in zip(self.exon_list, other.exon_list)
-                ],
+                [exon - other_exon for exon, other_exon in zip(self.exon_list, other.exon_list)],
             )
 
         message = f"{other} is not int or Intervals"

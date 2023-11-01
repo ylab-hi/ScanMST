@@ -120,8 +120,7 @@ def infer_nls_from_connected_reads(
         genome_fasta,
     ) or not read_rt.splice_site_checker(genome_fasta):
         logger.debug(
-            f"Splice site checking[different chroms]: "
-            f"{read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}",
+            f"Splice site checking[different chroms]: " f"{read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}",
         )
         return noreturn
 
