@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import types
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -41,6 +42,7 @@ class NLGraph:
         rescuer: Any,
         prune_threshold,
         support_reads,
+        input_bam_path: Path | None,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -49,6 +51,7 @@ class NLGraph:
         self.dict_factory = NLGraph.dict_factory  # type: ignore
         self.list_factory = NLGraph.list_factory  # type: ignore
         self.rescuer = rescuer
+        self.input_bam_path = input_bam_path
 
     def __call__(
         self,
@@ -96,8 +99,9 @@ class NLGraph:
             current_path.id = idx
             yield current_path
 
-        if is_plot and node_list:
-            default_visitors(self, f"{cluster_ind}", self.support_reads).visualize()
+        # if is_plot and node_list:
+        cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
+        default_visitors(self, f"{cluster_name}", self.support_reads).visualize()
 
     @classmethod
     def create_graph(
@@ -124,7 +128,7 @@ class NLGraph:
             average_read_depth,
         )
 
-        return cls(logger, rescuer, prune_threshold, support_reads)
+        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam))
 
     @property
     def trace_id(self) -> int:

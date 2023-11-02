@@ -20,27 +20,28 @@ if TYPE_CHECKING:
 def default_visitors(graph: NLGraph, figure_name: str, support_reads: int) -> GraphVis:
     return GraphVis.from_visitors(
         graph,
-        [MatplotlibVisualizeGraph(figure_name, support_reads)],
+        [
+            MatplotlibVisualizeGraph(figure_name, support_reads),
+            GraphCytoscapeExporter(figure_name),
+        ],
     )
 
 
 class GraphVis:
     GRAPH_LINK_DATA: ClassVar[dict[str, str]] = {
         "link": "edges",
-        "source": "from",
-        "target": "to",
+        "source": "source",
+        "target": "target",
     }
 
-    def __init__(self, nlgraph: NLGraph):
+    def __init__(self, nlgraph: NLGraph, visitors: list[GraphVisitor] | None = None):
         self.nlgraph = nlgraph
-        self.visitors: list[GraphVisitor] = []
+        self.visitors: list[GraphVisitor] = [] if visitors is None else visitors
 
     @classmethod
     def from_visitors(cls, nlgraph: NLGraph, visitors: list[GraphVisitor]) -> GraphVis:
         """Create GraphVis from visitors."""
-        graph_vis = cls(nlgraph)
-        graph_vis.visitors = visitors
-        return graph_vis
+        return cls(nlgraph, visitors)
 
     @staticmethod
     def load(file_name: str | Path):
@@ -53,7 +54,18 @@ class GraphVis:
 
         with file_name.open() as f:
             data = json.load(f)
-            return nx.node_link_graph(data, **GraphVis.GRAPH_LINK_DATA)
+            return nx.node_link_graph(data, **GraphVis.GRAPH_LINK_DATA)  # type: ignore
+
+    @staticmethod
+    def load_cytoscape(file_name: str | Path):
+        if isinstance(file_name, str):
+            file_name = Path(file_name)
+        if not file_name.exists():
+            msg = f"{file_name} not exists."
+            raise FileNotFoundError(msg)
+        with file_name.open() as f:
+            data = json.load(f)
+            return nx.cytoscape_graph(data)
 
     def register(self, visitor: GraphVisitor) -> None:
         """Register visitor."""
@@ -82,7 +94,7 @@ class GraphVis:
             chrom=node.chrom,
             ref_start=node.ref_start,
             ref_end=node.ref_end,
-            strand=node.strand,
+            strand=str(node.strand),
             is_head=node.is_start_node(),
         )
 
@@ -172,7 +184,7 @@ class PyvisVisualizeGraph(GraphVisitor):
         visualize_graph_via_pyvis(graph, self.figure_name)
 
 
-class GraphExporter(GraphVisitor):
+class GraphJsonExporter(GraphVisitor):
     def __init__(self, file_name: str | Path, graph_link_data):
         if isinstance(file_name, str):
             self.file_name = Path(file_name)
@@ -181,7 +193,18 @@ class GraphExporter(GraphVisitor):
 
     def visit(self, graph: nx.DiGraph):
         data = nx.node_link_data(graph, **self.graph_link_data)
-        with Path(f"{self.file_name}.json").open("w", encoding="utf-8") as f:
+        with Path(f"graph_{self.file_name}.json").open("w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+class GraphCytoscapeExporter(GraphVisitor):
+    def __init__(self, file_name: str | Path):
+        if isinstance(file_name, str):
+            self.file_name = Path(file_name)
+
+    def visit(self, graph: nx.DiGraph):
+        data = nx.cytoscape_data(graph)
+        with Path(f"cygraph_{self.file_name}_.json").open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
 

@@ -68,11 +68,8 @@ class BamScanner:
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
 
         self.bam_chrom_info = {}
-
         self.mapq_cutoff = mapq_cutoff
-
         self.ref_genome = ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
-
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
@@ -115,7 +112,7 @@ class BamScanner:
 
     def _get_bam_header(self):
         """Get bam header."""
-        header = self.in_bam.header.as_dict()
+        header = self.in_bam.header.as_dict()  # type: ignore
         self._check_bam_sort(header)
         return header
 
