@@ -204,7 +204,7 @@ class GraphCytoscapeExporter(GraphVisitor):
 
     def visit(self, graph: nx.DiGraph):
         data = nx.cytoscape_data(graph)
-        with Path(f"cygraph_{self.file_name}_.json").open("w", encoding="utf-8") as f:
+        with Path(f"cygraph_{self.file_name}.json").open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
 
@@ -260,6 +260,7 @@ def visualize_graph_via_matplot(
     plt.axis("off")
     plt.tight_layout()
     plt.savefig(f"graph_{figure_name}.png")
+    plt.close()
 
 
 def visualize_graph_via_pyvis(graph: nx.Graph, figure_name: str | Path) -> None:

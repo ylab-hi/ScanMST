@@ -126,9 +126,6 @@ class SRRescuer:
         region = cppext.Region(chrom, start - 1, start)
         break_point = make_breakpoint(current_node, int(mode1))
 
-        logger.trace(f"bp: {break_point.to_string()}")
-        logger.trace(f"{region.to_string()}")
-
         if current_node.cigartuples_without_soft is None:
             msg = f"{current_node.query_name} with None value"
             raise ValueError(msg)
@@ -221,7 +218,6 @@ class SRRescuer:
                     next_node.cigartuples_without_soft,
                 )
 
-                logger.trace(f"edge bp: {break_point.to_string()}")
-                logger.trace(f"edge {region.to_string()}, rescue sr {increased_sr}")
+                logger.trace(f"edge {region.to_string().strip()}, rescue sr {increased_sr}")
 
                 edge.sr += increased_sr

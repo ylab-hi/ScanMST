@@ -40,13 +40,13 @@ class NLGraph:
         self,
         logger: LoggerType,
         rescuer: Any,
-        prune_threshold,
+        merge_threshold,
         support_reads,
         input_bam_path: Path | None,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
-        self.prune_threshold = prune_threshold
+        self.merge_threshold = merge_threshold + 20  # 10 is tolerance compared cluster phase
         self.support_reads = support_reads
         self.dict_factory = NLGraph.dict_factory  # type: ignore
         self.list_factory = NLGraph.list_factory  # type: ignore
@@ -140,7 +140,7 @@ class NLGraph:
         edge = Edge.from_nodes(node1, node2, edge_data)
 
         if self.edges.get(edge.key) is None:
-            self.logger.warning(f"add edge with {edge_data=}")
+            self.logger.info(f"add edge with {edge_data=}")
             self.edges[edge.key].append(edge)
             return
 
@@ -153,9 +153,9 @@ class NLGraph:
             if current_edge.merged(
                 edge,
                 compared_break_point=True,
-                break_point_threshold=self.prune_threshold,
+                break_point_threshold=self.merge_threshold,
             ):
-                logger.warning(f"merging {current_edge} and {edge}")
+                logger.info(f"merging {current_edge} and {edge}")
                 current_edge.merge(edge, node1.strand, node2.strand)
                 is_merged = True
                 break
@@ -333,17 +333,22 @@ class NLGraph:
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
 
+        # if current_node.ref_start == 2242274:
+        #     import ipdb
+
+        #     ipdb.set_trace()
+
         # iterate all similar nodes in the graph
         for similar_node_in_graph in self.get_nodes_with_similar_key(similar_key):
             # check if the current node is merged into a similar node in the graph
             if NLGraph._compare_is_merged(
                 similar_node_in_graph,
                 current_node,
-                self.prune_threshold,
+                self.merge_threshold,
             ):
                 current_node.is_merged = True
 
-                self.logger.warning(
+                self.logger.info(
                     f"merging node {similar_node_in_graph} and {current_node})",
                 )
 

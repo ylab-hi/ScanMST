@@ -409,6 +409,7 @@ class Node(BasicNode):
         same_left=False,
         same_right=False,
         check_introns=False,
+        threshold=0,
     ):
         if isinstance(other, Node):
             if check_introns and self.introns != other.introns:
@@ -418,13 +419,22 @@ class Node(BasicNode):
                 return self.exons.first.start <= other.exons.first.start <= other.exons.last.end <= self.exons.last.end
 
             if same_left and same_right:
-                return self.exons.first.start == other.exons.first.start and self.exons.last.end == other.exons.last.end
+                return (
+                    abs(self.exons.first.start - other.exons.first.start) <= threshold
+                    and self.exons.last.end == other.exons.last.end
+                )
 
             if same_left:
-                return self.exons.first.start == other.exons.first.start and self.exons.last.end >= other.exons.last.end
+                return (
+                    abs(self.exons.first.start - other.exons.first.start) <= threshold
+                    and self.exons.last.end - other.exons.last.end >= -threshold
+                )
 
             if same_right:
-                return self.exons.first.start <= other.exons.first.start and self.exons.last.end == other.exons.last.end
+                return (
+                    -threshold <= self.exons.first.start - other.exons.first.start
+                    and abs(self.exons.last.end - other.exons.last.end) <= threshold
+                )
 
         msg = f"{other} is not Node"
         raise ValueError(msg)

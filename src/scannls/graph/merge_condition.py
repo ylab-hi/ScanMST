@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .basic_graph import Node
 
+TOLENRANCE = 25
+
 
 class MergeConditionMode(Enum):
     head2head = auto()
@@ -84,6 +86,9 @@ class MergeCondition:
         return self.head2mid(node2, node1)
 
     def mid2mid(self, node1: Node, node2: Node) -> bool:
+        if node1.chrom != node2.chrom or node1.strand != node2.strand:
+            return False
+
         if node1.exons is None or node2.exons is None:
             raise ValueError
 
@@ -114,14 +119,6 @@ class MergeCondition:
         if node2_self_identity is None or node1_self_identity is None:
             msg = f"{node1} or {node2}'s self_identity is None"
             raise ValueError(msg)
-
-        # merge will not work for nodes on the different chroms
-        if node1.chrom != node2.chrom:
-            return False
-
-        # merge will not work for nodes on the different strands
-        if node1.strand != node2.strand:
-            return False
 
         if node1_self_identity.is_head() and node2_self_identity.is_head():
             return self.head2head(node1, node2)
@@ -161,6 +158,13 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
 
     """
     # WARN:  compare break point, and edge still compare break point <06-08-23, Yangyang Li>
+    if node1.chrom != node2.chrom:
+        return False
+
+    # merge will not work for nodes on the different strands
+    if node1.strand != node2.strand:
+        return False
+
     if node1.introns != node2.introns:
         return False
 
@@ -215,6 +219,13 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
         -> [node1]               [node1] <-
             [node2] ->      <- [node2]
     """
+    if node1.chrom != node2.chrom:
+        return False
+
+    # merge will not work for nodes on the different strands
+    if node1.strand != node2.strand:
+        return False
+
     if node1.introns != node2.introns:
         return False
 
@@ -253,6 +264,14 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         -> [node1]
         -> [node2]
     """
+
+    if node1.chrom != node2.chrom:
+        return False
+
+    # merge will not work for nodes on the different strands
+    if node1.strand != node2.strand:
+        return False
+
     if node1.introns != node2.introns:
         return False
 
@@ -271,13 +290,13 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 
     if node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():
-            return node1.contains(node2, same_left=True)
-        return node1.contains(node2, same_right=True)
+            return node1.contains(node2, same_left=True, threshold=TOLENRANCE)
+        return node1.contains(node2, same_right=True, threshold=TOLENRANCE)
 
     if not node1.is_polya and node2.is_polya:
         if node1.strand.is_forward():
-            return node2.contains(node1, same_left=True)
-        return node2.contains(node1, same_right=True)
+            return node2.contains(node1, same_left=True, threshold=TOLENRANCE)
+        return node2.contains(node1, same_right=True, threshold=TOLENRANCE)
 
     if not node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():
@@ -306,6 +325,13 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
         -> [  node2  ] ->
     """
     # limit all introns
+    if node1.chrom != node2.chrom:
+        return False
+
+    # merge will not work for nodes on the different strands
+    if node1.strand != node2.strand:
+        return False
+
     if node1.introns != node2.introns:
         return False
 
@@ -313,8 +339,8 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
     # we save same value in different variable in which it is diffficult to change them at same time
 
     if node1.strand.is_forward():
-        return node2.contains(node1, same_right=True)
-    return node2.contains(node1, same_left=True)
+        return node2.contains(node1, same_right=True, threshold=TOLENRANCE)
+    return node2.contains(node1, same_left=True, threshold=TOLENRANCE)
 
 
 def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
@@ -335,6 +361,13 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
         -> [ node1 ]
         -> [  node2  ] ->
     """
+    if node1.chrom != node2.chrom:
+        return False
+
+    # merge will not work for nodes on the different strands
+    if node1.strand != node2.strand:
+        return False
+
     if node1.introns != node2.introns:
         return False
 
@@ -342,6 +375,6 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
         return False
 
     if node1.strand.is_forward():
-        return node2.contains(node1, same_left=True)
+        return node2.contains(node1, same_left=True, threshold=TOLENRANCE)
 
-    return node2.contains(node1, same_right=True)
+    return node2.contains(node1, same_right=True, threshold=TOLENRANCE)
