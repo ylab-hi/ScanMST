@@ -21,7 +21,6 @@ def default_visitors(graph: NLGraph, figure_name: str, support_reads: int) -> Gr
     return GraphVis.from_visitors(
         graph,
         [
-            MatplotlibVisualizeGraph(figure_name, support_reads),
             GraphCytoscapeExporter(figure_name),
         ],
     )
@@ -142,7 +141,7 @@ class GraphVis:
                     path,
                     start_node,
                     successor,
-                    1,
+                    1,  # minimal support_reads,
                     filter_edges=False,
                 ):
                     self.add_node_to_graph(successor, nx_graph)

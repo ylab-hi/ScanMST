@@ -66,11 +66,6 @@ class Ruler:
                 middle_nodes_b,
             )
         ):
-            # if head_node_a.ref_start == 2242274 or head_node_b.ref_start == 2242274:
-            #     import ipdb
-
-            #     ipdb.set_trace()
-
             return 0.0
 
         for middle_node_b in middle_nodes_b:
