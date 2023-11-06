@@ -1079,13 +1079,13 @@ def same_chrom_diff_strand_handler(
     rt_exons = read_rt.get_exons()
 
     same_mode = lt_mode
-    if same_mode == 1:
+    if same_mode == MappingMode.MS:
         ra_bp = read_lt.ref_start + read_lt.reference_match_size
         sa_bp = read_rt.ref_start + read_rt.reference_match_size
         bp_region_seq_len = (
             read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
         )
-    elif same_mode == 2:
+    elif same_mode == MappingMode.SM:
         ra_bp = read_lt.ref_start
         sa_bp = read_rt.ref_start
         bp_region_seq_len = (
