@@ -25,7 +25,7 @@ class DefaultOptions:
     sleep: bool = True
     bound: bool = True
     graph: bool = False
-    log: str = "info"
+    log: str = "warning"
     species: str = "human"
     species_choices: tuple[str, str] = ("human", "mouse")
     parallel: int = 1
@@ -169,7 +169,7 @@ def parse_args() -> argparse.ArgumentParser:
         "--log-level",
         action="store",
         dest="log",
-        choices=["info", "debug", "trace"],  # "warning", "error", "critical"
+        choices=["info", "debug", "trace", "warning"],  # "warning", "error", "critical"
         default=DefaultOptions.log,
         help="set log level (default: %(default)s)",
     )

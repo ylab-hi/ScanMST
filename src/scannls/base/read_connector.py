@@ -575,7 +575,7 @@ class ReadsConnector:
         else:
             candidate_read_len = len(self.candidate_nodes)
             while self.candidate_nodes:
-                self.logger.warning(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
+                self.logger.trace(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
                 if self.index == len(self.candidate_nodes):
                     logger.warning(
                         f"ReadsConnector: cannot connect all reads in candidate_nodes " f"{start_read.query_name}",

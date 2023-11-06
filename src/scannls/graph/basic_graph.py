@@ -837,6 +837,14 @@ class NLPath:
                 new_edges.append(edge)
                 new_nodes.append(next_node)
 
+        for idx, node in enumerate(new_nodes):
+            if idx == 0:
+                node.self_identity = NodeIdentity.HEAD
+            elif idx == len(new_nodes) - 1:
+                node.self_identity = NodeIdentity.TAIL
+            else:
+                node.self_identity = NodeIdentity.MID
+
         self.nodes = new_nodes
         self.edges.clear()
 
