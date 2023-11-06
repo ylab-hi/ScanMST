@@ -87,7 +87,7 @@ class FastaWriter(Writer):
         )
 
         self.write_line(
-            self.formatter(f"{object_id}{data_object.id} {node_length_str}", sequence),
+            self.formatter(f"{object_id}0{data_object.id} {node_length_str}", sequence),
         )
 
 

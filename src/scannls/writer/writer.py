@@ -2,7 +2,6 @@
 
 @Filename:    writer.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        12/30/21 4:02 PM
 """
 from __future__ import annotations

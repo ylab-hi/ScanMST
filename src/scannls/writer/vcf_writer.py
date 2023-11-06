@@ -396,7 +396,7 @@ def get_vcf_features_from_nlpath(
                     "STRAND2": f"{next_node.strand}",
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
-                    "TRANSCRIPT_ID": f"{cluster_id}{nlpath.id}",
+                    "TRANSCRIPT_ID": f"{cluster_id}0{nlpath.id}",
                     "GENE_ID": f"{cluster_id}",
                     "SR_ID": f"{','.join(current_edge.read_ids)}",
                     "SVMETHOD": "ScanNLS",
