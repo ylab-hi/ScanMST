@@ -78,12 +78,6 @@ class Blat:
         self.gfclient = load_gfclient()
         self.lock = lock
 
-        self.writer = open("blat.fa", 'w')
-        self.fqwritter = open("blat.fq", 'w')
-        self.result = open("blat.log", 'w')
-        self.index = 0
-
-
     @property
     def ref_dir(self) -> str:
         """Property for ref_dir, which is the path of reference for blat.
@@ -277,16 +271,6 @@ class Blat:
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
-        self.index += 1
-        self.writer.write(f">{self.ran_id}{self.index}\n")
-        self.writer.write(f"{in_seq}\n")
-
-        self.fqwritter.write(f"@{self.ran_id}{self.index}\n")
-        self.fqwritter.write(f"{in_seq}\n")
-        self.fqwritter.write("+\n")
-        self.fqwritter.write(f"{'I'*len(in_seq)}\n")
-
-
         while self.is_running():  # self or other is running service
             try:
                 self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
