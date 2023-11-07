@@ -17,12 +17,13 @@ if TYPE_CHECKING:
     from . import Edge, NLGraph, Node
 
 
-def default_visitors(graph: NLGraph, figure_name: str, support_reads: int) -> GraphVis:
+def default_visitors(graph: NLGraph, figure_name: str, support_reads: int = 1) -> GraphVis:
     return GraphVis.from_visitors(
         graph,
         [
             GraphCytoscapeExporter(figure_name),
         ],
+        support_reads,
     )
 
 
@@ -33,14 +34,15 @@ class GraphVis:
         "target": "target",
     }
 
-    def __init__(self, nlgraph: NLGraph, visitors: list[GraphVisitor] | None = None):
+    def __init__(self, nlgraph: NLGraph, visitors: list[GraphVisitor] | None = None, min_supprt_reads=1):
         self.nlgraph = nlgraph
         self.visitors: list[GraphVisitor] = [] if visitors is None else visitors
+        self.min_supprt_reads = min_supprt_reads
 
     @classmethod
-    def from_visitors(cls, nlgraph: NLGraph, visitors: list[GraphVisitor]) -> GraphVis:
+    def from_visitors(cls, nlgraph: NLGraph, visitors: list[GraphVisitor], min_supprt_reads) -> GraphVis:
         """Create GraphVis from visitors."""
-        return cls(nlgraph, visitors)
+        return cls(nlgraph, visitors, min_supprt_reads)
 
     @staticmethod
     def load(file_name: str | Path):
@@ -56,7 +58,7 @@ class GraphVis:
             return nx.node_link_graph(data, **GraphVis.GRAPH_LINK_DATA)  # type: ignore
 
     @staticmethod
-    def load_cytoscape(file_name: str | Path):
+    def load_cytoscape(file_name: str | Path) -> nx.Graph:
         if isinstance(file_name, str):
             file_name = Path(file_name)
         if not file_name.exists():
@@ -141,7 +143,7 @@ class GraphVis:
                     path,
                     start_node,
                     successor,
-                    1,  # minimal support_reads,
+                    self.min_supprt_reads,  # minimal support_reads,
                     filter_edges=False,
                 ):
                     self.add_node_to_graph(successor, nx_graph)

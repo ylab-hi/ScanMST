@@ -176,8 +176,7 @@ ignore = [
     "PLR0915", # Too many statements
     "DTZ005",  # Without `tz` argument
     "C901",    # Too complex
-
-
+    'PLC0415',
     # formater conflict
     'COM812',
     'COM819',

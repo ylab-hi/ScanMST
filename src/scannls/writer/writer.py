@@ -60,14 +60,14 @@ class Writers:
         """Init writers."""
         self.writers_list = writers
 
-    def write_series(self, series: NLPath, clique_id: str) -> None:
+    def write_path(self, nlpath: NLPath, cluster_id: str) -> None:
         """Write series.
 
         .. note::
              This method need all writers to be opened.
         """
         for writer in self.writers_list:
-            writer.write_data(series, clique_id)
+            writer.write_data(nlpath, cluster_id)
 
     def open_writers(self, mode: str = "w") -> list[IO]:
         """Open writers."""

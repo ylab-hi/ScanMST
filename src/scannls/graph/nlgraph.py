@@ -56,7 +56,7 @@ class NLGraph:
     def __call__(
         self,
         nlpath_list: Iterable[NLPath],
-        cluster_ind: int,
+        cluster_ind: int | str,
         *,
         is_plot: bool,
     ) -> Iterable[NLPath]:
@@ -99,9 +99,9 @@ class NLGraph:
             current_path.id = idx
             yield current_path
 
-        # if is_plot and node_list:
-        cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
-        default_visitors(self, f"{cluster_name}", self.support_reads).visualize()
+        if is_plot and node_list:
+            cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
+            default_visitors(self, f"{cluster_name}", self.support_reads).visualize()
 
     @classmethod
     def create_graph(
@@ -332,11 +332,6 @@ class NLGraph:
         similar_key: str,
     ) -> None:
         """Check if current node is merged in similar nodes in graph."""
-
-        # if current_node.ref_start == 2242274:
-        #     import ipdb
-
-        #     ipdb.set_trace()
 
         # iterate all similar nodes in the graph
         for similar_node_in_graph in self.get_nodes_with_similar_key(similar_key):

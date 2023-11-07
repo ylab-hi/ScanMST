@@ -1006,10 +1006,6 @@ class NLPath:
 
         events_len = len(events)
 
-        import ipdb
-
-        ipdb.set_trace()
-
         for index, event in enumerate(events):
             read1: Read = event.read1(read_chains)
             read2: Read = event.read2(read_chains)

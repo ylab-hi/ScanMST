@@ -86,11 +86,11 @@ def parse_nlgraph_for_cluster_seq(
                     )
 
                 logger.debug(f"cluster {ind=} output {nlpath=} ")
-                writers.write_series(nlpath, f"{ind}")
+                writers.write_path(nlpath, f"{ind}")
 
 
 def _parse_nlgraph_for_cluster_par(
-    cluster: Any,
+    clusters: Any,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     average_read_depth: int | None,
@@ -114,8 +114,8 @@ def _parse_nlgraph_for_cluster_par(
     )
 
     result = []
-    for ind, clique in enumerate(cluster, 1):
-        result.append(list(splice_graph(clique, ind, is_plot=False)))
+    for ind, cluster in enumerate(clusters, 1):
+        result.append(list(splice_graph(cluster, f"{os.getpid()}_{ind}", is_plot=options.graph)))
 
     return result
 
@@ -146,14 +146,14 @@ def parse_nlgraph_for_cluster_par(
     )
 
     with writers.open() as _:
-        for ind, clique in enumerate(result, 1):
-            for nlpath in clique[0]:  # reduce list depth
+        for ind, cluster in enumerate(result, 1):
+            for nlpath in cluster[0]:  # reduce list depth
                 if len(nlpath) == 1:
                     logger.warning(
-                        f"Single Series {ind}: {nlpath}{nlpath[0].query_name}",
+                        f"Single path {ind}: {nlpath}{nlpath[0].query_name}",
                     )
-                logger.debug(f"Output Clique{ind}: {nlpath}")
-                writers.write_series(nlpath, f"{ind}")
+                logger.debug(f"Output Cluster{ind}: {nlpath}")
+                writers.write_path(nlpath, f"{ind}")
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
