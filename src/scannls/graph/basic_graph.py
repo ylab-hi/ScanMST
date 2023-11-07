@@ -822,7 +822,7 @@ class NLPath:
             next_node = self.nodes[idx + 1]
 
             if edge.variation_type.is_del():
-                if prev_node.strand.is_forward():
+                if prev_node.strand.is_forward() and next_node.strand.is_forward():
                     prev_node.exons.extend(next_node.exons)
                     prev_node.ref_end = next_node.ref_end
                     prev_node._introns = None
@@ -836,6 +836,14 @@ class NLPath:
             else:
                 new_edges.append(edge)
                 new_nodes.append(next_node)
+
+        for idx, node in enumerate(new_nodes):
+            if idx == 0:
+                node.self_identity = NodeIdentity.HEAD
+            elif idx == len(new_nodes) - 1:
+                node.self_identity = NodeIdentity.TAIL
+            else:
+                node.self_identity = NodeIdentity.MID
 
         self.nodes = new_nodes
         self.edges.clear()
