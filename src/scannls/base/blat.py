@@ -350,8 +350,6 @@ class Blat:
                 in_seq_len=len(insert_seq),
             )
 
-            print(f"{insert_seq}\n{cigar} {top_hsp.hit_range}")
-
             dummy_qualities = array.array("B", [40] * len(insert_seq))
             return flag, Insertion(
                 hit_num=1,

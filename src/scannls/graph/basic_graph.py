@@ -800,6 +800,7 @@ class NLPath:
 
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""
+        logger.trace(f"Squeeze {self!r}")
 
         if not self.nodes:
             return
@@ -1004,6 +1005,10 @@ class NLPath:
         nodes = []
 
         events_len = len(events)
+
+        import ipdb
+
+        ipdb.set_trace()
 
         for index, event in enumerate(events):
             read1: Read = event.read1(read_chains)
