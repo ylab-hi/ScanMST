@@ -76,7 +76,8 @@ class MergeCondition:
             self.threshold,
         )
 
-    def head2mid(self, node1: Node, node2: Node) -> bool:
+    @staticmethod
+    def head2mid(node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
             node1,
             node2,
@@ -85,7 +86,8 @@ class MergeCondition:
     def mid2head(self, node1: Node, node2: Node) -> bool:
         return self.head2mid(node2, node1)
 
-    def mid2mid(self, node1: Node, node2: Node) -> bool:
+    @staticmethod
+    def mid2mid(node1: Node, node2: Node) -> bool:
         if node1.chrom != node2.chrom or node1.strand != node2.strand:
             return False
 
@@ -94,7 +96,8 @@ class MergeCondition:
 
         return node1.exons.first.start == node2.exons.first.start and node1.exons.last.end == node2.exons.last.end
 
-    def mid2tail(self, node1: Node, node2: Node) -> bool:
+    @staticmethod
+    def mid2tail(node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
             node2,
             node1,
