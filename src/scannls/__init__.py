@@ -32,6 +32,7 @@ from .exception import (
     ReadNotFoundError,
     ToolNotFoundError,
 )
+from .graph import graphvis
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 __all__ = [
@@ -68,6 +69,7 @@ __all__ = [
     "Insertion",
     "cppext",
     "blat",
+    "graphvis",
 ]
 
 

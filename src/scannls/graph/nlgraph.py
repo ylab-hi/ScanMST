@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from .annotate import is_weakly_connected
 from .basic_graph import (
     Edge,
     NLPath,
@@ -22,7 +23,6 @@ from .basic_graph import (
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition
 from .sr_rescuer import SRRescuer
-from .utils import is_weakly_connected
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
