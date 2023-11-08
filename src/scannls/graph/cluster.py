@@ -311,7 +311,8 @@ class ClusterFinder:
         self._create_graph_for_nlpath()
         yield from connected_components(self._graph)
 
-    def creat_merge_indexs(self, cluster) -> dict[int, list[str]]:
+    @staticmethod
+    def creat_merge_indexs(cluster) -> dict[int, list[str]]:
         result = {}
 
         for series in cluster:
@@ -374,7 +375,7 @@ class ClusterFinder:
             ClusterFinder._merge_cluster(sorted_nlpaths, new_cluster, merge_keys)
             yield sort_cluster(
                 new_cluster,
-                key=lambda x: create_sort_key_by_merge_factor(x),  # type: ignore
+                key=create_sort_key_by_merge_factor,  # type: ignore
                 reverse=True,
             )
 
