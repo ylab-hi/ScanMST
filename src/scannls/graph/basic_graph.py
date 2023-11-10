@@ -1003,6 +1003,7 @@ class NLPath:
 
         events = NLPath.order_events_by_trancription_direction(events)
 
+        logger.trace(f"reordered event:{events=}")
         edges_data: list[EdgeData] = []
         nodes = []
 
