@@ -114,8 +114,12 @@ def _parse_nlgraph_for_cluster_par(
     )
 
     result = []
+    # use time to generate unique name
+    import secrets
+
+    unique_name = secrets.token_hex(4)
     for ind, cluster in enumerate(clusters, 1):
-        result.append(list(splice_graph(cluster, f"{os.getpid()}_{ind}", is_plot=options.graph)))
+        result.append(list(splice_graph(cluster, f"{os.getpid()}_{unique_name}_{ind}", is_plot=options.graph)))
 
     return result
 
@@ -152,7 +156,7 @@ def parse_nlgraph_for_cluster_par(
                     logger.warning(
                         f"Single path {ind}: {nlpath}{nlpath[0].query_name}",
                     )
-                logger.debug(f"Output Cluster{ind}: {nlpath}")
+                logger.debug(f"Output Cluster {ind}: {nlpath}")
                 writers.write_path(nlpath, f"{ind}")
 
 
