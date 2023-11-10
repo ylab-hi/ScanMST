@@ -140,7 +140,7 @@ def get_nodes_gtf_features_from_series(
                 for x in get_gtf_features_from_node(
                     node,
                     edge,
-                    f"{cluster_id}0{nlpath.id}",
+                    f"{cluster_id}x{nlpath.id}",
                 )
             ],
         )
@@ -150,7 +150,7 @@ def get_nodes_gtf_features_from_series(
                 add_info_to_attribute_column(
                     get_gtf_features_from_insertion(
                         insertion_info[1],
-                        f"{cluster_id}0{nlpath.id}",
+                        f"{cluster_id}x{nlpath.id}",
                         node.trace_id,
                     ),
                     f'gene_id "{cluster_id}";',
@@ -159,7 +159,7 @@ def get_nodes_gtf_features_from_series(
 
     nlpath_gtf_features[0] = add_info_to_attribute_column(
         format_gtf_features_for_nlpath(
-            f"{cluster_id}0{nlpath.id}",
+            f"{cluster_id}x{nlpath.id}",
             min_nlpath_sr,
             min_nlpath_originla_sr,
         ),
