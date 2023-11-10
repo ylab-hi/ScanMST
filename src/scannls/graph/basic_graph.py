@@ -914,6 +914,7 @@ class NLPath:
         )
 
         if not is_bp1_upstream:
+            logger.trace(f"reorder event {evt=} {is_bp1_upstream=}")
             evt.reverse()
 
         return evt
@@ -999,6 +1000,7 @@ class NLPath:
         blat,
     ) -> NLPath:
         """Create a nlpath from a list of events."""
+
         events = NLPath.order_events_by_trancription_direction(events)
 
         edges_data: list[EdgeData] = []
