@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 class Aligner:
     MIN_MEMORY = 8
+    MIN_MAPQ = 10
 
     def __init__(self, reference=Path) -> None:
         self.reference = Path(reference)
@@ -71,7 +72,9 @@ class Aligner:
     @staticmethod
     def filters(records: Iterator[pysam.AlignedSegment], threshold_identity: float = 0.99) -> list[pysam.AlignedSegment]:
         return [
-            record for record in records if Aligner.record_identity(record) > threshold_identity and record.mapping_quality > 20
+            record
+            for record in records
+            if Aligner.record_identity(record) > threshold_identity and record.mapping_quality > Aligner.MIN_MAPQ
         ]
 
     def query_insertion(
@@ -107,7 +110,7 @@ class Aligner:
 
     def mem(self, query: str, output: Path | None) -> Path:
         """Align query to reference."""
-        ran_id = secrets.randbits(42)
+        ran_id = secrets.token_hex(8)
         in_fastq = self.reference.parent / f"{ran_id}.fq"
         with in_fastq.open("w") as fastq_file:
             fastq_file.write(f"@{ran_id}\n")
