@@ -7,7 +7,6 @@ from rich.traceback import install
 from . import blat, cli, cppext, graph, type, utils
 from .base import (
     Aligner,
-    Blat,
     BreakPoint,
     CigarCode,
     CircRNAFilter,
@@ -53,7 +52,6 @@ __all__ = [
     "Read",
     "Event",
     "reverse_complement",
-    "Blat",
     "MyLogger",
     "ParallelWorker",
     "ReadsConnector",

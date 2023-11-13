@@ -9,10 +9,18 @@ from __future__ import annotations
 
 import secrets
 from pathlib import Path
+from subprocess import SubprocessError
+from typing import TYPE_CHECKING
 
 import psutil
+import pysam
 from Bio.Sequencing.Applications import BwaIndexCommandline, BwaMemCommandline
 from loguru import logger
+
+from .basic_class import Insertion, NovelInsertion
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class Aligner:
@@ -43,16 +51,55 @@ class Aligner:
         """Check if there is enough memory to build index."""
         return psutil.virtual_memory().available >> 30 > Aligner.MIN_MEMORY
 
-    def query(self, query: str, output: Path | None) -> None:
+    def query(self, query: str, output: Path | None = None) -> Iterator[pysam.AlignedSegment]:
         if not self.index_exist():
             if not self.enough_memory():
                 msg = "Not enough memory to build index."
                 raise Exception(msg)
 
-            # Build index
-            self.build_index()
+            try:
+                # Build index
+                self.build_index()
+            except SubprocessError as e:
+                msg = f"Failed to build index: {e}"
+                raise Exception(msg) from e
 
         output = self.mem(query, output)
+        yield from self.alignment_records(output)
+
+    def query_insertion(
+        self,
+        query: str,
+        threshold_identity: float = 0.99,
+        output: Path | None = None,
+    ):
+        records = list(self.query(query, output))
+        if not records:
+            return False, NovelInsertion(hit_num=0, query_sequence=query)
+
+        keep_records = []
+        for record in records:
+            if Aligner.record_identity(record) > threshold_identity:
+                keep_records.append(record)
+
+        if len(keep_records) == 1:
+            top_record = keep_records[0]
+            return True, Insertion(
+                hit_num=1,
+                chrom=top_record.reference_name,
+                ref_start=top_record.reference_start,
+                strand="+" if top_record.is_reverse else "-",
+                cigarstring=top_record.cigarstring,
+                mapq=top_record.mapping_quality,
+                nm=top_record.get_tag("NM"),
+                query_sequence=query,
+                query_qualities=top_record.query_qualities,
+            )
+
+        return False, NovelInsertion(
+            hit_num=len(keep_records),
+            query_sequence=query,
+        )
 
     def mem(self, query: str, output: Path | None) -> Path:
         """Align query to reference."""
@@ -77,17 +124,13 @@ class Aligner:
     @staticmethod
     def record_identity(record):
         """Calculate alignment identity for every record in sam file."""
-        return (record.get_tag("NM") - record.get_tag("AS")) / record.query_alignment_length
+        return (record.query_alignment_length - record.get_tag("NM")) / record.query_alignment_length
 
     @staticmethod
-    def alignment_identity(sam_file: Path | str):
+    def alignment_records(sam_file: Path | str):
         """Calculate alignment identity for every record in sam file."""
         if isinstance(sam_file, str):
             sam_file = Path(sam_file)
 
-        import pysam
-
         with sam_file.open() as sam:
-            for record in pysam.AlignmentFile(sam):
-                print(record.query_alignment_length, record.query_length, record.reference_length)
-                print(record.query_name, record.get_tag("NM"), record.get_tag("AS"), record.get_tag("XS"))
+            yield from pysam.AlignmentFile(sam)

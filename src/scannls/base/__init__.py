@@ -24,7 +24,6 @@ from .basic_class import (
     reverse_complement,
 )
 from .basic_read import Read
-from .blat import Blat
 from .bwa import Aligner
 from .filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
 from .my_logger import MyLogger
@@ -55,7 +54,6 @@ __all__ = [
     "NovelInsertion",
     "reverse_complement",
     "Read",
-    "Blat",
     "MyLogger",
     "ParallelWorker",
     "ReadsConnector",

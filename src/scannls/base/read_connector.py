@@ -5,7 +5,6 @@ import re
 from itertools import combinations
 from typing import Any
 
-from Bio import SearchIO
 from loguru import logger
 
 from scannls.type import LoggerType
@@ -14,14 +13,14 @@ from scannls.utils import cigar_validity
 from .basic import MappingMode, Strand
 from .basic_class import reverse_complement
 from .basic_read import Read
-from .blat import Blat
+from .bwa import Aligner
 
 
 class ReadsConnector:
     """ReadsConnector class is used to connect the reads and identify the mode of the reads.
 
     :param read_list: the list of the alignment
-    :param blat: :class: `class.Blat` for the BLAT search
+    :param bwa: :class: `class.Blat` for the BLAT search
     :param logger: :class: `loguru.logger` for logging
 
     :Example:
@@ -40,7 +39,7 @@ class ReadsConnector:
     def __init__(
         self,
         read_list: list[Read],
-        blat: Blat,
+        bwa: Aligner,
         logger: LoggerType,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
@@ -52,7 +51,7 @@ class ReadsConnector:
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = read_list
         self.logger = logger
-        self.blat = blat
+        self.bwa = bwa
         self.index = 0
         self.num_added_reads = 0
 
@@ -382,20 +381,21 @@ class ReadsConnector:
 
     def _double_check_create_new_read_calculate_sms(
         self,
-        hsp,
+        record,
         query_seq: str,
         read: Read,
     ) -> Read:
         """Double check creat new read and calculate sms."""
-        mapq = 60
-        chrom, position, strand, cigar_str, num_of_mismatch = self.blat.psl2sam(
-            hsp,
-            len(query_seq),
-        )
+        mapq = record.mapping_quality
+        chrom = record.reference_name
+        position = record.reference_start
+        strand = "+" if not record.is_reverse else "-"
+        cigar_str = record.cigarstring
+        num_of_mismatch = record.get_tag("NM")
 
         strand = Strand.from_str(strand)
-        lt_s_len = hsp.query_start
-        rt_s_len = len(query_seq) - hsp.query_end
+        lt_s_len = record.query_start
+        rt_s_len = len(query_seq) - record.query_end
         new_read_mode = ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
             read,
             strand,
@@ -428,31 +428,24 @@ class ReadsConnector:
 
         return new_read
 
-    def __double_check_blat_query(
+    def __double_check_aligner_query(
         self,
         query_sequence,
         align_len_threshold,
         threshold_identity,
         top,
     ):
-        """Double check blat query."""
+        """Double check aligner query."""
 
         if len(query_sequence) < align_len_threshold:
             return None
 
-        out_blat = self.blat.query(in_seq=query_sequence)
-        try:
-            blat_result = SearchIO.read(out_blat, "blat-psl")
-        except ValueError:
-            return None
+        records = self.bwa.query(query=query_sequence)
 
-        hit, keep_hsp = self.blat._query_insertion(
-            blat_result,
-            query_sequence,
-            threshold_identity,
-            top=top,
-        )
-        return hit, keep_hsp
+        keep_records = [record for record in records if Aligner.record_identity(record) > threshold_identity]
+        hit = len(keep_records)
+
+        return hit, keep_records
 
     def _double_check_for_start_end_read(
         self,
@@ -473,7 +466,7 @@ class ReadsConnector:
         if read.strand.is_reverse():
             query_sequence = reverse_complement(query_sequence)
 
-        ret = self.__double_check_blat_query(
+        ret = self.__double_check_aligner_query(
             query_sequence,
             self.align_len_threshold,
             self.threshold_identity,
@@ -483,13 +476,13 @@ class ReadsConnector:
         if ret is None:
             return
 
-        hit, keep_hsp = ret
+        hit, keep_record = ret
 
         if hit == 1:
             self.num_added_reads += 1
-            hsp = keep_hsp[0]
+            record = keep_record[0]
             new_read = self._double_check_create_new_read_calculate_sms(
-                hsp,
+                record,
                 query_sequence,
                 read,
             )
@@ -615,7 +608,7 @@ def detect_read_read_connections_from_cigar(
     read,
     mapq_cutoff: int,
     max_allowed_nm: int,
-    blat: Blat,
+    bwa: Aligner,
     logger: LoggerType,
 ):
     """Detecting read-read connections with chimeric alignments CIGAR string.
@@ -825,7 +818,7 @@ def detect_read_read_connections_from_cigar(
     logger.debug(f"{len(chimeric_aln_list)} {chimeric_aln_list=}")
     read_connector = ReadsConnector(
         read_list=chimeric_aln_list,
-        blat=blat,
+        bwa=bwa,
         logger=logger,
     )
 

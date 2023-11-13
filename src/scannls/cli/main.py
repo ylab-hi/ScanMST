@@ -221,7 +221,7 @@ def detect_sv_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
         max_allowed_nm=max_allowed_nm,
-        blat=blat,
+        bwa=blat,
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
