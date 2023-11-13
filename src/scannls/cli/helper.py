@@ -10,7 +10,7 @@ import HTSeq  # type: ignore
 import yaml  # type: ignore
 
 from scannls import __PACKAGE_NAME__, cppext
-from scannls.base import CigarCode, MappingMode
+from scannls.base import Aligner, CigarCode, MappingMode
 from scannls.exception import ModesNotEqualError
 from scannls.utils import cigar_validity
 
@@ -485,7 +485,7 @@ def blat2chimeric_alignment(
     read_length: int,
     read_strand: str,
     read_mode: int,
-    blat: Any,
+    bwa: Aligner,
     mapq_cutoff: int,
     max_allowed_nm: int,
     blat_ident_pct_cutoff: float = 0.95,
@@ -507,37 +507,42 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    top_hsp, __mapq = blat.fetch_mapq(in_seq, blat_ident_pct_cutoff)
-    if top_hsp is None:
-        return ""
-    if top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff:
-        chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = blat.psl2sam(
-            top_hsp,
-            in_seq_len,
-        )
-        if read_strand == strand_sa:
-            # same strand: different reads mode
-            # MS(1) ~ SM(2) or SM(2) ~ MS(1)
-            # SM
-            cigar_sa = (
-                f"{read_length - in_seq_len}S{cigar_sa_partial}"
-                if read_mode == 1
-                else f"{cigar_sa_partial}{read_length - in_seq_len}S"
-            )  # MS
-        else:
-            # opposite strand: same reads mode
-            # MS(1) ~ MS(1) or SM(2) ~ SM(2)
-            # MS
-            cigar_sa = (
-                f"{cigar_sa_partial}{read_length - in_seq_len}S"
-                if read_mode == 1
-                else f"{read_length - in_seq_len}S{cigar_sa_partial}"
-            )  # SM
+    keep_records = Aligner.filter(bwa.query(in_seq), blat_ident_pct_cutoff)
 
-        valid_cigar_sa = cigar_validity(cigar_sa)
+    if not keep_records:
+        return chimeric_aln_str
 
-        if __mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
-            return f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{__mapq},{nm_sa};"
+    top_record = keep_records[0]
+    chrom_sa = top_record.reference_name
+    pos_sa = top_record.reference_start
+    strand_sa = "+" if top_record.is_reverse else "-"
+    cigar_sa_partial = top_record.cigarstring
+    nm_sa = top_record.get_tag("NM") if top_record.has_tag("NM") else 0
+    mapq = top_record.mapping_quality
+
+    if read_strand == strand_sa:
+        # same strand: different reads mode
+        # MS(1) ~ SM(2) or SM(2) ~ MS(1)
+        # SM
+        cigar_sa = (
+            f"{read_length - in_seq_len}S{cigar_sa_partial}"
+            if read_mode == 1
+            else f"{cigar_sa_partial}{read_length - in_seq_len}S"
+        )  # MS
+    else:
+        # opposite strand: same reads mode
+        # MS(1) ~ MS(1) or SM(2) ~ SM(2)
+        # MS
+        cigar_sa = (
+            f"{cigar_sa_partial}{read_length - in_seq_len}S"
+            if read_mode == 1
+            else f"{read_length - in_seq_len}S{cigar_sa_partial}"
+        )  # SM
+
+    valid_cigar_sa = cigar_validity(cigar_sa)
+
+    if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
+        return f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
 
     return chimeric_aln_str
 
