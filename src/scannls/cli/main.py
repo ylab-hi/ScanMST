@@ -52,7 +52,7 @@ class BamScanner:
         ref_genome,
         gtf,
         splice_in,
-        blat,
+        bwa,
         logger,
         motif_required,
         max_allowed_nm,
@@ -73,7 +73,7 @@ class BamScanner:
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
-        self.blat = blat
+        self.bwa = bwa
         self.logger = logger
         self.motif_required = motif_required
         self.max_allowed_nm = max_allowed_nm
@@ -268,13 +268,8 @@ def detect_sv_from_cigar(
 
 def _scan_bam_helper(
     identified_key,
-    lock,
     *,
     running_mode,
-    two_bit,
-    port,
-    tmp_dir,
-    blat_info,
     in_bam_path,
     ref_genome,
     gtf,
@@ -392,7 +387,7 @@ def _scan_bam_helper(
                         read_length,
                         read_strand,
                         read_mode,
-                        blat,
+                        bwa,
                         mapq_cutoff,
                         max_allowed_nm,
                         blat_ident_pct_cutoff,
@@ -420,7 +415,7 @@ def _scan_bam_helper(
                         read_length,
                         read_strand,
                         max_allowed_nm,
-                        blat,
+                        bwa,
                         blat_ident_pct_cutoff,
                     )
 
@@ -556,16 +551,11 @@ def _scan_bam_helper(
 
 
 def scanbam_run(
-    two_bit,
-    port,
-    tmp_dir,
-    blat_info,
     in_bam_path,
     mapq_cutoff,
     ref_genome,
     gtf,
     splice_bin,
-    blat,
     logger,
     motif_required,
     parallel,
@@ -582,13 +572,14 @@ def scanbam_run(
     rt_switching_filter_len,
 ):
     """Main function to run scanbam."""
+    bwa = Aligner(reference=ref_genome)
     bam_scanner = BamScanner(
         input_bam=Path(in_bam_path),
         mapq_cutoff=mapq_cutoff,
         ref_genome=Path(ref_genome),
         gtf=Path(gtf),
         splice_in=splice_bin,
-        blat=blat,
+        bwa=bwa,
         logger=logger,
         motif_required=motif_required,
         max_allowed_nm=max_allowed_nm,
@@ -626,7 +617,7 @@ def scanbam_run(
     intact_series_list = []
 
     if parallel == 1:
-        intact_series_list = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
+        intact_series_list = _scan_bam_helper(contigs, **keyword_parameters_dict)
     else:
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)

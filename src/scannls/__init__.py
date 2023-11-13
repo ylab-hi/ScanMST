@@ -68,7 +68,6 @@ __all__ = [
     "MicroHomology",
     "Insertion",
     "cppext",
-    "blat",
     "graphvis",
 ]
 
