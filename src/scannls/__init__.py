@@ -6,6 +6,7 @@ from rich.traceback import install
 
 from . import blat, cli, cppext, graph, type, utils
 from .base import (
+    Aligner,
     Blat,
     BreakPoint,
     CigarCode,
@@ -36,6 +37,7 @@ from .graph import graphvis
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 __all__ = [
+    "Aligner",
     "CigarCode",
     "Strand",
     "Interval",

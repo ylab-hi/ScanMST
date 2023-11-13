@@ -25,6 +25,7 @@ from .basic_class import (
 )
 from .basic_read import Read
 from .blat import Blat
+from .bwa import Aligner
 from .filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
 from .my_logger import MyLogger
 from .parallel import ParallelWorker
@@ -34,6 +35,7 @@ from .read_connector import (
 )
 
 __all__ = [
+    "Aligner",
     "CigarCode",
     "MappingMode",
     "AnnotationCode",
