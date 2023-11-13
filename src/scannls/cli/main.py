@@ -312,17 +312,8 @@ def _scan_bam_helper(
 
     logger.trace(f"{identified_key=} start")
 
-    blat_log_file, blat_is_start_server = blat_info
-    blat = Blat(
-        two_bit,
-        port,
-        tmp_dir,
-        fix_log_file=blat_log_file,
-        is_start_server=blat_is_start_server,
-        lock=lock,
-    )
-
     nls_src_forms_list = []
+    bwa = Aligner(reference=ref_genome)
 
     pat_left_s = re.compile(r"^(\d+)S")
     pat_right_s = re.compile(r"(\d+)S$")
@@ -480,7 +471,7 @@ def _scan_bam_helper(
                         cvg=cvg,
                         gene_iv=gene_iv,
                         motif_required=motif_required,
-                        blat=blat,
+                        bwa=bwa,
                         logger=logger,  # type: ignore
                     ):
                         event_lists, read_chains, num_added_reads = ret
@@ -533,7 +524,7 @@ def _scan_bam_helper(
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            blat=blat,
+                            bwa=bwa,
                         )
 
                         nlpath.squeeze()

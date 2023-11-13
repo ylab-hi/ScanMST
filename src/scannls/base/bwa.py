@@ -39,10 +39,11 @@ class Aligner:
 
     def index_exist(self) -> bool:
         """Check if index exists."""
-        return all(self.reference.with_suffix(ext).exists() for ext in ["amb", "ann", "bwt", "pac", "sa"])
+
+        return all(self.reference.with_suffix(".fa" + ext).exists() for ext in [".amb", ".ann", ".bwt", ".pac", ".sa"])
 
     def build_index(self) -> None:
-        index_cmd = BwaIndexCommandline(reference=self.reference)
+        index_cmd = BwaIndexCommandline(infile=self.reference)
         logger.trace(f"build index: {index_cmd}")
         index_cmd()
 
@@ -91,7 +92,7 @@ class Aligner:
                 strand="+" if top_record.is_reverse else "-",
                 cigarstring=top_record.cigarstring,
                 mapq=top_record.mapping_quality,
-                nm=top_record.get_tag("NM"),
+                nm=top_record.get_tag("NM") if top_record.has_tag("NM") else 0,
                 query_sequence=query,
                 query_qualities=top_record.query_qualities,
             )
@@ -124,7 +125,8 @@ class Aligner:
     @staticmethod
     def record_identity(record):
         """Calculate alignment identity for every record in sam file."""
-        return (record.query_alignment_length - record.get_tag("NM")) / record.query_alignment_length
+        nm = record.get_tag("NM") if record.has_tag("NM") else 0
+        return (record.query_alignment_length - nm) / record.query_alignment_length
 
     @staticmethod
     def alignment_records(sam_file: Path | str):

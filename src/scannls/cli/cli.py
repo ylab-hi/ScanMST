@@ -24,7 +24,7 @@ from scannls import (
     Writers,
 )
 from scannls.graph import ClusterFinder, NLGraph
-from scannls.utils import find_2bit_file, sleep
+from scannls.utils import find_2bit_file
 
 from .main import scanbam_run
 
@@ -193,12 +193,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
     # find 2bit file
     if options.two_bit is None:
         options.two_bit = find_2bit_file(options.ref)
-    blat = Blat(options.two_bit, options.port, tmp_dir.name)
     # delay random seconds to preventing from starting multiple servers simultaneously
-    if options.sleep:
-        sleep(options.input)
-    blat.start_server()
-    blat_info = blat.log_file_path, blat.is_start_server
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
@@ -206,13 +201,13 @@ def cli(options: argparse.Namespace | DefaultOptions):
             two_bit=options.two_bit,
             port=options.port,
             tmp_dir=tmp_dir.name,
-            blat_info=blat_info,
+            blat_info=None,
             in_bam_path=options.input,
             mapq_cutoff=options.mapq,
             ref_genome=options.ref,
             gtf=options.gtf,
             splice_bin=options.splice_bin,
-            blat=blat,
+            blat=None,
             logger=logger,
             motif_required=motif_required,
             parallel=options.parallel,
@@ -259,13 +254,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
     except KeyboardInterrupt:
-        if options.closed and not blat.is_stop_server:
-            logger.warning("KeyboardInterrupt")
-            blat.stop_server()
-            tmp_dir.cleanup()
-        raise
+        logger.warning("KeyboardInterrupt")
     finally:
-        if options.closed and not blat.is_stop_server:
-            logger.info("Program ends")
-            blat.stop_server()
-            tmp_dir.cleanup()
+        logger.info("Program ends")
+        tmp_dir.cleanup()

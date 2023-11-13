@@ -997,7 +997,7 @@ class NLPath:
         cvg,
         gene_iv,
         motif_required,
-        blat,
+        bwa,
     ) -> NLPath:
         """Create a nlpath from a list of events."""
 
@@ -1032,7 +1032,7 @@ class NLPath:
                 insertion_seq = event.insertion_seq1  # pick from the first read
                 insertion_seq = reverse_complement(insertion_seq) if event.strand1.is_reverse() else insertion_seq
 
-                flag, insertion = blat.query_insertion(insertion_seq)
+                flag, insertion = bwa.query_insertion(insertion_seq)
 
                 insertion.query_name = read1.query_name
                 if flag:  # only one hit
