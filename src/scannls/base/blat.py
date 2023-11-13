@@ -19,7 +19,7 @@ import psutil
 from Bio import SearchIO
 from loguru import logger
 
-from scannls.blat import load_gfclient, load_gfserver
+# from scannls.blat import load_gfclient, load_gfserver
 
 from .basic_class import Insertion, NovelInsertion
 

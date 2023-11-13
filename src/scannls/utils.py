@@ -17,7 +17,6 @@ from loguru import logger
 from scannls.base import MappingMode
 
 from . import cppext
-from .blat import load_fa2bit
 from .exception import ToolNotFoundError
 
 if TYPE_CHECKING:

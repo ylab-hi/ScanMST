@@ -39,7 +39,6 @@ class Aligner:
 
     def index_exist(self) -> bool:
         """Check if index exists."""
-
         return all(self.reference.with_suffix(".fa" + ext).exists() for ext in [".amb", ".ann", ".bwt", ".pac", ".sa"])
 
     def build_index(self) -> None:
@@ -67,6 +66,7 @@ class Aligner:
 
         output = self.mem(query, output)
         yield from self.alignment_records(output)
+        output.unlink()
 
     def query_insertion(
         self,
@@ -78,10 +78,9 @@ class Aligner:
         if not records:
             return False, NovelInsertion(hit_num=0, query_sequence=query)
 
-        keep_records = []
-        for record in records:
-            if Aligner.record_identity(record) > threshold_identity:
-                keep_records.append(record)
+        keep_records = [
+            record for record in records if Aligner.record_identity(record) > threshold_identity and record.mapping_quality > 20
+        ]
 
         if len(keep_records) == 1:
             top_record = keep_records[0]
@@ -105,7 +104,7 @@ class Aligner:
     def mem(self, query: str, output: Path | None) -> Path:
         """Align query to reference."""
         ran_id = secrets.randbits(42)
-        in_fastq = self.reference.parent / f"{ran_id}.fastq"
+        in_fastq = self.reference.parent / f"{ran_id}.fq"
         with in_fastq.open("w") as fastq_file:
             fastq_file.write(f"@{ran_id}\n")
             fastq_file.write(f"{query}\n")

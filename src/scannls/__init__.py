@@ -4,7 +4,7 @@ __PACKAGE_NAME__ = "scannls"
 
 from rich.traceback import install
 
-from . import blat, cli, cppext, graph, type, utils
+from . import cli, cppext, graph, type, utils
 from .base import (
     Aligner,
     BreakPoint,
