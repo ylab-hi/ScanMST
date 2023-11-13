@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from scannls import (
-    Blat,
     FastaWriter,
     GTFWriter,
     MyLogger,

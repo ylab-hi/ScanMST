@@ -12,7 +12,7 @@ import pysam
 from pyfaidx import Fasta, FastaNotFoundError
 
 from scannls import (
-    Blat,
+    Aligner,
     CircRNAFilter,
     Event,
     ExonFilter,
@@ -195,7 +195,7 @@ def detect_sv_from_cigar(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    blat: Blat,
+    bwa: Aligner,
     logger: LoggerType,
 ):
     """Detect SV from cigar string.
@@ -221,7 +221,7 @@ def detect_sv_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
         max_allowed_nm=max_allowed_nm,
-        bwa=blat,
+        bwa=bwa,
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
