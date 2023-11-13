@@ -391,7 +391,7 @@ class ReadsConnector:
         position = record.reference_start
         strand = "+" if not record.is_reverse else "-"
         cigar_str = record.cigarstring
-        num_of_mismatch = record.get_tag("NM")
+        num_of_mismatch = record.get_tag("NM") if record.has_tag("NM") else 0
 
         strand = Strand.from_str(strand)
         lt_s_len = record.query_start
@@ -441,8 +441,7 @@ class ReadsConnector:
             return None
 
         records = self.bwa.query(query=query_sequence)
-
-        keep_records = [record for record in records if Aligner.record_identity(record) > threshold_identity]
+        keep_records = self.bwa.filter(records, threshold_identity)
         hit = len(keep_records)
 
         return hit, keep_records
