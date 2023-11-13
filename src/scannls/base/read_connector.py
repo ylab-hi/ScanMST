@@ -271,7 +271,8 @@ class ReadsConnector:
         return flag
 
     def _match_left_softclip_segment(self, start_read: Read, read: Read):
-        """Test 2 case for two reads to check if they are connected.
+        """Test matched sequence of read1 to the left
+        soft-clipping sequence of read2 to check if they are connected.
 
         start read -> read
 
@@ -332,7 +333,8 @@ class ReadsConnector:
             return True, start_read
 
     def _match_right_softclip_segment(self, start_read: Read, read: Read):
-        """Test 2 case for two reads to check if they are connected.
+        """Test matched sequence of read1 to the right
+        soft-clipping sequence of read2 to check if they are connected.
 
         start read -> read
 
