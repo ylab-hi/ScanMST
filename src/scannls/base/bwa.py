@@ -69,7 +69,7 @@ class Aligner:
         output.unlink()
 
     @staticmethod
-    def filter(records: Iterator[pysam.AlignedSegment], threshold_identity: float = 0.99) -> list[pysam.AlignedSegment]:
+    def filters(records: Iterator[pysam.AlignedSegment], threshold_identity: float = 0.99) -> list[pysam.AlignedSegment]:
         return [
             record for record in records if Aligner.record_identity(record) > threshold_identity and record.mapping_quality > 20
         ]
@@ -84,7 +84,7 @@ class Aligner:
         if not records:
             return False, NovelInsertion(hit_num=0, query_sequence=query)
 
-        keep_records = Aligner.filter(records, threshold_identity)
+        keep_records = Aligner.filters(records, threshold_identity)
 
         if len(keep_records) == 1:
             top_record = keep_records[0]

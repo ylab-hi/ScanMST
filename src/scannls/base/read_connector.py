@@ -441,7 +441,7 @@ class ReadsConnector:
             return None
 
         records = self.bwa.query(query=query_sequence)
-        keep_records = self.bwa.filter(records, threshold_identity)
+        keep_records = self.bwa.filters(records, threshold_identity)
         hit = len(keep_records)
 
         return hit, keep_records

@@ -507,7 +507,7 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    keep_records = Aligner.filter(bwa.query(in_seq), blat_ident_pct_cutoff)
+    keep_records = Aligner.filters(bwa.query(in_seq), blat_ident_pct_cutoff)
 
     if not keep_records:
         return chimeric_aln_str
@@ -582,13 +582,13 @@ def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
 
 
 def insertion2chimeric_alignment(
-    read: pysam.libcalignedsegment.AlignedSegment,
+    read: pysam.AlignedSegment,
     insertion_ref_pos: int,
     insertion_seq: str,
     read_length: int,
     read_strand: str,
     max_allowed_nm: int,
-    blat: Any,
+    blat: Aligner,
     blat_ident_pct_cutoff: float = 0.95,
     top: int = 3,
     align_len_threshold: int = 50,
@@ -633,10 +633,8 @@ def insertion2chimeric_alignment(
     )
 
     flag, insertion_info = blat.query_insertion(
-        insert_seq=insertion_seq,
+        query=insertion_seq,
         threshold_identity=blat_ident_pct_cutoff,
-        top=top,
-        align_len_threshold=align_len_threshold,
     )
 
     chimeric_aln_str = ""
