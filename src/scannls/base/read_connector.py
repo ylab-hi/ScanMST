@@ -270,40 +270,23 @@ class ReadsConnector:
             flag = False
         return flag
 
-    def test_2case(
-        self,
-        start_read: Read,
-        read: Read,
-        *,
-        is_compare_for_ms: bool,
-    ):
+    def _match_left_softclip_segment(self, start_read: Read, read: Read):
         """Test 2 case for two reads to check if they are connected.
 
         start read -> read
 
         :param start_read: start read
         :param read: next read
-        :param is_compare_for_ms: it is necessary to compare for ms, yes for multi-hop, no for on-hop
         """
-        condition1, condition2 = False, False
 
-        self.logger.debug(f"{start_read.mode=}, {read.mode=}, {start_read.query_name=}")
-        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
-
-        if not is_compare_for_ms:  # one hop
-            self.logger.debug(f"add pair {start_read=} {read=}")
-            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
-            self.reads_chain.append(read)
-            return True, start_read
+        condition1 = False
+        self.logger.debug("testing case M vs LS")
 
         _lt_len_r1, _read_match_r1, _ = start_read.adhocsms
         _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+
         read_query_sequence = read.query_sequence
-
         same_strand = start_read.adhocseq == read.query_sequence
-
-        # first case
-        self.logger.debug("testing first case M vs LS")
 
         next_read_mode = MappingMode.SM
         read_match_sequence = start_read.adhocseq[
@@ -348,8 +331,23 @@ class ReadsConnector:
 
             return True, start_read
 
-        self.logger.debug("testing second case M vs RS")
-        # second case
+    def _match_right_softclip_segment(self, start_read: Read, read: Read):
+        """Test 2 case for two reads to check if they are connected.
+
+        start read -> read
+
+        :param start_read: start read
+        :param read: next read
+        :param same_strand: same strand
+        """
+        condition2 = False
+        self.logger.debug("testing case M vs RS")
+        _lt_len_r1, _read_match_r1, _ = start_read.adhocsms
+        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+
+        read_query_sequence = read.query_sequence
+        same_strand = start_read.adhocseq == read.query_sequence
+
         next_read_mode = MappingMode.MS
         read_match_sequence = start_read.adhocseq[
             _lt_len_r1 : _lt_len_r1 + _read_match_r1
@@ -399,7 +397,63 @@ class ReadsConnector:
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
-        #### End of second case ###
+
+    def test_2case(
+        self,
+        start_read: Read,
+        read: Read,
+        *,
+        is_compare_for_ms: bool,
+    ):
+        """Test 2 case for two reads to check if they are connected.
+
+        start read -> read
+
+        :param start_read: start read
+        :param read: next read
+        :param is_compare_for_ms: it is necessary to compare for ms, yes for multi-hop, no for on-hop
+        """
+
+        self.logger.debug(f"{start_read.mode=}, {read.mode=}, {start_read.query_name=}")
+        self.logger.debug(f"{start_read.adhocsms=}, {read.sms=}")
+
+        if not is_compare_for_ms:  # one hop
+            self.logger.debug(f"add pair {start_read=} {read=}")
+            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.reads_chain.append(read)
+            return True, start_read
+
+        _lt_len_r1, _, _rt_len_r1 = start_read.adhocsms
+
+        # SM
+        if _lt_len_r1 > _rt_len_r1:
+            # starts with tail (+)
+            if not start_read.strand.is_reverse():
+                if not read.strand.is_reverse():
+                    return self._match_right_softclip_segment(start_read, read)
+                else:
+                    return self._match_left_softclip_segment(start_read, read)
+            # starts with head (-)
+            else:
+                if not read.strand.is_reverse():
+                    return self._match_left_softclip_segment(start_read, read)
+                else:
+                    return self._match_right_softclip_segment(start_read, read)
+        # MS
+        elif _lt_len_r1 < _rt_len_r1:
+            # starts with head (+)
+            if not start_read.strand.is_reverse():
+                if not read.strand.is_reverse():
+                    return self._match_left_softclip_segment(start_read, read)
+                else:
+                    return self._match_right_softclip_segment(start_read, read)
+            # starts with tail (-)
+            else:
+                if not read.strand.is_reverse():
+                    return self._match_right_softclip_segment(start_read, read)
+                else:
+                    return self._match_left_softclip_segment(start_read, read)
+
         self.logger.debug(
             "start read cannot connect with read and try to connect other reads",
         )
