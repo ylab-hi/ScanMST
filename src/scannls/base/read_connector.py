@@ -90,20 +90,10 @@ class ReadsConnector:
     def init_read_mode(read1: Read, read2: Read) -> None:
         """Initialize the mode of the reads."""
 
-        if min(read1.lt_soft_len, read1.rt_soft_len) <= min(
-            read2.lt_soft_len,
-            read2.rt_soft_len,
-        ):
-            read1.mode = ReadsConnector._get_mode(read1.adhocsms)
-            read2.mode = (
-                read1.mode.reversed() if read1.strand == read2.strand else read1.mode
-            )
-
-        else:
-            read2.mode = ReadsConnector._get_mode(read2.sms)
-            read1.mode = (
-                read2.mode.reversed() if read1.strand == read2.strand else read2.mode
-            )
+        read1.mode = ReadsConnector._get_mode(read1.adhocsms)
+        read2.mode = (
+            read1.mode.reversed() if read1.strand == read2.strand else read1.mode
+        )
 
     def check_if_ms_match(
         self,
@@ -332,6 +322,8 @@ class ReadsConnector:
 
             return True, start_read
 
+        return False, start_read  # not match
+
     def _match_right_softclip_segment(self, start_read: Read, read: Read):
         """Test matched sequence of read1 to the right
         soft-clipping sequence of read2 to check if they are connected.
@@ -399,6 +391,9 @@ class ReadsConnector:
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
+
+        return False, start_read  # not match
+
 
     def test_2case(
         self,
@@ -736,7 +731,7 @@ class ReadsConnector:
             )
             if not is_connected:
                 self.logger.warning(
-                    f"ReadsConnector: cannot connect end read"
+                    f"ReadsConnector: cannot connect end read "
                     f"{start_read.query_name}",
                 )
                 return is_connected
