@@ -297,6 +297,7 @@ class ReadsConnector:
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
+        return None
 
     def _match_right_softclip_segment(self, start_read: Read, read: Read):
         """Test matched sequence of read1 to the right
@@ -363,6 +364,7 @@ class ReadsConnector:
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
+        return None
 
     def test_2case(
         self,

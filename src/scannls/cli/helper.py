@@ -507,7 +507,7 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    keep_records = Aligner.filters(bwa.query(in_seq), blat_ident_pct_cutoff)
+    keep_records = list(Aligner.filters(bwa.query(in_seq), blat_ident_pct_cutoff))
 
     if not keep_records:
         return chimeric_aln_str

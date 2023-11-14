@@ -70,12 +70,12 @@ class Aligner:
         output.unlink()
 
     @staticmethod
-    def filters(records: Iterator[pysam.AlignedSegment], threshold_identity: float = 0.99) -> list[pysam.AlignedSegment]:
-        return [
+    def filters(records: Iterator[pysam.AlignedSegment], threshold_identity: float = 0.99) -> Iterator[pysam.AlignedSegment]:
+        return (
             record
             for record in records
             if Aligner.record_identity(record) > threshold_identity and record.mapping_quality > Aligner.MIN_MAPQ
-        ]
+        )
 
     def query_insertion(
         self,
@@ -83,11 +83,13 @@ class Aligner:
         threshold_identity: float = 0.99,
         output: Path | None = None,
     ):
-        records = list(self.query(query, output))
-        if not records:
-            return False, NovelInsertion(hit_num=0, query_sequence=query)
+        records = self.query(query, output)
+        keep_records = list(Aligner.filters(records, threshold_identity))
 
-        keep_records = Aligner.filters(records, threshold_identity)
+        logger.trace(f"alginer: keep_records: {len(keep_records)}")
+
+        if not keep_records:
+            return False, NovelInsertion(hit_num=0, query_sequence=query)
 
         if len(keep_records) == 1:
             top_record = keep_records[0]
@@ -132,7 +134,9 @@ class Aligner:
     def record_identity(record):
         """Calculate alignment identity for every record in sam file."""
         nm = record.get_tag("NM") if record.has_tag("NM") else 0
-        return (record.query_alignment_length - nm) / record.query_alignment_length
+        identity = (record.query_alignment_length - nm) / record.query_alignment_length
+        logger.trace(f"record_identity: {identity} record mapq: {record.mapping_quality}")
+        return identity
 
     @staticmethod
     def alignment_records(sam_file: Path | str):
