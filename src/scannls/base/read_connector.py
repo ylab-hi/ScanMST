@@ -394,8 +394,8 @@ class ReadsConnector:
         num_of_mismatch = record.get_tag("NM") if record.has_tag("NM") else 0
 
         strand = Strand.from_str(strand)
-        lt_s_len = record.query_start
-        rt_s_len = len(query_seq) - record.query_end
+        lt_s_len = record.query_alignment_start
+        rt_s_len = len(query_seq) - record.query_alignment_end
         new_read_mode = ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
             read,
             strand,
