@@ -205,7 +205,7 @@ class GraphCytoscapeExporter(GraphVisitor):
 
     def visit(self, graph: nx.DiGraph):
         data = nx.cytoscape_data(graph)
-        with Path(f"cygraph_{self.file_name}.json").open("w", encoding="utf-8") as f:
+        with Path(f"{self.file_name}_cy.json").open("w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
 

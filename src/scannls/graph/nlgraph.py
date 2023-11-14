@@ -42,7 +42,7 @@ class NLGraph:
         rescuer: Any,
         merge_threshold,
         support_reads,
-        input_bam_path: Path | None,
+        input_bam_path: Path,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -100,8 +100,10 @@ class NLGraph:
             yield current_path
 
         if is_plot and node_list:
+            plot_result = Path(f"graph_{self.input_bam_path.stem}")
+            plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
-            default_visitors(self, f"{cluster_name}", self.support_reads).visualize()
+            default_visitors(self, (plot_result / cluster_name).as_posix(), self.support_reads).visualize()
 
     @classmethod
     def create_graph(
@@ -161,7 +163,7 @@ class NLGraph:
                 break
 
         if not is_merged:
-            self.logger.warning(f"add edge with {edge_data=}")
+            self.logger.info(f"add edge with {edge_data=}")
             self.edges[edge.key].append(edge)
 
     def find_edges(self, node1: Node, node2: Node):
