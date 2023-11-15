@@ -91,6 +91,12 @@ class ReadsConnector:
         read1.mode = ReadsConnector._get_mode(read1.adhocsms)
         read2.mode = read1.mode.reversed() if read1.strand == read2.strand else read1.mode
 
+    @staticmethod
+    def is_two_read_have_same_length_of_minimum_soft_clip(read1: Read, read2: Read) -> bool:
+        """Check the minimum soft clipping length of two reads."""
+
+        return min(read1.lt_soft_len, read1.rt_soft_len) == min(read2.lt_soft_len, read2.rt_soft_len)
+
     def check_if_ms_match(
         self,
         query_seq: str,
@@ -585,6 +591,7 @@ class ReadsConnector:
                     return abs(read.rt_soft_len - start_read_match_sequence)
                 else:
                     return abs(read.lt_soft_len - start_read_match_sequence)
+        return None
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.
@@ -605,11 +612,27 @@ class ReadsConnector:
         )
         start_read = temp_list[0]
 
-        if start_read.lt_soft_len > start_read.rt_soft_len:
-            start_read.adhocsms = (
-                start_read.lt_soft_len,
-                start_read.rt_soft_len + start_read.read_match_size,
-                0,
+        # start read and end read have the same minimum length of softclipping
+        if ReadsConnector.is_two_read_have_same_length_of_minimum_soft_clip(temp_list[0], temp_list[1]):
+            start_read = temp_list[0]
+            end_read = temp_list[1]
+            self.candidate_nodes = temp_list[2:]
+
+            if start_read.lt_soft_len > start_read.rt_soft_len:
+                start_read.adhocsms = (
+                    start_read.lt_soft_len,
+                    start_read.rt_soft_len + start_read.read_match_size,
+                    0,
+                )
+            else:
+                start_read.adhocsms = (
+                    0,
+                    start_read.lt_soft_len + start_read.read_match_size,
+                    start_read.rt_soft_len,
+                )
+
+            self.candidate_nodes.sort(
+                key=lambda x: self.__sort_candidate_reads_key(x, start_read),
             )
         else:
             start_read.adhocsms = (
@@ -626,7 +649,7 @@ class ReadsConnector:
 
         self.candidate_nodes = candidate_and_end_nodes[:-1]
         end_read = candidate_and_end_nodes[-1]
-        
+
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)
@@ -767,6 +790,7 @@ def detect_read_read_connections_from_cigar(
                 mean_qualities_read2_match = mean(
                     read2.query_qualities[read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)],
                 )
+
             if (
                 read1.strand != read2.strand
                 and read1.chrom == read2.chrom
