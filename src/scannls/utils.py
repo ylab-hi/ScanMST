@@ -33,7 +33,6 @@ __all__ = [
     "get_longest_insertion_sequence",
     "cigarstring2cigartuples",
     "timeit",
-    "sleep",
 ]
 
 
@@ -44,13 +43,6 @@ def external_tool_checking(software: list[str], log_handler: LoggerType) -> None
         if not output:
             raise ToolNotFoundError(tool)
         log_handler.success(f"Checking for {tool} found ")
-
-
-def sleep(input_file: str, max_time: int = 30) -> None:
-    """Sleep random time."""
-    file_size = Path.stat(Path(input_file)).st_size
-    secrets.SystemRandom().seed(file_size)
-    time.sleep(secrets.randbelow(max_time))
 
 
 def get_softclip_length(

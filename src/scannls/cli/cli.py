@@ -188,7 +188,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
-    logger.info(f"{options.input=} {options.closed=}")
+    logger.info(f"{options.input=}")
     logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()

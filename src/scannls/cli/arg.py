@@ -20,8 +20,6 @@ class DefaultOptions:
     splice_bin: int = 5
     mapq: int = 20
     noncanonical: bool = False
-    closed: bool = True
-    sleep: bool = True
     bound: bool = True
     graph: bool = False
     log: str = "warning"
@@ -218,20 +216,6 @@ def parse_args() -> argparse.ArgumentParser:
         dest="noncanonical",
         default=DefaultOptions.noncanonical,
         help="considering Non canonical spliced sites  (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--nclosed",
-        action="store_false",
-        dest="closed",
-        default=DefaultOptions.closed,
-        help="close BLAT server when job has done (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--nsleep",
-        action="store_false",
-        dest="sleep",
-        default=DefaultOptions.sleep,
-        help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
     parser.add_argument(
         "--graph",
