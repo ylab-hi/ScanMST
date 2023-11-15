@@ -288,7 +288,6 @@ class ReadsConnector:
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
-        return None
 
         return False, start_read  # not match
 
@@ -357,7 +356,6 @@ class ReadsConnector:
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
-        return None
 
         return False, start_read  # not match
 
@@ -557,12 +555,36 @@ class ReadsConnector:
     @staticmethod
     def __sort_candidate_reads_key(read: Read, start_read: Read) -> int:
         """Sort candidate reads."""
-        start_read_match_sequence = start_read.adhocsms[1]
+        lt_soft_len, start_read_match_sequence, rt_soft_len = start_read.adhocsms
 
-        return min(
-            abs(read.lt_soft_len - start_read_match_sequence),
-            abs(read.rt_soft_len - start_read_match_sequence),
-        )
+        # SM
+        if lt_soft_len > rt_soft_len:
+            # starts with tail (+)
+            if not start_read.strand.is_reverse():
+                if not read.strand.is_reverse():
+                    return abs(read.rt_soft_len - start_read_match_sequence)
+                else:
+                    return abs(read.lt_soft_len - start_read_match_sequence)
+            # starts with head (-)
+            else:
+                if not read.strand.is_reverse():
+                    return abs(read.lt_soft_len - start_read_match_sequence)
+                else:
+                    return abs(read.rt_soft_len - start_read_match_sequence)
+        # MS
+        elif lt_soft_len < rt_soft_len:
+            # starts with head (+)
+            if not start_read.strand.is_reverse():
+                if not read.strand.is_reverse():
+                    return abs(read.lt_soft_len - start_read_match_sequence)
+                else:
+                    return abs(read.rt_soft_len - start_read_match_sequence)
+            # starts with tail (-)
+            else:
+                if not read.strand.is_reverse():
+                    return abs(read.rt_soft_len - start_read_match_sequence)
+                else:
+                    return abs(read.lt_soft_len - start_read_match_sequence)
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.
@@ -581,11 +603,7 @@ class ReadsConnector:
             self.aln_list,
             key=lambda x: min(x.lt_soft_len, x.rt_soft_len),
         )
-        start_nodes = temp_list[:2]
-        self.candidate_nodes = temp_list[2:]
-
-        start_read = start_nodes[0]
-        end_read = start_nodes[1]
+        start_read = temp_list[0]
 
         if start_read.lt_soft_len > start_read.rt_soft_len:
             start_read.adhocsms = (
@@ -599,10 +617,16 @@ class ReadsConnector:
                 start_read.lt_soft_len + start_read.read_match_size,
                 start_read.rt_soft_len,
             )
+        # find end node and candidate nodes
+        candidate_and_end_nodes = temp_list[1:]
 
-        self.candidate_nodes.sort(
+        candidate_and_end_nodes.sort(
             key=lambda x: self.__sort_candidate_reads_key(x, start_read),
         )
+
+        self.candidate_nodes = candidate_and_end_nodes[:-1]
+        end_read = candidate_and_end_nodes[-1]
+        
         start_read.adhocseq = start_read.query_sequence
 
         self.reads_chain.append(start_read)
@@ -634,7 +658,7 @@ class ReadsConnector:
                     self.increment_index()
 
                 if is_connected and len(self.candidate_nodes) + 1 == candidate_read_len:
-                    self._double_check_for_start_end_read(start_nodes[0], "start")
+                    self._double_check_for_start_end_read(temp_list[0], "start")
 
             ReadsConnector.init_read_mode(start_read, end_read)
             is_connected, start_read = self.test_2case(
