@@ -5,8 +5,6 @@
 @Time:        1/11/22 4:28 PM
 """
 from __future__ import annotations
-import sys
-sys.setrecursionlimit(1500)
 
 import os
 import sys
@@ -37,6 +35,9 @@ if TYPE_CHECKING:
     from scannls.type import LoggerType
 
     from .arg import DefaultOptions
+
+
+sys.setrecursionlimit(10000)
 
 
 def get_writers(
