@@ -34,7 +34,6 @@ __all__ = [
     "cigarstring2cigartuples",
     "timeit",
     "sleep",
-    "find_2bit_file",
 ]
 
 
@@ -45,32 +44,6 @@ def external_tool_checking(software: list[str], log_handler: LoggerType) -> None
         if not output:
             raise ToolNotFoundError(tool)
         log_handler.success(f"Checking for {tool} found ")
-
-
-def find_2bit_file(fasta_path: str, parameter: list[str] | None = None) -> str:
-    """Create 2bit file from fasta file.
-
-     fa2bit usage:
-      faToTwoBit in.fa [in2.fa in3.fa ...] out.2bit
-     options:
-
-    -long          use 64-bit offsets for index.   Allow for twoBit to contain more than 4Gb of sequence.
-                   NOT COMPATIBLE WITH OLDER CODE.
-    -noMask        Ignore lower-case masking in fa file.
-    -stripVersion  Strip off version number after '.' for GenBank accessions.
-    -ignoreDups    Convert first sequence only if there are duplicate sequence
-                   names.  Use 'twoBitDup' to find duplicate sequences.
-    """
-    if parameter is None:
-        parameter = []
-
-    bit_file = Path(fasta_path).with_suffix(".2bit")
-    if not bit_file.exists():
-        logger.info(f"{bit_file.as_posix()} Not Found Creating...")
-        subprocess.check_call(
-            [load_fa2bit(), " ".join(parameter), fasta_path, bit_file.as_posix()],
-        )
-    return bit_file.as_posix()
 
 
 def sleep(input_file: str, max_time: int = 30) -> None:

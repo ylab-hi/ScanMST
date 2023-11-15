@@ -24,7 +24,6 @@ from scannls import (
     Writers,
 )
 from scannls.graph import ClusterFinder, NLGraph
-from scannls.utils import find_2bit_file
 
 from .main import scanbam_run
 
@@ -193,9 +192,6 @@ def cli(options: argparse.Namespace | DefaultOptions):
     logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
-    # find 2bit file
-    if options.two_bit is None:
-        options.two_bit = find_2bit_file(options.ref)
     # delay random seconds to preventing from starting multiple servers simultaneously
     # CIGAR string refinement
     motif_required = not options.noncanonical

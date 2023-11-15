@@ -16,7 +16,6 @@ class DefaultOptions:
     ref: str
     gtf: str
     output: str
-    two_bit: str
     support_reads: int = 1
     splice_bin: int = 5
     mapq: int = 20
@@ -29,7 +28,6 @@ class DefaultOptions:
     species: str = "human"
     species_choices: tuple[str, str] = ("human", "mouse")
     parallel: int = 1
-    port: int = 88888
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 50
     ident_cutoff: float = 0.99
@@ -181,12 +179,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.parallel,
         help="set working mode in processor (default: %(default)s)",
     )
-    parser.add_argument(
-        "--2bit",
-        action="store",
-        dest="two_bit",
-        help="reference genome in 2bit format",
-    )
 
     parser.add_argument(
         "--species",
@@ -254,14 +246,6 @@ def parse_args() -> argparse.ArgumentParser:
         dest="bound",
         default=DefaultOptions.bound,
         help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--port",
-        action="store",
-        dest="port",
-        type=int,
-        help="port for BLAT server (default: %(default)s)",
-        default=DefaultOptions.port,
     )
     parser.add_argument(
         "--max-allowed-nm",
