@@ -643,7 +643,11 @@ class ReadsConnector:
                     return abs(read.rt_soft_len - start_read_match_sequence)
                 else:
                     return abs(read.lt_soft_len - start_read_match_sequence)
-        return None
+        else:
+            return min(
+                abs(read.lt_soft_len - start_read_match_sequence),
+                abs(read.rt_soft_len - start_read_match_sequence),
+            )
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.
@@ -665,6 +669,19 @@ class ReadsConnector:
 
         start_read = temp_list[0]
 
+        if start_read.lt_soft_len > start_read.rt_soft_len:
+            start_read.adhocsms = (
+                start_read.lt_soft_len,
+                start_read.rt_soft_len + start_read.read_match_size,
+                0,
+            )
+        else:
+            start_read.adhocsms = (
+                0,
+                start_read.lt_soft_len + start_read.read_match_size,
+                start_read.rt_soft_len,
+            )
+
         # start read and end read have the same minimum length of softclipping
         if ReadsConnector.is_two_read_have_same_length_of_minimum_soft_clip(
             temp_list[0], temp_list[1]
@@ -682,19 +699,6 @@ class ReadsConnector:
             )
             self.candidate_nodes = candidate_and_end_nodes[:-1]
             end_read = candidate_and_end_nodes[-1]
-
-        if start_read.lt_soft_len > start_read.rt_soft_len:
-            start_read.adhocsms = (
-                start_read.lt_soft_len,
-                start_read.rt_soft_len + start_read.read_match_size,
-                0,
-            )
-        else:
-            start_read.adhocsms = (
-                0,
-                start_read.lt_soft_len + start_read.read_match_size,
-                start_read.rt_soft_len,
-            )
 
         start_read.adhocseq = start_read.query_sequence
 
