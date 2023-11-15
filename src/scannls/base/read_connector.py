@@ -95,6 +95,16 @@ class ReadsConnector:
             read1.mode.reversed() if read1.strand == read2.strand else read1.mode
         )
 
+    @staticmethod
+    def is_two_read_have_same_length_of_minimum_soft_clip(
+        read1: Read, read2: Read
+    ) -> bool:
+        """Check the minimum soft clipping length of two reads."""
+
+        return min(read1.lt_soft_len, read1.rt_soft_len) == min(
+            read2.lt_soft_len, read2.rt_soft_len
+        )
+
     def check_if_ms_match(
         self,
         query_seq: str,
@@ -394,7 +404,6 @@ class ReadsConnector:
 
         return False, start_read  # not match
 
-
     def test_2case(
         self,
         start_read: Read,
@@ -663,31 +672,56 @@ class ReadsConnector:
             self.aln_list,
             key=lambda x: min(x.lt_soft_len, x.rt_soft_len),
         )
-        start_nodes = temp_list[:1]
-        start_read = start_nodes[0]
 
-        if start_read.lt_soft_len > start_read.rt_soft_len:
-            start_read.adhocsms = (
-                start_read.lt_soft_len,
-                start_read.rt_soft_len + start_read.read_match_size,
-                0,
+        # start read and end read have the same minimum length of softclipping
+        if ReadsConnector.is_two_read_have_same_length_of_minimum_soft_clip(
+            temp_list[0], temp_list[1]
+        ):
+            start_read = temp_list[0]
+            end_read = temp_list[1]
+            self.candidate_nodes = temp_list[2:]
+
+            if start_read.lt_soft_len > start_read.rt_soft_len:
+                start_read.adhocsms = (
+                    start_read.lt_soft_len,
+                    start_read.rt_soft_len + start_read.read_match_size,
+                    0,
+                )
+            else:
+                start_read.adhocsms = (
+                    0,
+                    start_read.lt_soft_len + start_read.read_match_size,
+                    start_read.rt_soft_len,
+                )
+
+            self.candidate_nodes.sort(
+                key=lambda x: self.__sort_candidate_reads_key(x, start_read),
             )
         else:
-            start_read.adhocsms = (
-                0,
-                start_read.lt_soft_len + start_read.read_match_size,
-                start_read.rt_soft_len,
+            start_read = temp_list[0]
+
+            if start_read.lt_soft_len > start_read.rt_soft_len:
+                start_read.adhocsms = (
+                    start_read.lt_soft_len,
+                    start_read.rt_soft_len + start_read.read_match_size,
+                    0,
+                )
+            else:
+                start_read.adhocsms = (
+                    0,
+                    start_read.lt_soft_len + start_read.read_match_size,
+                    start_read.rt_soft_len,
+                )
+
+            # find end node and candiate nodes
+            candidate_and_end_nodes = temp_list[1:]
+
+            candidate_and_end_nodes.sort(
+                key=lambda x: self.__sort_candidate_reads_key(x, start_read),
             )
 
-        # find end node and candiate nodes
-        candidate_and_end_nodes = temp_list[1:]
-
-        candidate_and_end_nodes.sort(
-            key=lambda x: self.__sort_candidate_reads_key(x, start_read),
-        )
-
-        self.candidate_nodes = candidate_and_end_nodes[:-1]
-        end_read = candidate_and_end_nodes[-1]
+            self.candidate_nodes = candidate_and_end_nodes[:-1]
+            end_read = candidate_and_end_nodes[-1]
 
         start_read.adhocseq = start_read.query_sequence
 

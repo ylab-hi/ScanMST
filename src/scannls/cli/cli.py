@@ -5,6 +5,8 @@
 @Time:        1/11/22 4:28 PM
 """
 from __future__ import annotations
+import sys
+sys.setrecursionlimit(1500)
 
 import os
 import sys
