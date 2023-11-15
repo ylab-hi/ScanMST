@@ -755,7 +755,7 @@ class ReadsConnector:
                     self.increment_index()
 
                 if is_connected and len(self.candidate_nodes) + 1 == candidate_read_len:
-                    self._double_check_for_start_end_read(start_nodes[0], "start")
+                    self._double_check_for_start_end_read(temp_list[0], "start")
 
             ReadsConnector.init_read_mode(start_read, end_read)
             is_connected, start_read = self.test_2case(
