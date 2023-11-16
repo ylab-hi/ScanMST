@@ -146,7 +146,7 @@ class Aligner:
     def record_identity(record):
         """Calculate alignment identity for every record in sam file."""
         nm = record.get_tag("NM") if record.has_tag("NM") else 0
-        identity = (record.query_alignment_length - nm) / record.query_alignment_length
+        identity = (record.query_alignment_length - nm) / record.query_length
         logger.trace(
             f"record_identity: {identity} record mapq: {record.mapping_quality}"
         )
