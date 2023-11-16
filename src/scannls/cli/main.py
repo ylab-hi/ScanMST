@@ -308,7 +308,7 @@ def _scan_bam_helper(
     logger.trace(f"{identified_key=} start")
 
     nls_src_forms_list = []
-    bwa = Aligner(reference=ref_genome)
+    bwa = Aligner(reference=ref_genome, min_mapq=mapq_cutoff, threshold_identity=blat_ident_pct_cutoff)
 
     pat_left_s = re.compile(r"^(\d+)S")
     pat_right_s = re.compile(r"(\d+)S$")
@@ -578,7 +578,7 @@ def scanbam_run(
     rt_switching_filter_len,
 ):
     """Main function to run scanbam."""
-    bwa = Aligner(reference=ref_genome)
+    bwa = Aligner(reference=ref_genome, min_mapq=mapq_cutoff, threshold_identity=blat_ident_pct_cutoff)
     bam_scanner = BamScanner(
         input_bam=Path(in_bam_path),
         mapq_cutoff=mapq_cutoff,

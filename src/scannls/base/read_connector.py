@@ -43,7 +43,7 @@ class ReadsConnector:
         logger: LoggerType,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
-        top: int = 3,
+        mapq_cutoff: int = 20,
     ) -> None:
         """Initialize the ReadsConnector class."""
         self.candidate_nodes: list[Read] = []
@@ -57,7 +57,7 @@ class ReadsConnector:
 
         self.align_len_threshold: int = align_len_threshold
         self.threshold_identity: float = threshold_identity
-        self.top: int = top
+        self.mapq_cutoff: float = mapq_cutoff
 
     def reset_index(self) -> None:
         """Reset the index in order to fetch read in  candidate reads in new iteration."""
@@ -535,7 +535,7 @@ class ReadsConnector:
         query_sequence,
         align_len_threshold,
         threshold_identity,
-        top,
+        mapq_cutoff,
     ):
         """Double check aligner query."""
 
@@ -543,7 +543,7 @@ class ReadsConnector:
             return None
 
         records = self.bwa.query(query=query_sequence)
-        keep_records = list(self.bwa.filters(records, threshold_identity))
+        keep_records = list(self.bwa.filters(records, threshold_identity, mapq_cutoff))
         hit = len(keep_records)
 
         return hit, keep_records
@@ -571,7 +571,7 @@ class ReadsConnector:
             query_sequence,
             self.align_len_threshold,
             self.threshold_identity,
-            self.top,
+            self.mapq_cutoff,
         )
 
         if ret is None:

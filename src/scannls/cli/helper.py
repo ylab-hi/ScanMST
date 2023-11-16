@@ -488,7 +488,7 @@ def blat2chimeric_alignment(
     bwa: Aligner,
     mapq_cutoff: int,
     max_allowed_nm: int,
-    blat_ident_pct_cutoff: float = 0.95,
+    blat_ident_pct_cutoff: float = 0.99,
 ) -> str:
     """Create chimeric alignments from the alignments.
 
@@ -507,7 +507,7 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    keep_records = list(Aligner.filters(bwa.query(in_seq), blat_ident_pct_cutoff))
+    keep_records = list(Aligner.filters(bwa.query(in_seq), blat_ident_pct_cutoff, mapq_cutoff))
 
     if not keep_records:
         return chimeric_aln_str
@@ -589,7 +589,7 @@ def insertion2chimeric_alignment(
     read_strand: str,
     max_allowed_nm: int,
     blat: Aligner,
-    blat_ident_pct_cutoff: float = 0.95,
+    blat_ident_pct_cutoff: float = 0.99,
     top: int = 3,
     align_len_threshold: int = 50,
 ) -> tuple[str, str]:

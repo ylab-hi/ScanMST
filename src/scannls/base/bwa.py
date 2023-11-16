@@ -25,10 +25,13 @@ if TYPE_CHECKING:
 
 class Aligner:
     MIN_MEMORY = 8
-    MIN_MAPQ = 10
 
-    def __init__(self, reference=Path) -> None:
+    def __init__(
+        self, reference=Path, min_mapq: int = 20, threshold_identity: float = 0.99
+    ) -> None:
         self.reference = Path(reference)
+        self.min_mapq = min_mapq
+        self.threshold_identity = threshold_identity
         if not self.reference.exists():
             msg = f"{self.reference} not found."
             raise FileNotFoundError(msg)
@@ -40,7 +43,10 @@ class Aligner:
 
     def index_exist(self) -> bool:
         """Check if index exists."""
-        return all(self.reference.with_suffix(".fa" + ext).exists() for ext in [".amb", ".ann", ".bwt", ".pac", ".sa"])
+        return all(
+            self.reference.with_suffix(".fa" + ext).exists()
+            for ext in [".amb", ".ann", ".bwt", ".pac", ".sa"]
+        )
 
     def build_index(self) -> None:
         index_cmd = BwaIndexCommandline(infile=self.reference)
@@ -52,7 +58,9 @@ class Aligner:
         """Check if there is enough memory to build index."""
         return psutil.virtual_memory().available >> 30 > Aligner.MIN_MEMORY
 
-    def query(self, query: str, output: Path | None = None) -> Iterator[pysam.AlignedSegment]:
+    def query(
+        self, query: str, output: Path | None = None
+    ) -> Iterator[pysam.AlignedSegment]:
         if not self.index_exist():
             if not self.enough_memory():
                 msg = "Not enough memory to build index."
@@ -70,21 +78,25 @@ class Aligner:
         output.unlink()
 
     @staticmethod
-    def filters(records: Iterator[pysam.AlignedSegment], threshold_identity: float = 0.99) -> Iterator[pysam.AlignedSegment]:
+    def filters(
+        records: Iterator[pysam.AlignedSegment], threshold_identity, min_mapq
+    ) -> Iterator[pysam.AlignedSegment]:
         return (
             record
             for record in records
-            if Aligner.record_identity(record) > threshold_identity and record.mapping_quality > Aligner.MIN_MAPQ
+            if Aligner.record_identity(record) > threshold_identity
+            and record.mapping_quality > min_mapq
         )
 
     def query_insertion(
         self,
         query: str,
-        threshold_identity: float = 0.99,
         output: Path | None = None,
     ):
         records = self.query(query, output)
-        keep_records = list(Aligner.filters(records, threshold_identity))
+        keep_records = list(
+            Aligner.filters(records, self.threshold_identity, self.min_mapq)
+        )
 
         logger.trace(f"alginer: keep_records: {len(keep_records)}")
 
@@ -135,7 +147,9 @@ class Aligner:
         """Calculate alignment identity for every record in sam file."""
         nm = record.get_tag("NM") if record.has_tag("NM") else 0
         identity = (record.query_alignment_length - nm) / record.query_alignment_length
-        logger.trace(f"record_identity: {identity} record mapq: {record.mapping_quality}")
+        logger.trace(
+            f"record_identity: {identity} record mapq: {record.mapping_quality}"
+        )
         return identity
 
     @staticmethod
