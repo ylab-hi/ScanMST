@@ -488,7 +488,7 @@ def blat2chimeric_alignment(
     blat: Any,
     mapq_cutoff: int,
     max_allowed_nm: int,
-    blat_ident_pct_cutoff: float = 0.95,
+    blat_ident_pct_cutoff: float = 0.99,
 ) -> str:
     """Create chimeric alignments from the alignments.
 
@@ -584,7 +584,7 @@ def insertion2chimeric_alignment(
     read_strand: str,
     max_allowed_nm: int,
     blat: Any,
-    blat_ident_pct_cutoff: float = 0.95,
+    blat_ident_pct_cutoff: float = 0.99,
     top: int = 3,
     align_len_threshold: int = 50,
 ) -> tuple[str, str]:
