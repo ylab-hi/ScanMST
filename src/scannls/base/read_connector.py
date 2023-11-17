@@ -588,6 +588,8 @@ class ReadsConnector:
             self.top,
         )
 
+        self.logger.trace(f"start end read checking: {ret=}")
+
         if ret is None:
             return
 
@@ -603,10 +605,10 @@ class ReadsConnector:
             )
             # discard blat alignments mapped to uncommon chromosome and mitochondrion
             if "_" not in new_read.chrom and new_read.chrom not in {"chrM", "MT"}:
-                self.logger.trace(
-                    f"auxiliary alignment[1] is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
-                )
                 if read_type == "start":
+                    self.logger.trace(
+                        f"auxiliary alignment[1](start) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
+                    )
                     self.logger.debug(f"Insert {new_read=} to start of reads chain")
                     self.reads_chain.insert(0, new_read)
 
@@ -616,6 +618,9 @@ class ReadsConnector:
                         read.mode,
                     )
                 else:
+                    self.logger.trace(
+                        f"auxiliary alignment[1](end) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
+                    )
                     self.logger.debug(f"Add {read=} to end of reads chain")
                     self.reads_chain.append(new_read)
                     self.logger.debug(f"add {read=}, {new_read=} to mode dict")
