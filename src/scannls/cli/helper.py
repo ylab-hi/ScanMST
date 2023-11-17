@@ -634,7 +634,6 @@ def insertion2chimeric_alignment(
 
     flag, insertion_info = blat.query_insertion(
         query=insertion_seq,
-        threshold_identity=blat_ident_pct_cutoff,
     )
 
     chimeric_aln_str = ""
