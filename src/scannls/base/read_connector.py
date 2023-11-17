@@ -543,7 +543,7 @@ class ReadsConnector:
             return None
 
         records = self.bwa.query(query=query_sequence)
-        keep_records = list(self.bwa.filters(records, threshold_identity, mapq_cutoff))
+        keep_records = list(self.bwa.filters(records, threshold_identity, mapq_cutoff, len(query_sequence)))
         hit = len(keep_records)
 
         return hit, keep_records
