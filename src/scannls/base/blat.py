@@ -297,7 +297,7 @@ class Blat:
         hsps = hsps[:top]
         keep_hsp = []
         for hsp in hsps:
-            if (sum(hsp.hit_span_all) - hsp.mismatch_num) / len(
+            if (sum(hsp.hit_span_all) - hsp.mismatch_num - hsp.hit_gap_num) / len(
                 insert_seq,
             ) > threshold_identity:
                 keep_hsp.append(hsp)
@@ -394,9 +394,8 @@ class Blat:
 
         for hsp in hsps:
             if (
-                hsp.ident_pct / 100 >= threshold_identity
-                and hsp.query_span / in_seq_len >= threshold_identity
-            ):
+                sum(hsp.hit_span_all) - hsp.mismatch_num - hsp.hit_gap_num
+            ) / in_seq_len >= threshold_identity:
                 num_of_locations += 1
 
         if 4 <= num_of_locations <= 9:
