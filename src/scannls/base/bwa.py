@@ -79,12 +79,16 @@ class Aligner:
 
     @staticmethod
     def filters(
-        records: Iterator[pysam.AlignedSegment], threshold_identity, min_mapq, query_sequence_length
+        records: Iterator[pysam.AlignedSegment],
+        threshold_identity,
+        min_mapq,
+        query_sequence_length,
     ) -> Iterator[pysam.AlignedSegment]:
         return (
             record
             for record in records
-            if Aligner.record_identity(record, query_sequence_length) > threshold_identity
+            if Aligner.record_identity(record, query_sequence_length)
+            > threshold_identity
             and record.mapping_quality > min_mapq
         )
 
@@ -143,10 +147,33 @@ class Aligner:
         return output
 
     @staticmethod
+    def obtain_variants_stats(cigartuples, md_string) -> tuple[int, int]:
+        """Calculate alignment matched length and number of substitution in it."""
+        deletion_len = 0
+        substitution_len = 0
+        match_len = 0
+        for _operation, _len in cigartuples:
+            if _operation == 2:
+                deletion_len += _len
+            elif _operation == 0:
+                match_len += _len
+
+        sum_of_subs_dels = 0
+        for _letter in md_string:
+            if ord(_letter) >= 65 and ord(_letter) <= 90:
+                sum_of_subs_dels += 1
+
+        substitution_len = sum_of_subs_dels - deletion_len
+        return match_len, substitution_len
+
+    @staticmethod
     def record_identity(record, query_sequence_length):
         """Calculate alignment identity for every record in sam file."""
-        nm = record.get_tag("NM") if record.has_tag("NM") else 0
-        identity = (record.query_alignment_length - nm) / query_sequence_length
+        md_str = record.get_tag("MD") if record.has_tag("MD") else ""
+        match_length, substitution_len = Aligner.obtain_variants_stats(
+            record.cigartuples, md_str
+        )
+        identity = (match_length - substitution_len) / query_sequence_length
         logger.trace(
             f"record_identity: {identity} record mapq: {record.mapping_quality} record length: {record.query_length}"
         )
