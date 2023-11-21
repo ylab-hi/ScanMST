@@ -1123,6 +1123,9 @@ class NLPath:
                         )
 
                         nodes.append(read1_node)
+                        logger.trace(
+                            f"auxiliary alignment[4] is effective here. reads_name:{read1.query_name} query_sequence:{insertion_seq}"
+                        )
                         logger.trace(f"Add Insertion {insertion_node=} to path")
                         nodes.append(insertion_node)
 

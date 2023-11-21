@@ -37,6 +37,9 @@ if TYPE_CHECKING:
     from .arg import DefaultOptions
 
 
+sys.setrecursionlimit(10000)
+
+
 def get_writers(
     output_prefix: str,
     ref_path: str,

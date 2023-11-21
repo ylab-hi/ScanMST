@@ -95,6 +95,16 @@ class ReadsConnector:
             read1.mode.reversed() if read1.strand == read2.strand else read1.mode
         )
 
+    @staticmethod
+    def is_two_read_have_same_length_of_minimum_soft_clip(
+        read1: Read, read2: Read
+    ) -> bool:
+        """Check the minimum soft clipping length of two reads."""
+
+        return min(read1.lt_soft_len, read1.rt_soft_len) == min(
+            read2.lt_soft_len, read2.rt_soft_len
+        )
+
     def check_if_ms_match(
         self,
         query_seq: str,
@@ -394,7 +404,6 @@ class ReadsConnector:
 
         return False, start_read  # not match
 
-
     def test_2case(
         self,
         start_read: Read,
@@ -579,6 +588,8 @@ class ReadsConnector:
             self.top,
         )
 
+        self.logger.trace(f"start end read checking: {ret=}")
+
         if ret is None:
             return
 
@@ -595,6 +606,9 @@ class ReadsConnector:
             # discard blat alignments mapped to uncommon chromosome and mitochondrion
             if "_" not in new_read.chrom and new_read.chrom not in {"chrM", "MT"}:
                 if read_type == "start":
+                    self.logger.trace(
+                        f"auxiliary alignment[1](start) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
+                    )
                     self.logger.debug(f"Insert {new_read=} to start of reads chain")
                     self.reads_chain.insert(0, new_read)
 
@@ -604,7 +618,10 @@ class ReadsConnector:
                         read.mode,
                     )
                 else:
-                    self.logger.debug(f"Add {read=} to reads chain")
+                    self.logger.trace(
+                        f"auxiliary alignment[1](end) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
+                    )
+                    self.logger.debug(f"Add {read=} to end of reads chain")
                     self.reads_chain.append(new_read)
                     self.logger.debug(f"add {read=}, {new_read=} to mode dict")
                     self.read_pair_mode_dict[(read, new_read)] = (
@@ -645,6 +662,11 @@ class ReadsConnector:
                     return abs(read.rt_soft_len - start_read_match_sequence)
                 else:
                     return abs(read.lt_soft_len - start_read_match_sequence)
+        else:
+            return min(
+                abs(read.lt_soft_len - start_read_match_sequence),
+                abs(read.rt_soft_len - start_read_match_sequence),
+            )
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.
@@ -663,8 +685,8 @@ class ReadsConnector:
             self.aln_list,
             key=lambda x: min(x.lt_soft_len, x.rt_soft_len),
         )
-        start_nodes = temp_list[:1]
-        start_read = start_nodes[0]
+
+        start_read = temp_list[0]
 
         if start_read.lt_soft_len > start_read.rt_soft_len:
             start_read.adhocsms = (
@@ -679,15 +701,24 @@ class ReadsConnector:
                 start_read.rt_soft_len,
             )
 
-        # find end node and candiate nodes
-        candidate_and_end_nodes = temp_list[1:]
+        # start read and end read have the same minimum length of softclipping
+        if ReadsConnector.is_two_read_have_same_length_of_minimum_soft_clip(
+            temp_list[0], temp_list[1]
+        ):
+            end_read = temp_list[1]
+            self.candidate_nodes = temp_list[2:]
+            self.candidate_nodes.sort(
+                key=lambda x: self.__sort_candidate_reads_key(x, start_read),
+            )
+        else:
+            # find end node and candiate nodes
+            candidate_and_end_nodes = temp_list[1:]
+            candidate_and_end_nodes.sort(
+                key=lambda x: self.__sort_candidate_reads_key(x, start_read),
+            )
 
-        candidate_and_end_nodes.sort(
-            key=lambda x: self.__sort_candidate_reads_key(x, start_read),
-        )
-
-        self.candidate_nodes = candidate_and_end_nodes[:-1]
-        end_read = candidate_and_end_nodes[-1]
+            self.candidate_nodes = candidate_and_end_nodes[:-1]
+            end_read = candidate_and_end_nodes[-1]
 
         start_read.adhocseq = start_read.query_sequence
 
@@ -721,7 +752,7 @@ class ReadsConnector:
                     self.increment_index()
 
                 if is_connected and len(self.candidate_nodes) + 1 == candidate_read_len:
-                    self._double_check_for_start_end_read(start_nodes[0], "start")
+                    self._double_check_for_start_end_read(temp_list[0], "start")
 
             ReadsConnector.init_read_mode(start_read, end_read)
             is_connected, start_read = self.test_2case(
