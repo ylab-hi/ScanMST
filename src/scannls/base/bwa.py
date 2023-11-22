@@ -152,16 +152,19 @@ class Aligner:
         deletion_len = 0
         substitution_len = 0
         match_len = 0
-        for _operation, _len in cigartuples:
-            if _operation == 2:
-                deletion_len += _len
-            elif _operation == 0:
-                match_len += _len
+        # unmapped reads does not have CIGAR
+        if cigartuples:
+            for _operation, _len in cigartuples:
+                if _operation == 2:
+                    deletion_len += _len
+                elif _operation == 0:
+                    match_len += _len
 
         sum_of_subs_dels = 0
-        for _letter in md_string:
-            if ord(_letter) >= 65 and ord(_letter) <= 90:
-                sum_of_subs_dels += 1
+        if md_string:
+            for _letter in md_string:
+                if ord(_letter) >= 65 and ord(_letter) <= 90:
+                    sum_of_subs_dels += 1
 
         substitution_len = sum_of_subs_dels - deletion_len
         return match_len, substitution_len
