@@ -26,9 +26,7 @@ if TYPE_CHECKING:
 class Aligner:
     MIN_MEMORY = 8
 
-    def __init__(
-        self, reference=Path, min_mapq: int = 20, threshold_identity: float = 0.99
-    ) -> None:
+    def __init__(self, reference=Path, min_mapq: int = 20, threshold_identity: float = 0.99) -> None:
         self.reference = Path(reference)
         self.min_mapq = min_mapq
         self.threshold_identity = threshold_identity
@@ -43,10 +41,7 @@ class Aligner:
 
     def index_exist(self) -> bool:
         """Check if index exists."""
-        return all(
-            self.reference.with_suffix(".fa" + ext).exists()
-            for ext in [".amb", ".ann", ".bwt", ".pac", ".sa"]
-        )
+        return all(self.reference.with_suffix(".fa" + ext).exists() for ext in [".amb", ".ann", ".bwt", ".pac", ".sa"])
 
     def build_index(self) -> None:
         index_cmd = BwaIndexCommandline(infile=self.reference)
@@ -58,9 +53,7 @@ class Aligner:
         """Check if there is enough memory to build index."""
         return psutil.virtual_memory().available >> 30 > Aligner.MIN_MEMORY
 
-    def query(
-        self, query: str, output: Path | None = None
-    ) -> Iterator[pysam.AlignedSegment]:
+    def query(self, query: str, output: Path | None = None) -> Iterator[pysam.AlignedSegment]:
         if not self.index_exist():
             if not self.enough_memory():
                 msg = "Not enough memory to build index."
@@ -87,9 +80,7 @@ class Aligner:
         return (
             record
             for record in records
-            if Aligner.record_identity(record, query_sequence_length)
-            > threshold_identity
-            and record.mapping_quality > min_mapq
+            if Aligner.record_identity(record, query_sequence_length) > threshold_identity and record.mapping_quality > min_mapq
         )
 
     def query_insertion(
@@ -98,9 +89,7 @@ class Aligner:
         output: Path | None = None,
     ):
         records = self.query(query, output)
-        keep_records = list(
-            Aligner.filters(records, self.threshold_identity, self.min_mapq, len(query))
-        )
+        keep_records = list(Aligner.filters(records, self.threshold_identity, self.min_mapq, len(query)))
 
         logger.trace(f"alginer: keep_records: {len(keep_records)}")
 
@@ -173,13 +162,9 @@ class Aligner:
     def record_identity(record, query_sequence_length):
         """Calculate alignment identity for every record in sam file."""
         md_str = record.get_tag("MD") if record.has_tag("MD") else ""
-        match_length, substitution_len = Aligner.obtain_variants_stats(
-            record.cigartuples, md_str
-        )
+        match_length, substitution_len = Aligner.obtain_variants_stats(record.cigartuples, md_str)
         identity = (match_length - substitution_len) / query_sequence_length
-        logger.trace(
-            f"record_identity: {identity} record mapq: {record.mapping_quality} record length: {record.query_length}"
-        )
+        logger.trace(f"record_identity: {identity} record mapq: {record.mapping_quality} record length: {record.query_length}")
         return identity
 
     @staticmethod
