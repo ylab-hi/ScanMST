@@ -1,8 +1,7 @@
-"""Module for BLAT.
+"""Module for Bwa.
 
 @Filename:    bwa.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        12/15/23 2:00 PM
 """
 from __future__ import annotations
@@ -12,18 +11,20 @@ from pathlib import Path
 from subprocess import SubprocessError
 from typing import TYPE_CHECKING
 
-import psutil
-import pysam
 from Bio.Sequencing.Applications import BwaIndexCommandline, BwaMemCommandline
 from loguru import logger
 
-from .basic_class import Insertion, NovelInsertion
+from scannls import Insertion, NovelInsertion
+
+from .aligner import Aligner
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    import pysam
 
-class Aligner:
+
+class Bwa(Aligner):
     MIN_MEMORY = 8
 
     def __init__(self, reference=Path, min_mapq: int = 20, threshold_identity: float = 0.99) -> None:
@@ -48,14 +49,9 @@ class Aligner:
         logger.trace(f"build index: {index_cmd}")
         index_cmd()
 
-    @staticmethod
-    def enough_memory() -> bool:
-        """Check if there is enough memory to build index."""
-        return psutil.virtual_memory().available >> 30 > Aligner.MIN_MEMORY
-
     def query(self, query: str, output: Path | None = None) -> Iterator[pysam.AlignedSegment]:
         if not self.index_exist():
-            if not self.enough_memory():
+            if not self.enough_memory(Bwa.MIN_MEMORY):
                 msg = "Not enough memory to build index."
                 raise Exception(msg)
 
@@ -80,7 +76,7 @@ class Aligner:
         return (
             record
             for record in records
-            if Aligner.record_identity(record, query_sequence_length) > threshold_identity and record.mapping_quality > min_mapq
+            if Bwa.record_identity(record, query_sequence_length) > threshold_identity and record.mapping_quality > min_mapq
         )
 
     def query_insertion(
@@ -89,7 +85,7 @@ class Aligner:
         output: Path | None = None,
     ):
         records = self.query(query, output)
-        keep_records = list(Aligner.filters(records, self.threshold_identity, self.min_mapq, len(query)))
+        keep_records = list(Bwa.filters(records, self.threshold_identity, self.min_mapq, len(query)))
 
         logger.trace(f"alginer: keep_records: {len(keep_records)}")
 
@@ -134,44 +130,3 @@ class Aligner:
         in_fastq.unlink()
 
         return output
-
-    @staticmethod
-    def obtain_variants_stats(cigartuples, md_string) -> tuple[int, int]:
-        """Calculate alignment matched length and number of substitution in it."""
-        deletion_len = 0
-        substitution_len = 0
-        match_len = 0
-        # unmapped reads does not have CIGAR
-        if cigartuples:
-            for _operation, _len in cigartuples:
-                if _operation == 2:
-                    deletion_len += _len
-                elif _operation == 0:
-                    match_len += _len
-
-        sum_of_subs_dels = 0
-        if md_string:
-            for _letter in md_string:
-                if ord(_letter) >= 65 and ord(_letter) <= 90:
-                    sum_of_subs_dels += 1
-
-        substitution_len = sum_of_subs_dels - deletion_len
-        return match_len, substitution_len
-
-    @staticmethod
-    def record_identity(record, query_sequence_length):
-        """Calculate alignment identity for every record in sam file."""
-        md_str = record.get_tag("MD") if record.has_tag("MD") else ""
-        match_length, substitution_len = Aligner.obtain_variants_stats(record.cigartuples, md_str)
-        identity = (match_length - substitution_len) / query_sequence_length
-        logger.trace(f"record_identity: {identity} record mapq: {record.mapping_quality} record length: {record.query_length}")
-        return identity
-
-    @staticmethod
-    def alignment_records(sam_file: Path | str):
-        """Calculate alignment identity for every record in sam file."""
-        if isinstance(sam_file, str):
-            sam_file = Path(sam_file)
-
-        with sam_file.open() as sam:
-            yield from pysam.AlignmentFile(sam)
