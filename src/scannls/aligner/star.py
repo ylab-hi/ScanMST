@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import secrets
+import shlex
+import subprocess
 from pathlib import Path
+from subprocess import SubprocessError
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from .aligner import Aligner
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    import pysam
 
 
 class Star(Aligner):
@@ -31,7 +40,7 @@ class Star(Aligner):
     def build_index(self):
         pass
 
-    def _query(self, query: str, output: Path):
+    def _query(self, query: str) -> Path:
         ran_id = secrets.token_hex(8)
         in_fastq = self.reference.parent / f"{ran_id}.fq"
         with in_fastq.open("w") as fastq_file:
@@ -40,16 +49,32 @@ class Star(Aligner):
             fastq_file.write("+\n")
             fastq_file.write("I" * len(query) + "\n")
 
-        if output is None:
-            output = self.reference.parent / f"{ran_id}.sam"
+        output = self.reference.parent / f"{ran_id}.bam"
 
-        mem_cmd = BwaMemCommandline(reference=self.reference, read_file1=in_fastq)
+        cmd = self.MAPPING_TEMPLATE(thread=self.threads, genomeDir=self.reference, readFilesIn=in_fastq, outFileNamePrefix=output)
 
-        logger.trace(f"bwa mem: {mem_cmd}")
-        mem_cmd(stdout=output.as_posix())
+        logger.trace(f"alinger cmd: {cmd}")
+        result = subprocess.check_output(shlex.split(cmd))
+        with output.open("wb") as output_file:
+            output_file.write(result)
         in_fastq.unlink()
+        return output
 
-    def query(self, query: str, output: Path | None = None) -> Iterator[pysam.AlignedSegment]:
-        pass
+    def query(self, query: str) -> Iterator[pysam.AlignedSegment]:
+        if not self.index_exist():
+            if not self.enough_memory(self.MIN_MEMORY):
+                msg = "Not enough memory to build index."
+                raise Exception(msg)
+
+            try:
+                # Build index
+                self.build_index()
+            except SubprocessError as e:
+                msg = f"Failed to build index: {e}"
+                raise Exception(msg) from e
+
+        output = self._query(query)
+        yield from self.alignment_records(output)
+        output.unlink()
 
     __str__ = __repr__
