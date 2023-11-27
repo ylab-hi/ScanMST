@@ -190,17 +190,17 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
-    logger.info(f"{options.input=} {options.closed=}")
+    logger.info(f"{options.input=} {options.blat_closed=}")
     logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
     if options.aligner == "blat":
         # find 2bit file
-        if options.two_bit is None:
+        if options.blat_two_bit is None:
             options.two_bit = find_2bit_file(options.ref)
-        blat = Blat(options.two_bit, options.port, tmp_dir.name)
+        blat = Blat(options.blat_two_bit, options.blat_port, tmp_dir.name)
         # delay random seconds to preventing from starting multiple servers simultaneously
-        if options.sleep:
+        if options.blat_sleep:
             sleep(options.input)
         blat.start_server()
         blat_info = blat.log_file_path, blat.is_start_server
@@ -211,8 +211,8 @@ def cli(options: argparse.Namespace | DefaultOptions):
     motif_required = not options.noncanonical
     try:
         intact_nlpaths, in_bam_header, avg_cov = scanbam_run(
-            two_bit=options.two_bit,
-            port=options.port,
+            blat_two_bit=options.blat_two_bit,
+            blat_port=options.blat_port,
             tmp_dir=tmp_dir.name,
             blat_info=blat_info,
             in_bam_path=options.input,
@@ -268,12 +268,12 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
     except KeyboardInterrupt:
         logger.warning("KeyboardInterrupt")
-        if options.aligner == "blat" and blat and options.closed and not blat.is_stop_server:
+        if options.aligner == "blat" and blat and options.blat_closed and not blat.is_stop_server:
             blat.stop_server()
             tmp_dir.cleanup()
         raise
     finally:
         logger.info("Program ends")
-        if options.aligner == "blat" and blat and options.closed and not blat.is_stop_server:
+        if options.aligner == "blat" and blat and options.blat_closed and not blat.is_stop_server:
             blat.stop_server()
             tmp_dir.cleanup()

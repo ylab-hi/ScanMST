@@ -16,21 +16,21 @@ class DefaultOptions:
     ref: str
     gtf: str
     output: str
-    two_bit: str
+    blat_two_bit: str
+    blat_closed: bool = True
+    blat_sleep: bool = True
+    blat_port: int = 88888
     aligner: tuple[str, str] = ("star", "blat")
     support_reads: int = 1
     splice_bin: int = 5
     mapq: int = 20
     noncanonical: bool = False
-    closed: bool = True
-    sleep: bool = True
     bound: bool = True
     graph: bool = False
     log: str = "warning"
     species: str = "human"
     species_choices: tuple[str, str] = ("human", "mouse")
     parallel: int = 1
-    port: int = 88888
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 50
     ident_cutoff: float = 0.99
@@ -191,12 +191,35 @@ def parse_args() -> argparse.ArgumentParser:
         help="aligner to use for mapping reads (default: %(default)s)",
     )
     parser.add_argument(
-        "--2bit",
+        "--blat-2bit",
         action="store",
-        dest="two_bit",
-        help="reference genome in 2bit format",
+        dest="blat_two_bit",
+        help="reference genome in 2bit format for blat aligner",
+        required=False,
+    )
+    parser.add_argument(
+        "--blat-nclosed",
+        action="store_false",
+        dest="closed",
+        default=DefaultOptions.blat_closed,
+        help="close BLAT server when job has done (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--blat-nsleep",
+        action="store_false",
+        dest="sleep",
+        default=DefaultOptions.blat_sleep,
+        help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
 
+    parser.add_argument(
+        "--blat-port",
+        action="store",
+        dest="port",
+        type=int,
+        help="port for BLAT server (default: %(default)s)",
+        default=DefaultOptions.blat_port,
+    )
     parser.add_argument(
         "--species",
         action="store",
@@ -236,20 +259,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.noncanonical,
         help="considering Non canonical spliced sites  (default: %(default)s)",
     )
-    parser.add_argument(
-        "--nclosed",
-        action="store_false",
-        dest="closed",
-        default=DefaultOptions.closed,
-        help="close BLAT server when job has done (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--nsleep",
-        action="store_false",
-        dest="sleep",
-        default=DefaultOptions.sleep,
-        help="if sleep randomly before starting BLAT server (default: %(default)s)",
-    )
+
     parser.add_argument(
         "--graph",
         action="store_true",
@@ -264,14 +274,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.bound,
         help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
     )
-    parser.add_argument(
-        "--port",
-        action="store",
-        dest="port",
-        type=int,
-        help="port for BLAT server (default: %(default)s)",
-        default=DefaultOptions.port,
-    )
+
     parser.add_argument(
         "--max-allowed-nm",
         action="store",

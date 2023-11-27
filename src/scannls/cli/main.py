@@ -52,12 +52,10 @@ class BamScanner:
         ref_genome,
         gtf,
         splice_in,
-        aligner,
         logger,
         motif_required,
         max_allowed_nm,
         min_soft_seg_len,
-        aligner_ident_pct_cutoff,
         long_indel_length,
         substitutions_num,
         substitutions_fraction,
@@ -73,12 +71,10 @@ class BamScanner:
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
-        self.aligner = aligner
         self.logger = logger
         self.motif_required = motif_required
         self.max_allowed_nm = max_allowed_nm
         self.min_soft_seg_len = min_soft_seg_len
-        self.aligner_ident_pct_cutoff = aligner_ident_pct_cutoff
 
         self.pat_left_s = re.compile(r"^(\d+)S")
         self.pat_right_s = re.compile(r"(\d+)S$")
@@ -270,8 +266,8 @@ def _scan_bam_helper(
     lock,
     *,
     running_mode,
-    two_bit,
-    port,
+    blat_two_bit,
+    blat_port,
     tmp_dir,
     blat_info,
     in_bam_path,
@@ -314,8 +310,8 @@ def _scan_bam_helper(
     if blat_info is not None:
         blat_log_file, blat_is_start_server = blat_info
         aligner = Blat(
-            two_bit,
-            port,
+            blat_two_bit,
+            blat_port,
             tmp_dir,
             fix_log_file=blat_log_file,
             is_start_server=blat_is_start_server,
@@ -572,8 +568,8 @@ def _scan_bam_helper(
 
 
 def scanbam_run(
-    two_bit,
-    port,
+    blat_two_bit,
+    blat_port,
     tmp_dir,
     blat_info,
     in_bam_path,
@@ -604,12 +600,10 @@ def scanbam_run(
         ref_genome=Path(ref_genome),
         gtf=Path(gtf),
         splice_in=splice_bin,
-        aligner=blat,
         logger=logger,
         motif_required=motif_required,
         max_allowed_nm=max_allowed_nm,
         min_soft_seg_len=min_soft_seg_len,
-        aligner_ident_pct_cutoff=blat_ident_pct_cutoff,
         long_indel_length=long_indel_length,
         substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,
