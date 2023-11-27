@@ -4,10 +4,11 @@ import secrets
 import shlex
 import subprocess
 from pathlib import Path
-from subprocess import SubprocessError
 from typing import TYPE_CHECKING
 
 from loguru import logger
+
+from scannls import Insertion, NovelInsertion
 
 from .aligner import Aligner
 
@@ -42,6 +43,8 @@ class Star(Aligner):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.reference=})"
 
+    __str__ = __repr__
+
     def index_exist(self):
         pass
 
@@ -70,19 +73,41 @@ class Star(Aligner):
 
     def query(self, query: str) -> Iterator[pysam.AlignedSegment]:
         if not self.index_exist():
-            if not self.enough_memory(self.MIN_MEMORY):
-                msg = "Not enough memory to build index."
-                raise Exception(msg)
-
-            try:
-                # Build index
-                self.build_index()
-            except SubprocessError as e:
-                msg = f"Failed to build index: {e}"
-                raise Exception(msg) from e
+            url = "https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf"
+            msg = f"Index does not exist. Please reference {url} to build index first"
+            raise Exception(msg)
 
         output = self._query(query)
         yield from self.alignment_records(output)
         output.unlink()
 
-    __str__ = __repr__
+    def query_insertion(
+        self,
+        query: str,
+    ):
+        records = self.query(query)
+        keep_records = list(self.filters(records, self.threshold_identity, self.min_mapq, len(query)))
+
+        logger.trace(f"alginer: keep_records: {len(keep_records)}")
+
+        if not keep_records:
+            return False, NovelInsertion(hit_num=0, query_sequence=query)
+
+        if len(keep_records) == 1:
+            top_record = keep_records[0]
+            return True, Insertion(
+                hit_num=1,
+                chrom=top_record.reference_name,
+                ref_start=top_record.reference_start,
+                strand="+" if top_record.is_reverse else "-",
+                cigarstring=top_record.cigarstring,
+                mapq=top_record.mapping_quality,
+                nm=top_record.get_tag("NM") if top_record.has_tag("NM") else 0,
+                query_sequence=query,
+                query_qualities=top_record.query_qualities,
+            )
+
+        return False, NovelInsertion(
+            hit_num=len(keep_records),
+            query_sequence=query,
+        )
