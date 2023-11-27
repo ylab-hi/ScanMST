@@ -14,14 +14,12 @@ from scannls.utils import cigar_validity
 from .basic import MappingMode, Strand
 from .basic_class import reverse_complement
 from .basic_read import Read
-from .blat import Blat
 
 
 class ReadsConnector:
     """ReadsConnector class is used to connect the reads and identify the mode of the reads.
 
     :param read_list: the list of the alignment
-    :param blat: :class: `class.Blat` for the BLAT search
     :param logger: :class: `loguru.logger` for logging
 
     :Example:
@@ -40,7 +38,7 @@ class ReadsConnector:
     def __init__(
         self,
         read_list: list[Read],
-        blat: Blat,
+        aligner,
         logger: LoggerType,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
@@ -52,7 +50,7 @@ class ReadsConnector:
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = read_list
         self.logger = logger
-        self.blat = blat
+        self.aligner = aligner
         self.index = 0
         self.num_added_reads = 0
 
@@ -447,7 +445,7 @@ class ReadsConnector:
     ) -> Read:
         """Double check creat new read and calculate sms."""
         mapq = 60
-        chrom, position, strand, cigar_str, num_of_mismatch = self.blat.psl2sam(
+        chrom, position, strand, cigar_str, num_of_mismatch = self.aligner.psl2sam(
             hsp,
             len(query_seq),
         )
@@ -499,13 +497,13 @@ class ReadsConnector:
         if len(query_sequence) < align_len_threshold:
             return None
 
-        out_blat = self.blat.query(in_seq=query_sequence)
+        out_blat = self.aligner.query(in_seq=query_sequence)
         try:
             blat_result = SearchIO.read(out_blat, "blat-psl")
         except ValueError:
             return None
 
-        hit, keep_hsp = self.blat._query_insertion(
+        hit, keep_hsp = self.aligner._query_insertion(
             blat_result,
             query_sequence,
             threshold_identity,
@@ -722,13 +720,12 @@ def detect_read_read_connections_from_cigar(
     read,
     mapq_cutoff: int,
     max_allowed_nm: int,
-    blat: Blat,
+    aligner,
     logger: LoggerType,
 ):
     """Detecting read-read connections with chimeric alignments CIGAR string.
 
     :param logger:
-    :param blat:
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: NM cutoff
     :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) =>
@@ -932,7 +929,7 @@ def detect_read_read_connections_from_cigar(
     logger.debug(f"{len(chimeric_aln_list)} {chimeric_aln_list=}")
     read_connector = ReadsConnector(
         read_list=chimeric_aln_list,
-        blat=blat,
+        aligner=aligner,
         logger=logger,
     )
 

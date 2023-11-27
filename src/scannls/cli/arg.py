@@ -17,6 +17,7 @@ class DefaultOptions:
     gtf: str
     output: str
     two_bit: str
+    aligner: tuple[str, str] = ("star", "blat")
     support_reads: int = 1
     splice_bin: int = 5
     mapq: int = 20
@@ -180,6 +181,14 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         default=DefaultOptions.parallel,
         help="set working mode in processor (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--aligner",
+        dest="aligner",
+        type=str,
+        default="blat",
+        choices=DefaultOptions.aligner,
+        help="aligner to use for mapping reads (default: %(default)s)",
     )
     parser.add_argument(
         "--2bit",

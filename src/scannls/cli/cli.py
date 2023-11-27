@@ -194,15 +194,19 @@ def cli(options: argparse.Namespace | DefaultOptions):
     logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
-    # find 2bit file
-    if options.two_bit is None:
-        options.two_bit = find_2bit_file(options.ref)
-    blat = Blat(options.two_bit, options.port, tmp_dir.name)
-    # delay random seconds to preventing from starting multiple servers simultaneously
-    if options.sleep:
-        sleep(options.input)
-    blat.start_server()
-    blat_info = blat.log_file_path, blat.is_start_server
+    if options.aligner == "blat":
+        # find 2bit file
+        if options.two_bit is None:
+            options.two_bit = find_2bit_file(options.ref)
+        blat = Blat(options.two_bit, options.port, tmp_dir.name)
+        # delay random seconds to preventing from starting multiple servers simultaneously
+        if options.sleep:
+            sleep(options.input)
+        blat.start_server()
+        blat_info = blat.log_file_path, blat.is_start_server
+    else:
+        blat_info, blat = None, None
+
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
@@ -263,13 +267,13 @@ def cli(options: argparse.Namespace | DefaultOptions):
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
     except KeyboardInterrupt:
-        if options.closed and not blat.is_stop_server:
-            logger.warning("KeyboardInterrupt")
+        logger.warning("KeyboardInterrupt")
+        if options.aligner == "blat" and blat and options.closed and not blat.is_stop_server:
             blat.stop_server()
             tmp_dir.cleanup()
         raise
     finally:
-        if options.closed and not blat.is_stop_server:
-            logger.info("Program ends")
+        logger.info("Program ends")
+        if options.aligner == "blat" and blat and options.closed and not blat.is_stop_server:
             blat.stop_server()
             tmp_dir.cleanup()

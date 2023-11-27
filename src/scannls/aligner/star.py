@@ -20,8 +20,16 @@ if TYPE_CHECKING:
 class Star(Aligner):
     MIN_MEMORY = 20
 
-    INDEX_TEMPLATE = "STAR --runThreadN {thread}  --runMode genomeGenerate --genomeDir {genomeDir} --genomeFastaFiles {genomeFastaFiles} --sjdbGTFfile {GTFfile}  ".format
-    MAPPING_TEMPLATE = "STAR --runThreadN {thread} --genomeDir {genomeDir} --readFilesIn {readFilesIn} --outFileNamePrefix {outFileNamePrefix} --outSAMtype BAM SortedByCoordinate --outSAMunmapped Within --outSAMattributes NH HI AS NM MD".format
+    INDEX_TEMPLATE = (
+        "STAR --runThreadN {thread}  --runMode genomeGenerate --genomeDir {genomeDir} "
+        "--genomeFastaFiles {genomeFastaFiles} --sjdbGTFfile {GTFfile}  "
+    ).format
+
+    MAPPING_TEMPLATE = (
+        "STAR --runThreadN {thread} --genomeDir {genomeDir} --readFilesIn {readFilesIn}"
+        "--outFileNamePrefix {outFileNamePrefix} --outSAMtype BAM SortedByCoordinate "
+        " --outSAMunmapped Within --outSAMattributes NH HI AS NM MD"
+    ).format
 
     def __init__(self, reference=Path, gtf=Path, threads: int = 2, min_mapq: int = 20, threshold_identity: float = 0.99) -> None:
         super().__init__()

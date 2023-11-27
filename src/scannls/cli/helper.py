@@ -485,10 +485,10 @@ def blat2chimeric_alignment(
     read_length: int,
     read_strand: str,
     read_mode: int,
-    blat: Any,
+    aligner,
     mapq_cutoff: int,
     max_allowed_nm: int,
-    blat_ident_pct_cutoff: float = 0.99,
+    aligner_ident_pct_cutoff: float = 0.99,
 ) -> str:
     """Create chimeric alignments from the alignments.
 
@@ -507,11 +507,11 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    top_hsp, __mapq = blat.fetch_mapq(in_seq, blat_ident_pct_cutoff)
+    top_hsp, __mapq = aligner.fetch_mapq(in_seq, aligner_ident_pct_cutoff)
     if top_hsp is None:
         return ""
-    if top_hsp.ident_pct / 100 >= blat_ident_pct_cutoff and top_hsp.query_span / in_seq_len >= blat_ident_pct_cutoff:
-        chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = blat.psl2sam(
+    if top_hsp.ident_pct / 100 >= aligner_ident_pct_cutoff and top_hsp.query_span / in_seq_len >= aligner_ident_pct_cutoff:
+        chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = aligner.psl2sam(
             top_hsp,
             in_seq_len,
         )
@@ -577,14 +577,14 @@ def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
 
 
 def insertion2chimeric_alignment(
-    read: pysam.libcalignedsegment.AlignedSegment,
+    read: pysam.AlignedSegment,
     insertion_ref_pos: int,
     insertion_seq: str,
     read_length: int,
     read_strand: str,
     max_allowed_nm: int,
-    blat: Any,
-    blat_ident_pct_cutoff: float = 0.99,
+    aligner,
+    aligner_ident_pct_cutoff: float = 0.99,
     top: int = 3,
     align_len_threshold: int = 50,
 ) -> tuple[str, str]:
@@ -598,8 +598,6 @@ def insertion2chimeric_alignment(
     :param read_length: the length of the aligned read
     :param read_strand: the strand of the aligned read (-/+)
     :param max_allowed_nm: the maximum allowed NM
-    :param blat: instantiated blat object
-    :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :param top: the top number of the alignments
     :param align_len_threshold: the threshold of the insertion sequence length
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
@@ -627,9 +625,9 @@ def insertion2chimeric_alignment(
         right_cigar_str,
     )
 
-    flag, insertion_info = blat.query_insertion(
+    flag, insertion_info = aligner.query_insertion(
         insert_seq=insertion_seq,
-        threshold_identity=blat_ident_pct_cutoff,
+        threshold_identity=aligner_ident_pct_cutoff,
         top=top,
         align_len_threshold=align_len_threshold,
     )
@@ -639,32 +637,32 @@ def insertion2chimeric_alignment(
 
     if flag:
         # BLAT unique HSP
-        chrom_blat = insertion_info.chrom
-        strand_blat = str(insertion_info.strand)
-        pos_blat = insertion_info.ref_start
-        ref_end_blat = insertion_info.ref_end
-        cigar_blat = insertion_info.cigarstring
-        mapq_blat = insertion_info.mapq
-        nm_blat = insertion_info.nm
+        chrom_aligner = insertion_info.chrom
+        strand_aligner = str(insertion_info.strand)
+        pos_aligner = insertion_info.ref_start
+        ref_end_aligner = insertion_info.ref_end
+        cigar_aligner = insertion_info.cigarstring
+        mapq_aligner = insertion_info.mapq
+        nm_aligner = insertion_info.nm
         # Insertion sequence BLAT HSP and original insertion have the same chrom and reference start position
         if (
-            chrom_blat == read.reference_name
-            and strand_blat == read_strand
-            and (abs(pos_blat - insertion_ref_pos) <= 10 and ref_end_blat <= read.reference_end)
-            or (abs(ref_end_blat - insertion_ref_pos) <= 10 and pos_blat >= read.reference_start)
+            chrom_aligner == read.reference_name
+            and strand_aligner == read_strand
+            and (abs(pos_aligner - insertion_ref_pos) <= 10 and ref_end_aligner <= read.reference_end)
+            or (abs(ref_end_aligner - insertion_ref_pos) <= 10 and pos_aligner >= read.reference_start)
         ):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
             # MS
-            cigar_sa = f"{left_cigar_str}{cigar_blat}{read_length - left_cigar_read_seg_len - insertion_seq_len}S"
+            cigar_sa = f"{left_cigar_str}{cigar_aligner}{read_length - left_cigar_read_seg_len - insertion_seq_len}S"
 
             valid_cigar_ra = cigar_validity(cigar_ra)
             valid_cigar_sa = cigar_validity(cigar_sa)
 
-            nm_sa = nm_read - insertion_seq_len + nm_blat
+            nm_sa = nm_read - insertion_seq_len + nm_aligner
             if nm_sa < max_allowed_nm:
                 chimeric_aln_str = (
-                    f"{chrom_blat},{original_ref_start + 1}," f"{read_strand},{valid_cigar_sa},{mapq_blat},{nm_sa};"
+                    f"{chrom_aligner},{original_ref_start + 1}," f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
                 )
                 primary_aln_cigarstring = valid_cigar_ra
 
@@ -1529,8 +1527,8 @@ def get_transcriptome_length(species: str) -> int:
     :param species:  species name
     :return: reference transcriptome size.
     """
-    blat_path = Path(sys.modules[__PACKAGE_NAME__].__file__).parent / "blat"
+    path = Path(sys.modules[__PACKAGE_NAME__].__file__).parent / "blat"
 
-    path = blat_path / "transcriptome_length.yaml"
+    path = path / "transcriptome_length.yaml"
     transcript_length_dict = yaml.safe_load(path.open())
     return transcript_length_dict["species"][species]

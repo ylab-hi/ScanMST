@@ -52,12 +52,12 @@ class BamScanner:
         ref_genome,
         gtf,
         splice_in,
-        blat,
+        aligner,
         logger,
         motif_required,
         max_allowed_nm,
         min_soft_seg_len,
-        blat_ident_pct_cutoff,
+        aligner_ident_pct_cutoff,
         long_indel_length,
         substitutions_num,
         substitutions_fraction,
@@ -73,12 +73,12 @@ class BamScanner:
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
-        self.blat = blat
+        self.aligner = aligner
         self.logger = logger
         self.motif_required = motif_required
         self.max_allowed_nm = max_allowed_nm
         self.min_soft_seg_len = min_soft_seg_len
-        self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
+        self.aligner_ident_pct_cutoff = aligner_ident_pct_cutoff
 
         self.pat_left_s = re.compile(r"^(\d+)S")
         self.pat_right_s = re.compile(r"(\d+)S$")
@@ -195,13 +195,12 @@ def detect_sv_from_cigar(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    blat: Blat,
+    aligner,
     logger: LoggerType,
 ):
     """Detect SV from cigar string.
 
     :param logger: logger for logging
-    :param blat: `class.Blat`
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: NM cutoff
@@ -221,7 +220,7 @@ def detect_sv_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
         max_allowed_nm=max_allowed_nm,
-        blat=blat,
+        aligner=aligner,
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
@@ -312,15 +311,16 @@ def _scan_bam_helper(
 
     logger.trace(f"{identified_key=} start")
 
-    blat_log_file, blat_is_start_server = blat_info
-    blat = Blat(
-        two_bit,
-        port,
-        tmp_dir,
-        fix_log_file=blat_log_file,
-        is_start_server=blat_is_start_server,
-        lock=lock,
-    )
+    if blat_info is not None:
+        blat_log_file, blat_is_start_server = blat_info
+        aligner = Blat(
+            two_bit,
+            port,
+            tmp_dir,
+            fix_log_file=blat_log_file,
+            is_start_server=blat_is_start_server,
+            lock=lock,
+        )
 
     nls_src_forms_list = []
 
@@ -401,7 +401,7 @@ def _scan_bam_helper(
                         read_length,
                         read_strand,
                         read_mode,
-                        blat,
+                        aligner,
                         mapq_cutoff,
                         max_allowed_nm,
                         blat_ident_pct_cutoff,
@@ -433,7 +433,7 @@ def _scan_bam_helper(
                         read_length,
                         read_strand,
                         max_allowed_nm,
-                        blat,
+                        aligner,
                         blat_ident_pct_cutoff,
                     )
 
@@ -487,7 +487,7 @@ def _scan_bam_helper(
                         cvg=cvg,
                         gene_iv=gene_iv,
                         motif_required=motif_required,
-                        blat=blat,
+                        aligner=aligner,
                         logger=logger,  # type: ignore
                     ):
                         event_lists, read_chains, num_added_reads = ret
@@ -540,7 +540,7 @@ def _scan_bam_helper(
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            blat=blat,
+                            aligner=aligner,
                         )
 
                         nlpath.squeeze()
@@ -604,12 +604,12 @@ def scanbam_run(
         ref_genome=Path(ref_genome),
         gtf=Path(gtf),
         splice_in=splice_bin,
-        blat=blat,
+        aligner=blat,
         logger=logger,
         motif_required=motif_required,
         max_allowed_nm=max_allowed_nm,
         min_soft_seg_len=min_soft_seg_len,
-        blat_ident_pct_cutoff=blat_ident_pct_cutoff,
+        aligner_ident_pct_cutoff=blat_ident_pct_cutoff,
         long_indel_length=long_indel_length,
         substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,
