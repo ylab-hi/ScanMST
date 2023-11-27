@@ -275,7 +275,7 @@ class Blat:
                 self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
                 out_psl = self._query(in_seq, mini_identity)
             except subprocess.CalledProcessError:
-                time.sleep(60)  # wait for other's service to be ready
+                time.sleep(60 * 2)  # wait for other's service to be ready
             else:
                 return out_psl
 
