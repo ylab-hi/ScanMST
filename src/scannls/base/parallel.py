@@ -11,7 +11,7 @@ from collections.abc import Callable
 from concurrent import futures
 from typing import Any
 
-from scannls.type import LoggerType
+from scannls.mtype import LoggerType
 
 
 class ParallelWorker:

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import logger
 import psutil
 import pysam
+from loguru import logger
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class Aligner(ABC):
@@ -29,10 +33,18 @@ class Aligner(ABC):
         """Query."""
         raise NotImplementedError
 
-    @abstractmethod
-    def filters(self, *args):
-        """Filter."""
-        raise NotImplementedError
+    def filters(
+        self,
+        records: Iterator[pysam.AlignedSegment],
+        threshold_identity,
+        min_mapq,
+        query_sequence_length,
+    ) -> Iterator[pysam.AlignedSegment]:
+        return (
+            record
+            for record in records
+            if self.record_identity(record, query_sequence_length) > threshold_identity and record.mapping_quality > min_mapq
+        )
 
     @abstractmethod
     def query_insertion(self, insertion: str, output: Path | None = None):

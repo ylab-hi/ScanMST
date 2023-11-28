@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 
-from scannls import Insertion, NovelInsertion
+from scannls.base import Insertion, NovelInsertion
 
 from .aligner import Aligner
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     import pysam
 
 
-class Star(Aligner):
+class STAR(Aligner):
     MIN_MEMORY = 20
 
     INDEX_TEMPLATE = (

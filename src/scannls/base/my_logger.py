@@ -3,12 +3,11 @@
 
 @Filename:    mylogger.py
 @Author:      YangyangLi
-@license:     MIT Licence
 @Time:        12/15/21 2:08 PM
 """
 from loguru._logger import Logger
 
-from scannls.type import LoggerType
+from scannls.mtype import LoggerType
 
 
 class MyLogger(LoggerType):

@@ -8,7 +8,7 @@ from typing import Any
 from Bio import SearchIO
 from loguru import logger
 
-from scannls.type import LoggerType
+from scannls.mtype import LoggerType
 from scannls.utils import cigar_validity
 
 from .basic import MappingMode, Strand

@@ -10,7 +10,7 @@ import HTSeq  # type: ignore
 import yaml  # type: ignore
 
 from scannls import __PACKAGE_NAME__, cppext
-from scannls.base import CigarCode, MappingMode
+from scannls.base import Blat, CigarCode, MappingMode
 from scannls.exception import ModesNotEqualError
 from scannls.utils import cigar_validity
 
@@ -480,6 +480,10 @@ def splicing_confirmation(
     return None
 
 
+def _blat_blat2chimeric_alignment(**kwargs):
+    pass
+
+
 def blat2chimeric_alignment(
     in_seq: str,
     read_length: int,
@@ -504,40 +508,57 @@ def blat2chimeric_alignment(
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
     """
+
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
-    top_hsp, __mapq = aligner.fetch_mapq(in_seq, aligner_ident_pct_cutoff)
-    if top_hsp is None:
-        return ""
-    if top_hsp.ident_pct / 100 >= aligner_ident_pct_cutoff and top_hsp.query_span / in_seq_len >= aligner_ident_pct_cutoff:
-        chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = aligner.psl2sam(
-            top_hsp,
-            in_seq_len,
-        )
-        if read_strand == strand_sa:
-            # same strand: different reads mode
-            # MS(1) ~ SM(2) or SM(2) ~ MS(1)
-            # SM
-            cigar_sa = (
-                f"{read_length - in_seq_len}S{cigar_sa_partial}"
-                if read_mode == 1
-                else f"{cigar_sa_partial}{read_length - in_seq_len}S"
-            )  # MS
-        else:
-            # opposite strand: same reads mode
-            # MS(1) ~ MS(1) or SM(2) ~ SM(2)
-            # MS
-            cigar_sa = (
-                f"{cigar_sa_partial}{read_length - in_seq_len}S"
-                if read_mode == 1
-                else f"{read_length - in_seq_len}S{cigar_sa_partial}"
-            )  # SM
+    if isinstance(aligner, Blat):
+        top_hsp, mapq = aligner.fetch_mapq(in_seq, aligner_ident_pct_cutoff)
+        if top_hsp is None:
+            return chimeric_aln_str
 
-        valid_cigar_sa = cigar_validity(cigar_sa)
+        if top_hsp.ident_pct / 100 >= aligner_ident_pct_cutoff and top_hsp.query_span / in_seq_len >= aligner_ident_pct_cutoff:
+            chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = aligner.psl2sam(
+                top_hsp,
+                in_seq_len,
+            )
+        return chimeric_aln_str
+    else:
+        keep_records = list(aligner.filters(aligner.query(in_seq), aligner_ident_pct_cutoff, mapq_cutoff, len(in_seq)))
+        if not keep_records:
+            return chimeric_aln_str
 
-        if __mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
-            return f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{__mapq},{nm_sa};"
+        top_record = keep_records[0]
+        chrom_sa = top_record.reference_name
+        pos_sa = top_record.reference_start
+        strand_sa = "+" if top_record.is_reverse else "-"
+        cigar_sa_partial = top_record.cigarstring
+        nm_sa = top_record.get_tag("NM") if top_record.has_tag("NM") else 0
+        mapq = top_record.mapping_quality_
+
+    if read_strand == strand_sa:
+        # same strand: different reads mode
+        # MS(1) ~ SM(2) or SM(2) ~ MS(1)
+        # SM
+        cigar_sa = (
+            f"{read_length - in_seq_len}S{cigar_sa_partial}"
+            if read_mode == 1
+            else f"{cigar_sa_partial}{read_length - in_seq_len}S"
+        )  # MS
+    else:
+        # opposite strand: same reads mode
+        # MS(1) ~ MS(1) or SM(2) ~ SM(2)
+        # MS
+        cigar_sa = (
+            f"{cigar_sa_partial}{read_length - in_seq_len}S"
+            if read_mode == 1
+            else f"{read_length - in_seq_len}S{cigar_sa_partial}"
+        )  # SM
+
+    valid_cigar_sa = cigar_validity(cigar_sa)
+
+    if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
+        return f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
 
     return chimeric_aln_str
 

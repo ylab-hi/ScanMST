@@ -4,7 +4,7 @@ __PACKAGE_NAME__ = "scannls"
 
 from rich.traceback import install
 
-from . import blat, cli, cppext, graph, type, utils
+from . import aligner, blat, cli, cppext, graph, mtype, utils
 from .base import (
     Blat,
     BreakPoint,
@@ -36,6 +36,7 @@ from .graph import graphvis
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 __all__ = [
+    "aligner",
     "CigarCode",
     "Strand",
     "Interval",
@@ -46,7 +47,7 @@ __all__ = [
     "utils",
     "cli",
     "BreakPoint",
-    "type",
+    "mtype",
     "graph",
     "Read",
     "Event",

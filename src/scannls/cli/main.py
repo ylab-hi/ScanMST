@@ -22,9 +22,10 @@ from scannls import (
     detect_read_read_connections_from_cigar,
     reverse_complement,
 )
+from scannls.aligner import STAR
 from scannls.base import MappingMode
 from scannls.graph import NLPath
-from scannls.type import LoggerType
+from scannls.mtype import LoggerType
 from scannls.utils import (
     cigarstring2cigartuples,
     get_longest_insertion_sequence,
@@ -317,6 +318,8 @@ def _scan_bam_helper(
             is_start_server=blat_is_start_server,
             lock=lock,
         )
+    else:
+        aligner = STAR(ref_genome)
 
     nls_src_forms_list = []
 
