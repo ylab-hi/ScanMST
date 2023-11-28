@@ -115,7 +115,6 @@ class Blat:
             )
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
-        logger.debug("check if the server starts by reading the log file")
         with this_lock, open(self.log_file_path) as f:
             return any("Server ready" in line for line in f)
 
@@ -250,7 +249,7 @@ class Blat:
 
         return out_psl
 
-    def _check_if_self_ready(self, interval: int = 60) -> None:
+    def _check_if_self_ready(self, interval: int = 60 * 2) -> None:
         """Function for waiting the server service to be ready.
 
         :param interval: the interval time for checking the server service
@@ -276,7 +275,7 @@ class Blat:
                 self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
                 out_psl = self._query(in_seq, mini_identity)
             except subprocess.CalledProcessError:
-                time.sleep(60)  # wait for other's service to be ready
+                time.sleep(60 * 2)  # wait for other's service to be ready
             else:
                 return out_psl
 
