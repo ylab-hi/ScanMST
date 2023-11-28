@@ -14,6 +14,7 @@ from scannls.utils import cigar_validity
 from .basic import MappingMode, Strand
 from .basic_class import reverse_complement
 from .basic_read import Read
+from .blat import Blat
 
 
 class ReadsConnector:
@@ -439,20 +440,34 @@ class ReadsConnector:
 
     def _double_check_create_new_read_calculate_sms(
         self,
-        hsp,
+        record,
         query_seq: str,
         read: Read,
     ) -> Read:
         """Double check creat new read and calculate sms."""
         mapq = 60
-        chrom, position, strand, cigar_str, num_of_mismatch = self.aligner.psl2sam(
-            hsp,
-            len(query_seq),
-        )
 
-        strand = Strand.from_str(strand)
-        lt_s_len = hsp.query_start
-        rt_s_len = len(query_seq) - hsp.query_end
+        if isinstance(self.aligner, Blat):
+            chrom, position, strand, cigar_str, num_of_mismatch = self.aligner.psl2sam(
+                record,
+                len(query_seq),
+            )
+
+            strand = Strand.from_str(strand)
+            lt_s_len = record.query_start
+            rt_s_len = len(query_seq) - record.query_end
+        else:
+            mapq = record.mapping_quality
+            chrom = record.reference_name
+            position = record.reference_start
+            strand = "+" if not record.is_reverse else "-"
+            cigar_str = record.cigarstring
+            num_of_mismatch = record.get_tag("NM") if record.has_tag("NM") else 0
+
+            strand = Strand.from_str(strand)
+            lt_s_len = record.query_alignment_start
+            rt_s_len = len(query_seq) - record.query_alignment_end
+
         new_read_mode = ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
             read,
             strand,
@@ -497,19 +512,26 @@ class ReadsConnector:
         if len(query_sequence) < align_len_threshold:
             return None
 
-        out_blat = self.aligner.query(in_seq=query_sequence)
-        try:
-            blat_result = SearchIO.read(out_blat, "blat-psl")
-        except ValueError:
-            return None
+        if isinstance(self.aligner, Blat):
+            out_blat = self.aligner.query(in_seq=query_sequence)
+            try:
+                blat_result = SearchIO.read(out_blat, "blat-psl")
+            except ValueError:
+                return None
 
-        hit, keep_hsp = self.aligner._query_insertion(
-            blat_result,
-            query_sequence,
-            threshold_identity,
-            top=top,
-        )
-        return hit, keep_hsp
+            hit, keep_hsp = self.aligner._query_insertion(
+                blat_result,
+                query_sequence,
+                threshold_identity,
+                top=top,
+            )
+
+            return hit, keep_hsp
+
+        records = self.aligner.query(query=query_sequence)
+        keep_records = list(self.aligner.filters(records, threshold_identity, 15, len(query_sequence)))
+        hit = len(keep_records)
+        return hit, keep_records
 
     def _double_check_for_start_end_read(
         self,
