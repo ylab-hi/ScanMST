@@ -3,6 +3,7 @@ from __future__ import annotations
 import secrets
 import shlex
 import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -13,7 +14,6 @@ from .aligner import Aligner
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
     import pysam
 
@@ -36,8 +36,8 @@ class STAR(Aligner):
         self, reference: Path, index: Path, threads: int = 1, min_mapq: int = 20, threshold_identity: float = 0.99
     ) -> None:
         super().__init__()
-        self.reference = reference
-        self.index = index
+        self.reference = Path(reference)
+        self.index = Path(index)
         self.min_mapq = min_mapq
         self.threshold_identity = threshold_identity
         self.threads = threads
