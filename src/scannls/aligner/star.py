@@ -53,14 +53,11 @@ class STAR(Aligner):
     def build_index(self):
         raise NotImplementedError
 
-    def craft_output(self, output: Path) -> tuple[Path | str, ...]:
+    def craft_output(self, output: Path) -> Iterator[Path]:
         output_str = output.as_posix()
         return (
-            output_str + "Aligned.sortedByCoord.out.bam",
-            output_str + "Log.final.out",
-            output_str + "Log.out",
-            output_str + "Log.progress.out",
-            output_str + "SJ.out.tab",
+            Path(output_str + suffix)
+            for suffix in ["Aligned.sortedByCoord.out.bam", "Log.final.out", "Log.out", "Log.progress.out", "SJ.out.tab"]
         )
 
     def _query(self, query: str) -> Path:
