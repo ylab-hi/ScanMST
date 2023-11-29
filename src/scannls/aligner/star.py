@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 class STAR(Aligner):
-    MIN_MEMORY = 20
+    MIN_MEMORY = 30
 
     INDEX_TEMPLATE = (
         "STAR --runThreadN {thread}  --runMode genomeGenerate --genomeDir {genomeDir} "
@@ -64,7 +64,7 @@ class STAR(Aligner):
 
         output = self.reference.parent / f"{ran_id}.bam"
 
-        cmd = self.MAPPING_TEMPLATE(thread=self.threads, genomeDir=self.reference, readFilesIn=in_fastq, outFileNamePrefix=output)
+        cmd = self.MAPPING_TEMPLATE(thread=self.threads, genomeDir=self.index, readFilesIn=in_fastq, outFileNamePrefix="./")
 
         logger.trace(f"alinger cmd: {cmd}")
         result = subprocess.check_output(shlex.split(cmd))
@@ -77,6 +77,10 @@ class STAR(Aligner):
         if not self.index_exist():
             url = "https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf"
             msg = f"Index does not exist. Please reference {url} to build index first"
+            raise Exception(msg)
+
+        if not self.enough_memory(self.MIN_MEMORY):
+            msg = f"Memory is not enough. Please provide at least {self.MIN_MEMORY}G memory"
             raise Exception(msg)
 
         output = self._query(query)
