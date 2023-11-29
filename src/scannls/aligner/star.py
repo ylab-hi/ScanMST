@@ -53,6 +53,16 @@ class STAR(Aligner):
     def build_index(self):
         raise NotImplementedError
 
+    def craft_output(self, output: Path) -> tuple[Path | str, ...]:
+        output_str = output.as_posix()
+        return (
+            output_str + "Aligned.sortedByCoord.out.bam",
+            output_str + "Log.final.out",
+            output_str + "Log.out",
+            output_str + "Log.progress.out",
+            output_str + "SJ.out.tab",
+        )
+
     def _query(self, query: str) -> Path:
         ran_id = secrets.token_hex(8)
         in_fastq = self.reference.parent / f"{ran_id}.fq"
@@ -62,14 +72,17 @@ class STAR(Aligner):
             fastq_file.write("+\n")
             fastq_file.write("I" * len(query) + "\n")
 
-        output = self.reference.parent / f"{ran_id}.bam"
+        output = self.reference.parent / f"{ran_id}"
 
-        cmd = self.MAPPING_TEMPLATE(thread=self.threads, genomeDir=self.index, readFilesIn=in_fastq, outFileNamePrefix="./")
+        cmd = self.MAPPING_TEMPLATE(thread=self.threads, genomeDir=self.index, readFilesIn=in_fastq, outFileNamePrefix=output)
 
         logger.trace(f"alinger cmd: {cmd}")
-        result = subprocess.check_output(shlex.split(cmd))
-        with output.open("wb") as output_file:
-            output_file.write(result)
+        try:
+            _ = subprocess.check_output(shlex.split(cmd))
+        except subprocess.CalledProcessError as e:
+            msg = "STAR mapping failed"
+            raise Exception(msg) from e
+
         in_fastq.unlink()
         return output
 
@@ -84,8 +97,11 @@ class STAR(Aligner):
             raise Exception(msg)
 
         output = self._query(query)
-        yield from self.alignment_records(output)
-        output.unlink()
+        outputs = self.craft_output(output)
+        yield from self.alignment_records(outputs[0])
+
+        for output in outputs:
+            output.unlink()
 
     def query_insertion(
         self,
