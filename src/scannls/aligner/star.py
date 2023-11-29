@@ -27,9 +27,9 @@ class STAR(Aligner):
     ).format
 
     MAPPING_TEMPLATE = (
-        "STAR --runThreadN {thread} --genomeDir {genomeDir} --readFilesIn {readFilesIn}"
+        "STAR --runThreadN {thread} --genomeDir {genomeDir} --readFilesIn {readFilesIn} "
         "--outFileNamePrefix {outFileNamePrefix} --outSAMtype BAM SortedByCoordinate "
-        " --outSAMunmapped Within --outSAMattributes NH HI AS NM MD"
+        "--outSAMunmapped Within --outSAMattributes NH HI AS NM MD"
     ).format
 
     def __init__(
