@@ -28,8 +28,8 @@ class STAR(Aligner):
 
     MAPPING_TEMPLATE = (
         "STAR --runThreadN {thread} --genomeDir {genomeDir} --readFilesIn {readFilesIn} "
-        "--outFileNamePrefix {outFileNamePrefix} --outSAMtype BAM SortedByCoordinate "
-        "--outSAMunmapped Within --outSAMattributes NH HI AS NM MD"
+        "--outFileNamePrefix {outFileNamePrefix} --outSAMtype SAM SortedByCoordinate "
+        "--outSAMattributes NH HI AS NM MD"
     ).format
 
     def __init__(
@@ -57,31 +57,32 @@ class STAR(Aligner):
         output_str = output.as_posix()
         return (
             Path(output_str + suffix)
-            for suffix in ["Aligned.sortedByCoord.out.bam", "Log.final.out", "Log.out", "Log.progress.out", "SJ.out.tab"]
+            for suffix in ["Aligned.sortedByCoord.out.sam", "Log.final.out", "Log.out", "Log.progress.out", "SJ.out.tab"]
         )
 
-    def _query(self, query: str) -> Path:
+    def _query(self, query: str) -> Iterator[Path]:
         ran_id = secrets.token_hex(8)
-        in_fastq = self.reference.parent / f"{ran_id}.fq"
+        in_fastq = self.reference.parent / f"{ran_id}.fa"
         with in_fastq.open("w") as fastq_file:
-            fastq_file.write(f"@{ran_id}\n")
+            fastq_file.write(f">{ran_id}\n")
             fastq_file.write(f"{query}\n")
-            fastq_file.write("+\n")
-            fastq_file.write("I" * len(query) + "\n")
 
         output = self.reference.parent / f"{ran_id}"
-
         cmd = self.MAPPING_TEMPLATE(thread=self.threads, genomeDir=self.index, readFilesIn=in_fastq, outFileNamePrefix=output)
-
         logger.trace(f"alinger cmd: {cmd}")
+
+        outputs = self.craft_output(output)
+
         try:
             _ = subprocess.check_output(shlex.split(cmd))
         except subprocess.CalledProcessError as e:
+            for output in outputs:
+                output.unlink()
             msg = "STAR mapping failed"
             raise Exception(msg) from e
 
         in_fastq.unlink()
-        return output
+        return outputs
 
     def query(self, query: str) -> Iterator[pysam.AlignedSegment]:
         if not self.index_exist():
@@ -93,9 +94,8 @@ class STAR(Aligner):
             msg = f"Memory is not enough. Please provide at least {self.MIN_MEMORY}G memory"
             raise Exception(msg)
 
-        output = self._query(query)
-        outputs = self.craft_output(output)
-        yield from self.alignment_records(outputs[0])
+        outputs = self._query(query)
+        yield from self.alignment_records(next(outputs))
 
         for output in outputs:
             output.unlink()

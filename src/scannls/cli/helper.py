@@ -480,10 +480,6 @@ def splicing_confirmation(
     return None
 
 
-def _blat_blat2chimeric_alignment(**kwargs):
-    pass
-
-
 def blat2chimeric_alignment(
     in_seq: str,
     read_length: int,
@@ -534,7 +530,7 @@ def blat2chimeric_alignment(
         strand_sa = "+" if top_record.is_reverse else "-"
         cigar_sa_partial = top_record.cigarstring
         nm_sa = top_record.get_tag("NM") if top_record.has_tag("NM") else 0
-        mapq = top_record.mapping_quality_
+        mapq = top_record.mapping_quality
 
     if read_strand == strand_sa:
         # same strand: different reads mode
