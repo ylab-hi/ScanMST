@@ -1,4 +1,4 @@
-"""Module contains the main function of the draft scannls."""
+"""Module contains the main functon of the draft scannls."""
 import copy
 import inspect
 import math
@@ -267,6 +267,7 @@ def _scan_bam_helper(
     lock,
     *,
     running_mode,
+    star_index,
     blat_two_bit,
     blat_port,
     tmp_dir,
@@ -319,7 +320,7 @@ def _scan_bam_helper(
             lock=lock,
         )
     else:
-        aligner = STAR(ref_genome)
+        aligner = STAR(ref_genome, index=star_index)
 
     nls_src_forms_list = []
 
@@ -571,6 +572,7 @@ def _scan_bam_helper(
 
 
 def scanbam_run(
+    star_index,
     blat_two_bit,
     blat_port,
     tmp_dir,

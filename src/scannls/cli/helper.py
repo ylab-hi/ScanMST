@@ -646,12 +646,17 @@ def insertion2chimeric_alignment(
         right_cigar_str,
     )
 
-    flag, insertion_info = aligner.query_insertion(
-        insert_seq=insertion_seq,
-        threshold_identity=aligner_ident_pct_cutoff,
-        top=top,
-        align_len_threshold=align_len_threshold,
-    )
+    if isinstance(aligner, Blat):
+        flag, insertion_info = aligner.query_insertion(
+            insert_seq=insertion_seq,
+            threshold_identity=aligner_ident_pct_cutoff,
+            top=top,
+            align_len_threshold=align_len_threshold,
+        )
+    else:
+        flag, insertion_info = aligner.query_insertion(
+            query=insertion_seq,
+        )
 
     chimeric_aln_str = ""
     primary_aln_cigarstring = ""

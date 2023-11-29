@@ -211,6 +211,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
     motif_required = not options.noncanonical
     try:
         intact_nlpaths, in_bam_header, avg_cov = scanbam_run(
+            star_index=options.star_index,
             blat_two_bit=options.blat_two_bit,
             blat_port=options.blat_port,
             tmp_dir=tmp_dir.name,

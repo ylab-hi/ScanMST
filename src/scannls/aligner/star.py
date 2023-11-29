@@ -3,7 +3,6 @@ from __future__ import annotations
 import secrets
 import shlex
 import subprocess
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -14,6 +13,7 @@ from .aligner import Aligner
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
     import pysam
 
@@ -32,10 +32,12 @@ class STAR(Aligner):
         " --outSAMunmapped Within --outSAMattributes NH HI AS NM MD"
     ).format
 
-    def __init__(self, reference=Path, gtf=Path, threads: int = 2, min_mapq: int = 20, threshold_identity: float = 0.99) -> None:
+    def __init__(
+        self, reference: Path, index: Path, threads: int = 1, min_mapq: int = 20, threshold_identity: float = 0.99
+    ) -> None:
         super().__init__()
         self.reference = reference
-        self.gtf = gtf
+        self.index = index
         self.min_mapq = min_mapq
         self.threshold_identity = threshold_identity
         self.threads = threads
@@ -46,10 +48,10 @@ class STAR(Aligner):
     __str__ = __repr__
 
     def index_exist(self):
-        pass
+        return self.index.exists()
 
     def build_index(self):
-        pass
+        raise NotImplementedError
 
     def _query(self, query: str) -> Path:
         ran_id = secrets.token_hex(8)

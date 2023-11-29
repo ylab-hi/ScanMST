@@ -16,6 +16,7 @@ class DefaultOptions:
     ref: str
     gtf: str
     output: str
+    star_index = str
     blat_two_bit: str
     blat_closed: bool = True
     blat_sleep: bool = True
@@ -191,6 +192,14 @@ def parse_args() -> argparse.ArgumentParser:
         help="aligner to use for mapping reads (default: %(default)s)",
     )
     parser.add_argument(
+        "--star-index",
+        dest="star_index",
+        type=str,
+        default="",
+        help="star index for star aligner (default: %(default)s)",
+        required=False,
+    )
+    parser.add_argument(
         "--blat-2bit",
         action="store",
         dest="blat_two_bit",
@@ -200,14 +209,14 @@ def parse_args() -> argparse.ArgumentParser:
     parser.add_argument(
         "--blat-nclosed",
         action="store_false",
-        dest="closed",
+        dest="blat_closed",
         default=DefaultOptions.blat_closed,
         help="close BLAT server when job has done (default: %(default)s)",
     )
     parser.add_argument(
         "--blat-nsleep",
         action="store_false",
-        dest="sleep",
+        dest="blat_sleep",
         default=DefaultOptions.blat_sleep,
         help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
@@ -215,7 +224,7 @@ def parse_args() -> argparse.ArgumentParser:
     parser.add_argument(
         "--blat-port",
         action="store",
-        dest="port",
+        dest="blat_port",
         type=int,
         help="port for BLAT server (default: %(default)s)",
         default=DefaultOptions.blat_port,
