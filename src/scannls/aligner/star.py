@@ -28,7 +28,7 @@ class STAR(Aligner):
 
     MAPPING_TEMPLATE = (
         "STAR --runThreadN {thread} --genomeDir {genomeDir} --readFilesIn {readFilesIn} "
-        "--outFileNamePrefix {outFileNamePrefix} --outSAMtype SAM SortedByCoordinate "
+        "--outFileNamePrefix {outFileNamePrefix} --outSAMtype SAM "
         "--outSAMattributes NH HI AS NM MD"
     ).format
 
