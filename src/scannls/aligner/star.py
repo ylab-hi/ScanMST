@@ -57,7 +57,7 @@ class STAR(Aligner):
         output_str = output.as_posix()
         return (
             Path(output_str + suffix)
-            for suffix in ["Aligned.sortedByCoord.out.sam", "Log.final.out", "Log.out", "Log.progress.out", "SJ.out.tab"]
+            for suffix in ["Aligned.out.sam", "Log.final.out", "Log.out", "Log.progress.out", "SJ.out.tab"]
         )
 
     def _query(self, query: str) -> Iterator[Path]:
