@@ -187,9 +187,9 @@ def parse_args() -> argparse.ArgumentParser:
         "--aligner",
         dest="aligner",
         type=str,
-        default="blat",
         choices=DefaultOptions.aligner,
         help="aligner to use for mapping reads (default: %(default)s)",
+        required=False,
     )
     parser.add_argument(
         "--star-index",

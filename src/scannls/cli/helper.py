@@ -508,6 +508,9 @@ def blat2chimeric_alignment(
     chimeric_aln_str = ""
     in_seq_len = len(in_seq)
 
+    if aligner is None:
+        return chimeric_aln_str
+
     if isinstance(aligner, Blat):
         top_hsp, mapq = aligner.fetch_mapq(in_seq, aligner_ident_pct_cutoff)
         if top_hsp is None:
@@ -642,6 +645,12 @@ def insertion2chimeric_alignment(
         right_cigar_str,
     )
 
+    chimeric_aln_str = ""
+    primary_aln_cigarstring = ""
+
+    if aligner is None:
+        return primary_aln_cigarstring, chimeric_aln_str
+
     if isinstance(aligner, Blat):
         flag, insertion_info = aligner.query_insertion(
             insert_seq=insertion_seq,
@@ -653,9 +662,6 @@ def insertion2chimeric_alignment(
         flag, insertion_info = aligner.query_insertion(
             query=insertion_seq,
         )
-
-    chimeric_aln_str = ""
-    primary_aln_cigarstring = ""
 
     if flag:
         # BLAT unique HSP

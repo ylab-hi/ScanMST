@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     import pysam
 
-    from .type import LoggerType
+    from .mtype import LoggerType
 
 __all__ = [
     "cigar_validity",
@@ -36,7 +36,12 @@ __all__ = [
     "timeit",
     "sleep",
     "find_2bit_file",
+    "get_current_time",
 ]
+
+
+def get_current_time() -> str:
+    return time.strftime("%Y%m%d_%H%M%S")
 
 
 def external_tool_checking(software: list[str], log_handler: LoggerType) -> None:

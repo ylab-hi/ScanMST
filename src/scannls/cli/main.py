@@ -309,7 +309,11 @@ def _scan_bam_helper(
 
     logger.trace(f"{identified_key=} start")
 
-    if blat_info is not None:
+    if blat_info is None:
+        aligner = None
+    elif blat_info == "star":
+        aligner = STAR(ref_genome, index=star_index)
+    else:
         blat_log_file, blat_is_start_server = blat_info
         aligner = Blat(
             blat_two_bit,
@@ -319,8 +323,6 @@ def _scan_bam_helper(
             is_start_server=blat_is_start_server,
             lock=lock,
         )
-    else:
-        aligner = STAR(ref_genome, index=star_index)
 
     nls_src_forms_list = []
 

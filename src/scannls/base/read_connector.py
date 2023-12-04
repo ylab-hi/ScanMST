@@ -543,6 +543,9 @@ class ReadsConnector:
         To see if there are True first read or True end read.
         """
 
+        if self.aligner is None:
+            return
+
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
             if read.mode == MappingMode.MS

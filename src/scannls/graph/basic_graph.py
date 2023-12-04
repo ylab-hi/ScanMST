@@ -1033,9 +1033,13 @@ class NLPath:
                 insertion_seq = event.insertion_seq1  # pick from the first read
                 insertion_seq = reverse_complement(insertion_seq) if event.strand1.is_reverse() else insertion_seq
 
-                flag, insertion = aligner.query_insertion(insertion_seq)
+                if aligner is None:
+                    flag, insertion = False, NovelInsertion(hit_num=0, query_sequence=insertion_seq)
+                else:
+                    flag, insertion = aligner.query_insertion(insertion_seq)
 
                 insertion.query_name = read1.query_name
+
                 if flag:  # only one hit
                     # add first node and insertion node
                     source_s = event.source_s1
