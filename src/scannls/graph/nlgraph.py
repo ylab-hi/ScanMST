@@ -13,8 +13,6 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls.utils import get_current_time
-
 from .annotate import is_weakly_connected
 from .basic_graph import (
     Edge,
@@ -102,7 +100,7 @@ class NLGraph:
             yield current_path
 
         if is_plot and node_list:
-            plot_result = Path(f"graph_{self.input_bam_path.stem}_{get_current_time()}")
+            plot_result = Path(f"graph_{self.input_bam_path.stem}")
             plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
             default_visitors(self, (plot_result / cluster_name).as_posix(), self.support_reads).visualize()
