@@ -106,7 +106,7 @@ class VCFWriter(Writer):
         "END": "A placeholder for END coordinate in case of a translocation",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
-        "MEGAEXON1": "ID for source mega exon",
+        "MEGAEXON1": "ID for source mega exon", # Given multiple transcripts, there may be multiple megaexons
         "MEGAEXON2": "ID for target mega exon",
         "TRANSCRIPT_ID": "Transcript ID",
         "GENE_ID": "Gene ID",
@@ -227,6 +227,8 @@ class VCFWriter(Writer):
             else:
                 # multiple transcripts go through the same one hop
                 out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
+                out_vcf_dict[type_position_key]["MEGAEXON1"] += f',{hop_feature[type_position_key]["MEGAEXON1"]}'
+                out_vcf_dict[type_position_key]["MEGAEXON2"] += f',{hop_feature[type_position_key]["MEGAEXON2"]}'
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -250,7 +252,7 @@ class VCFWriter(Writer):
 
         for _id in VCFWriter.reserved_info:
             _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
-            if _id in {"TRANSCRIPT_ID", "SR_ID"}:
+            if _id in {"TRANSCRIPT_ID", "SR_ID", "MEGAEXON1", "MEGAEXON2"}:
                 _number = "."
             header_lines.append(
                 f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},"
