@@ -229,6 +229,7 @@ class VCFWriter(Writer):
                 out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
                 out_vcf_dict[type_position_key]["MEGAEXON1"] += f',{hop_feature[type_position_key]["MEGAEXON1"]}'
                 out_vcf_dict[type_position_key]["MEGAEXON2"] += f',{hop_feature[type_position_key]["MEGAEXON2"]}'
+                out_vcf_dict[type_position_key]["SR_ID"] += f',{hop_feature[type_position_key]["SR_ID"]}'
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -400,7 +401,7 @@ def get_vcf_features_from_nlpath(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{cluster_id}x{nlpath.id}",
                     "GENE_ID": f"{cluster_id}",
-                    "SR_ID": f"{','.join(current_edge.read_ids)}",
+                    "SR_ID": f"{'|'.join(current_edge.read_ids)}",
                     "SVMETHOD": "ScanNLS",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
                     "INSSEQ": microinsertion_sequence if microinsertion_sequence else ".",
