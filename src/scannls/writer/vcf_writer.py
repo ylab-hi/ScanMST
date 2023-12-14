@@ -106,7 +106,7 @@ class VCFWriter(Writer):
         "END": "A placeholder for END coordinate in case of a translocation",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
-        "MEGAEXON1": "ID for source mega exon", # Given multiple transcripts, there may be multiple megaexons
+        "MEGAEXON1": "ID for source mega exon",  # Given multiple transcripts, there may be multiple megaexons
         "MEGAEXON2": "ID for target mega exon",
         "TRANSCRIPT_ID": "Transcript ID",
         "GENE_ID": "Gene ID",
