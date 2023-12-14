@@ -179,7 +179,6 @@ class NLGraph:
         edge: Edge,
     ) -> dict[NodeIdentity, list[str]]:
         result = defaultdict(list)
-        logger.debug(f"{node=}")
         for read_id in edge.read_ids:
             node_identity = node.identity(read_id)
             if node_identity is None:
@@ -223,8 +222,6 @@ class NLGraph:
 
         edges = []
         for edge in self.find_edges(current_node, successor):
-            self.logger.trace(f"finding {edge=}")
-
             if not filter_edges:
                 edges.append(edge)
                 continue
@@ -240,7 +237,6 @@ class NLGraph:
                         previous_edge_node_identity,
                         edge_node_identity,
                     ):
-                        self.logger.trace(f"adding {edge=}")
                         edges.append(edge)
                 else:
                     edges.append(edge)

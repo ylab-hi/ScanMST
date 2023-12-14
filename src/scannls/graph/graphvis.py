@@ -237,7 +237,7 @@ def visualize_graph_via_matplot(
 ) -> None:
     node_numbers = len(list(graph))
 
-    fig, ax = plt.subplots(figsize=_cal_figure_size(node_numbers))
+    _fig, ax = plt.subplots(figsize=_cal_figure_size(node_numbers))
 
     pos = nx.spring_layout(graph, seed=42)
 
