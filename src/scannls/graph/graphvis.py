@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import networkx as nx
+from loguru import logger
 from matplotlib import pyplot as plt  # type: ignore
 
 if TYPE_CHECKING:
@@ -85,13 +86,14 @@ class GraphVis:
     def get_label_from_node(node: Node) -> str:
         """Get label from node."""
         head_node = "H" if node.is_start_node() else "T"
-        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}{node.strand}"
+        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}"
 
     @staticmethod
     def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
         """Add node to graph."""
+        node_label = GraphVis.get_label_from_node(node)
         graph.add_node(
-            GraphVis.get_label_from_node(node),
+            node_label,
             chrom=node.chrom,
             ref_start=node.ref_start,
             ref_end=node.ref_end,
@@ -107,20 +109,39 @@ class GraphVis:
         graph: nx.Graph,
     ) -> None:
         """Add edge to graph."""
-        graph.add_edge(
-            GraphVis.get_label_from_node(node1),
-            GraphVis.get_label_from_node(node2),
-            label=f"{edge.variation_type}_{edge.insertion_info}_{edge.sr}",
-            weight=edge.sr,
-            read_ids=edge.read_ids,
-        )
+        edge_label = f"{edge.variation_type}_{edge.insertion_info}_{edge.sr}"
+        node1_label = GraphVis.get_label_from_node(node1)
+        node2_label = GraphVis.get_label_from_node(node2)
+
+        if graph.has_edge(node1_label, node2_label):
+            current_edge_label = [i["label"] for i in graph[node1_label][node2_label].values()]
+            if edge_label not in current_edge_label:
+                graph.add_edge(
+                    node1_label,
+                    node2_label,
+                    label=edge_label,
+                    weight=edge.sr,
+                    read_ids=edge.read_ids,
+                )
+        else:
+            graph.add_edge(
+                node1_label,
+                node2_label,
+                label=edge_label,
+                weight=edge.sr,
+                read_ids=edge.read_ids,
+            )
 
     def create_nxgraph(self) -> nx.DiGraph:
         # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
+
         g = nx.MultiDiGraph()
 
-        for start_node in self.nlgraph.get_start_nodes():
-            self._traverse_graph(start_node, [start_node], g, self.nlgraph)  # type: ignore
+        try:
+            for start_node in self.nlgraph.get_start_nodes():
+                self._traverse_graph(start_node, [start_node], g, self.nlgraph)  # type: ignore
+        except RecursionError:
+            logger.error("RecursionError: maximum recursion depth exceeded when export graph")
 
         return g
 

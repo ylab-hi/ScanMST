@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .basic_graph import Node
 
-TOLENRANCE = 25
+TOLENRANCE = 10
 
 
 class MergeConditionMode(Enum):
@@ -267,6 +267,11 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         -> [node1]
         -> [node2]
     """
+
+    # if (node1.ref_start == 41485589 or node2.ref_start == 41485620) or (node1.ref_end == 41485620 or node2.ref_end == 41485589):
+    #     import ipdb
+
+    #     ipdb.set_trace()
 
     if node1.chrom != node2.chrom:
         return False

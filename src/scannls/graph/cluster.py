@@ -329,6 +329,7 @@ class ClusterFinder:
         path1: NLPath,
         path2: NLPath,
         merge_keys: dict[int, list[str]],
+        threadhold: int,
     ) -> bool:
         nlpath_2_nodes_key = "".join(merge_keys[path2.id])
 
@@ -341,7 +342,7 @@ class ClusterFinder:
                 path1,
                 path2,
                 start_index,
-                1,
+                threadhold,
             ):
                 merge_nlpath(path1, path2, start_index)  # type: ignore
                 path1.merge_factor += 1
@@ -350,11 +351,11 @@ class ClusterFinder:
         return False
 
     @staticmethod
-    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]):
+    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]], threadhold: float):
         """Check if nlpath1 can merge nlpath2."""
 
         if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
-            return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys)
+            return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys, threadhold)
 
         msg = "nlpath1 is shorter than nlpath2"
         raise ValueError(msg)
@@ -372,7 +373,7 @@ class ClusterFinder:
 
             merge_keys = self.creat_merge_indexs(sorted_nlpaths)
             new_cluster = []
-            ClusterFinder._merge_cluster(sorted_nlpaths, new_cluster, merge_keys)
+            ClusterFinder._merge_cluster(sorted_nlpaths, new_cluster, merge_keys, self.ruler.prune_threshold)
             yield sort_cluster(
                 new_cluster,
                 key=create_sort_key_by_merge_factor,  # type: ignore
@@ -380,7 +381,7 @@ class ClusterFinder:
             )
 
     @staticmethod
-    def _merge_cluster(nlpaths, result, merge_keys):
+    def _merge_cluster(nlpaths, result, merge_keys, threadhold: int):
         while nlpaths:
             slected_nlpath = nlpaths.pop()
 
@@ -389,6 +390,7 @@ class ClusterFinder:
                     slected_nlpath,
                     current_nlpath,
                     merge_keys,
+                    threadhold,
                 ):
                     nlpaths.remove(current_nlpath)
 
