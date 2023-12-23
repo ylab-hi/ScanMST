@@ -50,7 +50,7 @@ generate-setup-file = true
 scannls = "scannls.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.1.6"
+ruff = "^0.1.9"
 codespell = "^2.2.2"
 ipdb = "^0.13.11"
 isort = "^5.12.0"
@@ -82,7 +82,7 @@ flake8-broken-line = "^1.0.0"
 flake8-comprehensions = "^3.13.0"
 flake8-eradicate = "^1.5.0"
 flake8-simplify = "^0.21.0"
-pynvim = "^0.4.3"
+pynvim = "^0.5.0"
 flake8-2020 = "^1.8.1"
 flake8-alfred = "^1.1.1"
 cohesion = "^1.0.0"
