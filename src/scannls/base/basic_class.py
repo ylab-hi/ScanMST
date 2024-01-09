@@ -280,9 +280,11 @@ class Event:
         ) = event
 
         self.sv_type = sv_type
+
         self.annotation_code = annot
         self.splicing_code = canonical
         self.genes = genes
+
         self.insertion_info = insertion_info
         self.positions = _positions
         self.bp1, self.bp2 = _positions[:2]
@@ -420,36 +422,6 @@ class Event:
             setattr(node, key, getattr(self, key))
 
         return node
-
-    def update_node_info(
-        self,
-        new_node,
-    ):
-        """Update the common info the node in the front, and the common info includes.
-
-        sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
-
-        :param flag: the flag indicates whether there is a insertion
-        :param new_node: the new node to be updated
-        :param insertion: the insertion to be updated
-        :param is_update_insertion_info: whether to update the insertion info
-        :return: the updated node
-        """
-        new_node = self.update_specific_info_within_event(
-            new_node,
-            ["annotation_code", "splicing_code", "genes"],
-        )
-
-    def update_insertion_node_info(self, insertion_node):
-        """Update the information of insertion.
-
-        :param insertion_node: the insertion to be updated
-        :return: the updated insertion
-        """
-        self.update_specific_info_within_event(
-            insertion_node,
-            ["annotation_code", "splicing_code", "genes"],
-        )
 
 
 def reverse_complement(seq: str) -> str:

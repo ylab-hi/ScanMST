@@ -14,10 +14,7 @@ from pyfaidx import Fasta, FastaNotFoundError
 
 from scannls import MicroHomology, NovelInsertion, __version__, reverse_complement
 from scannls.exception import (
-    AnnotationCodeNotFoundError,
     BreakpointNotFoundError,
-    GenesNotFoundError,
-    SplicingCodeNotFoundError,
 )
 from scannls.graph import NLPath, Node  # noqa: TCH001
 
@@ -330,17 +327,11 @@ def get_vcf_features_from_nlpath(
         current_edge = nlpath.next_edge(current_node, event_id - 1)
         next_node = nlpath[event_id]
 
-        if current_node.splicing_code is None:
-            raise SplicingCodeNotFoundError(current_node.query_name)
-        can_field = can_field_dict[current_node.splicing_code]  # type: ignore
+        can_field = can_field_dict[current_edge.splicing_code]
 
-        if current_node.annotation_code is None:
-            raise AnnotationCodeNotFoundError(current_node.query_name)
-        anno_field = anno_field_dict.get(current_node.annotation_code, "BOTH")  # type: ignore
+        anno_field = anno_field_dict.get(current_edge.annotation_code, "BOTH")
 
-        if current_node.genes is None:
-            raise GenesNotFoundError(current_node.query_name)
-        gene1, gene2 = current_node.genes
+        gene1, gene2 = current_edge.gene1, current_edge.gene2
 
         _mode1, _mode2 = current_edge.modes
         mode1 = _mode1.to_str()

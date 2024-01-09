@@ -237,11 +237,8 @@ class Node(BasicNode):
         "_ref_end",
         "exons",
         "_introns",
-        "genes",  # WARN: delete and move to edge
         "gene_names",
         "query_name",
-        "annotation_code",
-        "splicing_code",
         "_unique_key",
         "is_polya",
         "cigartuples_without_soft",
@@ -258,9 +255,6 @@ class Node(BasicNode):
         ref_end: int,
         identity: NodeIdentity,
         exons: Exons,
-        annot: int | None = None,
-        canonical: int | None = None,
-        genes: tuple[str, str] | None = None,
         cigartuples_without_soft: list[int] | None = None,
     ) -> None:
         """Initialize a Node object."""
@@ -274,11 +268,8 @@ class Node(BasicNode):
         self.exons = exons
         self._introns = exons.introns()
 
-        self.genes = genes
         self.gene_names: list[str] = []
 
-        self.annotation_code = annot
-        self.splicing_code = canonical
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
@@ -366,7 +357,6 @@ class Node(BasicNode):
     def merge(
         self,
         other: Node,
-        optional_attributes=("splicing_code", "annotation_code", "genes"),
     ) -> None:
         """Merge two nodes.
 
@@ -391,12 +381,6 @@ class Node(BasicNode):
 
             # WARN: do not check if they have same key <Yangyang Li>
             self.identities.update(other.identities)
-
-            update_node_with_other_node(
-                self,
-                other,
-                optional_attributes,
-            )
             return
 
         msg = f"Cannot merge {self!r} and {other!r}"
@@ -483,6 +467,12 @@ class EdgeData:
     read_ids: list[str]
     mode1: MappingMode
     mode2: MappingMode
+
+    gene1: str | None  # find by breakpoint1
+    gene2: str | None  # find by breakpoint2
+    annotation_code: int
+    splicing_code: int
+
     insertion_info: Any | None = None
     original_sr: int = 1
 
@@ -496,6 +486,10 @@ class EdgeData:
             read_ids=[read_id],
             mode1=MappingMode.from_int(event.mode1),
             mode2=MappingMode.from_int(event.mode2),
+            gene1=event.genes[0],
+            gene2=event.genes[1],
+            annotation_code=event.annotation_code,
+            splicing_code=event.splicing_code,
         )
 
     def equal(
@@ -570,6 +564,22 @@ class Edge:
     def mode2(self): return self.edge_data.mode2
     @property
     def modes(self): return self.mode1, self.mode2
+    @property
+    def gene1(self): return self.edge_data.gene1
+    @gene1.setter
+    def gene1(self, value): self.edge_data.gene1 = value
+    @property
+    def gene2(self): return self.edge_data.gene2
+    @gene2.setter
+    def gene2(self, value): self.edge_data.gene2 = value
+    @property
+    def annotation_code(self): return self.edge_data.annotation_code
+    @annotation_code.setter
+    def annotation_code(self, value): self.edge_data.annotation_code = value
+    @property
+    def splicing_code(self): return self.edge_data.splicing_code
+    @splicing_code.setter
+    def splicing_code(self, value): self.edge_data.splicing_code = value
     # fmt: on
 
     @staticmethod
@@ -611,6 +621,11 @@ class Edge:
 
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
+
+        self.gene1 = other.gene1
+        self.gene2 = other.gene2
+        self.annotation_code = other.annotation_code
+        self.splicing_code = other.splicing_code
 
         logger.trace(
             f"Merge edge {self.key} {self.read_ids=} with {other.key} {other.read_ids=}.",
@@ -1086,7 +1101,6 @@ class NLPath:
                     if read1_insertion_event is None or insertion_read2_event is None:
                         # only add read1, False means that the insertion type (hit 1 insertion)
                         # are not added in series
-                        event.update_node_info(read1_node)
 
                         nodes.append(read1_node)
 
@@ -1098,8 +1112,6 @@ class NLPath:
                         # True means that the insertion type(hit 1 insertion) are added in series
                         read1_insertion_event = Event(read1_insertion_event)
                         insertion_read2_event = Event(insertion_read2_event)
-
-                        read1_insertion_event.update_node_info(read1_node)
 
                         edge_data = EdgeData.from_event(
                             read1_insertion_event,
@@ -1118,8 +1130,6 @@ class NLPath:
                             exons=insertion.get_exons(),
                             cigartuples_without_soft=insertion.cigartuples_without_soft,
                         )
-
-                        insertion_read2_event.update_insertion_node_info(insertion_node)
 
                         insertion_edge_data = EdgeData.from_event(
                             insertion_read2_event,
@@ -1141,8 +1151,6 @@ class NLPath:
                     # only add read1 with insertion info
                     # False means that the insertion type (hit more insertion) are
                     # not added in series
-                    event.update_node_info(read1_node)
-
                     nodes.append(read1_node)
                     edge_data.insertion_info = (False, insertion)
                     edges_data.append(edge_data)
@@ -1156,13 +1164,11 @@ class NLPath:
                 if event.strand1.is_reverse():
                     microhomology.reverse_completement_query()
 
-                event.update_node_info(read1_node)
                 nodes.append(read1_node)
                 edge_data.insertion_info = (False, microhomology)
                 edges_data.append(edge_data)
 
             else:
-                event.update_node_info(read1_node)
                 nodes.append(read1_node)
                 edges_data.append(edge_data)
 
