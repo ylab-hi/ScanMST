@@ -162,6 +162,7 @@ def get_nodes_gtf_features_from_series(
             f"{cluster_id}x{nlpath.id}",
             min_nlpath_sr,
             min_nlpath_originla_sr,
+            extend=nlpath.extension,
         ),
         f'gene_id "{cluster_id}";',
     )
@@ -179,6 +180,8 @@ def format_gtf_features_for_nlpath(
     nlpath_id: str,
     nlpath_sr: float,
     nlpath_originla_sr: float,
+    *,
+    extend: bool = False,
 ) -> list[str]:
     """Get GTF features of transcript."""
     return [
@@ -190,7 +193,7 @@ def format_gtf_features_for_nlpath(
         ".",
         ".",
         ".",
-        f'sr "{nlpath_sr}"; ' f'osr "{nlpath_originla_sr}"; ' f'transcript_id "{nlpath_id}"; ',
+        f'sr "{nlpath_sr}"; ' f'osr "{nlpath_originla_sr}"; ' f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
     ]
 
 

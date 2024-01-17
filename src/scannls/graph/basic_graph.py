@@ -749,6 +749,7 @@ class NLPath:
         self.is_in_graph = False
         self.id = -1
         self.merge_factor = 1
+        self.extension = False
 
     def add_edge(self, nodes: Node, nodet: Node, edge: Edge | None = None) -> None:
         """Add edge to the path."""
@@ -969,6 +970,14 @@ class NLPath:
 
         return output_event_list
 
+    def anno_extension(self):
+        read_ids_set = []
+        for edge in self.edges.values():
+            read_ids_set.append(set(edge.read_ids))
+
+        if not set.intersection(*read_ids_set):
+            self.extension = True
+
     @classmethod
     def create_path_from_node_edge_list(cls, node_edges):
         """Create a path from a list of nodes and edges.
@@ -990,6 +999,7 @@ class NLPath:
                 current_edge = node_edges[idx + 1]
                 instance.edges[current_edge.key] = current_edge
 
+        instance.anno_extension()
         return instance
 
     @classmethod
