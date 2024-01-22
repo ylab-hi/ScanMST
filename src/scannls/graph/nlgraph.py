@@ -104,7 +104,7 @@ class NLGraph:
             plot_result = Path(f"graph_{self.input_bam_path.stem}")
             plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
-            default_visitors(self, (plot_result / cluster_name).as_posix(), self.support_reads).visualize()
+            default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1).visualize()
 
     @classmethod
     def create_graph(
@@ -165,6 +165,10 @@ class NLGraph:
 
         if not is_merged:
             self.logger.info(f"add edge with {edge_data=}")
+
+            if len(self.edges[edge.key]) > 1:
+                self.logger.warning(f"Multiple edges {self.edges[edge.key]} found between {node1} and {node2}")
+
             self.edges[edge.key].append(edge)
 
     def find_edges(self, node1: Node, node2: Node):

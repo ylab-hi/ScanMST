@@ -86,7 +86,7 @@ class GraphVis:
     def get_label_from_node(node: Node) -> str:
         """Get label from node."""
         head_node = "H" if node.is_start_node() else "T"
-        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}"
+        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}_{node.trace_id}"
 
     @staticmethod
     def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
@@ -102,8 +102,8 @@ class GraphVis:
             trace_id=node.trace_id,
         )
 
-    @staticmethod
     def add_edge_to_graph(
+        self,
         node1: Node,
         node2: Node,
         edge: Edge,
@@ -117,12 +117,15 @@ class GraphVis:
         if graph.has_edge(node1_label, node2_label):
             current_edge_label = [i["label"] for i in graph[node1_label][node2_label].values()]
             if edge_label not in current_edge_label:
+                logger.warning(f"vis: multiple edges between {node1_label} and {node2_label}")
                 graph.add_edge(
                     node1_label,
                     node2_label,
                     label=edge_label,
                     weight=edge.sr,
                     read_ids=edge.read_ids,
+                    gene1=edge.gene1,
+                    gene2=edge.gene2,
                 )
         else:
             graph.add_edge(
@@ -161,13 +164,18 @@ class GraphVis:
 
         if successors := start_node.successors:
             for successor in successors:
-                for edge in graph.get_possible_edges(
-                    path,
-                    start_node,
-                    successor,
-                    self.min_supprt_reads,  # minimal support_reads,
-                    filter_edges=False,
+                for idx, edge in enumerate(
+                    graph.get_possible_edges(
+                        path,
+                        start_node,
+                        successor,
+                        self.min_supprt_reads,  # minimal support_reads,
+                        filter_edges=False,
+                    )
                 ):
+                    if idx > 0:
+                        logger.warning("Vis: multiple edges between {} and {}", start_node, successor)
+
                     self.add_node_to_graph(successor, nx_graph)
                     self.add_edge_to_graph(start_node, successor, edge, nx_graph)
                     self._traverse_graph(
