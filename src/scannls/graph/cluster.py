@@ -25,6 +25,7 @@ class Ruler:
         :param logger: logger
         """
         self.prune_threshold = prune_threshold
+        # self.write = open("distance_cluster.txt", "w")
 
     def __repr__(self) -> str:
         """Represent Ruler."""
@@ -66,6 +67,7 @@ class Ruler:
                 middle_nodes_b,
             )
         ):
+            # self.write.write(f"{nlpath_a.nodes[0].query_name}\t{nlpath_b.nodes[0].query_name}\n")
             return 0.0
 
         for middle_node_b in middle_nodes_b:
@@ -73,6 +75,7 @@ class Ruler:
                 head_node_a,
                 middle_node_b,
             ) or merge_condition.tail2mid(tail_node_a, middle_node_b):
+                # self.write.write(f"{nlpath_a.nodes[0].query_name}\t{nlpath_b.nodes[0].query_name}\n")
                 return 0.0
 
         for middle_node_a in middle_nodes_a:
@@ -80,6 +83,7 @@ class Ruler:
                 head_node_b,
                 middle_node_a,
             ) or merge_condition.tail2mid(tail_node_b, middle_node_a):
+                # self.write.write(f"{nlpath_a.nodes[0].query_name}\t{nlpath_b.nodes[0].query_name}\n")
                 return 0.0
 
         return 1.0

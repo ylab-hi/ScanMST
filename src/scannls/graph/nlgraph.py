@@ -197,7 +197,7 @@ class NLGraph:
         previous_edge_read_id_mid = set(previous_edge_node_identity[NodeIdentity.MID])
         next_edge_read_id_mid = set(next_edge_node_identity[NodeIdentity.MID])
 
-        if not previous_edge_read_id_mid and not next_edge_read_id_mid:
+        if previous_edge_read_id_mid and next_edge_read_id_mid:
             # check two mid from different reads
             return len(previous_edge_read_id_mid & next_edge_read_id_mid) > 0
 
@@ -428,6 +428,7 @@ class NLGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
+
         if not start_node or self.has_circle:
             # successor be [] or None
             if not self.has_circle:
