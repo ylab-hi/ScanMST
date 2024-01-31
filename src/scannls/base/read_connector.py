@@ -525,6 +525,7 @@ class ReadsConnector:
                 threshold_identity,
                 top=top,
             )
+            self.logger.warning(f"{threshold_identity=}, {query_sequence=}")
 
             return hit, keep_hsp
 
@@ -746,6 +747,7 @@ def detect_read_read_connections_from_cigar(
     mapq_cutoff: int,
     max_allowed_nm: int,
     aligner,
+    blat_ident_pct_cutoff: float,
     logger: LoggerType,
 ):
     """Detecting read-read connections with chimeric alignments CIGAR string.
@@ -955,6 +957,7 @@ def detect_read_read_connections_from_cigar(
     read_connector = ReadsConnector(
         read_list=chimeric_aln_list,
         aligner=aligner,
+        threshold_identity=blat_ident_pct_cutoff,
         logger=logger,
     )
 

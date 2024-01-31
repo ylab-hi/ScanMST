@@ -34,7 +34,7 @@ class DefaultOptions:
     parallel: int = 1
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 50
-    ident_cutoff: float = 0.99
+    ident_cutoff: float = 0.90
     prune_threshold: int = 10  # for merging conditions
     soft_len: int = 5
     mismatch: int = 3
