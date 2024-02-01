@@ -291,13 +291,15 @@ def _scan_bam_helper(
     circular_rna,
     exon_filter,
     rt_switching_filter_len,
+    prune_threshold,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
-
+    # Set exon boundary size internally
+    boundary_size = 10
     genome_fasta = _get_genome_fasta(ref_genome)
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
-    exon_filter = ExonFilter(gtf, 10)
+    exon_filter = ExonFilter(gtf, boundary_size)
     rt_switching_filter = RTSwitchingFilter(rt_switching_filter_len)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
@@ -332,7 +334,7 @@ def _scan_bam_helper(
     pat_right_s = re.compile(r"(\d+)S$")
 
     # Circular RNA filter
-    circ_rna_filter = CircRNAFilter(gtf, 10, 10)
+    circ_rna_filter = CircRNAFilter(gtf, boundary_size, prune_threshold)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
         if (
@@ -602,6 +604,7 @@ def scanbam_run(
     circular_rna,
     exon_filter,
     rt_switching_filter_len,
+    prune_threshold,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(

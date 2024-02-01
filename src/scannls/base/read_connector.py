@@ -525,7 +525,6 @@ class ReadsConnector:
                 threshold_identity,
                 top=top,
             )
-            self.logger.warning(f"{threshold_identity=}, {query_sequence=}")
 
             return hit, keep_hsp
 

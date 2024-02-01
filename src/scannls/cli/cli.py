@@ -238,6 +238,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             circular_rna=options.circular_rna,
             exon_filter=options.exon_filter,
             rt_switching_filter_len=options.rt_switching_filter_len,
+            prune_threshold=options.prune_threshold,
         )
 
         avg_cov = None if not options.bound else avg_cov
