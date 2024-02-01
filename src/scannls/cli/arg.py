@@ -200,6 +200,14 @@ def parse_args() -> argparse.ArgumentParser:
         required=False,
     )
     parser.add_argument(
+        "--blat-identity",
+        action="store",
+        dest="ident_cutoff",
+        type=float,
+        help="BLAT identity cutoff (default: %(default)s)",
+        default=DefaultOptions.ident_cutoff,
+    )
+    parser.add_argument(
         "--blat-2bit",
         action="store",
         dest="blat_two_bit",
@@ -291,14 +299,6 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         help="maximum allowed NM to keep AS tag (default: %(default)s)",
         default=DefaultOptions.max_allowed_nm,
-    )
-    parser.add_argument(
-        "--identity",
-        action="store",
-        dest="ident_cutoff",
-        type=float,
-        help="BLAT identity cutoff (default: %(default)s)",
-        default=DefaultOptions.ident_cutoff,
     )
 
     # Reads filter parameters
