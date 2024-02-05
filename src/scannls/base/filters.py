@@ -332,11 +332,13 @@ class CircRNAFilter:
                     <= self.breakpoint_diff_threshold
                 ) and (
                     (
-                        len(current_node.introns) > 0
+                        current_node.introns
+                        and next_node.introns
+                        and len(current_node.introns) > 0
                         and len(next_node.introns) > 0
                         and current_node.introns == next_node.introns
                     )
-                    or (len(current_node.introns) == 0 and len(next_node.introns) == 0)
+                    or (not current_node.introns and not next_node.introns)
                 ):
                     ont_condition = True
 
