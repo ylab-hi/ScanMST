@@ -899,7 +899,8 @@ class NLPath:
         for node_a, node_b in pairs:
             if (
                 node_a.strand == node_b.strand
-                and abs(node_a.ref_start - node_a.ref_start) <= threshold
+                and node_a.chrom == node_b.chrom
+                and abs(node_a.ref_start - node_b.ref_start) <= threshold
                 and abs(node_a.ref_end - node_b.ref_end) <= threshold
             ) and (
                 (
