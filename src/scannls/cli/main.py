@@ -68,7 +68,9 @@ class BamScanner:
 
         self.bam_chrom_info = {}
         self.mapq_cutoff = mapq_cutoff
-        self.ref_genome = ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        self.ref_genome = (
+            ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        )
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
@@ -145,11 +147,16 @@ class BamScanner:
 
                 subs_fraction = 0 if nm == 0 else num_of_subs / nm  # type: ignore
                 if (
-                    not (num_of_subs > self.substitutions_num and subs_fraction > self.substitutions_fraction)
+                    not (
+                        num_of_subs > self.substitutions_num
+                        and subs_fraction > self.substitutions_fraction
+                    )
                     and ins_fraction <= self.indels_fraction
                     and del_fraction <= self.indels_fraction
                 ):
-                    self.representative_alignments_new_cigar[f"{read.qname}\t{l_s_len}\t{r_s_len}"] = read.cigarstring
+                    self.representative_alignments_new_cigar[
+                        f"{read.qname}\t{l_s_len}\t{r_s_len}"
+                    ] = read.cigarstring
                 else:
                     self.logger.trace(
                         f"{read.query_name=} does not pass the substitutions/indel cutoff. "
@@ -295,6 +302,7 @@ def _scan_bam_helper(
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
+
     # Set exon boundary size internally
     boundary_size = 10
     genome_fasta = _get_genome_fasta(ref_genome)
@@ -347,7 +355,8 @@ def _scan_bam_helper(
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
-                    f"Pre-checking: {read.query_name=} has SA; supplementary read: " f"{read.is_supplementary}",
+                    f"Pre-checking: {read.query_name=} has SA; supplementary read: "
+                    f"{read.is_supplementary}",
                 )
 
                 updated_chimeric_alns = []
@@ -382,7 +391,11 @@ def _scan_bam_helper(
                                 f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}",
                             )
 
-                if len(updated_chimeric_alns) == 0 | len(updated_chimeric_alns) != len(chimeric_alns):
+                if (
+                    len(updated_chimeric_alns)
+                    == 0 | len(updated_chimeric_alns)
+                    != len(chimeric_alns)
+                ):
                     read.set_tag("SA", None)
                 else:
                     read.set_tag("SA", "{};".format(";".join(updated_chimeric_alns)))
@@ -400,7 +413,9 @@ def _scan_bam_helper(
 
                 ret = get_softclip_length(read, mode=MappingMode.Type0)
                 if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
-                    soft_seq_ori = reverse_complement(ret[1]) if read.is_reverse else ret[1]
+                    soft_seq_ori = (
+                        reverse_complement(ret[1]) if read.is_reverse else ret[1]
+                    )
                     read_mode = ret[-1]
                     chimeric_aln_str = blat2chimeric_alignment(
                         soft_seq_ori,
@@ -480,7 +495,10 @@ def _scan_bam_helper(
                 subs_fraction = 0 if nm == 0 else num_of_subs / int(nm)
 
                 if (
-                    not (num_of_subs > substitutions_num and subs_fraction > substitutions_fraction)
+                    not (
+                        num_of_subs > substitutions_num
+                        and subs_fraction > substitutions_fraction
+                    )
                     and ins_fraction <= indels_fraction
                     and del_fraction <= indels_fraction
                 ):
@@ -536,7 +554,8 @@ def _scan_bam_helper(
                     # num of alignment segments should be equal to the number of hops + 1
                     # after exon, RT switching and other filtering, the condition may be not satisfied.
                     if len(nls_event_list) > 0 and (
-                        len(nls_event_list) == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads
+                        len(nls_event_list)
+                        == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads
                     ):
                         logger.debug(f"{nls_event_list=}")
                         nlpath = NLPath.new(
@@ -552,7 +571,13 @@ def _scan_bam_helper(
 
                         nlpath.squeeze()
 
-                        if not nlpath.is_all_type_del() and nlpath.is_minimum_node_length_larger_than_threshold():
+                        if (
+                            not nlpath.is_all_type_del()
+                            and not nlpath.is_forming_circle(prune_threshold)
+                            and nlpath.is_minimum_node_length_larger_than_threshold(
+                                boundary_size
+                            )
+                        ):
                             if circular_rna == "remove":
                                 if not circ_rna_filter.is_circrna(nlpath):
                                     nls_src_forms_list.append(nlpath)
@@ -567,6 +592,13 @@ def _scan_bam_helper(
                             else:
                                 nls_src_forms_list.append(nlpath)
                                 logger.trace(f"{nlpath=}")
+
+                        # debug purposes only, remove it later
+                        elif nlpath.is_forming_circle(prune_threshold):
+                            logger.warning(
+                                f"{nlpath} is filtered out owing to forming circle",
+                            )
+
                 else:
                     logger.trace(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "
@@ -633,7 +665,11 @@ def scanbam_run(
     )
     # get the chromosome name we want to scan
 
-    contigs = [contig for contig in bam_scanner.bam_chrom_info if "_" not in contig and "M" not in contig]
+    contigs = [
+        contig
+        for contig in bam_scanner.bam_chrom_info
+        if "_" not in contig and "M" not in contig
+    ]
 
     logger.info(f" Processing {contigs=}")
     running_mode = "normal" if parallel == 1 else "parallel"

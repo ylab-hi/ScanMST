@@ -289,14 +289,22 @@ class CircRNAFilter:
             # medium-confidence circular RNA
             _circular_condition3 = bool(
                 current_edge.variation_type.is_tdup()
-                and not current_node.introns
-                and not next_node.introns
                 and (
                     abs(current_node.ref_start - next_node.ref_start)
                     <= self.breakpoint_diff_threshold
-                    or abs(current_node.ref_end - next_node.ref_end)
+                    and abs(current_node.ref_end - next_node.ref_end)
                     <= self.breakpoint_diff_threshold
-                ),
+                )
+                and (
+                    (
+                        current_node.introns
+                        and next_node.introns
+                        and len(current_node.introns) > 0
+                        and len(next_node.introns) > 0
+                        and current_node.introns == next_node.introns
+                    )
+                    or (not current_node.introns and not next_node.introns)
+                )
             )
 
             # low-confidence circular RNA
