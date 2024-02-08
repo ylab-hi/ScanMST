@@ -274,7 +274,7 @@ class Node(BasicNode):
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
-        self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.query_name}"
+        self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
 
     @property
     def ref_start(self) -> int:
@@ -379,8 +379,10 @@ class Node(BasicNode):
                     f"A circle in a path is detectd {other.query_name}",
                 )
 
-            # WARN: do not check if they have same key <Yangyang Li>
-            self.identities.update(other.identities)
+            # merge node without circle
+            else:
+                # WARN: do not check if they have same key <Yangyang Li>
+                self.identities.update(other.identities)
             return
 
         msg = f"Cannot merge {self!r} and {other!r}"
