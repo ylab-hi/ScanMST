@@ -292,6 +292,7 @@ def _scan_bam_helper(
     exon_filter,
     rt_switching_filter_len,
     prune_threshold,
+    max_allowed_ins,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
@@ -556,6 +557,7 @@ def _scan_bam_helper(
                         if (
                             not nlpath.is_all_type_del()
                             and not nlpath.is_forming_circle(prune_threshold)
+                            and nlpath.is_maximum_novel_insertion_length_valid(max_allowed_ins)
                             and nlpath.is_minimum_node_length_larger_than_threshold(boundary_size)
                         ):
                             if circular_rna == "remove":
@@ -617,6 +619,7 @@ def scanbam_run(
     exon_filter,
     rt_switching_filter_len,
     prune_threshold,
+    max_allowed_ins,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(

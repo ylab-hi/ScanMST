@@ -316,7 +316,7 @@ class CircRNAFilter:
                 num_of_tdups += 1
                 if (
                     abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
-                    and abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
                 ) and (
                     (
                         current_node.introns

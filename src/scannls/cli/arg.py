@@ -34,6 +34,7 @@ class DefaultOptions:
     parallel: int = 1
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 50
+    max_allowed_micro_insertion: int = 50
     ident_cutoff: float = 0.90
     prune_threshold: int = 10  # for merging conditions
     soft_len: int = 5
@@ -299,6 +300,15 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         help="maximum allowed NM to keep AS tag (default: %(default)s)",
         default=DefaultOptions.max_allowed_nm,
+    )
+
+    parser.add_argument(
+        "--max-allowed-ins",
+        action="store",
+        dest="max_allowed_ins",
+        type=int,
+        help="maximum allowed micro-insertion length (default: %(default)s)",
+        default=DefaultOptions.max_allowed_micro_insertion,
     )
 
     # Reads filter parameters
