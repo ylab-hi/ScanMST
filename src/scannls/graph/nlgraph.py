@@ -148,6 +148,7 @@ class NLGraph:
             return
 
         is_merged = False
+
         for current_edge in self.edges[edge.key]:
             if current_edge.read_ids == edge.read_ids:
                 # same edge

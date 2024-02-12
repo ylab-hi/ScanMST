@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -166,6 +167,9 @@ def parse_nlgraph_for_cluster_par(
 def cli(options: argparse.Namespace | DefaultOptions):
     """Cli function."""
     start = time.perf_counter()
+
+    options.input = Path(options.input).resolve().as_posix()
+
     logger.remove()
     if options.log.upper() == "INFO":
         info_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
