@@ -918,9 +918,12 @@ class NLPath:
                 and _b == len(self.nodes) - 1
                 and node_a.strand == node_b.strand
                 and node_a.chrom == node_b.chrom
-                and abs(node_a.ref_start - node_b.ref_start) <= threshold
-                or abs(node_a.ref_end - node_b.ref_end) <= threshold
-            ) and intron_condition:
+                and (
+                    abs(node_a.ref_start - node_b.ref_start) <= threshold
+                    or abs(node_a.ref_end - node_b.ref_end) <= threshold
+                )
+                and intron_condition
+            ):
                 return True
 
         return False
