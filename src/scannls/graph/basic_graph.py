@@ -155,11 +155,15 @@ class BasicNode:
             self.next_node_in_nlpath = nlpath[index + 1]
         elif index == len(nlpath) - 1:
             self.previous_node_in_nlpath = nlpath[index - 1]
-            self.previous_edge_in_nlapth = nlpath.edges[Edge.create_key_from_node(nlpath[index - 1], self)]
+            self.previous_edge_in_nlapth = nlpath.edges[
+                Edge.create_key_from_node(nlpath[index - 1], self)
+            ]
         else:
             self.next_node_in_nlpath = nlpath[index + 1]
             self.previous_node_in_nlpath = nlpath[index - 1]
-            self.previous_edge_in_nlapth = nlpath.edges[Edge.create_key_from_node(nlpath[index - 1], self)]
+            self.previous_edge_in_nlapth = nlpath.edges[
+                Edge.create_key_from_node(nlpath[index - 1], self)
+            ]
 
     def clear_next_and_previous_node_in_series(self) -> None:
         """Clear next and previous node in series."""
@@ -305,7 +309,13 @@ class Node(BasicNode):
     __str__ = __repr__
 
     def __hash__(self) -> int:
-        return hash(self.chrom) ^ hash(self.ref_start) ^ hash(self.ref_end) ^ hash(self.strand) ^ hash(self.exons)
+        return (
+            hash(self.chrom)
+            ^ hash(self.ref_start)
+            ^ hash(self.ref_end)
+            ^ hash(self.strand)
+            ^ hash(self.exons)
+        )
 
     @property
     def read_ids(self) -> list[str]:
@@ -402,7 +412,12 @@ class Node(BasicNode):
                 return False
 
             if not same_left and not same_right:
-                return self.exons.first.start <= other.exons.first.start <= other.exons.last.end <= self.exons.last.end
+                return (
+                    self.exons.first.start
+                    <= other.exons.first.start
+                    <= other.exons.last.end
+                    <= self.exons.last.end
+                )
 
             if same_left and same_right:
                 return (
@@ -814,7 +829,9 @@ class NLPath:
 
     def is_all_type_del(self) -> bool:
         """Check if sv_type of all nodes in the series are DEL."""
-        return all(edge.variation_type == VariationType.DEL for edge in self.edges.values())
+        return all(
+            edge.variation_type == VariationType.DEL for edge in self.edges.values()
+        )
 
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""
@@ -823,7 +840,9 @@ class NLPath:
         if not self.nodes:
             return
 
-        if not any(edge.variation_type == VariationType.DEL for edge in self.edges.values()):
+        if not any(
+            edge.variation_type == VariationType.DEL for edge in self.edges.values()
+        ):
             return
 
         edges = []
@@ -874,25 +893,36 @@ class NLPath:
             self.edges[edge_key] = edge
 
     def is_forming_circle(self, threshold: int = 20) -> bool:
-        """Check if it form a circle."""
-        pairs = combinations(self.nodes, 2)
-        for node_a, node_b in pairs:
+        """Check if this nlpath itself can form a circle."""
+        pair_indices = combinations(range(len(self.nodes)), 2)
+        for _a, _b in pair_indices:
+            node_a = self.nodes[_a]
+            node_b = self.nodes[_b]
+            intron_condition = (
+                node_a.introns
+                and node_b.introns
+                and len(node_a.introns) > 0
+                and len(node_b.introns) > 0
+            ) or (not node_a.introns and not node_b.introns)
+
             if (
                 node_a.strand == node_b.strand
                 and node_a.chrom == node_b.chrom
                 and abs(node_a.ref_start - node_b.ref_start) <= threshold
                 and abs(node_a.ref_end - node_b.ref_end) <= threshold
-            ) and (
-                (
-                    node_a.introns
-                    and node_b.introns
-                    and len(node_a.introns) > 0
-                    and len(node_b.introns) > 0
-                    and node_a.introns == node_b.introns
-                )
-                or (not node_a.introns and not node_b.introns)
-            ):
+            ) and intron_condition:
                 return True
+            # middle node vs. tail node
+            if (
+                _a > 0
+                and _b == len(self.nodes) - 1
+                and node_a.strand == node_b.strand
+                and node_a.chrom == node_b.chrom
+                and abs(node_a.ref_start - node_b.ref_start) <= threshold
+                or abs(node_a.ref_end - node_b.ref_end) <= threshold
+            ) and intron_condition:
+                return True
+
         return False
 
     def is_maximum_novel_insertion_length_valid(self, threshold: int = 50) -> bool:
@@ -900,7 +930,9 @@ class NLPath:
         maximum_insertion_length = 0
         for event_id, _node in enumerate(self.nodes[:-1], 1):
             _edge = self.next_edge(_node, event_id - 1)
-            if _edge.insertion_info and isinstance(_edge.insertion_info[1], NovelInsertion):
+            if _edge.insertion_info and isinstance(
+                _edge.insertion_info[1], NovelInsertion
+            ):
                 insertion = _edge.insertion_info[1]
                 _insertion_length = len(insertion.query_sequence)
                 if _insertion_length > maximum_insertion_length:
@@ -1093,10 +1125,16 @@ class NLPath:
             # is insertions
             if event.has_insertion():
                 insertion_seq = event.insertion_seq1  # pick from the first read
-                insertion_seq = reverse_complement(insertion_seq) if event.strand1.is_reverse() else insertion_seq
+                insertion_seq = (
+                    reverse_complement(insertion_seq)
+                    if event.strand1.is_reverse()
+                    else insertion_seq
+                )
 
                 if aligner is None:
-                    flag, insertion = False, NovelInsertion(hit_num=0, query_sequence=insertion_seq)
+                    flag, insertion = False, NovelInsertion(
+                        hit_num=0, query_sequence=insertion_seq
+                    )
                 else:
                     flag, insertion = aligner.query_insertion(insertion_seq)
 
@@ -1114,7 +1152,11 @@ class NLPath:
                     )
 
                     logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
-                    insertion_mode = (2 if event.mode1 == 1 else 1) if event.strand1 == insertion.strand else event.mode1
+                    insertion_mode = (
+                        (2 if event.mode1 == 1 else 1)
+                        if event.strand1 == insertion.strand
+                        else event.mode1
+                    )
                     logger.trace("nls reference for read1 and insertion")
 
                     read1_insertion_event = infer_nls_from_connected_reads(
@@ -1130,7 +1172,11 @@ class NLPath:
                     )
 
                     # get type of insertion between insertion node and second node
-                    insertion_mode = (2 if event.mode2 == 1 else 1) if insertion.strand == read2.strand else event.mode2
+                    insertion_mode = (
+                        (2 if event.mode2 == 1 else 1)
+                        if insertion.strand == read2.strand
+                        else event.mode2
+                    )
 
                     logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = infer_nls_from_connected_reads(
@@ -1266,7 +1312,9 @@ def check_end_node_is_ploya(
     if node.strand.is_forward():
         seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
     else:
-        seq = genome_fasta[node.chrom][node.ref_start - length : node.ref_start].reverse.complement.seq
+        seq = genome_fasta[node.chrom][
+            node.ref_start - length : node.ref_start
+        ].reverse.complement.seq
 
     counter: dict[str, int] = Counter(seq)
     if counter["A"] <= ratio * len(seq):
@@ -1295,7 +1343,10 @@ def _check_insertion_conditions_for_compare_insertion(
             if (
                 isinstance(insertion_info1[1], NovelInsertion)
                 and isinstance(insertion_info2[1], NovelInsertion)
-                and (insertion_info1[1].query_sequence == insertion_info2[1].query_sequence)
+                and (
+                    insertion_info1[1].query_sequence
+                    == insertion_info2[1].query_sequence
+                )
             ):
                 return True
 
