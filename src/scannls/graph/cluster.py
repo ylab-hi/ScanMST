@@ -349,6 +349,7 @@ class ClusterFinder:
                 threadhold,
             ):
                 merge_nlpath(path1, path2, start_index)  # type: ignore
+                path1.polish_edges()
                 path1.merge_factor += 1
                 return True
 

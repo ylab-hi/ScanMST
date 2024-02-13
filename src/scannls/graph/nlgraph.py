@@ -98,6 +98,7 @@ class NLGraph:
                 node_list,
             )
             current_path.id = idx
+            current_path.polish_edges()
             yield current_path
 
         if is_plot and not self.has_circle and node_list:
@@ -156,7 +157,7 @@ class NLGraph:
 
             if current_edge.merged(
                 edge,
-                compared_break_point=True,
+                compared_break_point=False,
                 break_point_threshold=self.merge_threshold,
             ):
                 logger.info(f"merging {current_edge} and {edge}")
