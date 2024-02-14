@@ -50,7 +50,7 @@ generate-setup-file = true
 scannls = "scannls.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.1.9"
+ruff = "^0.2.1"
 codespell = "^2.2.2"
 ipdb = "^0.13.11"
 isort = "^5.13.2"
