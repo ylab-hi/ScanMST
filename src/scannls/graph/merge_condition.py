@@ -13,8 +13,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .basic_graph import Node
 
-TOLENRANCE = 10
-
 
 class MergeConditionMode(Enum):
     head2head = auto()
@@ -60,6 +58,7 @@ class MergeConditionMode(Enum):
 
 class MergeCondition:
     def __init__(self, threshold: int) -> None:
+        """Prune threshold."""
         self.threshold = threshold
 
     def head2head(self, node1: Node, node2: Node) -> bool:
@@ -73,14 +72,13 @@ class MergeCondition:
         return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
             node1,
             node2,
-            self.threshold,
         )
 
-    @staticmethod
-    def head2mid(node1: Node, node2: Node) -> bool:
+    def head2mid(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
             node1,
             node2,
+            self.threshold,
         )
 
     def mid2head(self, node1: Node, node2: Node) -> bool:
@@ -88,19 +86,26 @@ class MergeCondition:
 
     @staticmethod
     def mid2mid(node1: Node, node2: Node) -> bool:
-        if node1.chrom != node2.chrom or node1.strand != node2.strand:
+        if (
+            node1.chrom != node2.chrom
+            or node1.strand != node2.strand
+            or node1.introns != node2.introns
+        ):
             return False
 
         if node1.exons is None or node2.exons is None:
             raise ValueError
 
-        return node1.exons.first.start == node2.exons.first.start and node1.exons.last.end == node2.exons.last.end
+        return (
+            node1.exons.first.start == node2.exons.first.start
+            and node1.exons.last.end == node2.exons.last.end
+        )
 
-    @staticmethod
-    def mid2tail(node1: Node, node2: Node) -> bool:
+    def mid2tail(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
             node2,
             node1,
+            self.threshold,
         )
 
     def tail2head(self, node1: Node, node2: Node) -> bool:
@@ -205,7 +210,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
 def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     node1: Node,
     node2: Node,
-    threshold: float = 0.5,
+    percentage_threshold: float = 0.5,
 ) -> bool:
     """Check if node1 and node2 can be merged based on overlap info.
 
@@ -236,13 +241,15 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
         return False
 
     if node1.strand.is_forward():
-        if ret := node1.exons.first.join(node2.exons.last):
-            overlap, union = ret
-            return len(overlap) / len(union) >= threshold
+        if node1.ref_start <= node2.ref_start < node1.ref_end <= node2.ref_end:
+            overlap = node1.ref_end - node2.ref_start
+            union = node2.ref_end - node1.ref_start
+            return overlap / union >= percentage_threshold
 
-    elif ret := node2.exons.first.join(node1.exons.last):
-        overlap, union = ret
-        return len(overlap) / len(union) >= threshold
+    elif node2.ref_start <= node1.ref_start < node2.ref_end <= node1.ref_end:
+        overlap = node2.ref_end - node1.ref_start
+        union = node1.ref_end - node2.ref_start
+        return overlap / union >= percentage_threshold
 
     return False
 
@@ -250,7 +257,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     node1: Node,
     node2: Node,
-    threshold: float,
+    threshold: int,
 ) -> bool:
     """Check if two end nodes can be merged or not.
 
@@ -298,13 +305,13 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 
     if node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():
-            return node1.contains(node2, same_left=True, threshold=TOLENRANCE)
-        return node1.contains(node2, same_right=True, threshold=TOLENRANCE)
+            return node1.contains(node2, same_left=True, threshold=threshold)
+        return node1.contains(node2, same_right=True, threshold=threshold)
 
     if not node1.is_polya and node2.is_polya:
         if node1.strand.is_forward():
-            return node2.contains(node1, same_left=True, threshold=TOLENRANCE)
-        return node2.contains(node1, same_right=True, threshold=TOLENRANCE)
+            return node2.contains(node1, same_left=True, threshold=threshold)
+        return node2.contains(node1, same_right=True, threshold=threshold)
 
     if not node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():
@@ -317,6 +324,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
     node1: Node,
     node2: Node,
+    threshold: int,
 ) -> bool:
     """Check if start node can be merged with a middle node or not.
 
@@ -347,13 +355,14 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
     # we save same value in different variable in which it is diffficult to change them at same time
 
     if node1.strand.is_forward():
-        return node2.contains(node1, same_right=True, threshold=TOLENRANCE)
-    return node2.contains(node1, same_left=True, threshold=TOLENRANCE)
+        return node2.contains(node1, same_right=True, threshold=threshold)
+    return node2.contains(node1, same_left=True, threshold=threshold)
 
 
 def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
     node1: Node,
     node2: Node,
+    threshold: int,
 ) -> bool:
     """Check if end node can be merged with a middle node or not.
 
@@ -383,6 +392,6 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
         return False
 
     if node1.strand.is_forward():
-        return node2.contains(node1, same_left=True, threshold=TOLENRANCE)
+        return node2.contains(node1, same_left=True, threshold=threshold)
 
-    return node2.contains(node1, same_right=True, threshold=TOLENRANCE)
+    return node2.contains(node1, same_right=True, threshold=threshold)

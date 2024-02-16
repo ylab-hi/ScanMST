@@ -21,6 +21,12 @@ from scannls.base import (
 )
 from scannls.cli import infer_nls_from_connected_reads
 
+from .merge_condition import (
+    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
+    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
+    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
@@ -909,37 +915,50 @@ class NLPath:
 
     def is_forming_circle(self, threshold: int = 20) -> bool:
         """Check if this nlpath itself can form a circle."""
-        pair_indices = combinations(range(len(self.nodes)), 2)
+        nlpath_len = len(self.nodes)
+        pair_indices = combinations(range(nlpath_len), 2)
         for _a, _b in pair_indices:
             node_a = self.nodes[_a]
             node_b = self.nodes[_b]
-            intron_condition = (
-                node_a.introns
-                and node_b.introns
-                and len(node_a.introns) > 0
-                and len(node_b.introns) > 0
-            ) or (not node_a.introns and not node_b.introns)
+            if (
+                node_a.introns != node_b.introns
+                or node_a.strand != node_b.strand
+                or node_a.chrom != node_b.chrom
+            ):
+                continue
 
             if (
-                node_a.strand == node_b.strand
-                and node_a.chrom == node_b.chrom
-                and abs(node_a.ref_start - node_b.ref_start) <= threshold
-                and abs(node_a.ref_end - node_b.ref_end) <= threshold
-            ) and intron_condition:
-                return True
-            # middle node vs. tail node or head node vs. middle node
-            if (
+                # head vs middle
                 (
-                    (_a > 0 and _b == len(self.nodes) - 1)
-                    or (_a == 0 and _b < len(self.nodes) - 1)
+                    _a == 0
+                    and _b < nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
+                        node_a, node_b, threshold
+                    )
                 )
-                and node_a.strand == node_b.strand
-                and node_a.chrom == node_b.chrom
-                and (
-                    abs(node_a.ref_start - node_b.ref_start) <= threshold
-                    or abs(node_a.ref_end - node_b.ref_end) <= threshold
+                # middle vs. tail
+                or (
+                    _a > 0
+                    and _b == nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
+                        node_b, node_a, threshold
+                    )
                 )
-                and intron_condition
+                # head vs. tail
+                or (
+                    _a == 0
+                    and _b == nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
+                        node_a, node_b
+                    )
+                )
+                # middle vs middle
+                or (
+                    _a > 0
+                    and _b < nlpath_len - 1
+                    and node1.exons.first.start == node2.exons.first.start
+                    and node1.exons.last.end == node2.exons.last.end
+                )
             ):
                 return True
 
