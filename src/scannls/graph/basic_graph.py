@@ -956,8 +956,8 @@ class NLPath:
                 or (
                     _a > 0
                     and _b < nlpath_len - 1
-                    and node1.exons.first.start == node2.exons.first.start
-                    and node1.exons.last.end == node2.exons.last.end
+                    and node_a.ref_start == node_b.ref_start
+                    and node_a.ref_end == node_b.ref_end
                 )
             ):
                 return True
