@@ -959,6 +959,11 @@ class NLPath:
                     and node_a.ref_start == node_b.ref_start
                     and node_a.ref_end == node_b.ref_end
                 )
+                # ONT condition
+                or (
+                    abs(node_a.ref_start - node_b.ref_start) <= threshold
+                    and abs(node_a._ref_end - node_b.ref_end) <= threshold
+                )
             ):
                 return True
 
