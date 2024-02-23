@@ -12,7 +12,7 @@ from scannls import __version__
 class DefaultOptions:
     """Cli default options."""
 
-    input: str  # noqa: A003
+    input: str
     ref: str
     gtf: str
     output: str
@@ -49,6 +49,7 @@ class DefaultOptions:
     # junctions within one annotated exon filter
     exon_filter: bool = True
     rt_switching_filter_len: int = 10
+    output_if_has_circle: bool = False
 
 
 COLOR = "bold magenta"
@@ -386,6 +387,13 @@ def parse_args() -> argparse.ArgumentParser:
         type=float,
         default=DefaultOptions.substitutions_fraction,
         help="the allowed maximum substitution fraction in the reads (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--output-if-has-circle",
+        action="store_true",
+        dest="output_if_has_circle",
+        default=DefaultOptions.output_if_has_circle,
+        help="if export result if the nlgraph has a circle  (default: %(default)s)",
     )
 
     return parser

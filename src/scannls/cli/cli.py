@@ -78,6 +78,7 @@ def parse_nlgraph_for_cluster_seq(
         options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
+        options.output_if_has_circle,
     )
 
     with writers.open():
@@ -115,6 +116,7 @@ def _parse_nlgraph_for_cluster_par(
         options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
+        options.output_if_has_circle,
     )
 
     result = []

@@ -35,20 +35,11 @@ class ExonInfo:
 
     def __repr__(self) -> str:
         """Get a string representation of an Exon."""
-        return (
-            f"Exon({self.chrom}:{self.start}-{self.end}:{self.strand}, "
-            f"{self.trx_id})"
-        )
+        return f"Exon({self.chrom}:{self.start}-{self.end}:{self.strand}, " f"{self.trx_id})"
 
     def __hash__(self) -> int:
         """Hash an exon."""
-        return (
-            hash(self.trx_id)
-            ^ hash(self.chrom)
-            ^ hash(self.start)
-            ^ hash(self.end)
-            ^ hash(self.strand)
-        )
+        return hash(self.trx_id) ^ hash(self.chrom) ^ hash(self.start) ^ hash(self.end) ^ hash(self.strand)
 
     def obtain_trx_id(self):
         """Get the transcript id of an exon."""
@@ -270,10 +261,7 @@ class CircRNAFilter:
                         set(current_node.exons).issuperset(set(next_node.exons))
                         or set(current_node.exons).issubset(set(next_node.exons))
                     )
-                    or (
-                        current_node.ref_start == next_node.ref_start
-                        or current_node.ref_end == next_node.ref_end
-                    )
+                    or (current_node.ref_start == next_node.ref_start or current_node.ref_end == next_node.ref_end)
                 )
                 and self.is_megaexon_superpose_with_annotated_exons(longest_node),
             )
@@ -290,10 +278,8 @@ class CircRNAFilter:
             _circular_condition3 = bool(
                 current_edge.variation_type.is_tdup()
                 and (
-                    abs(current_node.ref_start - next_node.ref_start)
-                    <= self.breakpoint_diff_threshold
-                    or abs(current_node.ref_end - next_node.ref_end)
-                    <= self.breakpoint_diff_threshold
+                    abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
                 )
                 and (current_node.introns == next_node.introns)
             )
@@ -307,12 +293,7 @@ class CircRNAFilter:
                 ),
             )
 
-            return (
-                _circular_condition1
-                or _circular_condition2
-                or _circular_condition3
-                or _circular_condition4
-            )
+            return _circular_condition1 or _circular_condition2 or _circular_condition3 or _circular_condition4
 
         # multi-hop event
         num_of_tdups = 0
@@ -325,10 +306,8 @@ class CircRNAFilter:
             if current_edge.variation_type.is_tdup():
                 num_of_tdups += 1
                 if (
-                    abs(current_node.ref_start - next_node.ref_start)
-                    <= self.breakpoint_diff_threshold
-                    or abs(current_node.ref_end - next_node.ref_end)
-                    <= self.breakpoint_diff_threshold
+                    abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
                 ) and (current_node.introns == next_node.introns):
                     ont_condition = True
 
@@ -345,10 +324,8 @@ class CircRNAFilter:
                     )
                     or (not current_node.introns)
                     and (
-                        abs(current_node.ref_start - next_node.ref_start)
-                        <= self.breakpoint_diff_threshold
-                        or abs(current_node.ref_end - next_node.ref_end)
-                        <= self.breakpoint_diff_threshold
+                        abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                        or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
                     )
                 ):
                     num_of_hops_satisfy_condition += 1
@@ -366,27 +343,20 @@ class CircRNAFilter:
                     )
                     or (not next_node.introns)
                     and (
-                        abs(current_node.ref_start - next_node.ref_start)
-                        <= self.breakpoint_diff_threshold
-                        or abs(current_node.ref_end - next_node.ref_end)
-                        <= self.breakpoint_diff_threshold
+                        abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                        or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
                     )
                 ):
                     num_of_hops_satisfy_condition += 1
 
             # middle hops
             elif set(current_node.exons) == set(next_node.exons) or (
-                abs(current_node.ref_start - next_node.ref_start)
-                <= self.breakpoint_diff_threshold
-                and abs(current_node.ref_end - next_node.ref_end)
-                <= self.breakpoint_diff_threshold
+                abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                and abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
             ):
                 num_of_hops_satisfy_condition += 1
 
-        return (
-            num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
-            or ont_condition
-        )
+        return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops or ont_condition
 
     def is_two_megaexon_within_annotated_intron(
         self,
@@ -411,19 +381,11 @@ class CircRNAFilter:
         anchor1 = None
         anchor2 = None
 
-        if (
-            strand_first == strand_second
-            and str(strand_first) == "+"
-            and first_node.ref_start > second_node.ref_end
-        ):
+        if strand_first == strand_second and str(strand_first) == "+" and first_node.ref_start > second_node.ref_end:
             anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_end, "+")
             anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_start, "+")
 
-        elif (
-            strand_first == strand_second
-            and str(strand_first) == "-"
-            and first_node.ref_end < second_node.ref_start
-        ):
+        elif strand_first == strand_second and str(strand_first) == "-" and first_node.ref_end < second_node.ref_start:
             anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_start, "-")
             anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_end, "-")
 
@@ -576,7 +538,4 @@ class RTSwitchingFilter:
 
     def is_from_rt_switching(self, event: Event) -> bool:
         """The event is from RT switching."""
-        return (
-            event.has_microhomology()
-            and event.insertion_microhomology_len > self.filter_size
-        )
+        return event.has_microhomology() and event.insertion_microhomology_len > self.filter_size

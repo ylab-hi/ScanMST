@@ -21,12 +21,6 @@ from scannls.base import (
 )
 from scannls.cli import infer_nls_from_connected_reads
 
-from .merge_condition import (
-    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
-    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
-    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
-)
-
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 

@@ -43,6 +43,8 @@ class NLGraph:
         merge_threshold,
         support_reads,
         input_bam_path: Path,
+        *,
+        output_if_has_circle: bool = False,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -53,6 +55,7 @@ class NLGraph:
         self.rescuer = rescuer
         self.input_bam_path = input_bam_path
         self.has_circle = False
+        self.output_if_has_circle = output_if_has_circle
 
     def __call__(
         self,
@@ -120,6 +123,7 @@ class NLGraph:
         support_reads: int,
         node_rescued_sr_maximum: int,
         average_read_depth: int | None,
+        output_if_has_circle: bool,
     ) -> NLGraph:
         """Create splice graph."""
         rescuer = SRRescuer(
@@ -433,16 +437,16 @@ class NLGraph:
 
         if not start_node or self.has_circle:
             # successor be [] or None
-            if not self.has_circle:
-                group_paths.append(path)
+            group_paths.append(path)
 
         elif successors := start_node.successors:
             for successor in successors:
                 if successor in path:
                     self.logger.warning(
-                        f"A circle may exist in graph with nodes {self.nodes}",
+                        f"A circle exist in graph with nodes {path}",
                     )
                     self.has_circle = True
+                    continue
 
                 for edge_ind, edge in enumerate(
                     self.get_possible_edges(
@@ -489,7 +493,7 @@ class NLGraph:
                 group_paths,
             )
 
-            if self.has_circle:
+            if not self.output_if_has_circle and self.has_circle:
                 result_series_list.clear()
                 break
 
