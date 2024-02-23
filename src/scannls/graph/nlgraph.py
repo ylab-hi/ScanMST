@@ -44,7 +44,7 @@ class NLGraph:
         support_reads,
         input_bam_path: Path,
         *,
-        output_if_has_circle: bool = False,
+        ignore_circle: bool = False,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -55,7 +55,7 @@ class NLGraph:
         self.rescuer = rescuer
         self.input_bam_path = input_bam_path
         self.has_circle = False
-        self.output_if_has_circle = output_if_has_circle
+        self.ignore_circle = ignore_circle
 
     def __call__(
         self,
@@ -123,7 +123,8 @@ class NLGraph:
         support_reads: int,
         node_rescued_sr_maximum: int,
         average_read_depth: int | None,
-        output_if_has_circle: bool,
+        *,
+        ignore_circle: bool,
     ) -> NLGraph:
         """Create splice graph."""
         rescuer = SRRescuer(
@@ -136,7 +137,7 @@ class NLGraph:
             average_read_depth,
         )
 
-        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam))
+        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), ignore_circle=ignore_circle)
 
     @property
     def trace_id(self) -> int:
@@ -493,7 +494,7 @@ class NLGraph:
                 group_paths,
             )
 
-            if not self.output_if_has_circle and self.has_circle:
+            if not self.ignore_circle and self.has_circle:
                 result_series_list.clear()
                 break
 
