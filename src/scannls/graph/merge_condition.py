@@ -214,7 +214,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
 ) -> bool:
     """Check if node1 and node2 can be merged based on overlap info.
 
-    node1 is tail node, node2 is head node Using mean overlap ratio to
+    node1 is head node, node2 is tail node Using mean overlap ratio to
     check if they can be merged.
 
     :param node1:  node1
@@ -237,18 +237,18 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     if node1.introns != node2.introns:
         return False
 
-    if node1.is_polya:
+    if node2.is_polya:
         return False
 
     if node1.strand.is_forward():
-        if node1.ref_start <= node2.ref_start < node1.ref_end <= node2.ref_end:
-            overlap = node1.ref_end - node2.ref_start
-            union = node2.ref_end - node1.ref_start
+        if node2.ref_start <= node1.ref_start < node2.ref_end <= node1.ref_end:
+            overlap = node2.ref_end - node1.ref_start
+            union = node1.ref_end - node2.ref_start
             return overlap / union >= percentage_threshold
 
-    elif node2.ref_start <= node1.ref_start < node2.ref_end <= node1.ref_end:
-        overlap = node2.ref_end - node1.ref_start
-        union = node1.ref_end - node2.ref_start
+    elif node1.ref_start <= node2.ref_start < node1.ref_end <= node2.ref_end:
+        overlap = node1.ref_end - node2.ref_start
+        union = node2.ref_end - node1.ref_start
         return overlap / union >= percentage_threshold
 
     return False
