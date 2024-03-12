@@ -16,17 +16,10 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls import (
-    Blat,
-    FastaWriter,
-    GTFWriter,
-    MyLogger,
-    ParallelWorker,
-    VCFWriter,
-    Writers,
-)
+from scannls.base import Blat, MyLogger, ParallelWorker
 from scannls.graph import ClusterFinder, NLGraph
 from scannls.utils import find_2bit_file, sleep
+from scannls.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 from .main import scanbam_run
 

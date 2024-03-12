@@ -12,14 +12,14 @@ from typing import IO, TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls import MicroHomology, NovelInsertion
+from scannls.base import MicroHomology, NovelInsertion
 from scannls.exception import ExonsNotFoundError
 from scannls.graph import Edge, NLPath, Node
 
 from .writer import Writer
 
 if TYPE_CHECKING:
-    from scannls.graph import Edge, NLPath, Node  # noqa: F811
+    from scannls.graph import Edge, NLPath, Node
 
 
 class GTFWriter(Writer):

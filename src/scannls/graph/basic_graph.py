@@ -17,9 +17,9 @@ from scannls.base import (
     MicroHomology,
     NovelInsertion,
     Strand,
+    infer_nls_from_connected_reads,
     reverse_complement,
 )
-from scannls.cli import infer_nls_from_connected_reads
 
 from .merge_condition import (
     _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,

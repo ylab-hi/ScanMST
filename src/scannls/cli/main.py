@@ -11,28 +11,20 @@ import pyfaidx
 import pysam
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import (
+from scannls.aligner import STAR
+from scannls.base import (
     Blat,
     CircRNAFilter,
     Event,
     ExonFilter,
+    MappingMode,
     MyLogger,
     ParallelWorker,
     RTSwitchingFilter,
     detect_read_read_connections_from_cigar,
     reverse_complement,
 )
-from scannls.aligner import STAR
-from scannls.base import MappingMode
-from scannls.graph import NLPath
-from scannls.mtype import LoggerType
-from scannls.utils import (
-    cigarstring2cigartuples,
-    get_longest_insertion_sequence,
-    get_softclip_length,
-)
-
-from .helper import (
+from scannls.base.helper import (
     blat2chimeric_alignment,
     extract_splice_sites,
     get_transcriptome_length,
@@ -40,7 +32,14 @@ from .helper import (
     obtain_variants_stats,
     strand_mode_checker,
 )
-from .nls_inference import infer_nls_from_connected_reads
+from scannls.base.nls_inference import infer_nls_from_connected_reads
+from scannls.graph import NLPath
+from scannls.mtype import LoggerType
+from scannls.utils import (
+    cigarstring2cigartuples,
+    get_longest_insertion_sequence,
+    get_softclip_length,
+)
 
 
 class BamScanner:

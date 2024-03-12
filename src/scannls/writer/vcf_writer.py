@@ -12,7 +12,7 @@ from typing import IO, Any, ClassVar
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import MicroHomology, NovelInsertion, __version__, reverse_complement
+from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (
     BreakpointNotFoundError,
 )
@@ -242,7 +242,7 @@ class VCFWriter(Writer):
         """VCF header provides metadata describing the body of the file."""
 
         date = datetime.datetime.today().strftime("%Y%m%d")
-        source = f"ScanNLS v{__version__}"
+        source = "ScanNLS"
         reference = f"<CMD={obtain_reference_from_bam_header(self.bam_header)}," 'Description="Alignment parameters">'
 
         header_lines = [

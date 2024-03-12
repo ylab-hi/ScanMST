@@ -11,7 +11,7 @@ from typing import IO, Any
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import MicroHomology, NovelInsertion, reverse_complement
+from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.graph import NLPath, Node
 
 from .writer import Writer

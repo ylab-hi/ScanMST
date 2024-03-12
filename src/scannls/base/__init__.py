@@ -27,6 +27,7 @@ from .basic_read import Read
 from .blat import Blat
 from .filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
 from .my_logger import MyLogger
+from .nls_inference import infer_nls_from_connected_reads
 from .parallel import ParallelWorker
 from .read_connector import (
     ReadsConnector,
@@ -58,4 +59,5 @@ __all__ = [
     "ParallelWorker",
     "ReadsConnector",
     "detect_read_read_connections_from_cigar",
+    "infer_nls_from_connected_reads",
 ]
