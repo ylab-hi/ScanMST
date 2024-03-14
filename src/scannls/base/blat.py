@@ -77,21 +77,15 @@ class Blat:
         self.gfclient = load_gfclient()
         self.lock = lock
 
-    @property
-    def ref_dir(self) -> str:
-        """Property for ref_dir, which is the path of reference for blat.
-
-        :return: the absolute path of reference dir
-        """
         if self.ref_2bit.startswith("~"):
             abs_2bit = os.path.join(
                 os.path.expanduser("~"),
                 self.ref_2bit.replace("~/", ""),
             )
-            return os.path.dirname(abs_2bit)
-
-        abs_2bit = os.path.abspath(self.ref_2bit)
-        return os.path.dirname(abs_2bit)
+            self.ref_dir =  os.path.dirname(abs_2bit)
+        else:
+            abs_2bit = os.path.abspath(self.ref_2bit)
+            self.ref_dir = os.path.dirname(abs_2bit)
 
     @property
     def log_file_path(self) -> str:
