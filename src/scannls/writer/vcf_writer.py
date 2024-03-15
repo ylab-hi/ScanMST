@@ -2,6 +2,7 @@
 @Filename:    vcfWriter.py
 @Time:        1/30/22 6:19 PM
 """
+
 from __future__ import annotations
 
 import datetime

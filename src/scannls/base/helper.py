@@ -1,4 +1,5 @@
 """Helper functions."""
+
 from __future__ import annotations
 
 import sys
@@ -19,20 +20,20 @@ if TYPE_CHECKING:
     import pysam
 
 __all__ = [
+    "blat2chimeric_alignment",
+    "diff_chrom_diff_strand_handler",
+    "diff_chrom_same_strand_handler",
+    "diff_chrom_same_strand_mode21_handler",
     "extract_splice_sites",
     "gene_annotation",
-    "splicing_confirmation",
-    "blat2chimeric_alignment",
     "insertion2chimeric_alignment",
-    "same_chrom_same_strand_mode21_handler",
-    "same_chrom_same_strand_handler",
-    "same_chrom_diff_strand_handler",
-    "diff_chrom_same_strand_mode21_handler",
-    "diff_chrom_same_strand_handler",
-    "diff_chrom_diff_strand_handler",
-    "softclipped_length_and_event_size_checker",
     "obtain_bp_region_seq",
     "obtain_variants_stats",
+    "same_chrom_diff_strand_handler",
+    "same_chrom_same_strand_handler",
+    "same_chrom_same_strand_mode21_handler",
+    "softclipped_length_and_event_size_checker",
+    "splicing_confirmation",
     "strand_mode_checker",
 ]
 
@@ -522,18 +523,17 @@ def blat2chimeric_alignment(
                 in_seq_len,
             )
         return chimeric_aln_str
-    else:
-        keep_records = list(aligner.filters(aligner.query(in_seq), aligner_ident_pct_cutoff, mapq_cutoff, len(in_seq)))
-        if not keep_records:
-            return chimeric_aln_str
+    keep_records = list(aligner.filters(aligner.query(in_seq), aligner_ident_pct_cutoff, mapq_cutoff, len(in_seq)))
+    if not keep_records:
+        return chimeric_aln_str
 
-        top_record = keep_records[0]
-        chrom_sa = top_record.reference_name
-        pos_sa = top_record.reference_start
-        strand_sa = "+" if top_record.is_reverse else "-"
-        cigar_sa_partial = top_record.cigarstring
-        nm_sa = top_record.get_tag("NM") if top_record.has_tag("NM") else 0
-        mapq = top_record.mapping_quality
+    top_record = keep_records[0]
+    chrom_sa = top_record.reference_name
+    pos_sa = top_record.reference_start
+    strand_sa = "+" if top_record.is_reverse else "-"
+    cigar_sa_partial = top_record.cigarstring
+    nm_sa = top_record.get_tag("NM") if top_record.has_tag("NM") else 0
+    mapq = top_record.mapping_quality
 
     if read_strand == strand_sa:
         # same strand: different reads mode
@@ -677,8 +677,7 @@ def insertion2chimeric_alignment(
             chrom_aligner == read.reference_name
             and strand_aligner == read_strand
             and (abs(pos_aligner - insertion_ref_pos) <= 10 and ref_end_aligner <= read.reference_end)
-            or (abs(ref_end_aligner - insertion_ref_pos) <= 10 and pos_aligner >= read.reference_start)
-        ):
+        ) or (abs(ref_end_aligner - insertion_ref_pos) <= 10 and pos_aligner >= read.reference_start):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
             # MS
@@ -873,7 +872,7 @@ def same_chrom_same_strand_mode21_handler(
             )
 
         # reads length < tandem duplication size
-        elif evt_size >= query_offset:  # large tandem duplication
+        if evt_size >= query_offset:  # large tandem duplication
             chrm_start = lt_chrm
             junc_start = read_lt.ref_start
             chrm_end = lt_chrm
@@ -939,94 +938,91 @@ def same_chrom_same_strand_mode21_handler(
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
                 )
-            else:
-                return noreturn
+            return noreturn
         # read length > tandem duplication size
+        # softclipped length < tandem duplication size (check chimeric read [SM])
+        if softclipped_length_and_event_size_checker(
+            read_lt,
+            lt_mode,
+            evt_size,
+            bp_region_seq_len,
+        ):
+            logger.trace("softclipped length < event size: TDUP")
+            is_dup = True
+        # softclipped length >= tandem duplication size
+        # TDUP; Novel Insertion feature: evt_size=0 and bp_region_seq_len>0
         else:
-            # softclipped length < tandem duplication size (check chimeric read [SM])
-            if softclipped_length_and_event_size_checker(
-                read_lt,
+            is_dup = True
+            logger.trace("softclipped length >= event size: TDUP")
+        if is_dup:
+            chrm_start = lt_chrm
+            junc_start = read_lt.ref_start
+            chrm_end = lt_chrm
+            junc_end = junc_start + evt_size
+            _nls, _anno, _can = splicing_confirmation(
+                chrm_start,
+                junc_start,
+                read_lt.strand,
                 lt_mode,
-                evt_size,
-                bp_region_seq_len,
-            ):
-                logger.trace("softclipped length < event size: TDUP")
-                is_dup = True
-            # softclipped length >= tandem duplication size
-            # TDUP; Novel Insertion feature: evt_size=0 and bp_region_seq_len>0
-            else:
-                is_dup = True
-                logger.trace("softclipped length >= event size: TDUP")
-            if is_dup:
-                chrm_start = lt_chrm
-                junc_start = read_lt.ref_start
-                chrm_end = lt_chrm
-                junc_end = junc_start + evt_size
-                _nls, _anno, _can = splicing_confirmation(
-                    chrm_start,
-                    junc_start,
-                    read_lt.strand,
-                    lt_mode,
-                    chrm_end,
-                    junc_end,
-                    read_rt.strand,
-                    rt_mode,
-                    splice_bin,
-                    genome_fasta,
-                    cvg,
-                    motif_required=motif_required,
-                )
-                _genes = gene_annotation(
-                    chrm_start,
-                    junc_start,
-                    chrm_end,
-                    junc_end,
-                    gene_iv,
-                )
-                if is_reverse:
-                    if _anno == 1:
-                        _anno = 2
-                    elif _anno == 2:
-                        _anno = 1
-                    _genes = _genes[::-1]
-                # 2 => 1
-                if _nls:
-                    if not is_reverse:
-                        return (
-                            "TDUP",
-                            _anno,
-                            _can,
-                            (
-                                f"{lt_chrm}:{junc_start}",
-                                f"{lt_chrm}:{junc_end}",
-                                2,
-                                1,
-                            ),
-                            (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                            (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                            (lt_bp_seq, rt_bp_seq),
-                            (read_lt.strand, read_rt.strand),
-                            [*_genes],
-                        )
+                chrm_end,
+                junc_end,
+                read_rt.strand,
+                rt_mode,
+                splice_bin,
+                genome_fasta,
+                cvg,
+                motif_required=motif_required,
+            )
+            _genes = gene_annotation(
+                chrm_start,
+                junc_start,
+                chrm_end,
+                junc_end,
+                gene_iv,
+            )
+            if is_reverse:
+                if _anno == 1:
+                    _anno = 2
+                elif _anno == 2:
+                    _anno = 1
+                _genes = _genes[::-1]
+            # 2 => 1
+            if _nls:
+                if not is_reverse:
                     return (
                         "TDUP",
                         _anno,
                         _can,
                         (
-                            f"{lt_chrm}:{junc_end}",
                             f"{lt_chrm}:{junc_start}",
-                            1,
+                            f"{lt_chrm}:{junc_end}",
                             2,
+                            1,
                         ),
-                        (read_rt.ref_start, read_rt.ref_end, rt_exons),
                         (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                        (rt_bp_seq, lt_bp_seq),
-                        (read_rt.strand, read_lt.strand),
+                        (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                        (lt_bp_seq, rt_bp_seq),
+                        (read_lt.strand, read_rt.strand),
                         [*_genes],
                     )
-                else:
-                    return noreturn
-            return None
+                return (
+                    "TDUP",
+                    _anno,
+                    _can,
+                    (
+                        f"{lt_chrm}:{junc_end}",
+                        f"{lt_chrm}:{junc_start}",
+                        1,
+                        2,
+                    ),
+                    (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                    (rt_bp_seq, lt_bp_seq),
+                    (read_rt.strand, read_lt.strand),
+                    [*_genes],
+                )
+            return noreturn
+        return None
     return None
 
 
@@ -1191,91 +1187,89 @@ def same_chrom_diff_strand_handler(
                 (*strands,),
                 [*_genes],
             )
-        else:
-            return noreturn
+        return noreturn
 
-    else:  # conventional INV
-        # If using noncanonical splice site, return NA
-        if not read_lt.splice_site_checker(
-            genome_fasta,
-        ) or not read_rt.splice_site_checker(genome_fasta):
-            logger.debug(
-                f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}",
-            )
-            return noreturn
-
-        chrm_start = lt_chrm
-        junc_start = min(ra_bp, sa_bp)
-        chrm_end = lt_chrm
-        junc_end = junc_start + abs(ra_bp - sa_bp)
-
-        if junc_start == ra_bp:
-            strands = (read_lt.strand, read_rt.strand)
-            lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
-            rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
-            lt_bp_seq = obtain_bp_region_seq(
-                read_lt,
-                lt_mode,
-                bp_region_seq_len,
-                genome_fasta,
-            )
-            rt_bp_seq = obtain_bp_region_seq(
-                read_rt,
-                rt_mode,
-                bp_region_seq_len,
-                genome_fasta,
-            )
-        elif junc_start == sa_bp:
-            strands = (read_rt.strand, read_lt.strand)
-            lt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
-            rt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
-            lt_bp_seq = obtain_bp_region_seq(
-                read_rt,
-                rt_mode,
-                bp_region_seq_len,
-                genome_fasta,
-            )
-            rt_bp_seq = obtain_bp_region_seq(
-                read_lt,
-                lt_mode,
-                bp_region_seq_len,
-                genome_fasta,
-            )
-
-        _nls, _anno, _can = splicing_confirmation(
-            chrm_start,
-            junc_start,
-            strands[0],
-            same_mode,
-            chrm_end,
-            junc_end,
-            strands[1],
-            same_mode,
-            splice_bin,
-            genome_fasta,
-            cvg,
-            motif_required=motif_required,
+    # conventional INV
+    # If using noncanonical splice site, return NA
+    if not read_lt.splice_site_checker(
+        genome_fasta,
+    ) or not read_rt.splice_site_checker(genome_fasta):
+        logger.debug(
+            f"Splice site checking[INV]: {read_lt.query_name=}, {read_lt.cigarstring=}, {read_rt.cigarstring=}",
         )
-        _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
-        if _nls:
-            return (
-                "INV",
-                _anno,
-                _can,
-                (
-                    f"{lt_chrm}:{junc_start}",
-                    f"{lt_chrm}:{junc_end}",
-                    same_mode,
-                    same_mode,
-                ),
-                lt_start_end_exons,
-                rt_start_end_exons,
-                (lt_bp_seq, rt_bp_seq),
-                (*strands,),
-                [*_genes],
-            )
-        else:
-            return noreturn
+        return noreturn
+
+    chrm_start = lt_chrm
+    junc_start = min(ra_bp, sa_bp)
+    chrm_end = lt_chrm
+    junc_end = junc_start + abs(ra_bp - sa_bp)
+
+    if junc_start == ra_bp:
+        strands = (read_lt.strand, read_rt.strand)
+        lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
+        rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
+        lt_bp_seq = obtain_bp_region_seq(
+            read_lt,
+            lt_mode,
+            bp_region_seq_len,
+            genome_fasta,
+        )
+        rt_bp_seq = obtain_bp_region_seq(
+            read_rt,
+            rt_mode,
+            bp_region_seq_len,
+            genome_fasta,
+        )
+    elif junc_start == sa_bp:
+        strands = (read_rt.strand, read_lt.strand)
+        lt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
+        rt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
+        lt_bp_seq = obtain_bp_region_seq(
+            read_rt,
+            rt_mode,
+            bp_region_seq_len,
+            genome_fasta,
+        )
+        rt_bp_seq = obtain_bp_region_seq(
+            read_lt,
+            lt_mode,
+            bp_region_seq_len,
+            genome_fasta,
+        )
+
+    _nls, _anno, _can = splicing_confirmation(
+        chrm_start,
+        junc_start,
+        strands[0],
+        same_mode,
+        chrm_end,
+        junc_end,
+        strands[1],
+        same_mode,
+        splice_bin,
+        genome_fasta,
+        cvg,
+        motif_required=motif_required,
+    )
+    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+    if _nls:
+        return (
+            "INV",
+            _anno,
+            _can,
+            (
+                f"{lt_chrm}:{junc_start}",
+                f"{lt_chrm}:{junc_end}",
+                same_mode,
+                same_mode,
+            ),
+            lt_start_end_exons,
+            rt_start_end_exons,
+            (lt_bp_seq, rt_bp_seq),
+            (*strands,),
+            [*_genes],
+        )
+    return noreturn
 
 
 def diff_chrom_same_strand_mode21_handler(

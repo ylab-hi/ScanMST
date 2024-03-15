@@ -1,4 +1,5 @@
 """Useful functions for scannls."""
+
 from __future__ import annotations
 
 import os
@@ -29,14 +30,14 @@ if TYPE_CHECKING:
 
 __all__ = [
     "cigar_validity",
-    "external_tool_checking",
-    "get_softclip_length",
-    "get_longest_insertion_sequence",
     "cigarstring2cigartuples",
-    "timeit",
-    "sleep",
+    "external_tool_checking",
     "find_2bit_file",
     "get_current_time",
+    "get_longest_insertion_sequence",
+    "get_softclip_length",
+    "sleep",
+    "timeit",
 ]
 
 

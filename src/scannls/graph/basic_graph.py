@@ -39,16 +39,16 @@ class BasicNode:
     """BasicNode is used to represent nodes in the nlgraph."""
 
     __slots__ = (
-        "successors",
-        "predecessors",
+        "is_in_graph",
+        "is_merged",
+        "is_traced",
         "merged_child_nodes",
         "merged_parent_nodes",
         "next_node_in_nlpath",
-        "previous_node_in_nlpath",
+        "predecessors",
         "previous_edge_in_nlapth",
-        "is_merged",
-        "is_in_graph",
-        "is_traced",
+        "previous_node_in_nlpath",
+        "successors",
         "trace_id",
     )
 

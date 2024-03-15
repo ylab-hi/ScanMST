@@ -1,4 +1,5 @@
 """Module contains the main functon of the draft scannls."""
+
 import copy
 import inspect
 import math

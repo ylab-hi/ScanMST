@@ -3,6 +3,7 @@
 @Filename:    nlgraph.py
 @Time:        12/15/21 10:42 AM.
 """
+
 from __future__ import annotations
 
 import copy

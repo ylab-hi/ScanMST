@@ -1,6 +1,7 @@
 """Connecter Reads.
 @Time:        12/15/21 2:14 PM.
 """
+
 import re
 from itertools import combinations
 from typing import Any
@@ -399,28 +400,22 @@ class ReadsConnector:
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return self._match_right_softclip_segment(start_read, read)
-                else:
-                    return self._match_left_softclip_segment(start_read, read)
+                return self._match_left_softclip_segment(start_read, read)
             # starts with head (-)
-            else:
-                if not read.strand.is_reverse():
-                    return self._match_left_softclip_segment(start_read, read)
-                else:
-                    return self._match_right_softclip_segment(start_read, read)
+            if not read.strand.is_reverse():
+                return self._match_left_softclip_segment(start_read, read)
+            return self._match_right_softclip_segment(start_read, read)
         # MS
-        elif _lt_len_r1 < _rt_len_r1:
+        if _lt_len_r1 < _rt_len_r1:
             # starts with head (+)
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return self._match_left_softclip_segment(start_read, read)
-                else:
-                    return self._match_right_softclip_segment(start_read, read)
+                return self._match_right_softclip_segment(start_read, read)
             # starts with tail (-)
-            else:
-                if not read.strand.is_reverse():
-                    return self._match_right_softclip_segment(start_read, read)
-                else:
-                    return self._match_left_softclip_segment(start_read, read)
+            if not read.strand.is_reverse():
+                return self._match_right_softclip_segment(start_read, read)
+            return self._match_left_softclip_segment(start_read, read)
 
         self.logger.debug(
             "start read cannot connect with read and try to connect other reads",
@@ -614,33 +609,26 @@ class ReadsConnector:
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return abs(read.rt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.lt_soft_len - start_read_match_sequence)
+                return abs(read.lt_soft_len - start_read_match_sequence)
             # starts with head (-)
-            else:
-                if not read.strand.is_reverse():
-                    return abs(read.lt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.rt_soft_len - start_read_match_sequence)
+            if not read.strand.is_reverse():
+                return abs(read.lt_soft_len - start_read_match_sequence)
+            return abs(read.rt_soft_len - start_read_match_sequence)
         # MS
-        elif lt_soft_len < rt_soft_len:
+        if lt_soft_len < rt_soft_len:
             # starts with head (+)
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return abs(read.lt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.rt_soft_len - start_read_match_sequence)
+                return abs(read.rt_soft_len - start_read_match_sequence)
             # starts with tail (-)
-            else:
-                if not read.strand.is_reverse():
-                    return abs(read.rt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.lt_soft_len - start_read_match_sequence)
-        else:
-            return min(
-                abs(read.lt_soft_len - start_read_match_sequence),
-                abs(read.rt_soft_len - start_read_match_sequence),
-            )
+            if not read.strand.is_reverse():
+                return abs(read.rt_soft_len - start_read_match_sequence)
+            return abs(read.lt_soft_len - start_read_match_sequence)
+        return min(
+            abs(read.lt_soft_len - start_read_match_sequence),
+            abs(read.rt_soft_len - start_read_match_sequence),
+        )
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.

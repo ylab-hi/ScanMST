@@ -1,4 +1,5 @@
 """Main function for scannls."""
+
 from .cli.arg import parse_args
 from .cli.cli import cli
 

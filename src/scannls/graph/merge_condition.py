@@ -4,6 +4,7 @@
 @contact:     yangyang.li@northwestern.edu
 @Time:        4/18/22 7:51 PM
 """
+
 from __future__ import annotations
 
 from enum import Enum, auto
