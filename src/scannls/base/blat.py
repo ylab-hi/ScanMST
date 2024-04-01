@@ -82,7 +82,7 @@ class Blat:
                 os.path.expanduser("~"),
                 self.ref_2bit.replace("~/", ""),
             )
-            self.ref_dir =  os.path.dirname(abs_2bit)
+            self.ref_dir = os.path.dirname(abs_2bit)
         else:
             abs_2bit = os.path.abspath(self.ref_2bit)
             self.ref_dir = os.path.dirname(abs_2bit)
@@ -264,7 +264,9 @@ class Blat:
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSL file
         """
-        while self.is_start_server or  self.is_running():  # self or other is running service
+        while (
+            self.is_start_server or self.is_running()
+        ):  # self or other is running service
             try:
                 self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
                 out_psl = self._query(in_seq, mini_identity)
@@ -291,7 +293,7 @@ class Blat:
         keep_hsp = []
         for hsp in hsps:
             if (sum(hsp.hit_span_all) - hsp.mismatch_num - hsp.hit_gap_num) / len(
-                insert_seq,
+                insert_seq
             ) > threshold_identity:
                 keep_hsp.append(hsp)
         hit = len(keep_hsp)

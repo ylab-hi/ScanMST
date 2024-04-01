@@ -361,7 +361,10 @@ def splicing_confirmation(
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
-        return any(_donor in donor_seq and _acceptor in acceptor_seq for _donor, _acceptor in splice_motif_dict.items())
+        return any(
+            _donor in donor_seq and _acceptor in acceptor_seq
+            for _donor, _acceptor in splice_motif_dict.items()
+        )
 
     def donor_accepter_breakpoint_determintor(
         chrm1: str,
@@ -449,7 +452,9 @@ def splicing_confirmation(
     # Non-annotated coding exon boundary
     if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
         donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
-        acceptor_seq = genome_fasta[chrm_ac][pos_ac - splice_bin : pos_ac + splice_bin].seq
+        acceptor_seq = genome_fasta[chrm_ac][
+            pos_ac - splice_bin : pos_ac + splice_bin
+        ].seq
         if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
             return True, 0, 1
 
@@ -457,7 +462,9 @@ def splicing_confirmation(
 
     # pos1 in annotated coding exon boundary, pos2 not.
     if motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-        acceptor_seq = genome_fasta[chrm_ac][pos_ac - splice_bin : pos_ac + splice_bin].seq
+        acceptor_seq = genome_fasta[chrm_ac][
+            pos_ac - splice_bin : pos_ac + splice_bin
+        ].seq
         if splice_motif_dict[motif_do] in acceptor_seq:
             return True, 2, 1
 
@@ -517,47 +524,39 @@ def blat2chimeric_alignment(
         if top_hsp is None:
             return chimeric_aln_str
 
-        if top_hsp.ident_pct / 100 >= aligner_ident_pct_cutoff and top_hsp.query_span / in_seq_len >= aligner_ident_pct_cutoff:
+        if (
+            sum(top_hsp.hit_span_all) - top_hsp.mismatch_num - top_hsp.hit_gap_num
+        ) / in_seq_len >= aligner_ident_pct_cutoff:
             chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = aligner.psl2sam(
                 top_hsp,
                 in_seq_len,
             )
-        return chimeric_aln_str
-    keep_records = list(aligner.filters(aligner.query(in_seq), aligner_ident_pct_cutoff, mapq_cutoff, len(in_seq)))
-    if not keep_records:
-        return chimeric_aln_str
+            if read_strand == strand_sa:
+                # same strand: different reads mode
+                # MS(1) ~ SM(2) or SM(2) ~ MS(1)
+                # SM
+                cigar_sa = (
+                    f"{read_length - in_seq_len}S{cigar_sa_partial}"
+                    if read_mode == 1
+                    else f"{cigar_sa_partial}{read_length - in_seq_len}S"
+                )  # MS
+            else:
+                # opposite strand: same reads mode
+                # MS(1) ~ MS(1) or SM(2) ~ SM(2)
+                # MS
+                cigar_sa = (
+                    f"{cigar_sa_partial}{read_length - in_seq_len}S"
+                    if read_mode == 1
+                    else f"{read_length - in_seq_len}S{cigar_sa_partial}"
+                )  # SM
 
-    top_record = keep_records[0]
-    chrom_sa = top_record.reference_name
-    pos_sa = top_record.reference_start
-    strand_sa = "+" if top_record.is_reverse else "-"
-    cigar_sa_partial = top_record.cigarstring
-    nm_sa = top_record.get_tag("NM") if top_record.has_tag("NM") else 0
-    mapq = top_record.mapping_quality
+            valid_cigar_sa = cigar_validity(cigar_sa)
 
-    if read_strand == strand_sa:
-        # same strand: different reads mode
-        # MS(1) ~ SM(2) or SM(2) ~ MS(1)
-        # SM
-        cigar_sa = (
-            f"{read_length - in_seq_len}S{cigar_sa_partial}"
-            if read_mode == 1
-            else f"{cigar_sa_partial}{read_length - in_seq_len}S"
-        )  # MS
-    else:
-        # opposite strand: same reads mode
-        # MS(1) ~ MS(1) or SM(2) ~ SM(2)
-        # MS
-        cigar_sa = (
-            f"{cigar_sa_partial}{read_length - in_seq_len}S"
-            if read_mode == 1
-            else f"{read_length - in_seq_len}S{cigar_sa_partial}"
-        )  # SM
-
-    valid_cigar_sa = cigar_validity(cigar_sa)
-
-    if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
-        return f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
+            if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
+                chimeric_aln_str = (
+                    f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
+                )
+                return chimeric_aln_str
 
     return chimeric_aln_str
 
@@ -676,8 +675,14 @@ def insertion2chimeric_alignment(
         if (
             chrom_aligner == read.reference_name
             and strand_aligner == read_strand
-            and (abs(pos_aligner - insertion_ref_pos) <= 10 and ref_end_aligner <= read.reference_end)
-        ) or (abs(ref_end_aligner - insertion_ref_pos) <= 10 and pos_aligner >= read.reference_start):
+            and (
+                abs(pos_aligner - insertion_ref_pos) <= 10
+                and ref_end_aligner <= read.reference_end
+            )
+        ) or (
+            abs(ref_end_aligner - insertion_ref_pos) <= 10
+            and pos_aligner >= read.reference_start
+        ):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
             # MS
@@ -689,7 +694,8 @@ def insertion2chimeric_alignment(
             nm_sa = nm_read - insertion_seq_len + nm_aligner
             if nm_sa < max_allowed_nm:
                 chimeric_aln_str = (
-                    f"{chrom_aligner},{original_ref_start + 1}," f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
+                    f"{chrom_aligner},{original_ref_start + 1},"
+                    f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
                 )
                 primary_aln_cigarstring = valid_cigar_ra
 
@@ -698,7 +704,9 @@ def insertion2chimeric_alignment(
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
     """Check if the two strands are compatible with the two modes."""
-    return (strand1 == strand2 and mode1 != mode2) or (strand1 != strand2 and mode1 == mode2)
+    return (strand1 == strand2 and mode1 != mode2) or (
+        strand1 != strand2 and mode1 == mode2
+    )
 
 
 def softclipped_length_and_event_size_checker(
@@ -760,10 +768,14 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     # microhomology
     elif bp_region_seq_len < 0:
         if mode == MappingMode.SM:  # SM
-            bp_region_seq = genome_fasta[chrom][read.ref_start : read.ref_start - bp_region_seq_len].seq
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_start : read.ref_start - bp_region_seq_len
+            ].seq
 
         elif mode == MappingMode.MS:  # MS
-            bp_region_seq = genome_fasta[chrom][read.ref_end + bp_region_seq_len : read.ref_end].seq
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_end + bp_region_seq_len : read.ref_end
+            ].seq
 
         bp_region_seq = "-" + bp_region_seq
 
@@ -799,7 +811,11 @@ def same_chrom_same_strand_mode21_handler(
         target_offset = target_end - target_start
 
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.rt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
 
         logger.trace(f"{bp_region_seq_len=}")
@@ -811,7 +827,11 @@ def same_chrom_same_strand_mode21_handler(
         if bp_region_seq_len > 0:
             query_offset = read_lt.reference_match_size + read_rt.reference_match_size
         else:
-            query_offset = read_lt.reference_match_size + read_rt.reference_match_size + bp_region_seq_len
+            query_offset = (
+                read_lt.reference_match_size
+                + read_rt.reference_match_size
+                + bp_region_seq_len
+            )
 
         lt_bp_seq = obtain_bp_region_seq(
             read_lt,
@@ -1105,13 +1125,21 @@ def same_chrom_diff_strand_handler(
         ra_bp = read_lt.ref_start + read_lt.reference_match_size
         sa_bp = read_rt.ref_start + read_rt.reference_match_size
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.lt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
     elif same_mode == MappingMode.SM:
         ra_bp = read_lt.ref_start
         sa_bp = read_rt.ref_start
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.rt_soft_len - read_rt.rt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.rt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
     logger.trace(f"{bp_region_seq_len=}")
 
@@ -1125,7 +1153,8 @@ def same_chrom_diff_strand_handler(
             genome_fasta,
         ) and not read_rt.splice_site_checker(genome_fasta):
             logger.debug(
-                f"Splice site checking[IDUP]: {read_lt.query_name=}, " f"{read_lt.cigarstring=}, {read_rt.cigarstring=}",
+                f"Splice site checking[IDUP]: {read_lt.query_name=}, "
+                f"{read_lt.cigarstring=}, {read_rt.cigarstring=}",
             )
             return noreturn
         chrm_start = lt_chrm
@@ -1297,7 +1326,11 @@ def diff_chrom_same_strand_mode21_handler(
     junc_end = read_rt.ref_start + read_rt.reference_match_size
 
     bp_region_seq_len = (
-        read_lt.query_length - read_lt.rt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        read_lt.query_length
+        - read_lt.rt_soft_len
+        - read_rt.lt_soft_len
+        - read_lt.read_match_size
+        - read_rt.read_match_size
     )
 
     logger.trace(f"{bp_region_seq_len=}")
@@ -1438,7 +1471,11 @@ def diff_chrom_diff_strand_handler(
         chrm_end = read_rt.chrom
         junc_end = read_rt.ref_start + read_rt.reference_match_size
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.lt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
     elif same_mode == MappingMode.SM:
         chrm_start = read_lt.chrom
@@ -1446,7 +1483,11 @@ def diff_chrom_diff_strand_handler(
         chrm_end = read_rt.chrom
         junc_end = read_rt.ref_start
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.rt_soft_len - read_rt.rt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.rt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
 
     logger.trace(f"{bp_region_seq_len=}")
