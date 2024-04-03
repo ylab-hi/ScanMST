@@ -164,7 +164,10 @@ class Insertion(Read):
 
     def __repr__(self) -> str:
         """Represent Insertion object."""
-        return f"{self.__class__.__name__}({self.hit_num=}," f"{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand})"
+        return (
+            f"{self.__class__.__name__}({self.hit_num=},"
+            f"{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand})"
+        )
 
     def update_cigarstring_sms(
         self,
@@ -398,17 +401,35 @@ class Event:
         """Return True if the event is same strand."""
         return self.strand1 == self.strand2
 
-    def read1(self, read_chains: list[Read]) -> Read:
+    def read1(self, read_chains: list[Read], shift_length: int) -> Read:
         """Return the read1 of the event."""
         for read in read_chains:
-            if read.ref_start == self.read1_ref_start and read.ref_end == self.read1_ref_end and read.strand == self.strand1:
+            if (
+                (
+                    abs(read.ref_start - self.read1_ref_start) <= shift_length
+                    and read.ref_end == self.read1_ref_end
+                )
+                or (
+                    read.ref_start == self.read1_ref_start
+                    and abs(read.ref_end - self.read1_ref_end) <= shift_length
+                )
+            ) and read.strand == self.strand1:
                 return read
         raise ReadNotFoundError
 
-    def read2(self, read_chains: list[Read]) -> Read:
+    def read2(self, read_chains: list[Read], shift_length: int) -> Read:
         """Return the read2 of the event."""
         for read in read_chains:
-            if read.ref_start == self.read2_ref_start and read.ref_end == self.read2_ref_end and read.strand == self.strand2:
+            if (
+                (
+                    abs(read.ref_start - self.read2_ref_start) <= shift_length
+                    and read.ref_end == self.read2_ref_end
+                )
+                or (
+                    read.ref_start == self.read2_ref_start
+                    and abs(read.ref_end - self.read2_ref_end) <= shift_length
+                )
+            ) and read.strand == self.strand2:
                 return read
         raise ReadNotFoundError
 

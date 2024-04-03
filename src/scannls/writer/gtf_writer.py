@@ -266,15 +266,6 @@ def get_gtf_features_from_node(
         if isinstance(insertion, MicroHomology):
             microhomology_sequence += insertion.query_sequence
 
-    # last exon end position needs a correction if there is a microhomology.
-    if node.strand.is_forward() and exons.last.start < exons.last.end - len(
-        microhomology_sequence,
-    ):
-        copy_exons.last.end -= len(microhomology_sequence)
-
-    elif node.strand.is_reverse() and exons.last.start + len(microhomology_sequence) < exons.last.end:
-        copy_exons.last.start += len(microhomology_sequence)
-
     nodes_gtf_features = []
 
     for index, (start, end) in enumerate(copy_exons, 1):

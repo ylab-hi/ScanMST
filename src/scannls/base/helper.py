@@ -6,12 +6,13 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+import copy
 
 import HTSeq  # type: ignore
 import yaml  # type: ignore
 
 from scannls import __PACKAGE_NAME__, cppext
-from scannls.base import Blat, CigarCode, MappingMode
+from scannls.base import Blat, CigarCode, MappingMode, Intervals
 from scannls.exception import ModesNotEqualError
 from scannls.utils import cigar_validity
 
@@ -33,7 +34,7 @@ __all__ = [
     "same_chrom_same_strand_handler",
     "same_chrom_same_strand_mode21_handler",
     "softclipped_length_and_event_size_checker",
-    "splicing_confirmation",
+    "splicing_confirmation_and_correction",
     "strand_mode_checker",
 ]
 
@@ -296,21 +297,28 @@ def gene_annotation(
     return gene1, gene2
 
 
-def splicing_confirmation(
+def splicing_confirmation_and_correction(
     chrm1: str,
     pos1: int,
     strand1: str,
     mode1: int,
+    ref_start1: int,
+    ref_end1: int,
+    exons1: Intervals,
     chrm2: str,
     pos2: int,
     strand2: str,
     mode2: int,
+    ref_start2: int,
+    ref_end2: int,
+    exons2: Intervals,
     splice_bin: int,
+    bp_region_seq_len: int,
     genome_fasta: pyfaidx.Fasta,
     cvg: HTSeq.GenomicArrayOfSets,
     *,
     motif_required: bool = True,
-) -> tuple[bool, int, int] | None:
+) -> tuple[bool, int, int, int, int, int, int, Intervals, int, int, Intervals] | None:
     """Judge whether the breakpoints are NLS events or not.
 
     if motif_required is ON: it will only report NLS events with 'canonical
@@ -326,13 +334,23 @@ def splicing_confirmation(
     :param strand1: strand for breakpoint1
     :param strand2: strand for breakpoint2
     :param splice_bin: bin size for splice sites searching
+    :param bp_region_seq_len: breakpoint region sequence length, <0 means microhomology, >0 means microinsertion
     :param genome_fasta: reference genome (pyfaidx.Fasta object)
     :param cvg: splice site annotations (HTSeq.GenomicArrayOfSets)
     :param motif_required: canonical splice sites required;
            if True: considering canonical splice sites only;
            else: considering canonical and noncanonical splice sites both
-    :return: report/not report, overlapping boundary in bits, canonical
-        splice site/noncanonical splice site
+    :return: report/not report
+             overlapping boundary in bits
+             canonical splice site/noncanonical splice site
+             corrected_pos1,
+             corrected_pos2,
+             ref_start1: read ref_start for breakpoint1,
+             ref_end1: read ref_end for breakpoint1,
+             exons1: exons for breakpoint1,
+             ref_start2: read ref_start for breakpoint2,
+             ref_end2: read ref_end for breakpoint2,
+             exons2: exons for breakpoint2,
 
     .. note::
         Possible current_output scenarios
@@ -416,6 +434,9 @@ def splicing_confirmation(
         "--": {"AC": "CT"},
     }
 
+    strand1 = str(strand1)
+    strand2 = str(strand2)
+
     donor_bp, acceptor_bp = donor_accepter_breakpoint_determintor(
         chrm1,
         pos1,
@@ -436,56 +457,389 @@ def splicing_confirmation(
         msg = "Invalid strand combination"
         raise ValueError(msg)
 
-    possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
+    _exons1 = copy.deepcopy(exons1)
+    _exons2 = copy.deepcopy(exons2)
 
-    # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
-    try:
-        motif_do = next(iter(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)]))
-    except (IndexError, StopIteration):
-        motif_do = ""
+    # for microinsertion or blunt end, search for splice_bin of the donor and acceptor sites
+    if bp_region_seq_len >= 0:
+        possible_donors = {_v: _k for _k, _v in splice_motif_dict.items()}
 
-    try:
-        motif_ac = next(iter(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)]))
-    except (IndexError, StopIteration):
-        motif_ac = ""
+        # motif_do/motif_ac will be available if chrm_do:pos_do/chrm_ac:pos_ac overlapped with annotated exon boundary
+        try:
+            motif_do = next(iter(cvg[HTSeq.GenomicPosition(chrm_do, pos_do)]))
+        except (IndexError, StopIteration):
+            motif_do = ""
 
-    # Non-annotated coding exon boundary
-    if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
-        acceptor_seq = genome_fasta[chrm_ac][
-            pos_ac - splice_bin : pos_ac + splice_bin
-        ].seq
-        if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
-            return True, 0, 1
+        try:
+            motif_ac = next(iter(cvg[HTSeq.GenomicPosition(chrm_ac, pos_ac)]))
+        except (IndexError, StopIteration):
+            motif_ac = ""
 
-        return (False, 0, 0) if motif_required else (True, 0, 0)
+        # Non-annotated coding exon boundary
+        if (
+            motif_do not in splice_motif_dict
+            and motif_ac not in splice_motif_dict.values()
+        ):
+            donor_seq = genome_fasta[chrm_do][
+                pos_do - splice_bin : pos_do + splice_bin
+            ].seq
+            acceptor_seq = genome_fasta[chrm_ac][
+                pos_ac - splice_bin : pos_ac + splice_bin
+            ].seq
+            if matched_candidate_sites_checker(
+                donor_seq, acceptor_seq, splice_motif_dict
+            ):
+                report_or_not, boundary_code, canonical_motif_or_not = True, 0, 1
+            else:
+                if motif_required:
+                    report_or_not, boundary_code, canonical_motif_or_not = False, 0, 0
+                else:
+                    report_or_not, boundary_code, canonical_motif_or_not = True, 0, 0
 
-    # pos1 in annotated coding exon boundary, pos2 not.
-    if motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-        acceptor_seq = genome_fasta[chrm_ac][
-            pos_ac - splice_bin : pos_ac + splice_bin
-        ].seq
-        if splice_motif_dict[motif_do] in acceptor_seq:
-            return True, 2, 1
+        # pos1 in annotated coding exon boundary, pos2 not.
+        elif (
+            motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values()
+        ):
+            acceptor_seq = genome_fasta[chrm_ac][
+                pos_ac - splice_bin : pos_ac + splice_bin
+            ].seq
+            if splice_motif_dict[motif_do] in acceptor_seq:
+                report_or_not, boundary_code, canonical_motif_or_not = True, 2, 1
+            else:
+                if motif_required:
+                    report_or_not, boundary_code, canonical_motif_or_not = False, 2, 0
+                else:
+                    report_or_not, boundary_code, canonical_motif_or_not = True, 2, 0
 
-        return (False, 2, 0) if motif_required else (True, 2, 0)
+        # pos2 in annotated coding exon boundary, pos1 not.
+        elif (
+            motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values()
+        ):
+            donor_seq = genome_fasta[chrm_do][
+                pos_do - splice_bin : pos_do + splice_bin
+            ].seq
 
-    # pos2 in annotated coding exon boundary, pos1 not.
-    if motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
-        donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+            if possible_donors[motif_ac] in donor_seq:
+                report_or_not, boundary_code, canonical_motif_or_not = True, 1, 1
+            else:
+                if motif_required:
+                    report_or_not, boundary_code, canonical_motif_or_not = False, 1, 0
+                else:
+                    report_or_not, boundary_code, canonical_motif_or_not = True, 1, 0
 
-        if possible_donors[motif_ac] in donor_seq:
-            return True, 1, 1
+        # pos1 and pos2 both in annotated coding exon boundary
+        elif motif_do in splice_motif_dict and motif_ac in splice_motif_dict.values():
+            if splice_motif_dict[motif_do] == motif_ac:
+                report_or_not, boundary_code, canonical_motif_or_not = True, 3, 1
+            else:
+                if motif_required:
+                    report_or_not, boundary_code, canonical_motif_or_not = False, 3, 0
+                else:
+                    report_or_not, boundary_code, canonical_motif_or_not = True, 3, 0
 
-        return (False, 1, 0) if motif_required else (True, 1, 0)
+        corrected_pos1 = pos1
+        corrected_pos2 = pos2
+    # for microhomology, try different combinations to form a canonical splice site.
+    # and correct the breakpoints positions and exons (first or last)
+    else:
+        microhomology_length = abs(bp_region_seq_len)
+        _breakpoint1 = (chrm1, pos1, strand1)
+        _breakpoint2 = (chrm2, pos2, strand2)
+        print(f"{_breakpoint1=}, {_breakpoint2=}")
 
-    # pos1 and pos2 both in annotated coding exon boundary
-    if motif_do in splice_motif_dict and motif_ac in splice_motif_dict.values():
-        if splice_motif_dict[motif_do] == motif_ac:
-            return True, 3, 1
-        return (False, 3, 0) if motif_required else (True, 3, 0)
+        target_donor_seq = list(splice_motif_dict.keys())[0]
+        target_acceptor_seq = splice_motif_dict[target_donor_seq]
 
-    return None
+        # default settings
+        corrected_pos1 = pos1
+        corrected_pos2 = pos2
+        canonical_motif_or_not = 0
+        # for events in the same chroms, event_size already considered microhomology
+        # it means event_size > observed junction_size
+        if chrm1 == chrm2:
+            if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
+                event_size = pos2 - pos1
+                # shifting donor site
+                for donor_shift in range(microhomology_length + 1):
+                    if strand1 == "+":
+                        donor_start = pos1 - donor_shift
+                        donor_end = donor_start + 2
+                        __corrected_pos1 = pos1 - donor_shift
+                        __corrected_pos2 = __corrected_pos1 + event_size
+                    elif strand1 == "-":
+                        donor_end = pos1 + donor_shift
+                        donor_start = donor_end - 2
+                        __corrected_pos1 = pos1 + donor_shift
+                        __corrected_pos2 = __corrected_pos1 + event_size
+
+                    if strand2 == "+":
+                        acceptor_end = __corrected_pos2
+                        acceptor_start = acceptor_end - 2
+                    elif strand2 == "-":
+                        acceptor_start = __corrected_pos2
+                        acceptor_end = acceptor_start + 2
+                    donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
+                    acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
+                    print(
+                        f"{donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
+                    )
+                    if (
+                        donor_seq == target_donor_seq
+                        and acceptor_seq == target_acceptor_seq
+                    ):
+                        corrected_pos1 = __corrected_pos1
+                        corrected_pos2 = __corrected_pos2
+                        canonical_motif_or_not = 1
+                        break
+                # no canonical motif found in shifting donor site
+                if canonical_motif_or_not != 1:
+                    # shifting acceptor site
+                    for acceptor_shift in range(microhomology_length + 1):
+                        if strand2 == "+":
+                            acceptor_end = pos2 + acceptor_shift
+                            acceptor_start = acceptor_end - 2
+                            __corrected_pos2 = pos2 + acceptor_shift
+                            __corrected_pos1 = __corrected_pos2 - event_size
+                        elif strand2 == "-":
+                            acceptor_start = pos2 - acceptor_shift
+                            acceptor_end = acceptor_start + 2
+                            __corrected_pos2 = pos2 - acceptor_shift
+                            __corrected_pos1 = __corrected_pos2 - event_size
+                        if strand1 == "+":
+                            donor_start = __corrected_pos1
+                            donor_end = donor_start + 2
+                        elif strand1 == "-":
+                            donor_end = __corrected_pos1
+                            donor_start = donor_end - 2
+
+                        donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
+                        acceptor_seq = genome_fasta[chrm2][
+                            acceptor_start:acceptor_end
+                        ].seq
+                        print(
+                            f"{donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
+                        )
+                        if (
+                            donor_seq == target_donor_seq
+                            and acceptor_seq == target_acceptor_seq
+                        ):
+                            corrected_pos1 = __corrected_pos1
+                            corrected_pos2 = __corrected_pos2
+                            canonical_motif_or_not = 1
+                            break
+
+                if strand1 == "+":
+                    ref_end1 = corrected_pos1
+                    _exons1.last.end = corrected_pos1
+                elif strand1 == "-":
+                    ref_start1 = corrected_pos1
+                    _exons1.first.start = corrected_pos1
+                if strand2 == "+":
+                    ref_start2 = corrected_pos2
+                    _exons2.first.start = corrected_pos2
+                elif strand2 == "-":
+                    ref_end2 = corrected_pos2
+                    _exons2.last.end = corrected_pos2
+
+            # (donor_bp, acceptor_bp) == (_breakpoint2, _breakpoint1)
+            else:
+                event_size = pos2 - pos1
+                # shifting donor site
+                for donor_shift in range(microhomology_length + 1):
+                    if strand2 == "+":
+                        donor_start = pos2 - donor_shift
+                        donor_end = donor_start + 2
+                        __corrected_pos2 = pos2 - donor_shift
+                        __corrected_pos1 = __corrected_pos2 - event_size
+                    elif strand2 == "-":
+                        donor_end = pos2 + donor_shift
+                        donor_start = donor_end - 2
+                        __corrected_pos2 = pos2 + donor_shift
+                        __corrected_pos1 = __corrected_pos2 - event_size
+                    if strand1 == "+":
+                        acceptor_end = __corrected_pos1
+                        acceptor_start = acceptor_end - 2
+                    elif strand1 == "-":
+                        acceptor_start = __corrected_pos1
+                        acceptor_end = acceptor_start + 2
+                    donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
+                    acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
+                    print(
+                        f"donor changing: {donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
+                    )
+                    if (
+                        donor_seq == target_donor_seq
+                        and acceptor_seq == target_acceptor_seq
+                    ):
+                        corrected_pos1 = __corrected_pos1
+                        corrected_pos2 = __corrected_pos2
+                        canonical_motif_or_not = 1
+                        break
+                # no canonical motif found in shifting donor site
+                if canonical_motif_or_not != 1:
+                    # shifting acceptor site
+                    for acceptor_shift in range(microhomology_length + 1):
+                        if strand1 == "+":
+                            acceptor_end = pos1 + acceptor_shift
+                            acceptor_start = acceptor_end - 2
+                            __corrected_pos1 = pos1 + acceptor_shift
+                            __corrected_pos2 = event_size + __corrected_pos1
+                        elif strand1 == "-":
+                            acceptor_start = pos1 - acceptor_shift
+                            acceptor_end = acceptor_start + 2
+                            __corrected_pos1 = pos1 - acceptor_shift
+                            __corrected_pos2 = event_size + __corrected_pos1
+                        if strand2 == "+":
+                            donor_start = __corrected_pos2
+                            donor_end = donor_start + 2
+                        elif strand2 == "-":
+                            donor_end = __corrected_pos2
+                            donor_start = donor_end - 2
+
+                        donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
+                        acceptor_seq = genome_fasta[chrm1][
+                            acceptor_start:acceptor_end
+                        ].seq
+                        print(
+                            f"acceptor changing:{donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
+                        )
+                        if (
+                            donor_seq == target_donor_seq
+                            and acceptor_seq == target_acceptor_seq
+                        ):
+                            corrected_pos1 = __corrected_pos1
+                            corrected_pos2 = __corrected_pos2
+                            canonical_motif_or_not = 1
+                            break
+
+                if strand2 == "+":
+                    ref_end2 = corrected_pos2
+                    _exons2.last.end = corrected_pos2
+                elif strand2 == "-":
+                    ref_start2 = corrected_pos2
+                    _exons2.first.start = corrected_pos2
+                if strand1 == "+":
+                    ref_start1 = corrected_pos1
+                    _exons1.first.start = corrected_pos1
+                elif strand1 == "-":
+                    ref_end1 = corrected_pos1
+                    _exons1.last.end = corrected_pos1
+
+        # chrm1 != chrm2
+        else:
+            if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
+                for donor_shift in range(microhomology_length + 1):
+                    acceptor_shift = microhomology_length - donor_shift
+                    if strand1 == "+":
+                        donor_start = pos1 - donor_shift
+                        donor_end = donor_start + 2
+                    elif strand1 == "-":
+                        donor_end = pos1 + donor_shift
+                        donor_start = donor_end - 2
+                    if strand2 == "+":
+                        acceptor_end = pos2 + acceptor_shift
+                        acceptor_start = acceptor_end - 2
+                    elif strand2 == "-":
+                        acceptor_start = pos2 - acceptor_shift
+                        acceptor_end = acceptor_start + 2
+
+                    donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
+                    acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
+                    print(
+                        f"{donor_seq=}, {acceptor_seq=} {donor_start=} {donor_end=}, {acceptor_start=}, {acceptor_end=}"
+                    )
+                    if (
+                        donor_seq == target_donor_seq
+                        and acceptor_seq == target_acceptor_seq
+                    ):
+                        final_donor_shift = donor_shift
+                        final_accecptor_shift = acceptor_shift
+                        canonical_motif_or_not = 1
+                        break
+                if strand1 == "+":
+                    ref_end1 = ref_end1 - final_donor_shift
+                    _exons1.last.end = _exons1.last.end - final_donor_shift
+                    corrected_pos1 = pos1 - final_donor_shift
+                elif strand1 == "-":
+                    ref_start1 = ref_start1 + donor_shift
+                    _exons1.first.start = _exons1.first.start + final_donor_shift
+                    corrected_pos1 = pos1 + final_donor_shift
+                if strand2 == "+":
+                    ref_start2 = ref_start2 + final_accecptor_shift
+                    _exons2.first.start = _exons2.first.start + final_accecptor_shift
+                    corrected_pos2 = pos2 + final_accecptor_shift
+                elif strand2 == "-":
+                    ref_end2 = ref_end2 - final_accecptor_shift
+                    _exons2.last.end = _exons2.last.end - final_accecptor_shift
+                    corrected_pos2 = pos2 - final_accecptor_shift
+            else:
+                for donor_shift in range(microhomology_length + 1):
+                    acceptor_shift = microhomology_length - donor_shift
+                    if strand2 == "+":
+                        donor_start = pos2 - donor_shift
+                        donor_end = donor_start + 2
+                    elif strand2 == "-":
+                        donor_end = pos2 + donor_shift
+                        donor_start = donor_end - 2
+                    if strand1 == "+":
+                        acceptor_end = pos1 + acceptor_shift
+                        acceptor_start = acceptor_end - 2
+                    elif strand1 == "-":
+                        acceptor_start = pos1 - acceptor_shift
+                        acceptor_end = acceptor_start + 2
+
+                    donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
+                    acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
+                    print(
+                        f"{donor_seq=}, {acceptor_seq=} {donor_start=} {donor_end=}, {acceptor_start=}, {acceptor_end=}"
+                    )
+                    if (
+                        donor_seq == target_donor_seq
+                        and acceptor_seq == target_acceptor_seq
+                    ):
+                        final_donor_shift = donor_shift
+                        final_accecptor_shift = acceptor_shift
+                        canonical_motif_or_not = 1
+                        break
+
+                if strand2 == "+":
+                    ref_end2 = ref_end2 - final_donor_shift
+                    _exons2.last.end = _exons2.last.end - final_donor_shift
+                    corrected_pos2 = pos2 - final_donor_shift
+                elif strand2 == "-":
+                    ref_start2 = ref_start2 + donor_shift
+                    _exons2.first.start = _exons2.first.start + final_donor_shift
+                    corrected_pos2 = pos2 + final_donor_shift
+                if strand1 == "+":
+                    ref_start1 = ref_start1 + final_accecptor_shift
+                    _exons1.first.start = _exons1.first.start + final_accecptor_shift
+                    corrected_pos1 = pos1 + final_accecptor_shift
+                elif strand1 == "-":
+                    ref_end1 = ref_end1 - final_accecptor_shift
+                    _exons1.last.end = _exons1.last.end - final_accecptor_shift
+                    corrected_pos1 = pos1 - final_accecptor_shift
+
+        if canonical_motif_or_not == 1:
+            report_or_not, boundary_code, canonical_motif_or_not = True, 3, 1
+        else:
+            if motif_required:
+                report_or_not, boundary_code, canonical_motif_or_not = False, 0, 0
+            else:
+                report_or_not, boundary_code, canonical_motif_or_not = True, 0, 0
+
+    return (
+        report_or_not,
+        boundary_code,
+        canonical_motif_or_not,
+        corrected_pos1,
+        corrected_pos2,
+        ref_start1,
+        ref_end1,
+        _exons1,
+        ref_start2,
+        ref_end2,
+        _exons2,
+    )
 
 
 def blat2chimeric_alignment(
@@ -852,21 +1206,42 @@ def same_chrom_same_strand_mode21_handler(
         if evt_size <= 0:  # deletion
             del_start = read_rt.ref_end
             del_end = del_start + abs(evt_size)
-            _, _anno, _can = splicing_confirmation(
+            (
+                _,
+                _anno,
+                _can,
+                corrected_del_start,
+                corrected_del_end,
+                rt_ref_start,
+                rt_ref_end,
+                _rt_exons,
+                lt_ref_start,
+                lt_ref_end,
+                _lt_exons,
+            ) = splicing_confirmation_and_correction(
                 lt_chrm,
                 del_start,
                 read_rt.strand,
                 rt_mode,
+                read_rt.ref_start,
+                read_rt.ref_end,
+                rt_exons,
                 lt_chrm,
                 del_end,
                 read_lt.strand,
                 lt_mode,
+                read_lt.ref_start,
+                read_lt.ref_end,
+                lt_exons,
                 splice_bin,
+                bp_region_seq_len,
                 genome_fasta,
                 cvg,
                 motif_required=motif_required,
             )
-            _genes = gene_annotation(lt_chrm, del_start, lt_chrm, del_end, gene_iv)
+            _genes = gene_annotation(
+                lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv
+            )
             # 1 => 2
             if is_reverse:
                 if _anno == 1:
@@ -879,13 +1254,13 @@ def same_chrom_same_strand_mode21_handler(
                 _anno,
                 _can,
                 (
-                    f"{lt_chrm}:{del_start}",
-                    f"{lt_chrm}:{del_end}",
+                    f"{lt_chrm}:{corrected_del_start}",
+                    f"{lt_chrm}:{corrected_del_end}",
                     1,
                     2,
                 ),
-                (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                (rt_ref_start, rt_ref_end, _rt_exons),
+                (lt_ref_start, lt_ref_end, _lt_exons),
                 (rt_bp_seq, lt_bp_seq),
                 (read_rt.strand, read_lt.strand),
                 [*_genes],
@@ -897,25 +1272,44 @@ def same_chrom_same_strand_mode21_handler(
             junc_start = read_lt.ref_start
             chrm_end = lt_chrm
             junc_end = junc_start + evt_size
-            _nls, _anno, _can = splicing_confirmation(
+            (
+                _nls,
+                _anno,
+                _can,
+                corrected_junc_start,
+                corrected_junc_end,
+                lt_ref_start,
+                lt_ref_end,
+                _lt_exons,
+                rt_ref_start,
+                rt_ref_end,
+                _rt_exons,
+            ) = splicing_confirmation_and_correction(
                 chrm_start,
                 junc_start,
                 read_lt.strand,
                 lt_mode,
+                read_lt.ref_start,
+                read_lt.ref_end,
+                lt_exons,
                 chrm_end,
                 junc_end,
                 read_rt.strand,
                 rt_mode,
+                read_rt.ref_start,
+                read_rt.ref_end,
+                rt_exons,
                 splice_bin,
+                bp_region_seq_len,
                 genome_fasta,
                 cvg,
                 motif_required=motif_required,
             )
             _genes = gene_annotation(
                 chrm_start,
-                junc_start,
+                corrected_junc_start,
                 chrm_end,
-                junc_end,
+                corrected_junc_end,
                 gene_iv,
             )
             if is_reverse:
@@ -931,13 +1325,13 @@ def same_chrom_same_strand_mode21_handler(
                         _anno,
                         _can,
                         (
-                            f"{lt_chrm}:{junc_start}",
-                            f"{lt_chrm}:{junc_end}",
+                            f"{lt_chrm}:{corrected_junc_start}",
+                            f"{lt_chrm}:{corrected_junc_end}",
                             2,
                             1,
                         ),
-                        (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                        (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                        (lt_ref_start, lt_ref_end, _lt_exons),
+                        (rt_ref_start, rt_ref_end, _rt_exons),
                         (lt_bp_seq, rt_bp_seq),
                         (read_lt.strand, read_rt.strand),
                         [*_genes],
@@ -947,13 +1341,13 @@ def same_chrom_same_strand_mode21_handler(
                     _anno,
                     _can,
                     (
-                        f"{lt_chrm}:{junc_end}",
-                        f"{lt_chrm}:{junc_start}",
+                        f"{lt_chrm}:{corrected_junc_end}",
+                        f"{lt_chrm}:{corrected_junc_start}",
                         1,
                         2,
                     ),
-                    (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                    (rt_ref_start, rt_ref_end, _rt_exons),
+                    (lt_ref_start, lt_ref_end, _lt_exons),
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
@@ -979,25 +1373,44 @@ def same_chrom_same_strand_mode21_handler(
             junc_start = read_lt.ref_start
             chrm_end = lt_chrm
             junc_end = junc_start + evt_size
-            _nls, _anno, _can = splicing_confirmation(
+            (
+                _nls,
+                _anno,
+                _can,
+                corrected_junc_start,
+                corrected_junc_end,
+                lt_ref_start,
+                lt_ref_end,
+                _lt_exons,
+                rt_ref_start,
+                rt_ref_end,
+                _rt_exons,
+            ) = splicing_confirmation_and_correction(
                 chrm_start,
                 junc_start,
                 read_lt.strand,
                 lt_mode,
+                read_lt.ref_start,
+                read_lt.ref_end,
+                lt_exons,
                 chrm_end,
                 junc_end,
                 read_rt.strand,
                 rt_mode,
+                read_rt.ref_start,
+                read_rt.ref_end,
+                rt_exons,
                 splice_bin,
+                bp_region_seq_len,
                 genome_fasta,
                 cvg,
                 motif_required=motif_required,
             )
             _genes = gene_annotation(
                 chrm_start,
-                junc_start,
+                corrected_junc_start,
                 chrm_end,
-                junc_end,
+                corrected_junc_end,
                 gene_iv,
             )
             if is_reverse:
@@ -1014,13 +1427,13 @@ def same_chrom_same_strand_mode21_handler(
                         _anno,
                         _can,
                         (
-                            f"{lt_chrm}:{junc_start}",
-                            f"{lt_chrm}:{junc_end}",
+                            f"{lt_chrm}:{corrected_junc_start}",
+                            f"{lt_chrm}:{corrected_junc_end}",
                             2,
                             1,
                         ),
-                        (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                        (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                        (lt_ref_start, lt_ref_end, _lt_exons),
+                        (rt_ref_start, rt_ref_end, _rt_exons),
                         (lt_bp_seq, rt_bp_seq),
                         (read_lt.strand, read_rt.strand),
                         [*_genes],
@@ -1030,13 +1443,13 @@ def same_chrom_same_strand_mode21_handler(
                     _anno,
                     _can,
                     (
-                        f"{lt_chrm}:{junc_end}",
-                        f"{lt_chrm}:{junc_start}",
+                        f"{lt_chrm}:{corrected_junc_end}",
+                        f"{lt_chrm}:{corrected_junc_start}",
                         1,
                         2,
                     ),
-                    (read_rt.ref_start, read_rt.ref_end, rt_exons),
-                    (read_lt.ref_start, read_lt.ref_end, lt_exons),
+                    (rt_ref_start, rt_ref_end, _rt_exons),
+                    (lt_ref_start, lt_ref_end, _lt_exons),
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
@@ -1161,23 +1574,40 @@ def same_chrom_diff_strand_handler(
         junc_start = ra_bp
         chrm_end = lt_chrm
         junc_end = ra_bp
-        _nls, _anno, _can = splicing_confirmation(
+        (
+            _nls,
+            _anno,
+            _can,
+            corrected_junc_start,
+            corrected_junc_end,
+            lt_ref_start,
+            lt_ref_end,
+            _lt_exons,
+            rt_ref_start,
+            rt_ref_end,
+            _rt_exons,
+        ) = splicing_confirmation_and_correction(
             chrm_start,
             junc_start,
             read_lt.strand,
             same_mode,
+            read_lt.ref_start,
+            read_lt.ref_end,
+            lt_exons,
             chrm_end,
             junc_end,
             read_rt.strand,
             same_mode,
+            read_rt.ref_start,
+            read_rt.ref_end,
+            rt_exons,
             splice_bin,
+            bp_region_seq_len,
             genome_fasta,
             cvg,
             motif_required=motif_required,
         )
         strands = (read_lt.strand, read_rt.strand)
-        lt_start_end_exons = (read_lt.ref_start, read_lt.ref_end, lt_exons)
-        rt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
         lt_bp_seq = obtain_bp_region_seq(
             read_lt,
             lt_mode,
@@ -1191,12 +1621,14 @@ def same_chrom_diff_strand_handler(
             genome_fasta,
         )
 
+        lt_start_end_exons = (lt_ref_start, lt_ref_end, _lt_exons)
+        rt_start_end_exons = (rt_ref_start, rt_ref_end, _rt_exons)
         if _nls:
             _genes = gene_annotation(
                 chrm_start,
-                junc_start,
+                corrected_junc_start,
                 chrm_end,
-                junc_end,
+                corrected_junc_end,
                 gene_iv,
             )
 
@@ -1205,8 +1637,8 @@ def same_chrom_diff_strand_handler(
                 _anno,
                 _can,
                 (
-                    f"{lt_chrm}:{junc_start}",
-                    f"{lt_chrm}:{junc_end}",
+                    f"{lt_chrm}:{corrected_junc_start}",
+                    f"{lt_chrm}:{corrected_junc_end}",
                     same_mode,
                     same_mode,
                 ),
@@ -1266,34 +1698,55 @@ def same_chrom_diff_strand_handler(
             genome_fasta,
         )
 
-    _nls, _anno, _can = splicing_confirmation(
+    (
+        _nls,
+        _anno,
+        _can,
+        corrected_junc_start,
+        corrected_junc_end,
+        lt_ref_start,
+        lt_ref_end,
+        _lt_exons,
+        rt_ref_start,
+        rt_ref_end,
+        _rt_exons,
+    ) = splicing_confirmation_and_correction(
         chrm_start,
         junc_start,
         strands[0],
         same_mode,
+        lt_start_end_exons[0],
+        lt_start_end_exons[1],
+        lt_start_end_exons[2],
         chrm_end,
         junc_end,
         strands[1],
         same_mode,
+        rt_start_end_exons[0],
+        rt_start_end_exons[1],
+        rt_start_end_exons[2],
         splice_bin,
+        bp_region_seq_len,
         genome_fasta,
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if _nls:
         return (
             "INV",
             _anno,
             _can,
             (
-                f"{lt_chrm}:{junc_start}",
-                f"{lt_chrm}:{junc_end}",
+                f"{lt_chrm}:{corrected_junc_start}",
+                f"{lt_chrm}:{corrected_junc_end}",
                 same_mode,
                 same_mode,
             ),
-            lt_start_end_exons,
-            rt_start_end_exons,
+            (lt_ref_start, lt_ref_end, _lt_exons),
+            (rt_ref_start, rt_ref_end, _rt_exons),
             (lt_bp_seq, rt_bp_seq),
             (*strands,),
             [*_genes],
@@ -1341,21 +1794,42 @@ def diff_chrom_same_strand_mode21_handler(
 
     lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
     rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
-    _nls, _anno, _can = splicing_confirmation(
+    (
+        _nls,
+        _anno,
+        _can,
+        corrected_junc_start,
+        corrected_junc_end,
+        lt_ref_start,
+        lt_ref_end,
+        _lt_exons,
+        rt_ref_start,
+        rt_ref_end,
+        _rt_exons,
+    ) = splicing_confirmation_and_correction(
         chrm_start,
         junc_start,
         read_lt.strand,
         lt_mode,
+        read_lt.ref_start,
+        read_lt.ref_end,
+        lt_exons,
         chrm_end,
         junc_end,
         read_rt.strand,
         rt_mode,
+        read_rt.ref_start,
+        read_rt.ref_end,
+        rt_exons,
         splice_bin,
+        bp_region_seq_len,
         genome_fasta,
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if is_reverse:
         if _anno == 1:
             _anno = 2
@@ -1369,9 +1843,14 @@ def diff_chrom_same_strand_mode21_handler(
                 "TRA",
                 _anno,
                 _can,
-                (f"{chrm_start}:{junc_start}", f"{chrm_end}:{junc_end}", 2, 1),
-                (read_lt.ref_start, read_lt.ref_end, lt_exons),
-                (read_rt.ref_start, read_rt.ref_end, rt_exons),
+                (
+                    f"{chrm_start}:{corrected_junc_start}",
+                    f"{chrm_end}:{corrected_junc_end}",
+                    2,
+                    1,
+                ),
+                (lt_ref_start, lt_ref_end, _lt_exons),
+                (rt_ref_start, rt_ref_end, _rt_exons),
                 (lt_bp_seq, rt_bp_seq),
                 (read_lt.strand, read_rt.strand),
                 [*_genes],
@@ -1380,9 +1859,14 @@ def diff_chrom_same_strand_mode21_handler(
             "TRA",
             _anno,
             _can,
-            (f"{chrm_end}:{junc_end}", f"{chrm_start}:{junc_start}", 1, 2),
-            (read_rt.ref_start, read_rt.ref_end, rt_exons),
-            (read_lt.ref_start, read_lt.ref_end, lt_exons),
+            (
+                f"{chrm_end}:{corrected_junc_end}",
+                f"{chrm_start}:{corrected_junc_start}",
+                1,
+                2,
+            ),
+            (rt_ref_start, rt_ref_end, _rt_exons),
+            (lt_ref_start, lt_ref_end, _lt_exons),
             (rt_bp_seq, lt_bp_seq),
             (read_rt.strand, read_lt.strand),
             [*_genes],
@@ -1498,34 +1982,55 @@ def diff_chrom_diff_strand_handler(
 
     lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
     rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
-    _nls, _anno, _can = splicing_confirmation(
+    (
+        _nls,
+        _anno,
+        _can,
+        corrected_junc_start,
+        corrected_junc_end,
+        lt_ref_start,
+        lt_ref_end,
+        _lt_exons,
+        rt_ref_start,
+        rt_ref_end,
+        _rt_exons,
+    ) = splicing_confirmation_and_correction(
         chrm_start,
         junc_start,
         read_lt.strand,
         same_mode,
+        read_lt.ref_start,
+        read_lt.ref_end,
+        lt_exons,
         chrm_end,
         junc_end,
         read_rt.strand,
         same_mode,
+        read_rt.ref_start,
+        read_rt.ref_end,
+        rt_exons,
         splice_bin,
+        bp_region_seq_len,
         genome_fasta,
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, junc_start, chrm_end, junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if _nls:
         return (
             "TRA",
             _anno,
             _can,
             (
-                f"{chrm_start}:{junc_start}",
-                f"{chrm_end}:{junc_end}",
+                f"{chrm_start}:{corrected_junc_start}",
+                f"{chrm_end}:{corrected_junc_end}",
                 same_mode,
                 same_mode,
             ),
-            (read_lt.ref_start, read_lt.ref_end, lt_exons),
-            (read_rt.ref_start, read_rt.ref_end, rt_exons),
+            (lt_ref_start, lt_ref_end, _lt_exons),
+            (rt_ref_start, rt_ref_end, _rt_exons),
             (lt_bp_seq, rt_bp_seq),
             (read_lt.strand, read_rt.strand),
             [*_genes],
