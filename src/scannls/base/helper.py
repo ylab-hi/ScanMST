@@ -727,6 +727,8 @@ def splicing_confirmation_and_correction(
 
         # chrm1 != chrm2
         else:
+            final_donor_shift = 0
+            final_accecptor_shift = microhomology_length - final_donor_shift
             if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
                 for donor_shift in range(microhomology_length + 1):
                     acceptor_shift = microhomology_length - donor_shift
@@ -1264,6 +1266,7 @@ def same_chrom_same_strand_mode21_handler(
                 (rt_bp_seq, lt_bp_seq),
                 (read_rt.strand, read_lt.strand),
                 [*_genes],
+                True,
             )
 
         # reads length < tandem duplication size
@@ -1335,6 +1338,7 @@ def same_chrom_same_strand_mode21_handler(
                         (lt_bp_seq, rt_bp_seq),
                         (read_lt.strand, read_rt.strand),
                         [*_genes],
+                        False,
                     )
                 return (
                     "TDUP",
@@ -1351,6 +1355,7 @@ def same_chrom_same_strand_mode21_handler(
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
+                    True,
                 )
             return noreturn
         # read length > tandem duplication size
@@ -1437,6 +1442,7 @@ def same_chrom_same_strand_mode21_handler(
                         (lt_bp_seq, rt_bp_seq),
                         (read_lt.strand, read_rt.strand),
                         [*_genes],
+                        False,
                     )
                 return (
                     "TDUP",
@@ -1453,6 +1459,7 @@ def same_chrom_same_strand_mode21_handler(
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
+                    True
                 )
             return noreturn
         return None
@@ -1647,6 +1654,7 @@ def same_chrom_diff_strand_handler(
                 (lt_bp_seq, rt_bp_seq),
                 (*strands,),
                 [*_genes],
+                False
             )
         return noreturn
 
@@ -1681,6 +1689,7 @@ def same_chrom_diff_strand_handler(
             bp_region_seq_len,
             genome_fasta,
         )
+        is_read_reversed = False
     elif junc_start == sa_bp:
         strands = (read_rt.strand, read_lt.strand)
         lt_start_end_exons = (read_rt.ref_start, read_rt.ref_end, rt_exons)
@@ -1697,6 +1706,7 @@ def same_chrom_diff_strand_handler(
             bp_region_seq_len,
             genome_fasta,
         )
+        is_read_reversed = True
 
     (
         _nls,
@@ -1750,6 +1760,7 @@ def same_chrom_diff_strand_handler(
             (lt_bp_seq, rt_bp_seq),
             (*strands,),
             [*_genes],
+            is_read_reversed,
         )
     return noreturn
 
@@ -1854,6 +1865,7 @@ def diff_chrom_same_strand_mode21_handler(
                 (lt_bp_seq, rt_bp_seq),
                 (read_lt.strand, read_rt.strand),
                 [*_genes],
+                False,
             )
         return (
             "TRA",
@@ -1870,6 +1882,7 @@ def diff_chrom_same_strand_mode21_handler(
             (rt_bp_seq, lt_bp_seq),
             (read_rt.strand, read_lt.strand),
             [*_genes],
+            True,
         )
 
     return noreturn
@@ -2034,6 +2047,7 @@ def diff_chrom_diff_strand_handler(
             (lt_bp_seq, rt_bp_seq),
             (read_lt.strand, read_rt.strand),
             [*_genes],
+            False,
         )
     return noreturn
 

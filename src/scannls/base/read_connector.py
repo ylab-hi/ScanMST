@@ -680,8 +680,7 @@ class ReadsConnector:
 
         .. note::
             Read-to-Read chain scenarios
-            * [[Read1, Read2, Read3]]
-            * [[Read1, Read2, Read3],[Read4,Read5]]
+            * [Read1, Read2, Read3, Read4, Read5]
 
             Dictionary of Read-pair scenarios
             * (Read1, Read2) => mode-of-Read1, mode-of-Read2
@@ -791,13 +790,12 @@ def detect_read_read_connections_from_cigar(
     :param logger:
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: NM cutoff
-    :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) =>
+    :return: Read-to-Read chain (a list of Read), a dictionary of Read-pair(Read1, Read2) =>
         mode-of-Read1, mode-of-Read2
 
     .. note::
         Read-to-Read chain scenarios
-        * [[Read1, Read2, Read3]]
-        * [[Read1, Read2, Read3],[Read4,Read5]]
+        * [Read1, Read2, Read3]
 
         Dictionary of Read-pair scenarios
         * (Read1, Read2) => mode-of-Read1, mode-of-Read2

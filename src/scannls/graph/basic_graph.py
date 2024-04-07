@@ -1155,6 +1155,7 @@ class NLPath:
             read1: Read = event.read1(read_chains, shift_length)
             read2: Read = event.read2(read_chains, shift_length)
 
+            logger.trace(f"{event.read1_ref_start=}, {event.read1_ref_end=}, {event.read2_ref_start=}, {event.read2_ref_end=}")
             read1_node = Node(
                 query_name=read1.query_name,
                 chrom=event.chrom1,

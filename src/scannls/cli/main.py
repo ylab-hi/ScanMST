@@ -182,6 +182,90 @@ def _get_cvg_gene_iv(gtf, splice_bin):
         raise SystemExit(msg) from OSError
 
 
+def update_position_event_list(event_list: list[Event]) -> list[Event]:
+    """Only deal with len(event_list) >= 2."""
+    def is_start_match(event: Event, check_bp1=False) -> bool:
+        bp1_position = int(event.bp1.split(":")[1])
+        bp2_position = int(event.bp2.split(":")[1])
+        if check_bp1:
+            if bp1_position == event.read1_ref_start:
+                return True
+            elif bp1_position == event.read1_ref_end:
+                return False
+        else:
+            if bp2_position == event.read2_ref_start:
+                return True
+            elif bp2_position == event.read2_ref_end:
+                return False
+
+    hop_number = len(event_list)
+    if hop_number < 2:
+        return event_list
+    else:
+        pre_read_info = None
+        updated_event_list = []
+        for idx, (pre_evt, next_evt) in enumerate(zip(event_list[:], event_list[1:]), 1):
+            if pre_evt.is_read_reversed:
+                if pre_read_info:
+                    pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = pre_read_info
+
+                is_start_match_for_pre_evt = is_start_match(pre_evt, check_bp1=True)
+                if next_evt.is_read_reversed:
+                    is_start_match_for_next_evt = is_start_match(next_evt)
+                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                        pre_evt.read1_ref_end = next_evt.read2_ref_end
+                        pre_evt.read1_exons.last.end = next_evt.read2_ref_end
+                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                        pre_evt.read1_ref_start = next_evt.read2_ref_start
+                        pre_evt.read1_exons.first.start = next_evt.read2_ref_start
+                else:
+                    is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
+                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                        pre_evt.read1_ref_end = next_evt.read1_ref_end
+                        pre_evt.read1_exons.last.end = next_evt.read1_ref_end
+                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                        pre_evt.read1_ref_start = next_evt.read1_ref_start
+                        pre_evt.read1_exons.first.start = next_evt.read1_ref_start
+                updated_event_list.append(pre_evt)
+                pre_read_info = pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons
+                if idx == hop_number - 1:
+                    if next_evt.is_read_reversed:
+                        next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                    else:
+                        next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                    updated_event_list.append(next_evt)
+            else:
+                if pre_read_info:
+                    pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons = pre_read_info
+
+                is_start_match_for_pre_evt = is_start_match(pre_evt)
+                if next_evt.is_read_reversed:
+                    is_start_match_for_next_evt = is_start_match(next_evt)
+                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                        pre_evt.read2_ref_end = next_evt.read2_ref_end
+                        pre_evt.read2_exons.last.end = next_evt.read2_ref_end
+                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                        pre_evt.read2_ref_start = next_evt.read2_ref_start
+                        pre_evt.read2_exons.first.start = next_evt.read2_ref_start
+                else:
+                    is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
+                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                        pre_evt.read2_ref_end = next_evt.read1_ref_end
+                        pre_evt.read2_exons.last.end = next_evt.read1_ref_end
+                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                        pre_evt.read2_ref_start = next_evt.read1_ref_start
+                        pre_evt.read2_exons.first.start = next_evt.read1_ref_start
+                updated_event_list.append(pre_evt)
+                pre_read_info = pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons
+                if idx == hop_number - 1:
+                    if next_evt.is_read_reversed:
+                        next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                    else:
+                        next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                    updated_event_list.append(next_evt)
+        return updated_event_list
+
+
 def detect_sv_from_cigar(
     *,
     read: pysam.AlignedSegment,
@@ -253,13 +337,16 @@ def detect_sv_from_cigar(
                 motif_required=motif_required,
             )
             if event_type is not None:
+                logger.trace(f"{event_type=}")
                 event = Event(event_type)
                 event_list.append(event)
                 logger.trace(str(event))
             else:  # temporary solution
                 logger.warning(f"Event Type is NA {event_type=}")
 
-        return event_list, read_chains, num_added_reads
+        updated_event_list = update_position_event_list(event_list)
+
+        return updated_event_list, read_chains, num_added_reads
 
     return None
 

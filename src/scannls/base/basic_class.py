@@ -281,6 +281,7 @@ class Event:
             insertion_info,
             strands,
             genes,
+            is_read_reversed
         ) = event
 
         self.sv_type = sv_type
@@ -297,14 +298,17 @@ class Event:
         self.strand2 = Strand.from_str(strands[1])
         self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
         self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+        self.is_read_reversed = is_read_reversed
+        from loguru import logger
+        logger.trace(f"{read1_info=}, {read2_info=}, {event=}")
 
     def __repr__(self) -> str:
         """Return the string representation of the event."""
         return (
             f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} ({self.bp1} "
             f"{self.bp2} {self.mode1} {self.mode2}) "
-            f"{self.strand1} {self.read1_ref_start} {self.read1_ref_end} "
-            f"{self.strand2} {self.read2_ref_start} {self.read2_ref_end} "
+            f"{self.strand1} {self.read1_ref_start=} {self.read1_ref_end=} "
+            f"{self.strand2} {self.read2_ref_start=} {self.read2_ref_end=} "
             f"{self.insertion_info})"
         )
 
@@ -406,12 +410,12 @@ class Event:
         for read in read_chains:
             if (
                 (
-                    abs(read.ref_start - self.read1_ref_start) <= shift_length
+                    abs(read.ref_start - self.read1_ref_start) <= shift_length * 2
                     and read.ref_end == self.read1_ref_end
                 )
                 or (
                     read.ref_start == self.read1_ref_start
-                    and abs(read.ref_end - self.read1_ref_end) <= shift_length
+                    and abs(read.ref_end - self.read1_ref_end) <= shift_length * 2
                 )
             ) and read.strand == self.strand1:
                 return read
