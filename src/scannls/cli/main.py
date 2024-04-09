@@ -183,8 +183,31 @@ def _get_cvg_gene_iv(gtf, splice_bin):
 
 
 def update_position_event_list(event_list: list[Event]) -> list[Event]:
-    """Only deal with len(event_list) >= 2."""
+    """Update co-linear exons start/end positions.
+
+     pre_read intersected
+                 read
+       [c1] ---- [c2]
+                 [c2] ---- [c3]
+                           [c3] ---- [c4]
+             ^         ^         ^
+            evt1      evt2      evt3
+
+      evt1 an evt2: No pre_read_info, so [c1] of evt1 keep unchanged.
+                    Update [c2]'s end position of evt1, using [c2]'s junnction-side position of evt2
+                    Keep [c2] of evt1 as pre_read_info, Add `evt1` in the list.
+
+      evt2 an evt3: Update [c2] of evt2 using pre_read_info.
+                    Update [c3]'s end position of evt2, using [c3]'s junnction-side position of evt3
+                    Keep [c3] of evt2 as pre_read_info, Add `evt2` in the list.
+
+      For the last event:
+                    Update [c3] of evt3 using pre_read_info, Add `evt3` in the list.
+    """
+
     def is_start_match(event: Event, check_bp1=False) -> bool:
+        """Check if event breakpoint equals to event's ref_start
+        """
         bp1_position = int(event.bp1.split(":")[1])
         bp2_position = int(event.bp2.split(":")[1])
         if check_bp1:
@@ -205,12 +228,17 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
         pre_read_info = None
         updated_event_list = []
         for idx, (pre_evt, next_evt) in enumerate(zip(event_list[:], event_list[1:]), 1):
+            # if is_read_reversed is True, pre_read will be read2, intersected read will be read1
+            # otherwise pre_read will be read1, intersected read will be read2
             if pre_evt.is_read_reversed:
                 if pre_read_info:
                     pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = pre_read_info
-
+                # intersected read is read1 for previous event
                 is_start_match_for_pre_evt = is_start_match(pre_evt, check_bp1=True)
+                # if is_read_reversed is False, intersected read will be read1
+                # otherwise intersected read will be read2
                 if next_evt.is_read_reversed:
+                    # intersected read is read2
                     is_start_match_for_next_evt = is_start_match(next_evt)
                     if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
                         pre_evt.read1_ref_end = next_evt.read2_ref_end
@@ -219,6 +247,7 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
                         pre_evt.read1_ref_start = next_evt.read2_ref_start
                         pre_evt.read1_exons.first.start = next_evt.read2_ref_start
                 else:
+                    # intersected read is read1 for next event
                     is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
                     if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
                         pre_evt.read1_ref_end = next_evt.read1_ref_end
@@ -325,7 +354,7 @@ def detect_sv_from_cigar(
                     f"{lt.strand=}, {rt.strand=}, {lt_mode=}, {rt_mode=}",
                 )
 
-            event_type = infer_nls_from_connected_reads(
+            original_event_info = infer_nls_from_connected_reads(
                 read_lt=lt,
                 read_rt=rt,
                 lt_mode=lt_mode,
@@ -336,9 +365,9 @@ def detect_sv_from_cigar(
                 gene_iv=gene_iv,
                 motif_required=motif_required,
             )
-            if event_type is not None:
-                logger.trace(f"{event_type=}")
-                event = Event(event_type)
+            if original_event_info is not None:
+                logger.trace(f"{original_event_info=}")
+                event = Event(original_event_info)
                 event_list.append(event)
                 logger.trace(str(event))
             else:  # temporary solution
@@ -587,7 +616,7 @@ def _scan_bam_helper(
                         logger=logger,  # type: ignore
                     ):
                         event_lists, read_chains, num_added_reads = ret
-                        logger.trace(f"{read_chains=}")
+                        logger.trace(f"Unordered {event_lists=}, {read_chains=}")
                     else:
                         event_lists, read_chains, num_added_reads = [], [], 0
 

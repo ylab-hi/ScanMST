@@ -545,7 +545,6 @@ def splicing_confirmation_and_correction(
         microhomology_length = abs(bp_region_seq_len)
         _breakpoint1 = (chrm1, pos1, strand1)
         _breakpoint2 = (chrm2, pos2, strand2)
-        print(f"{_breakpoint1=}, {_breakpoint2=}")
 
         target_donor_seq = list(splice_motif_dict.keys())[0]
         target_acceptor_seq = splice_motif_dict[target_donor_seq]
@@ -580,9 +579,6 @@ def splicing_confirmation_and_correction(
                         acceptor_end = acceptor_start + 2
                     donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
                     acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
-                    print(
-                        f"{donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
-                    )
                     if (
                         donor_seq == target_donor_seq
                         and acceptor_seq == target_acceptor_seq
@@ -616,9 +612,6 @@ def splicing_confirmation_and_correction(
                         acceptor_seq = genome_fasta[chrm2][
                             acceptor_start:acceptor_end
                         ].seq
-                        print(
-                            f"{donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
-                        )
                         if (
                             donor_seq == target_donor_seq
                             and acceptor_seq == target_acceptor_seq
@@ -664,9 +657,6 @@ def splicing_confirmation_and_correction(
                         acceptor_end = acceptor_start + 2
                     donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
                     acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
-                    print(
-                        f"donor changing: {donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
-                    )
                     if (
                         donor_seq == target_donor_seq
                         and acceptor_seq == target_acceptor_seq
@@ -700,9 +690,6 @@ def splicing_confirmation_and_correction(
                         acceptor_seq = genome_fasta[chrm1][
                             acceptor_start:acceptor_end
                         ].seq
-                        print(
-                            f"acceptor changing:{donor_seq=}, {acceptor_seq=} {donor_start=}:{donor_end=}, {acceptor_start=}:{acceptor_end=}"
-                        )
                         if (
                             donor_seq == target_donor_seq
                             and acceptor_seq == target_acceptor_seq
@@ -747,9 +734,6 @@ def splicing_confirmation_and_correction(
 
                     donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
                     acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
-                    print(
-                        f"{donor_seq=}, {acceptor_seq=} {donor_start=} {donor_end=}, {acceptor_start=}, {acceptor_end=}"
-                    )
                     if (
                         donor_seq == target_donor_seq
                         and acceptor_seq == target_acceptor_seq
@@ -792,9 +776,6 @@ def splicing_confirmation_and_correction(
 
                     donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
                     acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
-                    print(
-                        f"{donor_seq=}, {acceptor_seq=} {donor_start=} {donor_end=}, {acceptor_start=}, {acceptor_end=}"
-                    )
                     if (
                         donor_seq == target_donor_seq
                         and acceptor_seq == target_acceptor_seq
@@ -1251,6 +1232,12 @@ def same_chrom_same_strand_mode21_handler(
                 elif _anno == 2:
                     _anno = 1
                 _genes = _genes[::-1]
+
+            if is_reverse:
+                is_read_reversed = False
+            else:
+                is_read_reversed = True
+
             return (
                 "DEL",
                 _anno,
@@ -1266,7 +1253,7 @@ def same_chrom_same_strand_mode21_handler(
                 (rt_bp_seq, lt_bp_seq),
                 (read_rt.strand, read_lt.strand),
                 [*_genes],
-                True,
+                is_read_reversed,
             )
 
         # reads length < tandem duplication size
@@ -1355,7 +1342,7 @@ def same_chrom_same_strand_mode21_handler(
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
-                    True,
+                    False,
                 )
             return noreturn
         # read length > tandem duplication size
@@ -1459,7 +1446,7 @@ def same_chrom_same_strand_mode21_handler(
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
                     [*_genes],
-                    True
+                    False
                 )
             return noreturn
         return None
@@ -1882,7 +1869,7 @@ def diff_chrom_same_strand_mode21_handler(
             (rt_bp_seq, lt_bp_seq),
             (read_rt.strand, read_lt.strand),
             [*_genes],
-            True,
+            False,
         )
 
     return noreturn
