@@ -161,15 +161,11 @@ class BasicNode:
             self.next_node_in_nlpath = nlpath[index + 1]
         elif index == len(nlpath) - 1:
             self.previous_node_in_nlpath = nlpath[index - 1]
-            self.previous_edge_in_nlapth = nlpath.edges[
-                Edge.create_key_from_node(nlpath[index - 1], self)
-            ]
+            self.previous_edge_in_nlapth = nlpath.edges[Edge.create_key_from_node(nlpath[index - 1], self)]
         else:
             self.next_node_in_nlpath = nlpath[index + 1]
             self.previous_node_in_nlpath = nlpath[index - 1]
-            self.previous_edge_in_nlapth = nlpath.edges[
-                Edge.create_key_from_node(nlpath[index - 1], self)
-            ]
+            self.previous_edge_in_nlapth = nlpath.edges[Edge.create_key_from_node(nlpath[index - 1], self)]
 
     def clear_next_and_previous_node_in_series(self) -> None:
         """Clear next and previous node in series."""
@@ -315,13 +311,7 @@ class Node(BasicNode):
     __str__ = __repr__
 
     def __hash__(self) -> int:
-        return (
-            hash(self.chrom)
-            ^ hash(self.ref_start)
-            ^ hash(self.ref_end)
-            ^ hash(self.strand)
-            ^ hash(self.exons)
-        )
+        return hash(self.chrom) ^ hash(self.ref_start) ^ hash(self.ref_end) ^ hash(self.strand) ^ hash(self.exons)
 
     @property
     def read_ids(self) -> list[str]:
@@ -398,9 +388,7 @@ class Node(BasicNode):
 
             # WARN: do not check if they have same key <Yangyang Li>
             self.identities.update(other.identities)
-
             return
-
         msg = f"Cannot merge {self!r} and {other!r}"
         raise TypeError(msg)
 
@@ -418,12 +406,7 @@ class Node(BasicNode):
                 return False
 
             if not same_left and not same_right:
-                return (
-                    self.exons.first.start
-                    <= other.exons.first.start
-                    <= other.exons.last.end
-                    <= self.exons.last.end
-                )
+                return self.exons.first.start <= other.exons.first.start <= other.exons.last.end <= self.exons.last.end
 
             if same_left and same_right:
                 return (
@@ -835,9 +818,7 @@ class NLPath:
 
     def is_all_type_del(self) -> bool:
         """Check if sv_type of all nodes in the series are DEL."""
-        return all(
-            edge.variation_type == VariationType.DEL for edge in self.edges.values()
-        )
+        return all(edge.variation_type == VariationType.DEL for edge in self.edges.values())
 
     def polish_edges(self) -> None:
         """Polish edges in the path."""
@@ -845,14 +826,8 @@ class NLPath:
             next_node = self.nodes[idx + 1]
             edge = self.get_edge(node, next_node)
             if edge is not None:
-                edge.break_point1.pos = (
-                    node.ref_end if node.strand.is_forward() else node.ref_start
-                )
-                edge.break_point2.pos = (
-                    next_node.ref_start
-                    if next_node.strand.is_forward()
-                    else next_node.ref_end
-                )
+                edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
+                edge.break_point2.pos = next_node.ref_start if next_node.strand.is_forward() else next_node.ref_end
 
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""
@@ -861,9 +836,7 @@ class NLPath:
         if not self.nodes:
             return
 
-        if not any(
-            edge.variation_type == VariationType.DEL for edge in self.edges.values()
-        ):
+        if not any(edge.variation_type == VariationType.DEL for edge in self.edges.values()):
             return
 
         edges = []
@@ -920,11 +893,7 @@ class NLPath:
         for _a, _b in pair_indices:
             node_a = self.nodes[_a]
             node_b = self.nodes[_b]
-            if (
-                node_a.introns != node_b.introns
-                or node_a.strand != node_b.strand
-                or node_a.chrom != node_b.chrom
-            ):
+            if node_a.introns != node_b.introns or node_a.strand != node_b.strand or node_a.chrom != node_b.chrom:
                 continue
 
             if (
@@ -932,33 +901,22 @@ class NLPath:
                 (
                     _a == 0
                     and _b < nlpath_len - 1
-                    and _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
-                        node_a, node_b, threshold
-                    )
+                    and _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(node_a, node_b, threshold)
                 )
                 # middle vs. tail
                 or (
                     _a > 0
                     and _b == nlpath_len - 1
-                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
-                        node_b, node_a, threshold
-                    )
+                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, threshold)
                 )
                 # head vs. tail
                 or (
                     _a == 0
                     and _b == nlpath_len - 1
-                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
-                        node_a, node_b
-                    )
+                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b)
                 )
                 # middle vs middle
-                or (
-                    _a > 0
-                    and _b < nlpath_len - 1
-                    and node_a.ref_start == node_b.ref_start
-                    and node_a.ref_end == node_b.ref_end
-                )
+                or (_a > 0 and _b < nlpath_len - 1 and node_a.ref_start == node_b.ref_start and node_a.ref_end == node_b.ref_end)
             ):
                 return True
 
@@ -969,9 +927,7 @@ class NLPath:
         maximum_insertion_length = 0
         for event_id, _node in enumerate(self.nodes[:-1], 1):
             _edge = self.next_edge(_node, event_id - 1)
-            if _edge.insertion_info and isinstance(
-                _edge.insertion_info[1], NovelInsertion
-            ):
+            if _edge.insertion_info and isinstance(_edge.insertion_info[1], NovelInsertion):
                 insertion = _edge.insertion_info[1]
                 _insertion_length = len(insertion.query_sequence)
                 if _insertion_length > maximum_insertion_length:
@@ -1146,44 +1102,33 @@ class NLPath:
 
         events_len = len(events)
 
+        query_name = read_chains[0].query_name
+
         for index, event in enumerate(events):
-            if event.has_microhomology():
-                shift_length = len(event.insertion_seq1)
-            else:
-                shift_length = 0
-
-            read1: Read = event.read1(read_chains, shift_length)
-            read2: Read = event.read2(read_chains, shift_length)
-
-            logger.trace(f"{event.read1_ref_start=}, {event.read1_ref_end=}, {event.read2_ref_start=}, {event.read2_ref_end=}")
             read1_node = Node(
-                query_name=read1.query_name,
+                query_name=query_name,
                 chrom=event.chrom1,
                 strand=event.strand1,
                 ref_start=event.read1_ref_start,
                 ref_end=event.read1_ref_end,
                 identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
                 exons=Exons.from_list(event.read1_exons),
-                cigartuples_without_soft=read1.cigartuples_without_soft,
             )
 
-            edge_data = EdgeData.from_event(event, read_id=read1.query_name)
-
-            logger.trace(f"{read1=} {read2=}")
+            edge_data = EdgeData.from_event(event, read_id=query_name)
 
             # is insertions
             if event.has_insertion():
+                read1: Read = event.read1(read_chains)
+                read2: Read = event.read2(read_chains)
+
+                logger.trace(f"{read1=} {read2=}")
+
                 insertion_seq = event.insertion_seq1  # pick from the first read
-                insertion_seq = (
-                    reverse_complement(insertion_seq)
-                    if event.strand1.is_reverse()
-                    else insertion_seq
-                )
+                insertion_seq = reverse_complement(insertion_seq) if event.strand1.is_reverse() else insertion_seq
 
                 if aligner is None:
-                    flag, insertion = False, NovelInsertion(
-                        hit_num=0, query_sequence=insertion_seq
-                    )
+                    flag, insertion = False, NovelInsertion(hit_num=0, query_sequence=insertion_seq)
                 else:
                     flag, insertion = aligner.query_insertion(insertion_seq)
 
@@ -1201,11 +1146,7 @@ class NLPath:
                     )
 
                     logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
-                    insertion_mode = (
-                        (2 if event.mode1 == 1 else 1)
-                        if event.strand1 == insertion.strand
-                        else event.mode1
-                    )
+                    insertion_mode = (2 if event.mode1 == 1 else 1) if event.strand1 == insertion.strand else event.mode1
                     logger.trace("nls reference for read1 and insertion")
 
                     read1_insertion_event = infer_nls_from_connected_reads(
@@ -1221,11 +1162,7 @@ class NLPath:
                     )
 
                     # get type of insertion between insertion node and second node
-                    insertion_mode = (
-                        (2 if event.mode2 == 1 else 1)
-                        if insertion.strand == read2.strand
-                        else event.mode2
-                    )
+                    insertion_mode = (2 if event.mode2 == 1 else 1) if insertion.strand == read2.strand else event.mode2
 
                     logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = infer_nls_from_connected_reads(
@@ -1270,7 +1207,6 @@ class NLPath:
                             ref_end=insertion.ref_end,
                             identity=NodeIdentity.MID,
                             exons=insertion.get_exons(),
-                            cigartuples_without_soft=insertion.cigartuples_without_soft,
                         )
 
                         insertion_edge_data = EdgeData.from_event(
@@ -1279,9 +1215,6 @@ class NLPath:
                         )
 
                         nodes.append(read1_node)
-                        logger.trace(
-                            f"auxiliary alignment[4] is effective here. reads_name:{read1.query_name} query_sequence:{insertion_seq}"
-                        )
                         logger.trace(f"Add Insertion {insertion_node=} to path")
                         nodes.append(insertion_node)
 
@@ -1309,27 +1242,22 @@ class NLPath:
                 nodes.append(read1_node)
                 edge_data.insertion_info = (False, microhomology)
                 edges_data.append(edge_data)
-
             else:
                 nodes.append(read1_node)
                 edges_data.append(edge_data)
-
             # add final node
             if index == events_len - 1:
                 final_node = Node(
-                    query_name=read2.query_name,
+                    query_name=query_name,
                     chrom=event.chrom2,
                     strand=event.strand2,
                     ref_start=event.read2_ref_start,
                     ref_end=event.read2_ref_end,
                     identity=NodeIdentity.TAIL,
                     exons=Exons.from_list(event.read2_exons),
-                    cigartuples_without_soft=read2.cigartuples_without_soft,
                 )
                 check_end_node_is_ploya(final_node, genome_fasta)
-
                 nodes.append(final_node)
-
         return cls.from_nodes_and_edges_data(nodes, edges_data)
 
 
@@ -1361,9 +1289,7 @@ def check_end_node_is_ploya(
     if node.strand.is_forward():
         seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
     else:
-        seq = genome_fasta[node.chrom][
-            node.ref_start - length : node.ref_start
-        ].reverse.complement.seq
+        seq = genome_fasta[node.chrom][node.ref_start - length : node.ref_start].reverse.complement.seq
 
     counter: dict[str, int] = Counter(seq)
     if counter["A"] <= ratio * len(seq):
@@ -1392,10 +1318,7 @@ def _check_insertion_conditions_for_compare_insertion(
             if (
                 isinstance(insertion_info1[1], NovelInsertion)
                 and isinstance(insertion_info2[1], NovelInsertion)
-                and (
-                    insertion_info1[1].query_sequence
-                    == insertion_info2[1].query_sequence
-                )
+                and (insertion_info1[1].query_sequence == insertion_info2[1].query_sequence)
             ):
                 return True
 
