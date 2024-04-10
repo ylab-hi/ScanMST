@@ -1105,6 +1105,10 @@ class NLPath:
         query_name = read_chains[0].query_name
 
         for index, event in enumerate(events):
+            shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
+            read1: Read = event.read1(read_chains, shift_length)
+            read2: Read = event.read2(read_chains, shift_length)
+
             read1_node = Node(
                 query_name=query_name,
                 chrom=event.chrom1,
@@ -1113,15 +1117,13 @@ class NLPath:
                 ref_end=event.read1_ref_end,
                 identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
                 exons=Exons.from_list(event.read1_exons),
+                cigartuples_without_soft=read1.cigartuples_without_soft,
             )
 
             edge_data = EdgeData.from_event(event, read_id=query_name)
 
             # is insertions
             if event.has_insertion():
-                read1: Read = event.read1(read_chains)
-                read2: Read = event.read2(read_chains)
-
                 logger.trace(f"{read1=} {read2=}")
 
                 insertion_seq = event.insertion_seq1  # pick from the first read
@@ -1207,6 +1209,7 @@ class NLPath:
                             ref_end=insertion.ref_end,
                             identity=NodeIdentity.MID,
                             exons=insertion.get_exons(),
+                            cigartuples_without_soft=insertion.cigartuples_without_soft,
                         )
 
                         insertion_edge_data = EdgeData.from_event(
@@ -1255,6 +1258,7 @@ class NLPath:
                     ref_end=event.read2_ref_end,
                     identity=NodeIdentity.TAIL,
                     exons=Exons.from_list(event.read2_exons),
+                    cigartuples_without_soft=read2.cigartuples_without_soft,
                 )
                 check_end_node_is_ploya(final_node, genome_fasta)
                 nodes.append(final_node)
