@@ -55,7 +55,7 @@ codespell = "^2.2.2"
 ipdb = "^0.13.11"
 isort = "^5.13.2"
 pytest = "^7.4.3"
-coverage = { extras = ["toml"], version = "^7.3" }
+coverage = { extras = ["toml"], version = "^7.4" }
 safety = "^2.1.1"
 mypy = "^1.8"
 typeguard = "^4.1.5"
