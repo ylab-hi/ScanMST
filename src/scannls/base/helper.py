@@ -554,7 +554,8 @@ def splicing_confirmation_and_correction(
         corrected_pos2 = pos2
         canonical_motif_or_not = 0
         # for events in the same chroms, event_size already considered microhomology
-        # it means event_size > observed junction_size
+        # it means event_size could be bigger than observed junction_size
+        # or smaller than observed junction size
         if chrm1 == chrm2:
             if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
                 event_size = pos2 - pos1
@@ -587,39 +588,6 @@ def splicing_confirmation_and_correction(
                         corrected_pos2 = __corrected_pos2
                         canonical_motif_or_not = 1
                         break
-                # no canonical motif found in shifting donor site
-                if canonical_motif_or_not != 1:
-                    # shifting acceptor site
-                    for acceptor_shift in range(microhomology_length + 1):
-                        if strand2 == "+":
-                            acceptor_end = pos2 + acceptor_shift
-                            acceptor_start = acceptor_end - 2
-                            __corrected_pos2 = pos2 + acceptor_shift
-                            __corrected_pos1 = __corrected_pos2 - event_size
-                        elif strand2 == "-":
-                            acceptor_start = pos2 - acceptor_shift
-                            acceptor_end = acceptor_start + 2
-                            __corrected_pos2 = pos2 - acceptor_shift
-                            __corrected_pos1 = __corrected_pos2 - event_size
-                        if strand1 == "+":
-                            donor_start = __corrected_pos1
-                            donor_end = donor_start + 2
-                        elif strand1 == "-":
-                            donor_end = __corrected_pos1
-                            donor_start = donor_end - 2
-
-                        donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
-                        acceptor_seq = genome_fasta[chrm2][
-                            acceptor_start:acceptor_end
-                        ].seq
-                        if (
-                            donor_seq == target_donor_seq
-                            and acceptor_seq == target_acceptor_seq
-                        ):
-                            corrected_pos1 = __corrected_pos1
-                            corrected_pos2 = __corrected_pos2
-                            canonical_motif_or_not = 1
-                            break
 
                 if strand1 == "+":
                     ref_end1 = corrected_pos1
@@ -637,26 +605,29 @@ def splicing_confirmation_and_correction(
             # (donor_bp, acceptor_bp) == (_breakpoint2, _breakpoint1)
             else:
                 event_size = pos2 - pos1
-                # shifting donor site
-                for donor_shift in range(microhomology_length + 1):
-                    if strand2 == "+":
-                        donor_start = pos2 - donor_shift
-                        donor_end = donor_start + 2
-                        __corrected_pos2 = pos2 - donor_shift
-                        __corrected_pos1 = __corrected_pos2 - event_size
-                    elif strand2 == "-":
-                        donor_end = pos2 + donor_shift
-                        donor_start = donor_end - 2
-                        __corrected_pos2 = pos2 + donor_shift
-                        __corrected_pos1 = __corrected_pos2 - event_size
+                # shifting acceptor site
+                for acceptor_shift in range(microhomology_length + 1):
                     if strand1 == "+":
-                        acceptor_end = __corrected_pos1
+                        acceptor_end = pos1 + acceptor_shift
                         acceptor_start = acceptor_end - 2
+                        __corrected_pos1 = pos1 + acceptor_shift
+                        __corrected_pos2 = event_size + __corrected_pos1
                     elif strand1 == "-":
-                        acceptor_start = __corrected_pos1
+                        acceptor_start = pos1 - acceptor_shift
                         acceptor_end = acceptor_start + 2
+                        __corrected_pos1 = pos1 - acceptor_shift
+                        __corrected_pos2 = event_size + __corrected_pos1
+                    if strand2 == "+":
+                        donor_start = __corrected_pos2
+                        donor_end = donor_start + 2
+                    elif strand2 == "-":
+                        donor_end = __corrected_pos2
+                        donor_start = donor_end - 2
+
                     donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
-                    acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
+                    acceptor_seq = genome_fasta[chrm1][
+                        acceptor_start:acceptor_end
+                    ].seq
                     if (
                         donor_seq == target_donor_seq
                         and acceptor_seq == target_acceptor_seq
@@ -665,39 +636,6 @@ def splicing_confirmation_and_correction(
                         corrected_pos2 = __corrected_pos2
                         canonical_motif_or_not = 1
                         break
-                # no canonical motif found in shifting donor site
-                if canonical_motif_or_not != 1:
-                    # shifting acceptor site
-                    for acceptor_shift in range(microhomology_length + 1):
-                        if strand1 == "+":
-                            acceptor_end = pos1 + acceptor_shift
-                            acceptor_start = acceptor_end - 2
-                            __corrected_pos1 = pos1 + acceptor_shift
-                            __corrected_pos2 = event_size + __corrected_pos1
-                        elif strand1 == "-":
-                            acceptor_start = pos1 - acceptor_shift
-                            acceptor_end = acceptor_start + 2
-                            __corrected_pos1 = pos1 - acceptor_shift
-                            __corrected_pos2 = event_size + __corrected_pos1
-                        if strand2 == "+":
-                            donor_start = __corrected_pos2
-                            donor_end = donor_start + 2
-                        elif strand2 == "-":
-                            donor_end = __corrected_pos2
-                            donor_start = donor_end - 2
-
-                        donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
-                        acceptor_seq = genome_fasta[chrm1][
-                            acceptor_start:acceptor_end
-                        ].seq
-                        if (
-                            donor_seq == target_donor_seq
-                            and acceptor_seq == target_acceptor_seq
-                        ):
-                            corrected_pos1 = __corrected_pos1
-                            corrected_pos2 = __corrected_pos2
-                            canonical_motif_or_not = 1
-                            break
 
                 if strand2 == "+":
                     ref_end2 = corrected_pos2

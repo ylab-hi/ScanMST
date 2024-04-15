@@ -605,7 +605,7 @@ class ReadsConnector:
 
         self.logger.trace(f"start end read checking: {ret=}")
 
-        if ret is None:
+        if ret is None or ret == (0, []):
             return
 
         hit, keep_hsp = ret

@@ -371,7 +371,7 @@ def detect_sv_from_cigar(
                 event_list.append(event)
                 logger.trace(str(event))
             else:  # temporary solution
-                logger.warning(f"Event Type is NA {event_type=}")
+                logger.warning(f"Event Type is NA {original_event_info=}")
 
         updated_event_list = update_position_event_list(event_list)
 

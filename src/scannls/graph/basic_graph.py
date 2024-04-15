@@ -1104,10 +1104,15 @@ class NLPath:
 
         query_name = read_chains[0].query_name
 
+        max_shift_length_in_events = 0
         for index, event in enumerate(events):
             shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
-            read1: Read = event.read1(read_chains, shift_length)
-            read2: Read = event.read2(read_chains, shift_length)
+            if shift_length > max_shift_length_in_events:
+                max_shift_length_in_events = shift_length
+
+        for index, event in enumerate(events):
+            read1: Read = event.read1(read_chains, max_shift_length_in_events)
+            read2: Read = event.read2(read_chains, max_shift_length_in_events)
 
             read1_node = Node(
                 query_name=query_name,
