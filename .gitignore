@@ -5,7 +5,7 @@
 /.python-version
 /.pytype/
 /dist/
-/data/
+/tmp/
 /dependency/
 /build/
 /dependency/
