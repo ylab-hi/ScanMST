@@ -280,6 +280,18 @@ class Blat:
         return self.query(in_seq, mini_identity)
 
     @staticmethod
+    def hsp_matched_len(hsp: Any) -> int:
+        """Helper function for HSP matched length calculation."""
+        gap_num = hsp.hit_gap_num
+        # `N` splicing junction
+        if gap_num >= 10:
+            hsp_matched_length = sum(hsp.hit_span_all) - hsp.mismatch_num
+        # `D` deletion
+        else:
+            hsp_matched_length = sum(hsp.hit_span_all) - hsp.mismatch_num - gap_num
+        return hsp_matched_length
+
+    @staticmethod
     def _query_insertion(
         blat_result: Any,
         insert_seq: str,
@@ -292,7 +304,7 @@ class Blat:
         hsps = hsps[:top]
         keep_hsp = []
         for hsp in hsps:
-            if (sum(hsp.hit_span_all) - hsp.mismatch_num - hsp.hit_gap_num) / len(
+            if Blat.hsp_matched_len(hsp) / len(
                 insert_seq
             ) > threshold_identity:
                 keep_hsp.append(hsp)
@@ -303,7 +315,7 @@ class Blat:
     def query_insertion(
         self,
         insert_seq: str,
-        threshold_identity: float = 0.99,
+        threshold_identity: float = 0.90,
         top: int = 3,
         align_len_threshold: int = 20,
     ) -> Any:
@@ -336,7 +348,8 @@ class Blat:
             top,
         )
 
-        if hit == 1:
+        # keep the top ont hit
+        if hit >= 1:
             top_hsp = keep_hsp[0]
             flag = True
 
@@ -388,9 +401,7 @@ class Blat:
         }
 
         for hsp in hsps:
-            if (
-                sum(hsp.hit_span_all) - hsp.mismatch_num - hsp.hit_gap_num
-            ) / in_seq_len >= threshold_identity:
+            if Blat.hsp_matched_len(hsp) / in_seq_len >= threshold_identity:
                 num_of_locations += 1
 
         if 4 <= num_of_locations <= 9:

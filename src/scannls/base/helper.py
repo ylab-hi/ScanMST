@@ -878,7 +878,7 @@ def insertion2chimeric_alignment(
     read_strand: str,
     max_allowed_nm: int,
     aligner,
-    aligner_ident_pct_cutoff: float = 0.99,
+    aligner_ident_pct_cutoff: float = 0.9,
     top: int = 3,
     align_len_threshold: int = 50,
 ) -> tuple[str, str]:

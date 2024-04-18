@@ -520,6 +520,7 @@ def _scan_bam_helper(
                 if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
                     soft_seq_ori = reverse_complement(ret[1]) if read.is_reverse else ret[1]
                     read_mode = ret[-1]
+                    logger.trace(f"Funcion blat2chimeric_alignment works on it.")
                     chimeric_aln_str = blat2chimeric_alignment(
                         soft_seq_ori,
                         read_length,
@@ -547,6 +548,7 @@ def _scan_bam_helper(
                 # Detect novel chimeric alignments for reads with long insertion (I)
                 # but without SA tags using BLAT
                 elif ins_ref_pos > 0:
+                    logger.trace(f"Funcion insertion2chimeric_alignment works on it.")
                     (
                         primary_aln_cigarstring,
                         chimeric_aln_str,

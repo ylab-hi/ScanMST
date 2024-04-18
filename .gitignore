@@ -6,6 +6,7 @@
 /.pytype/
 /dist/
 /tmp/
+/data/src/
 /dependency/
 /build/
 /dependency/
