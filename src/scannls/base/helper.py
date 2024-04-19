@@ -550,195 +550,95 @@ def splicing_confirmation_and_correction(
         target_acceptor_seq = splice_motif_dict[target_donor_seq]
 
         # default settings
-        corrected_pos1 = pos1
-        corrected_pos2 = pos2
         canonical_motif_or_not = 0
-        # for events in the same chroms, event_size already considered microhomology
-        # it means event_size could be bigger than observed junction_size
-        # or smaller than observed junction size
-        if chrm1 == chrm2:
-            if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
-                event_size = pos2 - pos1
-                # shifting donor site
-                for donor_shift in range(microhomology_length + 1):
-                    if strand1 == "+":
-                        donor_start = pos1 - donor_shift
-                        donor_end = donor_start + 2
-                        __corrected_pos1 = pos1 - donor_shift
-                        __corrected_pos2 = __corrected_pos1 + event_size
-                    elif strand1 == "-":
-                        donor_end = pos1 + donor_shift
-                        donor_start = donor_end - 2
-                        __corrected_pos1 = pos1 + donor_shift
-                        __corrected_pos2 = __corrected_pos1 + event_size
 
-                    if strand2 == "+":
-                        acceptor_end = __corrected_pos2
-                        acceptor_start = acceptor_end - 2
-                    elif strand2 == "-":
-                        acceptor_start = __corrected_pos2
-                        acceptor_end = acceptor_start + 2
-                    donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
-                    acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
-                    if (
-                        donor_seq == target_donor_seq
-                        and acceptor_seq == target_acceptor_seq
-                    ):
-                        corrected_pos1 = __corrected_pos1
-                        corrected_pos2 = __corrected_pos2
-                        canonical_motif_or_not = 1
-                        break
-
+        final_donor_shift = 0
+        final_accecptor_shift = microhomology_length - final_donor_shift
+        if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
+            for donor_shift in range(microhomology_length + 1):
+                acceptor_shift = microhomology_length - donor_shift
                 if strand1 == "+":
-                    ref_end1 = corrected_pos1
-                    _exons1.last.end = corrected_pos1
+                    donor_start = pos1 - donor_shift
+                    donor_end = donor_start + 2
                 elif strand1 == "-":
-                    ref_start1 = corrected_pos1
-                    _exons1.first.start = corrected_pos1
+                    donor_end = pos1 + donor_shift
+                    donor_start = donor_end - 2
                 if strand2 == "+":
-                    ref_start2 = corrected_pos2
-                    _exons2.first.start = corrected_pos2
+                    acceptor_end = pos2 + acceptor_shift
+                    acceptor_start = acceptor_end - 2
                 elif strand2 == "-":
-                    ref_end2 = corrected_pos2
-                    _exons2.last.end = corrected_pos2
+                    acceptor_start = pos2 - acceptor_shift
+                    acceptor_end = acceptor_start + 2
 
-            # (donor_bp, acceptor_bp) == (_breakpoint2, _breakpoint1)
-            else:
-                event_size = pos2 - pos1
-                # shifting acceptor site
-                for acceptor_shift in range(microhomology_length + 1):
-                    if strand1 == "+":
-                        acceptor_end = pos1 + acceptor_shift
-                        acceptor_start = acceptor_end - 2
-                        __corrected_pos1 = pos1 + acceptor_shift
-                        __corrected_pos2 = event_size + __corrected_pos1
-                    elif strand1 == "-":
-                        acceptor_start = pos1 - acceptor_shift
-                        acceptor_end = acceptor_start + 2
-                        __corrected_pos1 = pos1 - acceptor_shift
-                        __corrected_pos2 = event_size + __corrected_pos1
-                    if strand2 == "+":
-                        donor_start = __corrected_pos2
-                        donor_end = donor_start + 2
-                    elif strand2 == "-":
-                        donor_end = __corrected_pos2
-                        donor_start = donor_end - 2
-
-                    donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
-                    acceptor_seq = genome_fasta[chrm1][
-                        acceptor_start:acceptor_end
-                    ].seq
-                    if (
-                        donor_seq == target_donor_seq
-                        and acceptor_seq == target_acceptor_seq
-                    ):
-                        corrected_pos1 = __corrected_pos1
-                        corrected_pos2 = __corrected_pos2
-                        canonical_motif_or_not = 1
-                        break
-
-                if strand2 == "+":
-                    ref_end2 = corrected_pos2
-                    _exons2.last.end = corrected_pos2
-                elif strand2 == "-":
-                    ref_start2 = corrected_pos2
-                    _exons2.first.start = corrected_pos2
-                if strand1 == "+":
-                    ref_start1 = corrected_pos1
-                    _exons1.first.start = corrected_pos1
-                elif strand1 == "-":
-                    ref_end1 = corrected_pos1
-                    _exons1.last.end = corrected_pos1
-
-        # chrm1 != chrm2
+                donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
+                acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
+                if (
+                    donor_seq == target_donor_seq
+                    and acceptor_seq == target_acceptor_seq
+                ):
+                    final_donor_shift = donor_shift
+                    final_accecptor_shift = acceptor_shift
+                    canonical_motif_or_not = 1
+                    break
+            if strand1 == "+":
+                ref_end1 = ref_end1 - final_donor_shift
+                _exons1.last.end = _exons1.last.end - final_donor_shift
+                corrected_pos1 = pos1 - final_donor_shift
+            elif strand1 == "-":
+                ref_start1 = ref_start1 + donor_shift
+                _exons1.first.start = _exons1.first.start + final_donor_shift
+                corrected_pos1 = pos1 + final_donor_shift
+            if strand2 == "+":
+                ref_start2 = ref_start2 + final_accecptor_shift
+                _exons2.first.start = _exons2.first.start + final_accecptor_shift
+                corrected_pos2 = pos2 + final_accecptor_shift
+            elif strand2 == "-":
+                ref_end2 = ref_end2 - final_accecptor_shift
+                _exons2.last.end = _exons2.last.end - final_accecptor_shift
+                corrected_pos2 = pos2 - final_accecptor_shift
         else:
-            final_donor_shift = 0
-            final_accecptor_shift = microhomology_length - final_donor_shift
-            if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
-                for donor_shift in range(microhomology_length + 1):
-                    acceptor_shift = microhomology_length - donor_shift
-                    if strand1 == "+":
-                        donor_start = pos1 - donor_shift
-                        donor_end = donor_start + 2
-                    elif strand1 == "-":
-                        donor_end = pos1 + donor_shift
-                        donor_start = donor_end - 2
-                    if strand2 == "+":
-                        acceptor_end = pos2 + acceptor_shift
-                        acceptor_start = acceptor_end - 2
-                    elif strand2 == "-":
-                        acceptor_start = pos2 - acceptor_shift
-                        acceptor_end = acceptor_start + 2
-
-                    donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
-                    acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
-                    if (
-                        donor_seq == target_donor_seq
-                        and acceptor_seq == target_acceptor_seq
-                    ):
-                        final_donor_shift = donor_shift
-                        final_accecptor_shift = acceptor_shift
-                        canonical_motif_or_not = 1
-                        break
-                if strand1 == "+":
-                    ref_end1 = ref_end1 - final_donor_shift
-                    _exons1.last.end = _exons1.last.end - final_donor_shift
-                    corrected_pos1 = pos1 - final_donor_shift
-                elif strand1 == "-":
-                    ref_start1 = ref_start1 + donor_shift
-                    _exons1.first.start = _exons1.first.start + final_donor_shift
-                    corrected_pos1 = pos1 + final_donor_shift
+            for donor_shift in range(microhomology_length + 1):
+                acceptor_shift = microhomology_length - donor_shift
                 if strand2 == "+":
-                    ref_start2 = ref_start2 + final_accecptor_shift
-                    _exons2.first.start = _exons2.first.start + final_accecptor_shift
-                    corrected_pos2 = pos2 + final_accecptor_shift
+                    donor_start = pos2 - donor_shift
+                    donor_end = donor_start + 2
                 elif strand2 == "-":
-                    ref_end2 = ref_end2 - final_accecptor_shift
-                    _exons2.last.end = _exons2.last.end - final_accecptor_shift
-                    corrected_pos2 = pos2 - final_accecptor_shift
-            else:
-                for donor_shift in range(microhomology_length + 1):
-                    acceptor_shift = microhomology_length - donor_shift
-                    if strand2 == "+":
-                        donor_start = pos2 - donor_shift
-                        donor_end = donor_start + 2
-                    elif strand2 == "-":
-                        donor_end = pos2 + donor_shift
-                        donor_start = donor_end - 2
-                    if strand1 == "+":
-                        acceptor_end = pos1 + acceptor_shift
-                        acceptor_start = acceptor_end - 2
-                    elif strand1 == "-":
-                        acceptor_start = pos1 - acceptor_shift
-                        acceptor_end = acceptor_start + 2
-
-                    donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
-                    acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
-                    if (
-                        donor_seq == target_donor_seq
-                        and acceptor_seq == target_acceptor_seq
-                    ):
-                        final_donor_shift = donor_shift
-                        final_accecptor_shift = acceptor_shift
-                        canonical_motif_or_not = 1
-                        break
-
-                if strand2 == "+":
-                    ref_end2 = ref_end2 - final_donor_shift
-                    _exons2.last.end = _exons2.last.end - final_donor_shift
-                    corrected_pos2 = pos2 - final_donor_shift
-                elif strand2 == "-":
-                    ref_start2 = ref_start2 + donor_shift
-                    _exons2.first.start = _exons2.first.start + final_donor_shift
-                    corrected_pos2 = pos2 + final_donor_shift
+                    donor_end = pos2 + donor_shift
+                    donor_start = donor_end - 2
                 if strand1 == "+":
-                    ref_start1 = ref_start1 + final_accecptor_shift
-                    _exons1.first.start = _exons1.first.start + final_accecptor_shift
-                    corrected_pos1 = pos1 + final_accecptor_shift
+                    acceptor_end = pos1 + acceptor_shift
+                    acceptor_start = acceptor_end - 2
                 elif strand1 == "-":
-                    ref_end1 = ref_end1 - final_accecptor_shift
-                    _exons1.last.end = _exons1.last.end - final_accecptor_shift
-                    corrected_pos1 = pos1 - final_accecptor_shift
+                    acceptor_start = pos1 - acceptor_shift
+                    acceptor_end = acceptor_start + 2
+
+                donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
+                acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
+                if (
+                    donor_seq == target_donor_seq
+                    and acceptor_seq == target_acceptor_seq
+                ):
+                    final_donor_shift = donor_shift
+                    final_accecptor_shift = acceptor_shift
+                    canonical_motif_or_not = 1
+                    break
+
+            if strand2 == "+":
+                ref_end2 = ref_end2 - final_donor_shift
+                _exons2.last.end = _exons2.last.end - final_donor_shift
+                corrected_pos2 = pos2 - final_donor_shift
+            elif strand2 == "-":
+                ref_start2 = ref_start2 + donor_shift
+                _exons2.first.start = _exons2.first.start + final_donor_shift
+                corrected_pos2 = pos2 + final_donor_shift
+            if strand1 == "+":
+                ref_start1 = ref_start1 + final_accecptor_shift
+                _exons1.first.start = _exons1.first.start + final_accecptor_shift
+                corrected_pos1 = pos1 + final_accecptor_shift
+            elif strand1 == "-":
+                ref_end1 = ref_end1 - final_accecptor_shift
+                _exons1.last.end = _exons1.last.end - final_accecptor_shift
+                corrected_pos1 = pos1 - final_accecptor_shift
 
         if canonical_motif_or_not == 1:
             report_or_not, boundary_code, canonical_motif_or_not = True, 3, 1
@@ -1005,9 +905,9 @@ def softclipped_length_and_event_size_checker(
     :rtype: bool
     """
     return (
-        read.lt_soft_len < event_size + bp_region_seq_len
+        read.lt_soft_len < event_size
         if mode == MappingMode.SM
-        else read.rt_soft_len < event_size + bp_region_seq_len
+        else read.rt_soft_len < event_size
     )
 
 
@@ -1099,14 +999,12 @@ def same_chrom_same_strand_mode21_handler(
             logger.trace(f"{bp_region_seq_len=} > {microinsertion_cutoff=}")
             return noreturn
 
-        if bp_region_seq_len > 0:
-            query_offset = read_lt.reference_match_size + read_rt.reference_match_size
-        else:
-            query_offset = (
-                read_lt.reference_match_size
-                + read_rt.reference_match_size
-                + bp_region_seq_len
-            )
+        # unified query_offset calculation
+        # evt_size is consistent with ref_start/ref_end difference
+        # in the read for same chrom events.
+        # junc_start/junc_end used ref_start/ref_end in the read
+        # for all the events (including same/different chrom)
+        query_offset = read_lt.reference_match_size + read_rt.reference_match_size
 
         lt_bp_seq = obtain_bp_region_seq(
             read_lt,
