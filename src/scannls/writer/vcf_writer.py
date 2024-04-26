@@ -360,7 +360,6 @@ def get_vcf_features_from_nlpath(
                     current_node,
                 )
 
-
         sv_distance = abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
         _dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
 

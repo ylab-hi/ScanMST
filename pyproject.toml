@@ -206,7 +206,7 @@ indent-style = "space"
 line-ending = "auto"
 
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "src/scannls/cli/main.py" = ["ARG001"]
 "src/scannls/cli/helper.py" = ["PLR2004", "RET505"]
 "src/scannls/writer/writer.py" = ["A003"]

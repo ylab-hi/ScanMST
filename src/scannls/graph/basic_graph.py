@@ -389,6 +389,7 @@ class Node(BasicNode):
             # WARN: do not check if they have same key <Yangyang Li>
             self.identities.update(other.identities)
             return
+
         msg = f"Cannot merge {self!r} and {other!r}"
         raise TypeError(msg)
 
@@ -596,7 +597,7 @@ class Edge:
         if read_id not in self.edge_data.read_ids:
             self.edge_data.read_ids.append(read_id)
 
-    def merge(self, other: Edge, pnode_strand: Strand, nnode_strand: Strand):
+    def merge(self, other: Edge, pnode_strand: Strand, nnode_strand: Strand, *, merge_insertion_info=True):
         # WARN: update breakpoint in cmparing way <07-03-23, Yangyang Li>
 
         self.beak_point1 = (
@@ -623,7 +624,8 @@ class Edge:
             )
         )
 
-        merge_insertion(self, other)
+        if merge_insertion_info:
+            merge_insertion(self, other)
 
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
@@ -930,8 +932,7 @@ class NLPath:
             if _edge.insertion_info and isinstance(_edge.insertion_info[1], NovelInsertion):
                 insertion = _edge.insertion_info[1]
                 _insertion_length = len(insertion.query_sequence)
-                if _insertion_length > maximum_insertion_length:
-                    maximum_insertion_length = _insertion_length
+                maximum_insertion_length = max(_insertion_length, maximum_insertion_length)
 
         return maximum_insertion_length <= threshold
 
@@ -1107,8 +1108,7 @@ class NLPath:
         max_shift_length_in_events = 0
         for index, event in enumerate(events):
             shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
-            if shift_length > max_shift_length_in_events:
-                max_shift_length_in_events = shift_length
+            max_shift_length_in_events = max(shift_length, max_shift_length_in_events)
 
         for index, event in enumerate(events):
             read1: Read = event.read1(read_chains, max_shift_length_in_events)
@@ -1336,15 +1336,18 @@ def _check_insertion_conditions_for_compare_insertion(
 
 def merge_insertion(edge1: Edge, edge2: Edge):
     """edge1 merge edge2."""
-    if edge1.insertion_info is not None and edge2.insertion_info is not None:
-        if edge1.sr > edge2.sr:
+    if edge1.sr < edge2.sr:
+        edge1.insertion_info = edge2.insertion_info
+    elif edge1.sr == edge2.sr:
+        if edge1.insertion_info is None:
             return
 
-        if (edge1.sr < edge2.sr) or (
-            isinstance(edge1.insertion_info[1], MicroHomology)
-            and isinstance(
-                edge2.insertion_info[1],
-                NovelInsertion,
-            )
+        if edge2.insertion_info is None:
+            edge1.insertion_info = edge2.insertion_info
+            return
+
+        if isinstance(edge1.insertion_info[1], MicroHomology) and isinstance(
+            edge2.insertion_info[1],
+            NovelInsertion,
         ):
             edge1.insertion_info = edge2.insertion_info
