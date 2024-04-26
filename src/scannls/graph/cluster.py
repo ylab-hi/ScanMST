@@ -168,7 +168,7 @@ def merge_same_len_node_list(
     path1: NLPath,
     path2: NLPath,
     start_index: int,
-    threashold: int,
+    threshold: int,
 ) -> bool:
     """seires1 is equal than series2 and series1 merge series2.
 
@@ -176,7 +176,7 @@ def merge_same_len_node_list(
     s2:                [ ] - [ ] - [ ]
     """
 
-    merge_condition = MergeCondition(threashold)
+    merge_condition = MergeCondition(threshold)
 
     for idx, (node1, node2) in enumerate(
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore

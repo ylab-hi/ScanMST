@@ -61,6 +61,13 @@ class NovelInsertion:
         """Increment ao."""
         self.ao += num
 
+    def __eq__(self, other) -> bool:
+        """Check if two NovelInsertion objects are equal."""
+        if not isinstance(other, NovelInsertion):
+            return False
+
+        return self.query_sequence == other.query_sequence
+
 
 class MicroHomology:
     """MicroHomology is used to represent microhomology.
@@ -95,6 +102,12 @@ class MicroHomology:
     def increment_ao(self, num=1) -> None:
         """Increment ao."""
         self.ao += num
+
+    def __eq__(self, other) -> bool:
+        """Check if two MicroHomology objects are equal."""
+        if not isinstance(other, MicroHomology):
+            return False
+        return self.query_sequence == other.query_sequence
 
 
 class Insertion(Read):
