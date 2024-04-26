@@ -12,4 +12,6 @@
 11. case11 -- LNCaP, PDE6C-CYP2C19-SNX9
 12. case12 -- PC3, TCOF1-EDIL3-DT, 26bp insertion, merged data only for SR>=3
 13. case13 -- VCaP, DOCK2-RANBP17, two different isoforms for the same two junctions
-
+14. case14 -- LNCaP, PRPF39,  3' exon case, protein validation
+15. case15 -- LuCaP, SARAF, interspersed-exon case
+16. case16 -- PC3, ADK, gene-fusion transcript
