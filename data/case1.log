@@ -52,7 +52,7 @@
 [32m2024-04-18 09:24:19.794[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36mnew[0m:[36m1099[0m - [36m[1mreordered event:events=[Event(DEL, 3, 1 (chr8:30069641 chr8:30066918 2 1) - self.read1_ref_start=30069641 self.read1_ref_end=30070036 - self.read2_ref_start=30065987 self.read2_ref_end=30066918 ('-CCT', '-CCT')), Event(TDUP, 3, 1 (chr8:30065987 chr8:30074055 2 1) - self.read1_ref_start=30065987 self.read1_ref_end=30066918 - self.read2_ref_start=30063125 self.read2_ref_end=30074055 ('-CTGA', '-CTGA'))][0m
 [32m2024-04-18 09:24:19.794[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36mnew[0m:[36m1246[0m - [36m[1mAdd MicroHomology microhomology=MicroHomology(CCT) to read1[0m
 [32m2024-04-18 09:24:19.794[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36mnew[0m:[36m1246[0m - [36m[1mAdd MicroHomology microhomology=MicroHomology(CTGA) to read1[0m
-[32m2024-04-18 09:24:19.797[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36msqueeze[0m:[36m834[0m - [36m[1mSqueeze 
+[32m2024-04-18 09:24:19.797[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36msqueeze[0m:[36m834[0m - [36m[1mSqueeze
 NLPath(
     [36mNode(chr8:30069641-30070036:-, self.trace_id=-1 NodeIdentity.HEAD [30069641-30070036], read_ids=['m64135_220529_055304/108331088/ccs'])
     [31mEdge(data=EdgeData(variantion_type=DEL, break_point1=BreakPoint(chrom='chr8', pos=30069641, depth=1), break_point2=BreakPoint(chrom='chr8', pos=30066918, depth=1), sr=1, read_ids=['m64135_220529_055304/108331088/ccs'], mode1=<MappingMode.SM: 2>, mode2=<MappingMode.MS: 1>, gene1='INTERGENIC', gene2='INTERGENIC', annotation_code=3, splicing_code=1, insertion_info=(False, MicroHomology(AGG)), original_sr=1))[36m
@@ -83,7 +83,7 @@ NLPath(
 [32m2024-04-18 09:24:19.802[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36mreorder_event[0m:[36m997[0m - [36m[1mreorder event evt=Event(TDUP, 3, 1 (chr8:30074055 chr8:30065987 1 2) - self.read1_ref_start=30063125 self.read1_ref_end=30074055 - self.read2_ref_start=30065987 self.read2_ref_end=30069946 ('-CTGA', '-CTGA')) is_bp1_upstream=False[0m
 [32m2024-04-18 09:24:19.802[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36mnew[0m:[36m1099[0m - [36m[1mreordered event:events=[Event(TDUP, 3, 1 (chr8:30065987 chr8:30074055 2 1) - self.read1_ref_start=30065987 self.read1_ref_end=30069946 - self.read2_ref_start=30063125 self.read2_ref_end=30074055 ('-CTGA', '-CTGA'))][0m
 [32m2024-04-18 09:24:19.803[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36mnew[0m:[36m1246[0m - [36m[1mAdd MicroHomology microhomology=MicroHomology(CTGA) to read1[0m
-[32m2024-04-18 09:24:19.803[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36msqueeze[0m:[36m834[0m - [36m[1mSqueeze 
+[32m2024-04-18 09:24:19.803[0m | [36m[1mTRACE   [0m | [36mscannls.graph.basic_graph[0m:[36msqueeze[0m:[36m834[0m - [36m[1mSqueeze
 NLPath(
     [36mNode(chr8:30065987-30069946:-, self.trace_id=-1 NodeIdentity.HEAD [30065987-30066139,30066776-30066918,30069641-30069946], read_ids=['m64135_220529_055304/23527673/ccs'])
     [31mEdge(data=EdgeData(variantion_type=TDUP, break_point1=BreakPoint(chrom='chr8', pos=30065987, depth=1), break_point2=BreakPoint(chrom='chr8', pos=30074055, depth=1), sr=1, read_ids=['m64135_220529_055304/23527673/ccs'], mode1=<MappingMode.SM: 2>, mode2=<MappingMode.MS: 1>, gene1='INTERGENIC', gene2='INTERGENIC', annotation_code=3, splicing_code=1, insertion_info=(False, MicroHomology(TCAG)), original_sr=1))[36m
@@ -92,7 +92,7 @@ NLPath(
 NLPath(
     [36mNode(chr8:30065987-30070036:-, self.trace_id=-1 NodeIdentity.HEAD [30065987-30066139,30066776-30066918,30069641-30070036], read_ids=['m64135_220529_055304/108331088/ccs'])
     [31mEdge(data=EdgeData(variantion_type=TDUP, break_point1=BreakPoint(chrom='chr8', pos=30065987, depth=1), break_point2=BreakPoint(chrom='chr8', pos=30074055, depth=1), sr=1, read_ids=['m64135_220529_055304/108331088/ccs'], mode1=<MappingMode.SM: 2>, mode2=<MappingMode.MS: 1>, gene1='INTERGENIC', gene2='INTERGENIC', annotation_code=3, splicing_code=1, insertion_info=(False, MicroHomology(TCAG)), original_sr=1))[36m
-    [36mNode(chr8:30063125-30074055:-, self.trace_id=-1 NodeIdentity.TAIL [30063125-30063913,30065987-30066139,30066776-30066918,30069641-30070059,30073876-30074055], read_ids=['m64135_220529_055304/108331088/ccs'])), 
+    [36mNode(chr8:30063125-30074055:-, self.trace_id=-1 NodeIdentity.TAIL [30063125-30063913,30065987-30066139,30066776-30066918,30069641-30070059,30073876-30074055], read_ids=['m64135_220529_055304/108331088/ccs'])),
 NLPath(
     [36mNode(chr8:30065987-30069946:-, self.trace_id=-1 NodeIdentity.HEAD [30065987-30066139,30066776-30066918,30069641-30069946], read_ids=['m64135_220529_055304/23527673/ccs'])
     [31mEdge(data=EdgeData(variantion_type=TDUP, break_point1=BreakPoint(chrom='chr8', pos=30065987, depth=1), break_point2=BreakPoint(chrom='chr8', pos=30074055, depth=1), sr=1, read_ids=['m64135_220529_055304/23527673/ccs'], mode1=<MappingMode.SM: 2>, mode2=<MappingMode.MS: 1>, gene1='INTERGENIC', gene2='INTERGENIC', annotation_code=3, splicing_code=1, insertion_info=(False, MicroHomology(TCAG)), original_sr=1))[36m
@@ -102,7 +102,7 @@ NLPath(
 NLPath(
     [36mNode(chr8:30065987-30069946:-, self.trace_id=-1 NodeIdentity.HEAD [30065987-30066139,30066776-30066918,30069641-30069946], read_ids=['m64135_220529_055304/23527673/ccs'])
     [31mEdge(data=EdgeData(variantion_type=TDUP, break_point1=BreakPoint(chrom='chr8', pos=30065987, depth=1), break_point2=BreakPoint(chrom='chr8', pos=30074055, depth=1), sr=1, read_ids=['m64135_220529_055304/23527673/ccs'], mode1=<MappingMode.SM: 2>, mode2=<MappingMode.MS: 1>, gene1='INTERGENIC', gene2='INTERGENIC', annotation_code=3, splicing_code=1, insertion_info=(False, MicroHomology(TCAG)), original_sr=1))[36m
-    [36mNode(chr8:30063125-30074055:-, self.trace_id=-1 NodeIdentity.TAIL [30063125-30063913,30065987-30066139,30066776-30066918,30069641-30070059,30073876-30074055], read_ids=['m64135_220529_055304/23527673/ccs'])), 
+    [36mNode(chr8:30063125-30074055:-, self.trace_id=-1 NodeIdentity.TAIL [30063125-30063913,30065987-30066139,30066776-30066918,30069641-30070059,30073876-30074055], read_ids=['m64135_220529_055304/23527673/ccs'])),
 NLPath(
     [36mNode(chr8:30065987-30070036:-, self.trace_id=-1 NodeIdentity.HEAD [30065987-30066139,30066776-30066918,30069641-30070036], read_ids=['m64135_220529_055304/108331088/ccs'])
     [31mEdge(data=EdgeData(variantion_type=TDUP, break_point1=BreakPoint(chrom='chr8', pos=30065987, depth=1), break_point2=BreakPoint(chrom='chr8', pos=30074055, depth=1), sr=1, read_ids=['m64135_220529_055304/108331088/ccs'], mode1=<MappingMode.SM: 2>, mode2=<MappingMode.MS: 1>, gene1='INTERGENIC', gene2='INTERGENIC', annotation_code=3, splicing_code=1, insertion_info=(False, MicroHomology(TCAG)), original_sr=1))[36m

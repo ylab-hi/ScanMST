@@ -219,13 +219,13 @@ def get_longest_insertion_sequence(
         _len = cigartuples_without_soft[idx + 1]
 
         if op_code == 0:  # M
-            current_pos = current_pos + _len
-            current_len = current_len + _len
+            current_pos += _len
+            current_len += _len
         elif op_code in {2, 3}:  # D or N
-            current_pos = current_pos + _len
+            current_pos += _len
         elif op_code == 1:  # I
             insertion_list.append((current_pos, current_len, _len))
-            current_len = current_len + _len
+            current_len += _len
 
     if len(insertion_list) == 0:
         return 0, "", 0

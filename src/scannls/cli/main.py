@@ -99,8 +99,7 @@ class BamScanner:
     def _count_chrom_info(self, read):
         """Count the chrom and the chrom start and the chrom end."""
         if read.reference_name in self.bam_chrom_info:
-            if read.reference_end > self.bam_chrom_info[read.reference_name][1]:
-                self.bam_chrom_info[read.reference_name][1] = read.reference_end
+            self.bam_chrom_info[read.reference_name][1] = max(read.reference_end, self.bam_chrom_info[read.reference_name][1])
         else:
             self.bam_chrom_info[read.reference_name] = [
                 read.reference_start,
@@ -185,114 +184,113 @@ def _get_cvg_gene_iv(gtf, splice_bin):
 def update_position_event_list(event_list: list[Event]) -> list[Event]:
     """Update co-linear exons start/end positions.
 
-     pre_read intersected
-                 read
-       [c1] ---- [c2]
-                 [c2] ---- [c3]
-                           [c3] ---- [c4]
-             ^         ^         ^
-            evt1      evt2      evt3
+    pre_read intersected
+                read
+      [c1] ---- [c2]
+                [c2] ---- [c3]
+                          [c3] ---- [c4]
+            ^         ^         ^
+           evt1      evt2      evt3
 
-      evt1 an evt2: No pre_read_info, so [c1] of evt1 keep unchanged.
-                    Update [c2]'s end position of evt1, using [c2]'s junnction-side position of evt2
-                    Keep [c2] of evt1 as pre_read_info, Add `evt1` in the list.
+     evt1 an evt2: No pre_read_info, so [c1] of evt1 keep unchanged.
+                   Update [c2]'s end position of evt1, using [c2]'s junnction-side position of evt2
+                   Keep [c2] of evt1 as pre_read_info, Add `evt1` in the list.
 
-      evt2 an evt3: Update [c2] of evt2 using pre_read_info.
-                    Update [c3]'s end position of evt2, using [c3]'s junnction-side position of evt3
-                    Keep [c3] of evt2 as pre_read_info, Add `evt2` in the list.
+     evt2 an evt3: Update [c2] of evt2 using pre_read_info.
+                   Update [c3]'s end position of evt2, using [c3]'s junnction-side position of evt3
+                   Keep [c3] of evt2 as pre_read_info, Add `evt2` in the list.
 
-      For the last event:
-                    Update [c3] of evt3 using pre_read_info, Add `evt3` in the list.
+     For the last event:
+                   Update [c3] of evt3 using pre_read_info, Add `evt3` in the list.
     """
 
     def is_start_match(event: Event, check_bp1=False) -> bool:
-        """Check if event breakpoint equals to event's ref_start
-        """
+        """Check if event breakpoint equals to event's ref_start"""
         bp1_position = int(event.bp1.split(":")[1])
         bp2_position = int(event.bp2.split(":")[1])
         if check_bp1:
             if bp1_position == event.read1_ref_start:
                 return True
-            elif bp1_position == event.read1_ref_end:
+            if bp1_position == event.read1_ref_end:
                 return False
-        else:
-            if bp2_position == event.read2_ref_start:
-                return True
-            elif bp2_position == event.read2_ref_end:
-                return False
+            return None
+        if bp2_position == event.read2_ref_start:
+            return True
+        if bp2_position == event.read2_ref_end:
+            return False
+        return None
 
     hop_number = len(event_list)
     if hop_number < 2:
         return event_list
-    else:
-        pre_read_info = None
-        updated_event_list = []
-        for idx, (pre_evt, next_evt) in enumerate(zip(event_list[:], event_list[1:]), 1):
-            # if is_read_reversed is True, pre_read will be read2, intersected read will be read1
-            # otherwise pre_read will be read1, intersected read will be read2
-            if pre_evt.is_read_reversed:
-                if pre_read_info:
-                    pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = pre_read_info
-                # intersected read is read1 for previous event
-                is_start_match_for_pre_evt = is_start_match(pre_evt, check_bp1=True)
-                # if is_read_reversed is False, intersected read will be read1
-                # otherwise intersected read will be read2
-                if next_evt.is_read_reversed:
-                    # intersected read is read2
-                    is_start_match_for_next_evt = is_start_match(next_evt)
-                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
-                        pre_evt.read1_ref_end = next_evt.read2_ref_end
-                        pre_evt.read1_exons.last.end = next_evt.read2_ref_end
-                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
-                        pre_evt.read1_ref_start = next_evt.read2_ref_start
-                        pre_evt.read1_exons.first.start = next_evt.read2_ref_start
-                else:
-                    # intersected read is read1 for next event
-                    is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
-                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
-                        pre_evt.read1_ref_end = next_evt.read1_ref_end
-                        pre_evt.read1_exons.last.end = next_evt.read1_ref_end
-                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
-                        pre_evt.read1_ref_start = next_evt.read1_ref_start
-                        pre_evt.read1_exons.first.start = next_evt.read1_ref_start
-                updated_event_list.append(pre_evt)
-                pre_read_info = pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons
-                if idx == hop_number - 1:
-                    if next_evt.is_read_reversed:
-                        next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
-                    else:
-                        next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
-                    updated_event_list.append(next_evt)
+    pre_read_info = None
+    updated_event_list = []
+    for idx, (pre_evt, next_evt) in enumerate(zip(event_list[:], event_list[1:]), 1):
+        # if is_read_reversed is True, pre_read will be read2, intersected read will be read1
+        # otherwise pre_read will be read1, intersected read will be read2
+        if pre_evt.is_read_reversed:
+            if pre_read_info:
+                pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = pre_read_info
+            # intersected read is read1 for previous event
+            is_start_match_for_pre_evt = is_start_match(pre_evt, check_bp1=True)
+            # if is_read_reversed is False, intersected read will be read1
+            # otherwise intersected read will be read2
+            if next_evt.is_read_reversed:
+                # intersected read is read2
+                is_start_match_for_next_evt = is_start_match(next_evt)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read1_ref_end = next_evt.read2_ref_end
+                    pre_evt.read1_exons.last.end = next_evt.read2_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read1_ref_start = next_evt.read2_ref_start
+                    pre_evt.read1_exons.first.start = next_evt.read2_ref_start
             else:
-                if pre_read_info:
-                    pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons = pre_read_info
-
-                is_start_match_for_pre_evt = is_start_match(pre_evt)
+                # intersected read is read1 for next event
+                is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read1_ref_end = next_evt.read1_ref_end
+                    pre_evt.read1_exons.last.end = next_evt.read1_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read1_ref_start = next_evt.read1_ref_start
+                    pre_evt.read1_exons.first.start = next_evt.read1_ref_start
+            updated_event_list.append(pre_evt)
+            pre_read_info = pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons
+            if idx == hop_number - 1:
                 if next_evt.is_read_reversed:
-                    is_start_match_for_next_evt = is_start_match(next_evt)
-                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
-                        pre_evt.read2_ref_end = next_evt.read2_ref_end
-                        pre_evt.read2_exons.last.end = next_evt.read2_ref_end
-                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
-                        pre_evt.read2_ref_start = next_evt.read2_ref_start
-                        pre_evt.read2_exons.first.start = next_evt.read2_ref_start
+                    next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
                 else:
-                    is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
-                    if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
-                        pre_evt.read2_ref_end = next_evt.read1_ref_end
-                        pre_evt.read2_exons.last.end = next_evt.read1_ref_end
-                    elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
-                        pre_evt.read2_ref_start = next_evt.read1_ref_start
-                        pre_evt.read2_exons.first.start = next_evt.read1_ref_start
-                updated_event_list.append(pre_evt)
-                pre_read_info = pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons
-                if idx == hop_number - 1:
-                    if next_evt.is_read_reversed:
-                        next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
-                    else:
-                        next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
-                    updated_event_list.append(next_evt)
-        return updated_event_list
+                    next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                updated_event_list.append(next_evt)
+        else:
+            if pre_read_info:
+                pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons = pre_read_info
+
+            is_start_match_for_pre_evt = is_start_match(pre_evt)
+            if next_evt.is_read_reversed:
+                is_start_match_for_next_evt = is_start_match(next_evt)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read2_ref_end = next_evt.read2_ref_end
+                    pre_evt.read2_exons.last.end = next_evt.read2_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read2_ref_start = next_evt.read2_ref_start
+                    pre_evt.read2_exons.first.start = next_evt.read2_ref_start
+            else:
+                is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read2_ref_end = next_evt.read1_ref_end
+                    pre_evt.read2_exons.last.end = next_evt.read1_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read2_ref_start = next_evt.read1_ref_start
+                    pre_evt.read2_exons.first.start = next_evt.read1_ref_start
+            updated_event_list.append(pre_evt)
+            pre_read_info = pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons
+            if idx == hop_number - 1:
+                if next_evt.is_read_reversed:
+                    next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                else:
+                    next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                updated_event_list.append(next_evt)
+    return updated_event_list
 
 
 def detect_sv_from_cigar(
@@ -520,7 +518,7 @@ def _scan_bam_helper(
                 if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
                     soft_seq_ori = reverse_complement(ret[1]) if read.is_reverse else ret[1]
                     read_mode = ret[-1]
-                    logger.trace(f"Funcion blat2chimeric_alignment works on it.")
+                    logger.trace("Funcion blat2chimeric_alignment works on it.")
                     chimeric_aln_str = blat2chimeric_alignment(
                         soft_seq_ori,
                         read_length,
@@ -548,7 +546,7 @@ def _scan_bam_helper(
                 # Detect novel chimeric alignments for reads with long insertion (I)
                 # but without SA tags using BLAT
                 elif ins_ref_pos > 0:
-                    logger.trace(f"Funcion insertion2chimeric_alignment works on it.")
+                    logger.trace("Funcion insertion2chimeric_alignment works on it.")
                     (
                         primary_aln_cigarstring,
                         chimeric_aln_str,

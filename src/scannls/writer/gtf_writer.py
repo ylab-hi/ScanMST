@@ -173,7 +173,7 @@ def get_nodes_gtf_features_from_series(
 
 def add_info_to_attribute_column(col_list: list[str], add_info: str):
     """Add additional info. to the 9th column of GTF."""
-    col_list[-1] = col_list[-1] + add_info
+    col_list[-1] += add_info
     return col_list
 
 
