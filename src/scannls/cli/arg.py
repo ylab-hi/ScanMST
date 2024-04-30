@@ -51,6 +51,7 @@ class DefaultOptions:
     exon_filter: bool = True
     rt_switching_filter_len: int = 10
     ignore_circle: bool = False
+    resuce_sr: bool = False
 
 
 COLOR = "bold magenta"
@@ -395,6 +396,13 @@ def parse_args() -> argparse.ArgumentParser:
         dest="ignore_circle",
         default=DefaultOptions.ignore_circle,
         help="if export result if the nlgraph has a circle  (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--rescue-sr",
+        action="store_true",
+        dest="rescue_sr",
+        default=DefaultOptions.resuce_sr,
+        help="if rescuing sr for edge  (default: %(default)s)",
     )
 
     return parser

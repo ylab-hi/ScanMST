@@ -90,7 +90,8 @@ class NLGraph:
 
         # sr rescuer
         self.logger.trace(f"NLGraph Node: {len(self)}")
-        self.rescuer(self)
+        if self.rescuer is not None:
+            self.rescuer(self)
 
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
@@ -126,16 +127,21 @@ class NLGraph:
         average_read_depth: int | None,
         *,
         ignore_circle: bool,
+        rescue_sr: bool,
     ) -> NLGraph:
         """Create splice graph."""
-        rescuer = SRRescuer(
-            input_bam,
-            mapq,
-            soft_len,
-            mismatch,
-            alignment_fraction,
-            node_rescued_sr_maximum,
-            average_read_depth,
+        rescuer = (
+            SRRescuer(
+                input_bam,
+                mapq,
+                soft_len,
+                mismatch,
+                alignment_fraction,
+                node_rescued_sr_maximum,
+                average_read_depth,
+            )
+            if rescue_sr
+            else None
         )
 
         return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), ignore_circle=ignore_circle)
