@@ -38,13 +38,15 @@ sys.setrecursionlimit(10000)
 def get_writers(
     output_prefix: str,
     ref_path: str,
+    rescue_sr: bool,
     bam_header: Any,
 ) -> Writers:
     """Get writers."""
     fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path)
-    gtf_writer = GTFWriter(f"{output_prefix}.gtf")
+    gtf_writer = GTFWriter(f"{output_prefix}.gtf", rescue_sr)
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
+        rescue_sr,
         ref_path,
         bam_header,
     )
@@ -258,7 +260,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
-        writers = get_writers(options.output, options.ref, in_bam_header)
+        writers = get_writers(options.output, options.ref, options.rescue_sr, in_bam_header)
         parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
 
         node_rescued_sr_max = 100

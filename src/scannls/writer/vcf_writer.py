@@ -127,11 +127,13 @@ class VCFWriter(Writer):
     def __init__(
         self,
         file_path: str,
+        rescue_sr: bool,
         reference: str,
         bam_header: dict[str, Any],
     ) -> None:
         """Initialize VCFWriter object."""
         super().__init__(file_path)
+        self.rescue_sr = rescue_sr
         self.reference = Path(reference)
         if not self.reference.exists():
             raise FastaNotFoundError
@@ -212,6 +214,7 @@ class VCFWriter(Writer):
         for _hop_vcf_feature in get_vcf_features_from_nlpath(
             data_object,
             cluster_id,
+            self.rescue_sr,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
@@ -318,6 +321,7 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 def get_vcf_features_from_nlpath(
     nlpath: NLPath,
     cluster_id: str,
+    rescue_sr: bool,
 ):
     """Obtain hop vcf features from one series."""
     path_hops_features = []
@@ -367,6 +371,13 @@ def get_vcf_features_from_nlpath(
 
         _pso = 0 if _dp1 == 0 or _dp2 == 0 else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
 
+        if rescue_sr:
+            sr = current_edge.sr
+            osr = current_edge.original_sr
+        else:
+            sr = current_edge.sr
+            osr = current_edge.sr
+
         path_hops_features.append(
             {
                 f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}" f"_{_chrom2}|{_pos2 + 1}": {
@@ -375,8 +386,8 @@ def get_vcf_features_from_nlpath(
                     "REF": ".",
                     "ALT": f"<{current_edge.variation_type}>",
                     "SVTYPE": current_edge.variation_type,
-                    "SR": current_edge.sr,
-                    "OSR": current_edge.original_sr,
+                    "SR": sr,
+                    "OSR": osr,
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,
