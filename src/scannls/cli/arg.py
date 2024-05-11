@@ -17,7 +17,6 @@ class DefaultOptions:
     ref: str
     gtf: str
     output: str
-    star_index = str
     blat_two_bit: str
     blat_closed: bool = True
     blat_sleep: bool = True

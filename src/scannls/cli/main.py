@@ -382,7 +382,6 @@ def _scan_bam_helper(
     lock,
     *,
     running_mode,
-    star_index,
     blat_two_bit,
     blat_port,
     tmp_dir,
@@ -430,8 +429,6 @@ def _scan_bam_helper(
 
     if blat_info is None:
         aligner = None
-    elif blat_info == "star":
-        aligner = STAR(ref_genome, index=star_index)
     else:
         blat_log_file, blat_is_start_server = blat_info
         aligner = Blat(
@@ -706,7 +703,6 @@ def _scan_bam_helper(
 
 
 def scanbam_run(
-    star_index,
     blat_two_bit,
     blat_port,
     tmp_dir,
