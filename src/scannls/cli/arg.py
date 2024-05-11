@@ -41,10 +41,10 @@ class DefaultOptions:
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8
-    long_indel_length: int = 5
+    long_indel_length: int = 10
     substitutions_num: int = 20
-    substitutions_fraction: float = 0.1
-    indel_fraction: float = 0.1
+    substitutions_fraction: float = 0.2
+    indel_fraction: float = 0.2
     circular_rna: str = "remove"
     circular_rna_choices: tuple[str, ...] = ("remove", "keep", "extract")
     # junctions within one annotated exon filter
@@ -196,14 +196,6 @@ def parse_args() -> argparse.ArgumentParser:
         required=False,
     )
     parser.add_argument(
-        "--star-index",
-        dest="star_index",
-        type=str,
-        default="",
-        help="star index for star aligner (default: %(default)s)",
-        required=False,
-    )
-    parser.add_argument(
         "--blat-identity",
         action="store",
         dest="ident_cutoff",
@@ -331,7 +323,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.substitutions_num,
         help="the allowed maximum substitution number in the reads (default: %(default)s)",
     )
-
     parser.add_argument(
         "--indel-fraction",
         action="store",

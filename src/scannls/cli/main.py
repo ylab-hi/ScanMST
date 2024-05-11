@@ -136,13 +136,12 @@ class BamScanner:
 
                 nm = read.get_tag("NM")
                 md_tag = read.get_tag("MD")
-                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring,
                     md_tag,
                     self.long_indel_length,
                 )
 
-                subs_fraction = 0 if nm == 0 else num_of_subs / nm  # type: ignore
                 if (
                     not (num_of_subs > self.substitutions_num and subs_fraction > self.substitutions_fraction)
                     and ins_fraction <= self.indels_fraction
@@ -589,13 +588,11 @@ def _scan_bam_helper(
                 if read.cigarstring is None:
                     msg = f"{read}'s cigarstring is None"
                     raise ValueError(msg)
-                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring,
                     read.get_tag("MD"),
                     long_indel_length,
                 )
-
-                subs_fraction = 0 if nm == 0 else num_of_subs / int(nm)
 
                 if (
                     not (num_of_subs > substitutions_num and subs_fraction > substitutions_fraction)

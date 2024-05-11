@@ -1831,10 +1831,12 @@ def obtain_variants_stats(
             sum_of_subs_dels += 1
 
     num_of_subs = sum_of_subs_dels - dels_len_total
-    ins_fraction = 0 if ins_num == 0 else ins_outlier_num / ins_num
-    del_fraction = 0 if del_num == 0 else del_outlier_num / del_num
+    total_num_of_mutations = num_of_subs + ins_num + del_num
+    ins_fraction = 0 if ins_num == 0 else ins_outlier_num / total_num_of_mutations
+    del_fraction = 0 if del_num == 0 else del_outlier_num / total_num_of_mutations
+    subs_fraction = 0 if num_of_subs == 0 else num_of_subs / total_num_of_mutations
 
-    return num_of_subs, ins_fraction, del_fraction
+    return num_of_subs, subs_fraction, ins_fraction, del_fraction
 
 
 def get_transcriptome_length(species: str) -> int:
