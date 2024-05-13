@@ -379,7 +379,10 @@ def splicing_confirmation_and_correction(
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
-        return any(_donor in donor_seq and _acceptor in acceptor_seq for _donor, _acceptor in splice_motif_dict.items())
+        return any(
+            _donor in donor_seq and _acceptor in acceptor_seq
+            for _donor, _acceptor in splice_motif_dict.items()
+        )
 
     def donor_accepter_breakpoint_determintor(
         chrm1: str,
@@ -421,6 +424,47 @@ def splicing_confirmation_and_correction(
             raise ValueError(msg)
 
         return ret
+
+    def default_shift_prechecker(
+        strand_donor, strand_acceptor, exons_donor, exons_acceptor, microhomology_length
+    ) -> bool:
+        """Determine if use the default shift settings: donor shift=0, acceptor shift=length of microhomology
+        if return False, using alternative settings: donor shift=length of microhomology, acceptor shift=0
+
+        :param strand_donor: donor segment strand
+        :param strand_acceptor: acceptor segment strand
+        :param exons_donor: exons for donor segment
+        :param exons_acceptor: exons for acceptor segment
+        :param microhomology_length: length of microhomology
+        """
+        final_donor_shift = 0
+        final_accecptor_shift = microhomology_length
+
+        if strand_donor == "+":
+            border_exon_donor = (
+                exons_donor.last.start,
+                exons_donor.last.end - final_donor_shift,
+            )
+        elif strand_donor == "-":
+            border_exon_donor = (
+                exons_donor.first.start + final_donor_shift,
+                exons_donor.first.end,
+            )
+        if strand_acceptor == "+":
+            border_exon_acceptor = (
+                exons_acceptor.first.start + final_accecptor_shift,
+                exons_acceptor.first.end,
+            )
+        elif strand_acceptor == "-":
+            border_exon_acceptor = (
+                exons_acceptor.last.start,
+                exons_acceptor.last.end - final_accecptor_shift,
+            )
+
+        return (
+            border_exon_donor[0] < border_exon_donor[1]
+            and border_exon_acceptor[0] < border_exon_acceptor[1]
+        )
 
     # key: strand of donor site, strand of accepter site
     # values: possible matched donor site and accepter site (>99% splice site using GT-AG)
@@ -473,10 +517,19 @@ def splicing_confirmation_and_correction(
             motif_ac = ""
 
         # Non-annotated coding exon boundary
-        if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-            donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
-            acceptor_seq = genome_fasta[chrm_ac][pos_ac - splice_bin : pos_ac + splice_bin].seq
-            if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
+        if (
+            motif_do not in splice_motif_dict
+            and motif_ac not in splice_motif_dict.values()
+        ):
+            donor_seq = genome_fasta[chrm_do][
+                pos_do - splice_bin : pos_do + splice_bin
+            ].seq
+            acceptor_seq = genome_fasta[chrm_ac][
+                pos_ac - splice_bin : pos_ac + splice_bin
+            ].seq
+            if matched_candidate_sites_checker(
+                donor_seq, acceptor_seq, splice_motif_dict
+            ):
                 report_or_not, boundary_code, canonical_motif_or_not = True, 0, 1
             elif motif_required:
                 report_or_not, boundary_code, canonical_motif_or_not = False, 0, 0
@@ -484,8 +537,12 @@ def splicing_confirmation_and_correction(
                 report_or_not, boundary_code, canonical_motif_or_not = True, 0, 0
 
         # pos1 in annotated coding exon boundary, pos2 not.
-        elif motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-            acceptor_seq = genome_fasta[chrm_ac][pos_ac - splice_bin : pos_ac + splice_bin].seq
+        elif (
+            motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values()
+        ):
+            acceptor_seq = genome_fasta[chrm_ac][
+                pos_ac - splice_bin : pos_ac + splice_bin
+            ].seq
             if splice_motif_dict[motif_do] in acceptor_seq:
                 report_or_not, boundary_code, canonical_motif_or_not = True, 2, 1
             elif motif_required:
@@ -494,8 +551,12 @@ def splicing_confirmation_and_correction(
                 report_or_not, boundary_code, canonical_motif_or_not = True, 2, 0
 
         # pos2 in annotated coding exon boundary, pos1 not.
-        elif motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
-            donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+        elif (
+            motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values()
+        ):
+            donor_seq = genome_fasta[chrm_do][
+                pos_do - splice_bin : pos_do + splice_bin
+            ].seq
 
             if possible_donors[motif_ac] in donor_seq:
                 report_or_not, boundary_code, canonical_motif_or_not = True, 1, 1
@@ -531,6 +592,12 @@ def splicing_confirmation_and_correction(
         final_donor_shift = 0
         final_accecptor_shift = microhomology_length - final_donor_shift
         if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
+            if not default_shift_prechecker(
+                strand1, strand2, _exons1, _exons2, microhomology_length
+            ):
+                final_accecptor_shift = 0
+                final_donor_shift = microhomology_length - final_accecptor_shift
+
             for donor_shift in range(microhomology_length + 1):
                 acceptor_shift = microhomology_length - donor_shift
                 if strand1 == "+":
@@ -548,7 +615,10 @@ def splicing_confirmation_and_correction(
 
                 donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
                 acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
-                if donor_seq == target_donor_seq and acceptor_seq == target_acceptor_seq:
+                if (
+                    donor_seq == target_donor_seq
+                    and acceptor_seq == target_acceptor_seq
+                ):
                     final_donor_shift = donor_shift
                     final_accecptor_shift = acceptor_shift
                     canonical_motif_or_not = 1
@@ -570,6 +640,12 @@ def splicing_confirmation_and_correction(
                 _exons2.last.end -= final_accecptor_shift
                 corrected_pos2 = pos2 - final_accecptor_shift
         else:
+            if not default_shift_prechecker(
+                strand2, strand1, _exons2, _exons1, microhomology_length
+            ):
+                final_accecptor_shift = 0
+                final_donor_shift = microhomology_length - final_accecptor_shift
+
             for donor_shift in range(microhomology_length + 1):
                 acceptor_shift = microhomology_length - donor_shift
                 if strand2 == "+":
@@ -587,7 +663,10 @@ def splicing_confirmation_and_correction(
 
                 donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
                 acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
-                if donor_seq == target_donor_seq and acceptor_seq == target_acceptor_seq:
+                if (
+                    donor_seq == target_donor_seq
+                    and acceptor_seq == target_acceptor_seq
+                ):
                     final_donor_shift = donor_shift
                     final_accecptor_shift = acceptor_shift
                     canonical_motif_or_not = 1
@@ -668,7 +747,9 @@ def blat2chimeric_alignment(
         if top_hsp is None:
             return chimeric_aln_str
 
-        if (sum(top_hsp.hit_span_all) - top_hsp.mismatch_num - top_hsp.hit_gap_num) / in_seq_len >= aligner_ident_pct_cutoff:
+        if (
+            sum(top_hsp.hit_span_all) - top_hsp.mismatch_num - top_hsp.hit_gap_num
+        ) / in_seq_len >= aligner_ident_pct_cutoff:
             chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = aligner.psl2sam(
                 top_hsp,
                 in_seq_len,
@@ -695,7 +776,9 @@ def blat2chimeric_alignment(
             valid_cigar_sa = cigar_validity(cigar_sa)
 
             if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
-                return f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
+                return (
+                    f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
+                )
 
     return chimeric_aln_str
 
@@ -814,8 +897,14 @@ def insertion2chimeric_alignment(
         if (
             chrom_aligner == read.reference_name
             and strand_aligner == read_strand
-            and (abs(pos_aligner - insertion_ref_pos) <= 10 and ref_end_aligner <= read.reference_end)
-        ) or (abs(ref_end_aligner - insertion_ref_pos) <= 10 and pos_aligner >= read.reference_start):
+            and (
+                abs(pos_aligner - insertion_ref_pos) <= 10
+                and ref_end_aligner <= read.reference_end
+            )
+        ) or (
+            abs(ref_end_aligner - insertion_ref_pos) <= 10
+            and pos_aligner >= read.reference_start
+        ):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
             # MS
@@ -827,7 +916,8 @@ def insertion2chimeric_alignment(
             nm_sa = nm_read - insertion_seq_len + nm_aligner
             if nm_sa < max_allowed_nm:
                 chimeric_aln_str = (
-                    f"{chrom_aligner},{original_ref_start + 1}," f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
+                    f"{chrom_aligner},{original_ref_start + 1},"
+                    f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
                 )
                 primary_aln_cigarstring = valid_cigar_ra
 
@@ -836,7 +926,9 @@ def insertion2chimeric_alignment(
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
     """Check if the two strands are compatible with the two modes."""
-    return (strand1 == strand2 and mode1 != mode2) or (strand1 != strand2 and mode1 == mode2)
+    return (strand1 == strand2 and mode1 != mode2) or (
+        strand1 != strand2 and mode1 == mode2
+    )
 
 
 def softclipped_length_and_event_size_checker(
@@ -859,7 +951,11 @@ def softclipped_length_and_event_size_checker(
     :return: whether event_size > softclipped_length (If it is True, it will be a TDUP event)
     :rtype: bool
     """
-    return read.lt_soft_len < event_size if mode == MappingMode.SM else read.rt_soft_len < event_size
+    return (
+        read.lt_soft_len < event_size
+        if mode == MappingMode.SM
+        else read.rt_soft_len < event_size
+    )
 
 
 def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
@@ -894,10 +990,14 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     # microhomology
     elif bp_region_seq_len < 0:
         if mode == MappingMode.SM:  # SM
-            bp_region_seq = genome_fasta[chrom][read.ref_start : read.ref_start - bp_region_seq_len].seq
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_start : read.ref_start - bp_region_seq_len
+            ].seq
 
         elif mode == MappingMode.MS:  # MS
-            bp_region_seq = genome_fasta[chrom][read.ref_end + bp_region_seq_len : read.ref_end].seq
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_end + bp_region_seq_len : read.ref_end
+            ].seq
 
         bp_region_seq = "-" + bp_region_seq
 
@@ -933,7 +1033,11 @@ def same_chrom_same_strand_mode21_handler(
         target_offset = target_end - target_start
 
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.rt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
 
         logger.trace(f"{bp_region_seq_len=}")
@@ -1001,7 +1105,9 @@ def same_chrom_same_strand_mode21_handler(
                 cvg,
                 motif_required=motif_required,
             )
-            _genes = gene_annotation(lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv)
+            _genes = gene_annotation(
+                lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv
+            )
             # 1 => 2
             if is_reverse:
                 if _anno == 1:
@@ -1306,13 +1412,21 @@ def same_chrom_diff_strand_handler(
         ra_bp = read_lt.ref_start + read_lt.reference_match_size
         sa_bp = read_rt.ref_start + read_rt.reference_match_size
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.lt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
     elif same_mode == MappingMode.SM:
         ra_bp = read_lt.ref_start
         sa_bp = read_rt.ref_start
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.rt_soft_len - read_rt.rt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.rt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
     logger.trace(f"{bp_region_seq_len=}")
 
@@ -1326,7 +1440,8 @@ def same_chrom_diff_strand_handler(
             genome_fasta,
         ) and not read_rt.splice_site_checker(genome_fasta):
             logger.debug(
-                f"Splice site checking[IDUP]: {read_lt.query_name=}, " f"{read_lt.cigarstring=}, {read_rt.cigarstring=}",
+                f"Splice site checking[IDUP]: {read_lt.query_name=}, "
+                f"{read_lt.cigarstring=}, {read_rt.cigarstring=}",
             )
             return noreturn
         chrm_start = lt_chrm
@@ -1493,7 +1608,9 @@ def same_chrom_diff_strand_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if _nls:
         return (
             "INV",
@@ -1540,7 +1657,11 @@ def diff_chrom_same_strand_mode21_handler(
     junc_end = read_rt.ref_start + read_rt.reference_match_size
 
     bp_region_seq_len = (
-        read_lt.query_length - read_lt.rt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        read_lt.query_length
+        - read_lt.rt_soft_len
+        - read_rt.lt_soft_len
+        - read_lt.read_match_size
+        - read_rt.read_match_size
     )
 
     logger.trace(f"{bp_region_seq_len=}")
@@ -1584,7 +1705,9 @@ def diff_chrom_same_strand_mode21_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if is_reverse:
         if _anno == 1:
             _anno = 2
@@ -1712,7 +1835,11 @@ def diff_chrom_diff_strand_handler(
         chrm_end = read_rt.chrom
         junc_end = read_rt.ref_start + read_rt.reference_match_size
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.lt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
     elif same_mode == MappingMode.SM:
         chrm_start = read_lt.chrom
@@ -1720,7 +1847,11 @@ def diff_chrom_diff_strand_handler(
         chrm_end = read_rt.chrom
         junc_end = read_rt.ref_start
         bp_region_seq_len = (
-            read_lt.query_length - read_lt.rt_soft_len - read_rt.rt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.rt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
         )
 
     logger.trace(f"{bp_region_seq_len=}")
@@ -1764,7 +1895,9 @@ def diff_chrom_diff_strand_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if _nls:
         return (
             "TRA",
