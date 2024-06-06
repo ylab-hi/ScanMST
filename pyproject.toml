@@ -54,7 +54,7 @@ ruff = "^0.3.5"
 codespell = "^2.2.2"
 ipdb = "^0.13.11"
 isort = "^5.13.2"
-pytest = "^7.4.3"
+pytest = "^8.2.2"
 coverage = { extras = ["toml"], version = "^7.5" }
 safety = "^2.1.1"
 mypy = "^1.8"
