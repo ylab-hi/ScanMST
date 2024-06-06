@@ -2271,19 +2271,18 @@ toml = ["tomli (>=1.2.3)"]
 
 [[package]]
 name = "pyfaidx"
-version = "0.7.2.2"
+version = "0.8.1.1"
 description = "pyfaidx: efficient pythonic random access to fasta subsequences"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyfaidx-0.7.2.2-py3-none-any.whl", hash = "sha256:4e689bc09f3c5de1d2a1099d059b3b9914629c1c5c3ad08b49ff05af33392e0e"},
-    {file = "pyfaidx-0.7.2.2.tar.gz", hash = "sha256:3b7693c052c82691000fe4a92475db82ffc3b5a721a12b10dfbc87119c4b4d30"},
+    {file = "pyfaidx-0.8.1.1-py3-none-any.whl", hash = "sha256:2694af8e3f35f1890a03f04c0f89ba245caf24ff9e435f2c494b132f537e70f6"},
+    {file = "pyfaidx-0.8.1.1.tar.gz", hash = "sha256:6f0482352619f2cc56003ca22321bdb0d0764b656795bc1e4062b1fa9b08686b"},
 ]
 
 [package.dependencies]
 importlib-metadata = "*"
 setuptools = "*"
-six = "*"
 
 [[package]]
 name = "pyflakes"
@@ -3417,4 +3416,4 @@ vis = ["matplotlib", "pyvis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "628d123a383b5f42a28a96c6181e7a1499a24450cb62f1e270550d1f89b4d2ec"
+content-hash = "82ba89f2a29577e38cf0f5dc2150503463adf76e782842ad336ae21e7bcfe587"
