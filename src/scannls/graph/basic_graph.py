@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import combinations
@@ -250,6 +250,7 @@ class Node(BasicNode):
         "is_polya",
         "cigartuples_without_soft",
         "identities",
+        "breakpoints",
         *BasicNode.__slots__,
     )
 
@@ -282,6 +283,36 @@ class Node(BasicNode):
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
         self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
+
+        self.breakpoints = defaultdict(int)
+
+        if self.self_identity is NodeIdentity.HEAD:
+            if self.strand.is_reverse():
+                self.breakpoints[ref_start] += 1
+            else:
+                self.breakpoints[ref_end] += 1
+        elif self.self_identity is NodeIdentity.TAIL:
+            if self.strand.is_reverse():
+                self.breakpoints[ref_end] += 1
+            else:
+                self.breakpoints[ref_start] += 1
+
+    def update_breakpoint(self) -> int | None:
+        """Get final breakpoint of a node."""
+        if self.is_start_node():
+            new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
+            if self.strand.is_reverse():
+                self.ref_start = new_breakpoint
+            else:
+                self.ref_end = new_breakpoint
+            return new_breakpoint
+        elif self.is_end_node():
+            new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
+            if self.strand.is_reverse():
+                self.ref_end = new_breakpoint
+            else:
+                self.ref_start = new_breakpoint
+            return new_breakpoint
 
     @property
     def ref_start(self) -> int:
@@ -388,6 +419,10 @@ class Node(BasicNode):
 
             # WARN: do not check if they have same key <Yangyang Li>
             self.identities.update(other.identities)
+
+            for key, value in other.breakpoints.items():
+                self.breakpoints[key] += value
+
             return
 
         msg = f"Cannot merge {self!r} and {other!r}"

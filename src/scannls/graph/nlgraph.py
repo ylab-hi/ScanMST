@@ -442,7 +442,6 @@ class NLGraph:
         .. seealso::
             :func:`SpliceGraph.trace`
         """
-
         if not start_node or self.has_circle:
             # successor be [] or None
             group_paths.append(path)
@@ -467,6 +466,11 @@ class NLGraph:
                     if edge_ind > 0:
                         self.logger.warning(f"Multiple edges {edge} found between {start_node} and {successor}")
 
+                    if start_node.is_start_node():
+                        new_break_point = start_node.update_breakpoint()
+                        path[-1].update_breakpoint()
+                        edge.break_point1.pos = new_break_point
+
                     successor.set_trace_id(self.trace_id)
                     self._trace_forward(
                         successor,
@@ -475,6 +479,11 @@ class NLGraph:
                     )
 
         else:
+            if start_node.is_end_node():
+                new_break_point = start_node.update_breakpoint()
+                path[-1].update_breakpoint()
+                path[-2].break_point2.pos = new_break_point
+
             # successor be [] or None
             self._trace_forward(
                 successors,  # type: ignore
