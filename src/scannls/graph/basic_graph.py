@@ -1377,12 +1377,14 @@ def merge_insertion(edge1: Edge, edge2: Edge):
         if edge1.insertion_info is None:
             return
 
+        # prefer blunt end
         if edge2.insertion_info is None:
             edge1.insertion_info = edge2.insertion_info
             return
 
-        if isinstance(edge1.insertion_info[1], MicroHomology) and isinstance(
+        # prefer micorhomology over novelinsertion
+        if isinstance(edge1.insertion_info[1], NovelInsertion) and isinstance(
             edge2.insertion_info[1],
-            NovelInsertion,
+            MicroHomology
         ):
             edge1.insertion_info = edge2.insertion_info
