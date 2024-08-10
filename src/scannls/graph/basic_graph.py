@@ -300,6 +300,7 @@ class Node(BasicNode):
     def update_breakpoint(self) -> int | None:
         """Get final breakpoint of a node."""
         if self.is_start_node():
+            logger.debug(f"Update start node's breakpoint {self.breakpoints}")
             new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
             if self.strand.is_reverse():
                 self.ref_start = new_breakpoint
@@ -307,6 +308,7 @@ class Node(BasicNode):
                 self.ref_end = new_breakpoint
             return new_breakpoint
         elif self.is_end_node():
+            logger.debug(f"Update end node's breakpoint {self.breakpoints}")
             new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
             if self.strand.is_reverse():
                 self.ref_end = new_breakpoint
