@@ -286,16 +286,18 @@ class Node(BasicNode):
 
         self.breakpoints = defaultdict(int)
 
+    def set_up_breakpoints(self) -> None:
+        logger.debug(f"Set up breakpoints for {self!r}")
         if self.self_identity is NodeIdentity.HEAD:
             if self.strand.is_reverse():
-                self.breakpoints[ref_start] += 1
+                self.breakpoints[self.ref_start] += 1
             else:
-                self.breakpoints[ref_end] += 1
+                self.breakpoints[self.ref_end] += 1
         elif self.self_identity is NodeIdentity.TAIL:
             if self.strand.is_reverse():
-                self.breakpoints[ref_end] += 1
+                self.breakpoints[self.ref_end] += 1
             else:
-                self.breakpoints[ref_start] += 1
+                self.breakpoints[self.ref_start] += 1
 
     def update_breakpoint(self) -> int | None:
         """Get final breakpoint of a node."""
@@ -867,6 +869,10 @@ class NLPath:
             if edge is not None:
                 edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
                 edge.break_point2.pos = next_node.ref_start if next_node.strand.is_forward() else next_node.ref_end
+
+    def setup_breakpoints(self) -> None:
+        for node in self.nodes:
+            node.set_up_breakpoints()
 
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""

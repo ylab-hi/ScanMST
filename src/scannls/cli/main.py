@@ -663,6 +663,7 @@ def _scan_bam_helper(
                         )
 
                         nlpath.squeeze()
+                        nlpath.setup_breakpoints()
 
                         if (
                             not nlpath.is_all_type_del()
