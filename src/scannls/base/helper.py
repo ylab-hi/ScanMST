@@ -628,7 +628,7 @@ def splicing_confirmation_and_correction(
                 _exons1.last.end -= final_donor_shift
                 corrected_pos1 = pos1 - final_donor_shift
             elif strand1 == "-":
-                ref_start1 += donor_shift
+                ref_start1 += final_donor_shift
                 _exons1.first.start += final_donor_shift
                 corrected_pos1 = pos1 + final_donor_shift
             if strand2 == "+":
@@ -677,7 +677,7 @@ def splicing_confirmation_and_correction(
                 _exons2.last.end -= final_donor_shift
                 corrected_pos2 = pos2 - final_donor_shift
             elif strand2 == "-":
-                ref_start2 += donor_shift
+                ref_start2 += final_donor_shift
                 _exons2.first.start += final_donor_shift
                 corrected_pos2 = pos2 + final_donor_shift
             if strand1 == "+":
