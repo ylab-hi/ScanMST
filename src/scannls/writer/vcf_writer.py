@@ -464,4 +464,4 @@ def obtain_sequence_from_insertion(
     if not novel_insertion_sequence:
         return ""
 
-    return novel_insertion_sequence if node.strand == "+" else reverse_complement(novel_insertion_sequence)
+    return novel_insertion_sequence if node.strand.is_forward() else reverse_complement(novel_insertion_sequence)
