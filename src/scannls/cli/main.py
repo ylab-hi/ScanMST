@@ -552,6 +552,7 @@ def _scan_bam_helper(
                         ins_seq,
                         read_length,
                         read_strand,
+                        mapq_cutoff,
                         max_allowed_nm,
                         aligner,
                         blat_ident_pct_cutoff,

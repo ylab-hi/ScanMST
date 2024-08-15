@@ -743,17 +743,14 @@ def blat2chimeric_alignment(
         return chimeric_aln_str
 
     if isinstance(aligner, Blat):
-        top_hsp, mapq = aligner.fetch_mapq(in_seq, aligner_ident_pct_cutoff)
-        if top_hsp is None:
-            return chimeric_aln_str
-
-        if (
-            sum(top_hsp.hit_span_all) - top_hsp.mismatch_num - top_hsp.hit_gap_num
-        ) / in_seq_len >= aligner_ident_pct_cutoff:
-            chrom_sa, pos_sa, strand_sa, cigar_sa_partial, nm_sa = aligner.psl2sam(
-                top_hsp,
-                in_seq_len,
-            )
+        flag, insertion_info = aligner.query_insertion(in_seq, aligner_ident_pct_cutoff)
+        if flag:
+            chrom_sa = insertion_info.chrom
+            pos_sa = insertion_info.ref_start
+            strand_sa = insertion_info.strand
+            cigar_sa_partial = insertion_info.cigarstring
+            nm_sa = insertion_info.nm
+            mapq = insertion_info.mapq
             if read_strand == strand_sa:
                 # same strand: different reads mode
                 # MS(1) ~ SM(2) or SM(2) ~ MS(1)
@@ -823,6 +820,7 @@ def insertion2chimeric_alignment(
     insertion_seq: str,
     read_length: int,
     read_strand: str,
+    mapq_cutoff: int,
     max_allowed_nm: int,
     aligner,
     aligner_ident_pct_cutoff: float = 0.9,
@@ -914,7 +912,7 @@ def insertion2chimeric_alignment(
             valid_cigar_sa = cigar_validity(cigar_sa)
 
             nm_sa = nm_read - insertion_seq_len + nm_aligner
-            if nm_sa < max_allowed_nm:
+            if nm_sa < max_allowed_nm and mapq_aligner >= mapq_cutoff:
                 chimeric_aln_str = (
                     f"{chrom_aligner},{original_ref_start + 1},"
                     f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"

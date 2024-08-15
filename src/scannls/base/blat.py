@@ -302,15 +302,16 @@ class Blat:
         hsps = blat_result.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
         hsps = hsps[:top]
-        keep_hsp = []
+        keep_hsps = []
         for hsp in hsps:
-            if Blat.hsp_matched_len(hsp) / len(
-                insert_seq
-            ) > threshold_identity:
-                keep_hsp.append(hsp)
-        hit = len(keep_hsp)
+            if Blat.hsp_matched_len(hsp) / len(insert_seq) > threshold_identity:
+                keep_hsps.append(hsp)
+        hit = len(keep_hsps)
 
-        return hit, keep_hsp
+        mapq = Blat._calculate_mapq(keep_hsps)
+        top_hsp = keep_hsps[0] if hit >= 1 else ""
+
+        return hit, top_hsp, mapq
 
     def query_insertion(
         self,
@@ -341,16 +342,15 @@ class Blat:
         except ValueError:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
-        hit, keep_hsp = Blat._query_insertion(
+        hit, top_hsp, mapq = Blat._query_insertion(
             blat_result,
             insert_seq,
             threshold_identity,
             top,
         )
 
-        # keep the top ont hit
+        # keep the top one hit
         if hit >= 1:
-            top_hsp = keep_hsp[0]
             flag = True
 
             ref_chrom, position, strand, cigar, num_of_mismatch = self.psl2sam(
@@ -365,7 +365,7 @@ class Blat:
                 ref_start=position,
                 strand=strand,
                 cigarstring=cigar,
-                mapq=60,
+                mapq=mapq,
                 nm=num_of_mismatch,
                 query_sequence=insert_seq,
                 query_qualities=dummy_qualities,
@@ -382,53 +382,23 @@ class Blat:
             os.remove(file)
 
     @staticmethod
-    def _calculate_mapq(hsps: Any, in_seq_len: int, threshold_identity: float) -> int:
+    def _calculate_mapq(hsps: Any) -> int:
         """Function is used to calculate map quality of the insertion.
-        We adapted the way of calculation in TopHat.
-        reference: 1) https://www.biostars.org/p/69773/
-                   2) https://sequencing.qcfail.com/articles/mapq-values-are-really-useful-but-their-implementation-is-a-mess/v.
+        We adapted the way of calculation in Minimap2.
+            MAPQ=min([60 × (S1 - S2)/S1], 60)
+            S1: best alignment score
+            S2: the second-best alignment score
+            They both passed the query identity threshold.
 
-        :param hsps: the list of hsp after aligning the insertion sequence
-        :param in_seq_len: the length of the input sequence
-        :param threshold_identity: the threshold of the identity for aligning
+        :param hsps: the list of hsp ordered by score after aligning the insertion sequence
         :return: the map quality of the insertion
         """
-        num_of_locations = 0
-        mapq_dict = {
-            1: 60,
-            2: 3,
-            3: 2,
-        }
-
-        for hsp in hsps:
-            if Blat.hsp_matched_len(hsp) / in_seq_len >= threshold_identity:
-                num_of_locations += 1
-
-        if 4 <= num_of_locations <= 9:
-            return 1
-        return mapq_dict.get(num_of_locations, 0)
-
-    def fetch_mapq(self, in_seq: str, threshold_identity: float) -> Any:
-        """Function is used to fetch the map quality of the insertion.
-
-        :param in_seq: the input sequence
-        :param threshold_identity: the threshold of the identity for aligning
-        :return: the top hit of the insertion sequence, and the map quality of the insertion
-        """
-        psl_file = self.query(in_seq=in_seq)
-
-        try:
-            blat = SearchIO.read(psl_file, "blat-psl")
-        except ValueError:
-            logger.warning(f"No Blat hit found {in_seq[:10]}...")
-            return None, None
+        if len(hsps) == 0:
+            return 0
+        elif len(hsps) == 1:
+            return 60
         else:
-            hsps = blat.hsps
-            hsps.sort(key=lambda k: k.score, reverse=True)
-            top_hsp = hsps[0]
-            Blat._remove(psl_file)
-            mapq = Blat._calculate_mapq(hsps, len(in_seq), threshold_identity)
-        return top_hsp, mapq
+            return int(min(60 * (hsps[0].score - hsps[1].score) / hsps[0].score, 60))
 
     @staticmethod
     def psl2sam(hsp: Any, in_seq_len: int) -> tuple[str, int, str, str, int]:
