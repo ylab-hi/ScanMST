@@ -773,9 +773,7 @@ def blat2chimeric_alignment(
             valid_cigar_sa = cigar_validity(cigar_sa)
 
             if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
-                return (
-                    f"{chrom_sa},{pos_sa},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
-                )
+                return f"{chrom_sa},{pos_sa+1},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
 
     return chimeric_aln_str
 
