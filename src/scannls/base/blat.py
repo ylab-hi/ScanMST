@@ -304,7 +304,10 @@ class Blat:
         hsps = hsps[:top]
         keep_hsps = []
         for hsp in hsps:
-            if Blat.hsp_matched_len(hsp) / len(insert_seq) > threshold_identity:
+            if (
+                Blat.hsp_matched_len(hsp) / len(insert_seq) > threshold_identity
+                and "_" not in hsp.hit_id
+            ):
                 keep_hsps.append(hsp)
         hit = len(keep_hsps)
 
@@ -317,7 +320,7 @@ class Blat:
         self,
         insert_seq: str,
         threshold_identity: float = 0.90,
-        top: int = 3,
+        top: int = 5,
         align_len_threshold: int = 20,
     ) -> Any:
         """Function for querying the insertion sequence to the server service.

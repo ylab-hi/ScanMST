@@ -45,7 +45,7 @@ class ReadsConnector:
         mapq_cutoff: int,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
-        top: int = 3,
+        top: int = 5,
     ) -> None:
         """Initialize the ReadsConnector class."""
         self.candidate_nodes: list[Read] = []
