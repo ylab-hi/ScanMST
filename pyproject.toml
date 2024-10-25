@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "scannls"
-version = "0.0.1"
-description = "Graph algorithm is used to detected non-linear transcripts in long-read data"
+version = "0.1.0"
+description = "A non-colinear transcript caller for long-read transcriptome sequencing data"
 authors = [
     "Yangyang Li <yangyang.li@northwestern.edu>",
-    "Ting-You Wang <tingyou.wang@northwestern.edu>",
+    "Ting-You Wang <tywang@northwestern.edu>",
 ]
 license = "GPL"
 readme = "README.md"
@@ -12,7 +12,7 @@ homepage = "https://github.com/ylab-hi/ScanNLS"
 repository = "https://github.com/ylab-hi/ScanNLS"
 documentation = "https://scannls.readthedocs.io"
 classifiers = [
-    "Development Status :: 1 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
