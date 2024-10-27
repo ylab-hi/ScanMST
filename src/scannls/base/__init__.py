@@ -1,8 +1,4 @@
-"""Init file for scannls.
-
-@Filename:    __init__.py
-@Time:        12/15/21 2:04 PM
-"""
+"""Init file for scannls."""
 
 from .basic import (
     AnnotationCode,

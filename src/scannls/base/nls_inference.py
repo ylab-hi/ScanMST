@@ -1,4 +1,4 @@
-"""Module for nls inference."""
+"""Module for NLS inference."""
 
 import HTSeq
 import pyfaidx

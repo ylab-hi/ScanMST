@@ -1,15 +1,7 @@
-"""Basic Read Class.
-
-@Filename:    basicRead.py
-@Author:      YangyangLi
-@contact:     yangyang.li@northwestern.edu
-@Time:        1/9/22 12:13 PM
-"""
+"""Basic Read Class."""
 
 from __future__ import annotations
-
 from scannls import cppext
-
 from .basic import CigarCode, Intervals, MappingMode, Strand
 
 

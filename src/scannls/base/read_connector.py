@@ -1,6 +1,4 @@
-"""Connecter Reads.
-@Time:        12/15/21 2:14 PM.
-"""
+"""Connecter Reads."""
 
 import re
 from itertools import combinations
@@ -616,7 +614,9 @@ class ReadsConnector:
 
         self.num_added_reads += 1
 
-        self.logger.trace(f"add start/end query sequence: {query_sequence} to form a new segment using BLAT")
+        self.logger.trace(
+            f"add start/end query sequence: {query_sequence} to form a new segment using BLAT"
+        )
 
         new_read = self._double_check_create_new_read_calculate_sms(
             top_hsp,

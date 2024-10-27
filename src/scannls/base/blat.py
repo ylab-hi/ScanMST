@@ -1,9 +1,5 @@
-"""Module for BLAT.
+"""Module for BLAT."""
 
-@Filename:    blat.py
-@Author:      YangyangLi
-@Time:        12/15/21 2:00 PM
-"""
 import array
 import contextlib
 import os

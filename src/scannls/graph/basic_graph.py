@@ -1,3 +1,5 @@
+"""Basic NLGraph operations."""
+
 from __future__ import annotations
 
 from collections import Counter, defaultdict

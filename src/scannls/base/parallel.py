@@ -1,9 +1,4 @@
-"""Module for parallel worker.
-
-@Filename:    parallel.py
-@Author:      YangyangLi
-@Time:        12/15/21 1:58 PM
-"""
+"""Module for parallel worker."""
 
 import multiprocessing
 import os

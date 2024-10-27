@@ -1,13 +1,6 @@
-# !/usr/bin/env python
-"""Wrapper for loguru.logger.
-
-@Filename:    mylogger.py
-@Author:      YangyangLi
-@Time:        12/15/21 2:08 PM
-"""
+"""Wrapper for loguru.logger."""
 
 from loguru._logger import Logger
-
 from scannls.mtype import LoggerType
 
 

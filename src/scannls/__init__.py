@@ -1,13 +1,13 @@
 """Init file for scannls package."""
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 __PACKAGE_NAME__ = "scannls"
 
 import sys
 
 from rich.traceback import install
 
-from . import aligner, blat, cli, cppext, graph, mtype, utils
+from . import blat, cli, cppext, graph, mtype, utils
 from .base import (
     Blat,
     BreakPoint,
@@ -68,7 +68,6 @@ __all__ = [
     "ToolNotFoundError",
     "VCFWriter",
     "Writers",
-    "aligner",
     "blat",
     "cli",
     "cppext",

@@ -1,8 +1,4 @@
-"""Type of the scannls.
-
-@Author:      YangyangLi
-@Time:        12/30/21 2:20 PM
-"""
+"""Type of the scannls."""
 
 from __future__ import annotations
 

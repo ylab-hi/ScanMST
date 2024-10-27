@@ -1,8 +1,4 @@
-"""cluster paths.
-
-@Filename:    cluster.py
-@Time:        1/19/22 7:59 PM
-"""
+"""cluster NLpaths."""
 
 from itertools import combinations
 

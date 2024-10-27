@@ -1,9 +1,4 @@
-"""CLi for scannls.
-
-@Filename:    cli.py
-@Author:      YangyangLi
-@Time:        1/11/22 4:28 PM
-"""
+"""CLi for scannls."""
 
 from __future__ import annotations
 

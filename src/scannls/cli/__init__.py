@@ -1,9 +1,4 @@
-"""Initialize the scannls.draft module.
-
-@Filename:    __init__.py
-@contact:     yangyang.li@northwestern.edu
-@Time:        1/1/22 8:28 PM
-"""
+"""Initialize the scannls cli module."""
 
 from . import cli
 from .arg import DefaultOptions

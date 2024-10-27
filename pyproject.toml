@@ -166,7 +166,7 @@ select = [
     # "CPY",
     "COM",
 ]
-line-length = 130
+line-length = 150
 exclude = ["tests", "cppext", "blat.py"]
 ignore = [
     "ANN001",

@@ -1,9 +1,4 @@
-"""GTF writer class.
-
-@Filename:    gtfWriter.py
-@Author:      YangyangLi
-@Time:        1/30/22 6:18 PM
-"""
+"""GTF writer class."""
 
 from __future__ import annotations
 

@@ -1,9 +1,4 @@
-"""FastaWriter class.
-
-@Filename:    fastaWriter.py
-@Author:      YangyangLi
-@Time:        1/30/22 6:18 PM
-"""
+"""FastaWriter class."""
 
 from functools import singledispatchmethod
 from pathlib import Path

@@ -1,9 +1,4 @@
-"""Module for writing data to a file.
-
-@Filename:    __init__.py.py
-@Author:      YangyangLi
-@Time:        1/30/22 6:15 PM
-"""
+"""Module for writing data to a file."""
 
 from .fasta_writer import FastaWriter
 from .gtf_writer import GTFWriter

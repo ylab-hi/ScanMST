@@ -1,3 +1,5 @@
+"""Node annotation."""
+
 from collections import defaultdict
 from pathlib import Path
 

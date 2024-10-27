@@ -1,9 +1,4 @@
-"""SR rescuer.
-
-@Filename:    srRescuer.py
-@author:      Yangyang Li
-@Time:        12/30/21 15:00 PM
-"""
+"""SR rescuer."""
 
 from __future__ import annotations
 

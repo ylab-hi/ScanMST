@@ -12,7 +12,6 @@ import pyfaidx
 import pysam
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls.aligner import STAR
 from scannls.base import (
     Blat,
     CircRNAFilter,

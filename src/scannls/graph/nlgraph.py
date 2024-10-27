@@ -1,8 +1,4 @@
-"""
-@Author:      YangyangLi
-@Filename:    nlgraph.py
-@Time:        12/15/21 10:42 AM.
-"""
+"""NLGraph operations."""
 
 from __future__ import annotations
 

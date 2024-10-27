@@ -1,8 +1,4 @@
-"""Plot Graphs.
-
-@Author:      YangyangLi
-@Time:        1/28/22 8:46 PM
-"""
+"""Visualize Graphs."""
 
 from __future__ import annotations
 

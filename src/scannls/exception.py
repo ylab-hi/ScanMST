@@ -1,9 +1,4 @@
-"""Module for the exception class.
-
-@file: exception.py
-@time: 16/11/2021 11:28
-"""
-
+"""Module for the exception class."""
 
 class ScannlsExceptionError(Exception):
     """Base class for exceptions in this module."""

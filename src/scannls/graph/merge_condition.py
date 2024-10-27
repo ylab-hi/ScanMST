@@ -1,9 +1,4 @@
-"""Merge condition.
-
-@Filename:    mergeCondition.py
-@contact:     yangyang.li@northwestern.edu
-@Time:        4/18/22 7:51 PM
-"""
+"""Merge condition."""
 
 from __future__ import annotations
 

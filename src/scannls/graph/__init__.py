@@ -1,3 +1,5 @@
+"""Init NLGraph."""
+
 from .basic_graph import (
     BasicNode,
     Edge,

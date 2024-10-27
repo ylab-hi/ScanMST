@@ -21,7 +21,7 @@ class DefaultOptions:
     blat_closed: bool = True
     blat_sleep: bool = True
     blat_port: int = 88888
-    aligner: tuple[str, str] = ("star", "blat")
+    aligner: tuple[str, str] = ("blat", "")
     support_reads: int = 1
     splice_bin: int = 5
     mapq: int = 20
@@ -87,7 +87,7 @@ class RichArgParser(argparse.ArgumentParser):
         """Color message."""
         import re
 
-        pattern = re.compile(r"(?P<arg>-{1,2}[-|\w]+)")
+        pattern = re.compile(r'(?<!\w)(?P<arg>(?:--[\w-]+|-h))(?!\w)')
         return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
 
     def _print_message(self, message: str | None, _file: Any = None) -> None:
@@ -106,7 +106,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]scannls[/] :rocket: Nonlinear splicing "
+        description="[red]scannls[/] :rocket: Non-colinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
         formatter_class=RichHelpFormatter,
