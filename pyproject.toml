@@ -89,7 +89,7 @@ cohesion = "^1.0.0"
 tqdm = "^4.64.0"
 wily = "^1.24.2"
 altair = "^5.2.0"
-seaborn = "^0.13.0"
+seaborn = "^0.13.2"
 aquarel = "^0.0.5"
 
 
