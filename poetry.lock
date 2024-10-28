@@ -37,13 +37,13 @@ doc = ["docutils", "jinja2", "myst-parser", "numpydoc", "pillow (>=9,<10)", "pyd
 
 [[package]]
 name = "aquarel"
-version = "0.0.5"
+version = "0.0.6"
 description = "Lightweight templating engine for matplotlib"
 optional = false
 python-versions = ">3.7"
 files = [
-    {file = "aquarel-0.0.5-py3-none-any.whl", hash = "sha256:65becdc525be8374d434836ca16bfea9338106a62ec1bbfb959dd7a705b8d547"},
-    {file = "aquarel-0.0.5.tar.gz", hash = "sha256:c705ca6ac7b6c3381c86a5030b04fce0b872b88c51a9af39b56f2975476a51d7"},
+    {file = "aquarel-0.0.6-py3-none-any.whl", hash = "sha256:373fa3f9e101c16a8b453e2cb64c88ef05ab8830e873bb110bca49e14137877d"},
+    {file = "aquarel-0.0.6.tar.gz", hash = "sha256:1905766db15f07c3b4047fd19bc898e0193c93d14700cc549d0af83e8ada0dfa"},
 ]
 
 [package.dependencies]
@@ -3571,4 +3571,4 @@ vis = ["matplotlib", "pyvis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "3a446ddd1f3a67f136c8e370cfc979cd818b5643e34847ea44838c83c8f07cb1"
+content-hash = "42262d5d5f1ffe048c1ff8124406088452195d69860a3b23939dfe1b9dc6b259"
