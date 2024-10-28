@@ -2407,21 +2407,22 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pynvim"
-version = "0.4.3"
-description = "Python client to neovim"
+version = "0.5.0"
+description = "Python client for Neovim"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 files = [
-    {file = "pynvim-0.4.3.tar.gz", hash = "sha256:3a795378bde5e8092fbeb3a1a99be9c613d2685542f1db0e5c6fd467eed56dff"},
+    {file = "pynvim-0.5.0-py2.py3-none-any.whl", hash = "sha256:2ac197ef0cdfff53719184a45c33cfb7cef88d1c9bf7f0525c21b3239cb5365f"},
+    {file = "pynvim-0.5.0.tar.gz", hash = "sha256:e80a11f6f5d194c6a47bea4135b90b55faca24da3544da7cf4a5f7ba8fb09215"},
 ]
 
 [package.dependencies]
-greenlet = "*"
+greenlet = ">=3.0"
 msgpack = ">=0.5.0"
 
 [package.extras]
 pyuv = ["pyuv (>=1.0.0)"]
-test = ["pytest (>=3.4.0)"]
+test = ["pytest"]
 
 [[package]]
 name = "pyparsing"
@@ -3563,4 +3564,4 @@ vis = ["matplotlib", "pyvis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "54c1208c931f27c3744013fae58ece2a0f142e767d25730c535c0d75b95e91ba"
+content-hash = "ef741e029dff0eab8c5db96fe50ba6dc84153127395844331b526b88bc2ca31e"
