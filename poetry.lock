@@ -1038,22 +1038,22 @@ test = ["objgraph", "psutil"]
 
 [[package]]
 name = "htseq"
-version = "2.0.7"
+version = "2.0.9"
 description = "A framework to process and analyze data from high-throughput sequencing (HTS) assays"
 optional = false
 python-versions = "*"
 files = [
-    {file = "HTSeq-2.0.7-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d35a778b088dcfa23e20a07f0e6a2734ddc475d1da694c47e88e6b738c35ef0b"},
-    {file = "HTSeq-2.0.7-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b238bafdc8ba0a8e9ac68d27b1f2347515cba413210814906389e9ebbc5f83f9"},
-    {file = "HTSeq-2.0.7-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:f25fd15bb373bc6d1e3029e956d3180932ad1897215f6b3e29cf4347310fffe6"},
-    {file = "HTSeq-2.0.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9024415302f06860e50af4a3f4c04cd98d985f4c8e7b4f8291ddb46c3b0694a3"},
-    {file = "HTSeq-2.0.7-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:98089dbc685c71f0fa520369038036b09325c5b269496d5a4604a48a8c5d1a09"},
-    {file = "HTSeq-2.0.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:59a21f3144e00ff7b96fa5ba33e17d9bdfbef411830b5d09b5ba49c0076e9e73"},
-    {file = "HTSeq-2.0.7-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:d411b73a5f500fca9e79b1d6775e0fe29316c6541ad4c3f8b6c9f23462e8aafc"},
-    {file = "HTSeq-2.0.7-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f8817f029e26d92e5a7c6afaf499488a65ce042f7296768a61e4f4d001443507"},
-    {file = "HTSeq-2.0.7-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:3678a995d7468c6ab107c72bf91cf790cb09aace17c0546994b4a9dfd7c34f1d"},
-    {file = "HTSeq-2.0.7-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f60dadeb680fab8b0e07d2673642e699abf5390a128f01ac3a674526c2f54342"},
-    {file = "htseq-2.0.7.tar.gz", hash = "sha256:c1490cede77fb04c8f3a9efeb44d41399cd466a6082180529e63c1dade203fdd"},
+    {file = "HTSeq-2.0.9-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7f49a0b975eb37b51be0e493e81ab6889fe7dbf94099f0c5a7a4ec7b12e02f9c"},
+    {file = "HTSeq-2.0.9-cp310-cp310-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:81326ec698ed6809e084536af8ea6f27f3c461d06d4dc33673a164c8e12b1d36"},
+    {file = "HTSeq-2.0.9-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4f25d34dcf5d298b56de1b38b94fc4bc600261c994402f156bf97b01c5b23f37"},
+    {file = "HTSeq-2.0.9-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:fb8550b4838bf949d4f28621f7513c447b65f965aff596a278879e5862253c5d"},
+    {file = "HTSeq-2.0.9-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:890d2d66452b376d64f60d2832d026fc3dc0a9ea093c1107151d1df6f34eaac8"},
+    {file = "HTSeq-2.0.9-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6db887e6ebf1571666b0922d8449bae123c743f17b728aee42abe619b166de0c"},
+    {file = "HTSeq-2.0.9-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:a0883e975906a90e2b95b44997f4831cc480759be0ca75f8fd567881340faba4"},
+    {file = "HTSeq-2.0.9-cp38-cp38-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c462e30c095109b76631f566d8d94212712a082154ff4a18e6dba7dab74c0720"},
+    {file = "HTSeq-2.0.9-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:9fd3b751129dff0ec7ae224e749c001d72eaf8e0545bceb4f5044c575d0c0659"},
+    {file = "HTSeq-2.0.9-cp39-cp39-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a988cdb5da7362f915f242cd6df87e2639045de689cf19a41e2610fc260b8bb4"},
+    {file = "htseq-2.0.9.tar.gz", hash = "sha256:3bbec23f033d35f40ab33a40c2b5c43f75e382c424b804c099dea635b52c2b12"},
 ]
 
 [package.dependencies]
@@ -3438,4 +3438,4 @@ vis = ["matplotlib", "pyvis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "fa435cd121bcf27cc5b63e75ccc64604972acaa68594948a69572bd814e2d55e"
+content-hash = "38fb9b9f6dcdf011900c547e8e52a956659610b05b3f4ac7a9fd44e3ae56b751"
