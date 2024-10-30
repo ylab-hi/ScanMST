@@ -1,9 +1,4 @@
-"""Module for parallel worker.
-
-@Filename:    parallel.py
-@Author:      YangyangLi
-@Time:        12/15/21 1:58 PM
-"""
+"""Module for parallel worker."""
 
 import multiprocessing
 import os
@@ -11,7 +6,7 @@ from collections.abc import Callable
 from concurrent import futures
 from typing import Any
 
-from scannls.type import LoggerType
+from scannls.mtype import LoggerType
 
 
 class ParallelWorker:

@@ -1,4 +1,5 @@
-"""Module contains the main function of the draft scannls."""
+"""Module contains the main functon of the draft scannls."""
+
 import copy
 import inspect
 import math
@@ -11,27 +12,19 @@ import pyfaidx
 import pysam
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import (
+from scannls.base import (
     Blat,
     CircRNAFilter,
     Event,
     ExonFilter,
+    MappingMode,
     MyLogger,
     ParallelWorker,
     RTSwitchingFilter,
     detect_read_read_connections_from_cigar,
     reverse_complement,
 )
-from scannls.base import MappingMode
-from scannls.graph import NLPath
-from scannls.type import LoggerType
-from scannls.utils import (
-    cigarstring2cigartuples,
-    get_longest_insertion_sequence,
-    get_softclip_length,
-)
-
-from .helper import (
+from scannls.base.helper import (
     blat2chimeric_alignment,
     extract_splice_sites,
     get_transcriptome_length,
@@ -39,7 +32,14 @@ from .helper import (
     obtain_variants_stats,
     strand_mode_checker,
 )
-from .nls_inference import infer_nls_from_connected_reads
+from scannls.base.nls_inference import infer_nls_from_connected_reads
+from scannls.graph import NLPath
+from scannls.mtype import LoggerType
+from scannls.utils import (
+    cigarstring2cigartuples,
+    get_longest_insertion_sequence,
+    get_softclip_length,
+)
 
 
 class BamScanner:
@@ -52,12 +52,10 @@ class BamScanner:
         ref_genome,
         gtf,
         splice_in,
-        blat,
         logger,
         motif_required,
         max_allowed_nm,
         min_soft_seg_len,
-        blat_ident_pct_cutoff,
         long_indel_length,
         substitutions_num,
         substitutions_fraction,
@@ -73,12 +71,10 @@ class BamScanner:
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
-        self.blat = blat
         self.logger = logger
         self.motif_required = motif_required
         self.max_allowed_nm = max_allowed_nm
         self.min_soft_seg_len = min_soft_seg_len
-        self.blat_ident_pct_cutoff = blat_ident_pct_cutoff
 
         self.pat_left_s = re.compile(r"^(\d+)S")
         self.pat_right_s = re.compile(r"(\d+)S$")
@@ -102,8 +98,7 @@ class BamScanner:
     def _count_chrom_info(self, read):
         """Count the chrom and the chrom start and the chrom end."""
         if read.reference_name in self.bam_chrom_info:
-            if read.reference_end > self.bam_chrom_info[read.reference_name][1]:
-                self.bam_chrom_info[read.reference_name][1] = read.reference_end
+            self.bam_chrom_info[read.reference_name][1] = max(read.reference_end, self.bam_chrom_info[read.reference_name][1])
         else:
             self.bam_chrom_info[read.reference_name] = [
                 read.reference_start,
@@ -140,13 +135,12 @@ class BamScanner:
 
                 nm = read.get_tag("NM")
                 md_tag = read.get_tag("MD")
-                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring,
                     md_tag,
                     self.long_indel_length,
                 )
 
-                subs_fraction = 0 if nm == 0 else num_of_subs / nm  # type: ignore
                 if (
                     not (num_of_subs > self.substitutions_num and subs_fraction > self.substitutions_fraction)
                     and ins_fraction <= self.indels_fraction
@@ -185,6 +179,118 @@ def _get_cvg_gene_iv(gtf, splice_bin):
         raise SystemExit(msg) from OSError
 
 
+def update_position_event_list(event_list: list[Event]) -> list[Event]:
+    """Update co-linear exons start/end positions.
+
+    pre_read intersected
+                read
+      [c1] ---- [c2]
+                [c2] ---- [c3]
+                          [c3] ---- [c4]
+            ^         ^         ^
+           evt1      evt2      evt3
+
+     evt1 an evt2: No pre_read_info, so [c1] of evt1 keep unchanged.
+                   Update [c2]'s end position of evt1, using [c2]'s junnction-side position of evt2
+                   Keep [c2] of evt1 as pre_read_info, Add `evt1` in the list.
+
+     evt2 an evt3: Update [c2] of evt2 using pre_read_info.
+                   Update [c3]'s end position of evt2, using [c3]'s junnction-side position of evt3
+                   Keep [c3] of evt2 as pre_read_info, Add `evt2` in the list.
+
+     For the last event:
+                   Update [c3] of evt3 using pre_read_info, Add `evt3` in the list.
+    """
+
+    def is_start_match(event: Event, check_bp1=False) -> bool:
+        """Check if event breakpoint equals to event's ref_start"""
+        bp1_position = int(event.bp1.split(":")[1])
+        bp2_position = int(event.bp2.split(":")[1])
+        if check_bp1:
+            if bp1_position == event.read1_ref_start:
+                return True
+            if bp1_position == event.read1_ref_end:
+                return False
+            return None
+        if bp2_position == event.read2_ref_start:
+            return True
+        if bp2_position == event.read2_ref_end:
+            return False
+        return None
+
+    hop_number = len(event_list)
+    if hop_number < 2:
+        return event_list
+    pre_read_info = None
+    updated_event_list = []
+    for idx, (pre_evt, next_evt) in enumerate(zip(event_list[:], event_list[1:]), 1):
+        # if is_read_reversed is True, pre_read will be read2, intersected read will be read1
+        # otherwise pre_read will be read1, intersected read will be read2
+        if pre_evt.is_read_reversed:
+            if pre_read_info:
+                pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = pre_read_info
+            # intersected read is read1 for previous event
+            is_start_match_for_pre_evt = is_start_match(pre_evt, check_bp1=True)
+            # if is_read_reversed is False, intersected read will be read1
+            # otherwise intersected read will be read2
+            if next_evt.is_read_reversed:
+                # intersected read is read2
+                is_start_match_for_next_evt = is_start_match(next_evt)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read1_ref_end = next_evt.read2_ref_end
+                    pre_evt.read1_exons.last.end = next_evt.read2_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read1_ref_start = next_evt.read2_ref_start
+                    pre_evt.read1_exons.first.start = next_evt.read2_ref_start
+            else:
+                # intersected read is read1 for next event
+                is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read1_ref_end = next_evt.read1_ref_end
+                    pre_evt.read1_exons.last.end = next_evt.read1_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read1_ref_start = next_evt.read1_ref_start
+                    pre_evt.read1_exons.first.start = next_evt.read1_ref_start
+            updated_event_list.append(pre_evt)
+            pre_read_info = pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons
+            if idx == hop_number - 1:
+                if next_evt.is_read_reversed:
+                    next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                else:
+                    next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                updated_event_list.append(next_evt)
+        else:
+            if pre_read_info:
+                pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons = pre_read_info
+
+            is_start_match_for_pre_evt = is_start_match(pre_evt)
+            if next_evt.is_read_reversed:
+                is_start_match_for_next_evt = is_start_match(next_evt)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read2_ref_end = next_evt.read2_ref_end
+                    pre_evt.read2_exons.last.end = next_evt.read2_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read2_ref_start = next_evt.read2_ref_start
+                    pre_evt.read2_exons.first.start = next_evt.read2_ref_start
+            else:
+                is_start_match_for_next_evt = is_start_match(next_evt, check_bp1=True)
+                if is_start_match_for_pre_evt and not is_start_match_for_next_evt:
+                    pre_evt.read2_ref_end = next_evt.read1_ref_end
+                    pre_evt.read2_exons.last.end = next_evt.read1_ref_end
+                elif not is_start_match_for_pre_evt and is_start_match_for_next_evt:
+                    pre_evt.read2_ref_start = next_evt.read1_ref_start
+                    pre_evt.read2_exons.first.start = next_evt.read1_ref_start
+            updated_event_list.append(pre_evt)
+            pre_read_info = pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons
+            if idx == hop_number - 1:
+                if next_evt.is_read_reversed:
+                    next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                else:
+                    next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                updated_event_list.append(next_evt)
+    return updated_event_list
+
+
 def detect_sv_from_cigar(
     *,
     read: pysam.AlignedSegment,
@@ -195,13 +301,13 @@ def detect_sv_from_cigar(
     cvg: HTSeq.GenomicArrayOfSets,
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
-    blat: Blat,
+    blat_ident_pct_cutoff: float,
+    aligner,
     logger: LoggerType,
 ):
     """Detect SV from cigar string.
 
     :param logger: logger for logging
-    :param blat: `class.Blat`
     :param read: A read from pysam.AlignedSegment
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: NM cutoff
@@ -221,7 +327,8 @@ def detect_sv_from_cigar(
         read=read,
         mapq_cutoff=mapq_cutoff,
         max_allowed_nm=max_allowed_nm,
-        blat=blat,
+        aligner=aligner,
+        blat_ident_pct_cutoff=blat_ident_pct_cutoff,
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
@@ -243,7 +350,7 @@ def detect_sv_from_cigar(
                     f"{lt.strand=}, {rt.strand=}, {lt_mode=}, {rt_mode=}",
                 )
 
-            event_type = infer_nls_from_connected_reads(
+            original_event_info = infer_nls_from_connected_reads(
                 read_lt=lt,
                 read_rt=rt,
                 lt_mode=lt_mode,
@@ -254,14 +361,17 @@ def detect_sv_from_cigar(
                 gene_iv=gene_iv,
                 motif_required=motif_required,
             )
-            if event_type is not None:
-                event = Event(event_type)
+            if original_event_info is not None:
+                logger.trace(f"{original_event_info=}")
+                event = Event(original_event_info)
                 event_list.append(event)
                 logger.trace(str(event))
             else:  # temporary solution
-                logger.warning(f"Event Type is NA {event_type=}")
+                logger.warning(f"Event Type is NA {original_event_info=}")
 
-        return event_list, read_chains, num_added_reads
+        updated_event_list = update_position_event_list(event_list)
+
+        return updated_event_list, read_chains, num_added_reads
 
     return None
 
@@ -271,8 +381,8 @@ def _scan_bam_helper(
     lock,
     *,
     running_mode,
-    two_bit,
-    port,
+    blat_two_bit,
+    blat_port,
     tmp_dir,
     blat_info,
     in_bam_path,
@@ -292,13 +402,17 @@ def _scan_bam_helper(
     circular_rna,
     exon_filter,
     rt_switching_filter_len,
+    prune_threshold,
+    max_allowed_ins,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
 
+    # Set exon boundary size internally
+    boundary_size = 10
     genome_fasta = _get_genome_fasta(ref_genome)
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
-    exon_filter = ExonFilter(gtf, 10)
+    exon_filter = ExonFilter(gtf, boundary_size)
     rt_switching_filter = RTSwitchingFilter(rt_switching_filter_len)
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
@@ -312,15 +426,18 @@ def _scan_bam_helper(
 
     logger.trace(f"{identified_key=} start")
 
-    blat_log_file, blat_is_start_server = blat_info
-    blat = Blat(
-        two_bit,
-        port,
-        tmp_dir,
-        fix_log_file=blat_log_file,
-        is_start_server=blat_is_start_server,
-        lock=lock,
-    )
+    if blat_info is None:
+        aligner = None
+    else:
+        blat_log_file, blat_is_start_server = blat_info
+        aligner = Blat(
+            blat_two_bit,
+            blat_port,
+            tmp_dir,
+            fix_log_file=blat_log_file,
+            is_start_server=blat_is_start_server,
+            lock=lock,
+        )
 
     nls_src_forms_list = []
 
@@ -328,7 +445,7 @@ def _scan_bam_helper(
     pat_right_s = re.compile(r"(\d+)S$")
 
     # Circular RNA filter
-    circ_rna_filter = CircRNAFilter(gtf, 10, 10)
+    circ_rna_filter = CircRNAFilter(gtf, boundary_size, prune_threshold)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
         if (
@@ -396,12 +513,13 @@ def _scan_bam_helper(
                 if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
                     soft_seq_ori = reverse_complement(ret[1]) if read.is_reverse else ret[1]
                     read_mode = ret[-1]
+                    logger.trace("Funcion blat2chimeric_alignment works on it.")
                     chimeric_aln_str = blat2chimeric_alignment(
                         soft_seq_ori,
                         read_length,
                         read_strand,
                         read_mode,
-                        blat,
+                        aligner,
                         mapq_cutoff,
                         max_allowed_nm,
                         blat_ident_pct_cutoff,
@@ -423,6 +541,7 @@ def _scan_bam_helper(
                 # Detect novel chimeric alignments for reads with long insertion (I)
                 # but without SA tags using BLAT
                 elif ins_ref_pos > 0:
+                    logger.trace("Funcion insertion2chimeric_alignment works on it.")
                     (
                         primary_aln_cigarstring,
                         chimeric_aln_str,
@@ -432,8 +551,9 @@ def _scan_bam_helper(
                         ins_seq,
                         read_length,
                         read_strand,
+                        mapq_cutoff,
                         max_allowed_nm,
-                        blat,
+                        aligner,
                         blat_ident_pct_cutoff,
                     )
 
@@ -465,13 +585,11 @@ def _scan_bam_helper(
                 if read.cigarstring is None:
                     msg = f"{read}'s cigarstring is None"
                     raise ValueError(msg)
-                num_of_subs, ins_fraction, del_fraction = obtain_variants_stats(
+                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
                     read.cigarstring,
                     read.get_tag("MD"),
                     long_indel_length,
                 )
-
-                subs_fraction = 0 if nm == 0 else num_of_subs / int(nm)
 
                 if (
                     not (num_of_subs > substitutions_num and subs_fraction > substitutions_fraction)
@@ -487,11 +605,12 @@ def _scan_bam_helper(
                         cvg=cvg,
                         gene_iv=gene_iv,
                         motif_required=motif_required,
-                        blat=blat,
+                        aligner=aligner,
+                        blat_ident_pct_cutoff=blat_ident_pct_cutoff,
                         logger=logger,  # type: ignore
                     ):
                         event_lists, read_chains, num_added_reads = ret
-                        logger.trace(f"{read_chains=}")
+                        logger.trace(f"Unordered {event_lists=}, {read_chains=}")
                     else:
                         event_lists, read_chains, num_added_reads = [], [], 0
 
@@ -540,12 +659,18 @@ def _scan_bam_helper(
                             cvg=cvg,
                             gene_iv=gene_iv,
                             motif_required=motif_required,
-                            blat=blat,
+                            aligner=aligner,
                         )
 
                         nlpath.squeeze()
+                        nlpath.setup_breakpoints()
 
-                        if not nlpath.is_all_type_del() and nlpath.is_minimum_node_length_larger_than_threshold():
+                        if (
+                            not nlpath.is_all_type_del()
+                            and not nlpath.is_forming_circle(prune_threshold)
+                            and nlpath.is_maximum_novel_insertion_length_valid(max_allowed_ins)
+                            and nlpath.is_minimum_node_length_larger_than_threshold(boundary_size)
+                        ):
                             if circular_rna == "remove":
                                 if not circ_rna_filter.is_circrna(nlpath):
                                     nls_src_forms_list.append(nlpath)
@@ -560,6 +685,13 @@ def _scan_bam_helper(
                             else:
                                 nls_src_forms_list.append(nlpath)
                                 logger.trace(f"{nlpath=}")
+
+                        # debug purposes only, remove it later
+                        elif nlpath.is_forming_circle(prune_threshold):
+                            logger.warning(
+                                f"{nlpath} is filtered out owing to forming circle",
+                            )
+
                 else:
                     logger.trace(
                         f"{read.query_name= } does not pass the substitutions/indel cutoff. "
@@ -572,8 +704,8 @@ def _scan_bam_helper(
 
 
 def scanbam_run(
-    two_bit,
-    port,
+    blat_two_bit,
+    blat_port,
     tmp_dir,
     blat_info,
     in_bam_path,
@@ -596,6 +728,8 @@ def scanbam_run(
     circular_rna,
     exon_filter,
     rt_switching_filter_len,
+    prune_threshold,
+    max_allowed_ins,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(
@@ -604,12 +738,10 @@ def scanbam_run(
         ref_genome=Path(ref_genome),
         gtf=Path(gtf),
         splice_in=splice_bin,
-        blat=blat,
         logger=logger,
         motif_required=motif_required,
         max_allowed_nm=max_allowed_nm,
         min_soft_seg_len=min_soft_seg_len,
-        blat_ident_pct_cutoff=blat_ident_pct_cutoff,
         long_indel_length=long_indel_length,
         substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,

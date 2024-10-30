@@ -1,4 +1,5 @@
 """Useful functions for scannls."""
+
 from __future__ import annotations
 
 import os
@@ -25,18 +26,23 @@ if TYPE_CHECKING:
 
     import pysam
 
-    from .type import LoggerType
+    from .mtype import LoggerType
 
 __all__ = [
     "cigar_validity",
-    "external_tool_checking",
-    "get_softclip_length",
-    "get_longest_insertion_sequence",
     "cigarstring2cigartuples",
-    "timeit",
-    "sleep",
+    "external_tool_checking",
     "find_2bit_file",
+    "get_current_time",
+    "get_longest_insertion_sequence",
+    "get_softclip_length",
+    "sleep",
+    "timeit",
 ]
+
+
+def get_current_time() -> str:
+    return time.strftime("%Y%m%d_%H%M%S")
 
 
 def external_tool_checking(software: list[str], log_handler: LoggerType) -> None:
@@ -213,13 +219,13 @@ def get_longest_insertion_sequence(
         _len = cigartuples_without_soft[idx + 1]
 
         if op_code == 0:  # M
-            current_pos = current_pos + _len
-            current_len = current_len + _len
+            current_pos += _len
+            current_len += _len
         elif op_code in {2, 3}:  # D or N
-            current_pos = current_pos + _len
+            current_pos += _len
         elif op_code == 1:  # I
             insertion_list.append((current_pos, current_len, _len))
-            current_len = current_len + _len
+            current_len += _len
 
     if len(insertion_list) == 0:
         return 0, "", 0

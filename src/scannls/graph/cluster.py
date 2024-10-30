@@ -1,8 +1,5 @@
-"""cluster paths.
+"""cluster NLpaths."""
 
-@Filename:    cluster.py
-@Time:        1/19/22 7:59 PM
-"""
 from itertools import combinations
 
 import networkx as nx
@@ -160,14 +157,14 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
                 nodes_idx=start_index + idx,
             )
         ) is not None and (node2_edge := path2.next_edge(nodes=current_node, nodes_idx=idx)) is not None:
-            node1_edge.merge(node2_edge, current_node.strand, path2[idx + 1].strand)
+            node1_edge.merge(node2_edge, current_node.strand, path2[idx + 1].strand, merge_insertion_info=False)
 
 
 def merge_same_len_node_list(
     path1: NLPath,
     path2: NLPath,
     start_index: int,
-    threashold: int,
+    threshold: int,
 ) -> bool:
     """seires1 is equal than series2 and series1 merge series2.
 
@@ -175,9 +172,7 @@ def merge_same_len_node_list(
     s2:                [ ] - [ ] - [ ]
     """
 
-    merge_condition = MergeCondition(threashold)
-
-    flag = True
+    merge_condition = MergeCondition(threshold)
 
     for idx, (node1, node2) in enumerate(
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
@@ -187,43 +182,40 @@ def merge_same_len_node_list(
 
         same_edge = True
         if node2_edge is not None and node1_edge is not None:
-            same_edge = node1_edge.merged(
+            same_edge = node1_edge.insertion_info == node2_edge.insertion_info and node1_edge.merged(
                 node2_edge,
                 compared_break_point=False,
             )
 
+        if not same_edge:
+            return False
+
         if node1.self_identity.is_head() and node2.self_identity.is_head():
-            if not (same_edge and merge_condition.head2head(node1, node2)):
-                flag = False
-                break
+            if not merge_condition.head2head(node1, node2):
+                return False
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_head():
-            if not (same_edge and merge_condition.mid2head(node1, node2)):
-                flag = False
-                break
+            if not merge_condition.mid2head(node1, node2):
+                return False
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_mid():
-            if not (same_edge and merge_condition.mid2mid(node1, node2)):
-                flag = False
-                break
+            if not merge_condition.mid2mid(node1, node2):
+                return False
 
         elif node1.self_identity.is_mid() and node2.self_identity.is_tail():
             if not merge_condition.mid2tail(node1, node2):
-                flag = False
-                break
+                return False
 
         elif node1.self_identity.is_tail() and node2.self_identity.is_tail():
             if not merge_condition.tail2tail(node1, node2):
-                flag = False
-                break
-
+                return False
         else:
             msg = f"invalid node identity node1.self_identity={node1.self_identity!r} node2.self_identity={node2.self_identity!r}"
             raise ValueError(
                 msg,
             )
 
-    return flag
+    return True
 
 
 class ClusterFinder:
@@ -329,6 +321,7 @@ class ClusterFinder:
         path1: NLPath,
         path2: NLPath,
         merge_keys: dict[int, list[str]],
+        threadhold: int,
     ) -> bool:
         nlpath_2_nodes_key = "".join(merge_keys[path2.id])
 
@@ -341,20 +334,21 @@ class ClusterFinder:
                 path1,
                 path2,
                 start_index,
-                1,
+                threadhold,
             ):
                 merge_nlpath(path1, path2, start_index)  # type: ignore
+                path1.polish_edges()
                 path1.merge_factor += 1
                 return True
 
         return False
 
     @staticmethod
-    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]):
+    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]], threshold: float):
         """Check if nlpath1 can merge nlpath2."""
 
         if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
-            return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys)
+            return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys, threshold)
 
         msg = "nlpath1 is shorter than nlpath2"
         raise ValueError(msg)
@@ -371,8 +365,7 @@ class ClusterFinder:
             logger.debug(f"{len(sorted_nlpaths)=} nlpaths for merge: {sorted_nlpaths}")
 
             merge_keys = self.creat_merge_indexs(sorted_nlpaths)
-            new_cluster = []
-            ClusterFinder._merge_cluster(sorted_nlpaths, new_cluster, merge_keys)
+            new_cluster = ClusterFinder._merge_cluster(sorted_nlpaths, merge_keys, self.ruler.prune_threshold)
             yield sort_cluster(
                 new_cluster,
                 key=create_sort_key_by_merge_factor,  # type: ignore
@@ -380,17 +373,22 @@ class ClusterFinder:
             )
 
     @staticmethod
-    def _merge_cluster(nlpaths, result, merge_keys):
+    def _merge_cluster(nlpaths, merge_keys, threshold: int):
+        result = []
+        removed_nlpaths = set()  # Use a set to keep track of removed paths for efficiency
+
         while nlpaths:
-            slected_nlpath = nlpaths.pop()
+            selected_nlpath = nlpaths.pop()
+            # Iterate over a copy of the list to safely modify the original list
+            for current_nlpath in list(nlpaths):
+                if current_nlpath in removed_nlpaths:
+                    continue  # Skip this one as it's already marked for removal
 
-            for current_nlpath in nlpaths:
-                if ClusterFinder.check_merge(
-                    slected_nlpath,
-                    current_nlpath,
-                    merge_keys,
-                ):
-                    nlpaths.remove(current_nlpath)
+                # Check if the selected and current nlpaths should be merged
+                if ClusterFinder.check_merge(selected_nlpath, current_nlpath, merge_keys, threshold):
+                    removed_nlpaths.add(current_nlpath)
 
-            result.append(slected_nlpath)
+            # Remove all marked nlpaths from the main list after checking
+            nlpaths = [nlpath for nlpath in nlpaths if nlpath not in removed_nlpaths]
+            result.append(selected_nlpath)
         return result

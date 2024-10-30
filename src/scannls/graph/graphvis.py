@@ -1,8 +1,5 @@
-"""Plot Graphs.
+"""Visualize Graphs."""
 
-@Author:      YangyangLi
-@Time:        1/28/22 8:46 PM
-"""
 from __future__ import annotations
 
 import json
@@ -11,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import networkx as nx
+from loguru import logger
 from matplotlib import pyplot as plt  # type: ignore
 
 if TYPE_CHECKING:
@@ -85,42 +83,66 @@ class GraphVis:
     def get_label_from_node(node: Node) -> str:
         """Get label from node."""
         head_node = "H" if node.is_start_node() else "T"
-        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}{node.strand}"
+        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}_{node.trace_id}"
 
     @staticmethod
     def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
         """Add node to graph."""
+        node_label = GraphVis.get_label_from_node(node)
         graph.add_node(
-            GraphVis.get_label_from_node(node),
+            node_label,
             chrom=node.chrom,
             ref_start=node.ref_start,
             ref_end=node.ref_end,
             strand=str(node.strand),
             is_head=node.is_start_node(),
+            trace_id=node.trace_id,
         )
 
-    @staticmethod
     def add_edge_to_graph(
+        self,
         node1: Node,
         node2: Node,
         edge: Edge,
         graph: nx.Graph,
     ) -> None:
         """Add edge to graph."""
-        graph.add_edge(
-            GraphVis.get_label_from_node(node1),
-            GraphVis.get_label_from_node(node2),
-            label=f"{edge.variation_type}_{edge.insertion_info}_{edge.sr}",
-            weight=edge.sr,
-            read_ids=edge.read_ids,
-        )
+        edge_label = f"{edge.variation_type}_{edge.insertion_info}_{edge.sr}"
+        node1_label = GraphVis.get_label_from_node(node1)
+        node2_label = GraphVis.get_label_from_node(node2)
+
+        if graph.has_edge(node1_label, node2_label):
+            current_edge_label = [i["label"] for i in graph[node1_label][node2_label].values()]
+            if edge_label not in current_edge_label:
+                logger.warning(f"vis: multiple edges between {node1_label} and {node2_label}")
+                graph.add_edge(
+                    node1_label,
+                    node2_label,
+                    label=edge_label,
+                    weight=edge.sr,
+                    read_ids=edge.read_ids,
+                    gene1=edge.gene1,
+                    gene2=edge.gene2,
+                )
+        else:
+            graph.add_edge(
+                node1_label,
+                node2_label,
+                label=edge_label,
+                weight=edge.sr,
+                read_ids=edge.read_ids,
+            )
 
     def create_nxgraph(self) -> nx.DiGraph:
         # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
+
         g = nx.MultiDiGraph()
 
-        for start_node in self.nlgraph.get_start_nodes():
-            self._traverse_graph(start_node, [start_node], g, self.nlgraph)  # type: ignore
+        try:
+            for start_node in self.nlgraph.get_start_nodes():
+                self._traverse_graph(start_node, [start_node], g, self.nlgraph)  # type: ignore
+        except RecursionError:
+            logger.error("RecursionError: maximum recursion depth exceeded when export graph")
 
         return g
 
@@ -139,13 +161,18 @@ class GraphVis:
 
         if successors := start_node.successors:
             for successor in successors:
-                for edge in graph.get_possible_edges(
-                    path,
-                    start_node,
-                    successor,
-                    self.min_supprt_reads,  # minimal support_reads,
-                    filter_edges=False,
+                for idx, edge in enumerate(
+                    graph.get_possible_edges(
+                        path,
+                        start_node,
+                        successor,
+                        self.min_supprt_reads,  # minimal support_reads,
+                        filter_edges=False,
+                    )
                 ):
+                    if idx > 0:
+                        logger.warning("Vis: multiple edges between {} and {}", start_node, successor)
+
                     self.add_node_to_graph(successor, nx_graph)
                     self.add_edge_to_graph(start_node, successor, edge, nx_graph)
                     self._traverse_graph(
@@ -237,7 +264,7 @@ def visualize_graph_via_matplot(
 ) -> None:
     node_numbers = len(list(graph))
 
-    fig, ax = plt.subplots(figsize=_cal_figure_size(node_numbers))
+    _fig, ax = plt.subplots(figsize=_cal_figure_size(node_numbers))
 
     pos = nx.spring_layout(graph, seed=42)
 

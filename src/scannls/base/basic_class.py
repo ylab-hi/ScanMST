@@ -1,8 +1,5 @@
-"""Type of the scannls.
+"""Type of the scannls."""
 
-@Author:      YangyangLi
-@Time:        12/30/21 2:20 PM
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -60,6 +57,13 @@ class NovelInsertion:
         """Increment ao."""
         self.ao += num
 
+    def __eq__(self, other) -> bool:
+        """Check if two NovelInsertion objects are equal."""
+        if not isinstance(other, NovelInsertion):
+            return False
+
+        return self.query_sequence == other.query_sequence
+
 
 class MicroHomology:
     """MicroHomology is used to represent microhomology.
@@ -94,6 +98,12 @@ class MicroHomology:
     def increment_ao(self, num=1) -> None:
         """Increment ao."""
         self.ao += num
+
+    def __eq__(self, other) -> bool:
+        """Check if two MicroHomology objects are equal."""
+        if not isinstance(other, MicroHomology):
+            return False
+        return self.query_sequence == other.query_sequence
 
 
 class Insertion(Read):
@@ -267,22 +277,14 @@ class Event:
 
     def __init__(self, event) -> None:
         """Initialize the event."""
-        (
-            sv_type,
-            annot,
-            canonical,
-            _positions,
-            read1_info,
-            read2_info,
-            insertion_info,
-            strands,
-            genes,
-        ) = event
+        (sv_type, annot, canonical, _positions, read1_info, read2_info, insertion_info, strands, genes, is_read_reversed) = event
 
         self.sv_type = sv_type
+
         self.annotation_code = annot
         self.splicing_code = canonical
         self.genes = genes
+
         self.insertion_info = insertion_info
         self.positions = _positions
         self.bp1, self.bp2 = _positions[:2]
@@ -291,14 +293,18 @@ class Event:
         self.strand2 = Strand.from_str(strands[1])
         self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info
         self.read2_ref_start, self.read2_ref_end, self.read2_exons = read2_info
+        self.is_read_reversed = is_read_reversed
+        from loguru import logger
+
+        logger.trace(f"{read1_info=}, {read2_info=}, {event=}")
 
     def __repr__(self) -> str:
         """Return the string representation of the event."""
         return (
             f"Event({self.sv_type}, {self.annotation_code}, {self.splicing_code} ({self.bp1} "
             f"{self.bp2} {self.mode1} {self.mode2}) "
-            f"{self.strand1} {self.read1_ref_start} {self.read1_ref_end} "
-            f"{self.strand2} {self.read2_ref_start} {self.read2_ref_end} "
+            f"{self.strand1} {self.read1_ref_start=} {self.read1_ref_end=} "
+            f"{self.strand2} {self.read2_ref_start=} {self.read2_ref_end=} "
             f"{self.insertion_info})"
         )
 
@@ -395,17 +401,23 @@ class Event:
         """Return True if the event is same strand."""
         return self.strand1 == self.strand2
 
-    def read1(self, read_chains: list[Read]) -> Read:
+    def read1(self, read_chains: list[Read], shift_length) -> Read:
         """Return the read1 of the event."""
         for read in read_chains:
-            if read.ref_start == self.read1_ref_start and read.ref_end == self.read1_ref_end and read.strand == self.strand1:
+            if (
+                abs(read.ref_start - self.read1_ref_start) <= shift_length
+                and abs(read.ref_end - self.read1_ref_end) <= shift_length
+            ) and read.strand == self.strand1:
                 return read
         raise ReadNotFoundError
 
-    def read2(self, read_chains: list[Read]) -> Read:
+    def read2(self, read_chains: list[Read], shift_length) -> Read:
         """Return the read2 of the event."""
         for read in read_chains:
-            if read.ref_start == self.read2_ref_start and read.ref_end == self.read2_ref_end and read.strand == self.strand2:
+            if (
+                abs(read.ref_start - self.read2_ref_start) <= shift_length
+                and abs(read.ref_end - self.read2_ref_end) <= shift_length
+            ) and read.strand == self.strand2:
                 return read
         raise ReadNotFoundError
 
@@ -420,36 +432,6 @@ class Event:
             setattr(node, key, getattr(self, key))
 
         return node
-
-    def update_node_info(
-        self,
-        new_node,
-    ):
-        """Update the common info the node in the front, and the common info includes.
-
-        sv_type, annot, canonical, genes, insertion_info, and the breakpoints, mode
-
-        :param flag: the flag indicates whether there is a insertion
-        :param new_node: the new node to be updated
-        :param insertion: the insertion to be updated
-        :param is_update_insertion_info: whether to update the insertion info
-        :return: the updated node
-        """
-        new_node = self.update_specific_info_within_event(
-            new_node,
-            ["annotation_code", "splicing_code", "genes"],
-        )
-
-    def update_insertion_node_info(self, insertion_node):
-        """Update the information of insertion.
-
-        :param insertion_node: the insertion to be updated
-        :return: the updated insertion
-        """
-        self.update_specific_info_within_event(
-            insertion_node,
-            ["annotation_code", "splicing_code", "genes"],
-        )
 
 
 def reverse_complement(seq: str) -> str:

@@ -1,9 +1,5 @@
-"""CLi for scannls.
+"""CLi for scannls."""
 
-@Filename:    cli.py
-@Author:      YangyangLi
-@Time:        1/11/22 4:28 PM
-"""
 from __future__ import annotations
 
 import os
@@ -11,28 +7,22 @@ import sys
 import tempfile
 import time
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls import (
-    Blat,
-    FastaWriter,
-    GTFWriter,
-    MyLogger,
-    ParallelWorker,
-    VCFWriter,
-    Writers,
-)
+from scannls.base import Blat, MyLogger, ParallelWorker
 from scannls.graph import ClusterFinder, NLGraph
 from scannls.utils import find_2bit_file, sleep
+from scannls.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 from .main import scanbam_run
 
 if TYPE_CHECKING:
     import argparse
 
-    from scannls.type import LoggerType
+    from scannls.mtype import LoggerType
 
     from .arg import DefaultOptions
 
@@ -43,13 +33,15 @@ sys.setrecursionlimit(10000)
 def get_writers(
     output_prefix: str,
     ref_path: str,
+    rescue_sr: bool,
     bam_header: Any,
 ) -> Writers:
     """Get writers."""
     fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path)
-    gtf_writer = GTFWriter(f"{output_prefix}.gtf")
+    gtf_writer = GTFWriter(f"{output_prefix}.gtf", rescue_sr)
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
+        rescue_sr,
         ref_path,
         bam_header,
     )
@@ -77,6 +69,8 @@ def parse_nlgraph_for_cluster_seq(
         options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
+        ignore_circle=options.ignore_circle,
+        rescue_sr=options.rescue_sr,
     )
 
     with writers.open():
@@ -114,6 +108,8 @@ def _parse_nlgraph_for_cluster_par(
         options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
+        ignore_circle=options.ignore_circle,
+        rescue_sr=options.rescue_sr,
     )
 
     result = []
@@ -166,6 +162,9 @@ def parse_nlgraph_for_cluster_par(
 def cli(options: argparse.Namespace | DefaultOptions):
     """Cli function."""
     start = time.perf_counter()
+
+    options.input = Path(options.input).resolve().as_posix()
+
     logger.remove()
     if options.log.upper() == "INFO":
         info_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>"
@@ -190,25 +189,31 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
-    logger.info(f"{options.input=} {options.closed=}")
+    logger.info(f"{options.input=} {options.blat_closed=}")
     logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
-    # find 2bit file
-    if options.two_bit is None:
-        options.two_bit = find_2bit_file(options.ref)
-    blat = Blat(options.two_bit, options.port, tmp_dir.name)
-    # delay random seconds to preventing from starting multiple servers simultaneously
-    if options.sleep:
-        sleep(options.input)
-    blat.start_server()
-    blat_info = blat.log_file_path, blat.is_start_server
+    if options.aligner == "blat":
+        # find 2bit file
+        if options.blat_two_bit is None:
+            options.two_bit = find_2bit_file(options.ref)
+        blat = Blat(options.blat_two_bit, options.blat_port, tmp_dir.name)
+        # delay random seconds to preventing from starting multiple servers simultaneously
+        if options.blat_sleep:
+            sleep(options.input)
+        blat.start_server()
+        blat_info = blat.log_file_path, blat.is_start_server
+    elif options.aligner is None:
+        blat_info, blat = None, None
+    else:
+        blat_info, blat = "star", None
+
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
         intact_nlpaths, in_bam_header, avg_cov = scanbam_run(
-            two_bit=options.two_bit,
-            port=options.port,
+            blat_two_bit=options.blat_two_bit,
+            blat_port=options.blat_port,
             tmp_dir=tmp_dir.name,
             blat_info=blat_info,
             in_bam_path=options.input,
@@ -231,6 +236,8 @@ def cli(options: argparse.Namespace | DefaultOptions):
             circular_rna=options.circular_rna,
             exon_filter=options.exon_filter,
             rt_switching_filter_len=options.rt_switching_filter_len,
+            prune_threshold=options.prune_threshold,
+            max_allowed_ins=options.max_allowed_ins,
         )
 
         avg_cov = None if not options.bound else avg_cov
@@ -247,7 +254,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
-        writers = get_writers(options.output, options.ref, in_bam_header)
+        writers = get_writers(options.output, options.ref, options.rescue_sr, in_bam_header)
         parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
 
         node_rescued_sr_max = 100
@@ -263,13 +270,13 @@ def cli(options: argparse.Namespace | DefaultOptions):
         logger.info(f"ScanNLS takes {time.perf_counter() - start:.2f} seconds.")
 
     except KeyboardInterrupt:
-        if options.closed and not blat.is_stop_server:
-            logger.warning("KeyboardInterrupt")
+        logger.warning("KeyboardInterrupt")
+        if options.aligner == "blat" and blat and options.blat_closed and not blat.is_stop_server:
             blat.stop_server()
             tmp_dir.cleanup()
         raise
     finally:
-        if options.closed and not blat.is_stop_server:
-            logger.info("Program ends")
+        logger.info("Program ends")
+        if options.aligner == "blat" and blat and options.blat_closed and not blat.is_stop_server:
             blat.stop_server()
             tmp_dir.cleanup()

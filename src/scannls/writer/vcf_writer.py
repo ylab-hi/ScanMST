@@ -1,7 +1,5 @@
-"""VCF Writer class.
-@Filename:    vcfWriter.py
-@Time:        1/30/22 6:19 PM
-"""
+"""VCF Writer class."""
+
 from __future__ import annotations
 
 import datetime
@@ -12,12 +10,9 @@ from typing import IO, Any, ClassVar
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import MicroHomology, NovelInsertion, __version__, reverse_complement
+from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (
-    AnnotationCodeNotFoundError,
     BreakpointNotFoundError,
-    GenesNotFoundError,
-    SplicingCodeNotFoundError,
 )
 from scannls.graph import NLPath, Node  # noqa: TCH001
 
@@ -106,7 +101,7 @@ class VCFWriter(Writer):
         "END": "A placeholder for END coordinate in case of a translocation",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
-        "MEGAEXON1": "ID for source mega exon",
+        "MEGAEXON1": "ID for source mega exon",  # Given multiple transcripts, there may be multiple megaexons
         "MEGAEXON2": "ID for target mega exon",
         "TRANSCRIPT_ID": "Transcript ID",
         "GENE_ID": "Gene ID",
@@ -129,11 +124,13 @@ class VCFWriter(Writer):
     def __init__(
         self,
         file_path: str,
+        rescue_sr: bool,
         reference: str,
         bam_header: dict[str, Any],
     ) -> None:
         """Initialize VCFWriter object."""
         super().__init__(file_path)
+        self.rescue_sr = rescue_sr
         self.reference = Path(reference)
         if not self.reference.exists():
             raise FastaNotFoundError
@@ -214,6 +211,7 @@ class VCFWriter(Writer):
         for _hop_vcf_feature in get_vcf_features_from_nlpath(
             data_object,
             cluster_id,
+            self.rescue_sr,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
@@ -227,6 +225,14 @@ class VCFWriter(Writer):
             else:
                 # multiple transcripts go through the same one hop
                 out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
+                out_vcf_dict[type_position_key]["MEGAEXON1"] += f',{hop_feature[type_position_key]["MEGAEXON1"]}'
+                out_vcf_dict[type_position_key]["MEGAEXON2"] += f',{hop_feature[type_position_key]["MEGAEXON2"]}'
+                out_vcf_dict[type_position_key]["SR_ID"] += f',{hop_feature[type_position_key]["SR_ID"]}'
+                # deal with 'Y' shape NLS graph
+                if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
+                    out_vcf_dict[type_position_key]["READS"].update(hop_feature[type_position_key]["READS"])
+                    out_vcf_dict[type_position_key]["SR"] += hop_feature[type_position_key]["SR"]
+                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[type_position_key]["OSR"]
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -237,7 +243,7 @@ class VCFWriter(Writer):
         """VCF header provides metadata describing the body of the file."""
 
         date = datetime.datetime.today().strftime("%Y%m%d")
-        source = f"ScanNLS v{__version__}"
+        source = "ScanNLS"
         reference = f"<CMD={obtain_reference_from_bam_header(self.bam_header)}," 'Description="Alignment parameters">'
 
         header_lines = [
@@ -250,7 +256,7 @@ class VCFWriter(Writer):
 
         for _id in VCFWriter.reserved_info:
             _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
-            if _id in {"TRANSCRIPT_ID", "SR_ID"}:
+            if _id in {"TRANSCRIPT_ID", "SR_ID", "MEGAEXON1", "MEGAEXON2"}:
                 _number = "."
             header_lines.append(
                 f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},"
@@ -312,6 +318,7 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 def get_vcf_features_from_nlpath(
     nlpath: NLPath,
     cluster_id: str,
+    rescue_sr: bool,
 ):
     """Obtain hop vcf features from one series."""
     path_hops_features = []
@@ -322,17 +329,11 @@ def get_vcf_features_from_nlpath(
         current_edge = nlpath.next_edge(current_node, event_id - 1)
         next_node = nlpath[event_id]
 
-        if current_node.splicing_code is None:
-            raise SplicingCodeNotFoundError(current_node.query_name)
-        can_field = can_field_dict[current_node.splicing_code]  # type: ignore
+        can_field = can_field_dict[current_edge.splicing_code]
 
-        if current_node.annotation_code is None:
-            raise AnnotationCodeNotFoundError(current_node.query_name)
-        anno_field = anno_field_dict.get(current_node.annotation_code, "BOTH")  # type: ignore
+        anno_field = anno_field_dict.get(current_edge.annotation_code, "BOTH")
 
-        if current_node.genes is None:
-            raise GenesNotFoundError(current_node.query_name)
-        gene1, gene2 = current_node.genes
+        gene1, gene2 = current_edge.gene1, current_edge.gene2
 
         _mode1, _mode2 = current_edge.modes
         mode1 = _mode1.to_str()
@@ -360,15 +361,19 @@ def get_vcf_features_from_nlpath(
                     current_node,
                 )
 
-        # correct the breakpoint position in order to obtain a precise "sv_distance"
-        _pos1 = _pos1 - len(microhomology_sequence) if current_node.strand == "+" else _pos1 + len(microhomology_sequence)
-
         sv_distance = abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
         _dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
 
         _dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
 
         _pso = 0 if _dp1 == 0 or _dp2 == 0 else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
+
+        if rescue_sr:
+            sr = current_edge.sr
+            osr = current_edge.original_sr
+        else:
+            sr = current_edge.sr
+            osr = current_edge.sr
 
         path_hops_features.append(
             {
@@ -378,8 +383,8 @@ def get_vcf_features_from_nlpath(
                     "REF": ".",
                     "ALT": f"<{current_edge.variation_type}>",
                     "SVTYPE": current_edge.variation_type,
-                    "SR": current_edge.sr,
-                    "OSR": current_edge.original_sr,
+                    "SR": sr,
+                    "OSR": osr,
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
                     "CHR2": _chrom2,
@@ -398,7 +403,8 @@ def get_vcf_features_from_nlpath(
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": f"{cluster_id}x{nlpath.id}",
                     "GENE_ID": f"{cluster_id}",
-                    "SR_ID": f"{','.join(current_edge.read_ids)}",
+                    "SR_ID": f"{'|'.join(current_edge.read_ids)}",
+                    "READS": set(current_edge.read_ids),
                     "SVMETHOD": "ScanNLS",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
                     "INSSEQ": microinsertion_sequence if microinsertion_sequence else ".",
@@ -455,4 +461,4 @@ def obtain_sequence_from_insertion(
     if not novel_insertion_sequence:
         return ""
 
-    return novel_insertion_sequence if node.strand == "+" else reverse_complement(novel_insertion_sequence)
+    return novel_insertion_sequence if node.strand.is_forward() else reverse_complement(novel_insertion_sequence)

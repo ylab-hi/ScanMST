@@ -1,9 +1,5 @@
-"""Type of the scannls.
+"""Type of the scannls."""
 
-@Filename:    type.py
-@Author:      Yangyang Li
-@Time:        12/30/21 2:20 PM
-"""
 from typing import Any, Protocol
 
 EventType = tuple[

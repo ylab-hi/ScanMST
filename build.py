@@ -1,9 +1,5 @@
-"""Build cpp extension.
+"""Build cpp extension."""
 
-@Filename:    build.py
-@author:      Yangyang Li
-@Time:        1/7/22 3:00 PM
-"""
 from __future__ import annotations
 
 import os

@@ -1,9 +1,5 @@
-"""FastaWriter class.
+"""FastaWriter class."""
 
-@Filename:    fastaWriter.py
-@Author:      YangyangLi
-@Time:        1/30/22 6:18 PM
-"""
 from functools import singledispatchmethod
 from pathlib import Path
 from typing import IO, Any
@@ -11,7 +7,7 @@ from typing import IO, Any
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
-from scannls import MicroHomology, NovelInsertion, reverse_complement
+from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.graph import NLPath, Node
 
 from .writer import Writer
@@ -139,4 +135,4 @@ def get_exon_sequence_from_node(node: Node, insertion_info, reference_io: Fasta)
     node_sequence = node_sequence if node.strand.is_forward() else reverse_complement(node_sequence)
 
     node_sequence += novel_insertion_sequence
-    return node_sequence[: len(node_sequence) - len(microhomology_sequence)]
+    return node_sequence[: len(node_sequence)]

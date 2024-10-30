@@ -1,8 +1,11 @@
+"""Basic NLGraph operations."""
+
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
+from itertools import combinations
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from loguru import logger
@@ -16,9 +19,15 @@ from scannls.base import (
     MicroHomology,
     NovelInsertion,
     Strand,
+    infer_nls_from_connected_reads,
     reverse_complement,
 )
-from scannls.cli import infer_nls_from_connected_reads
+
+from .merge_condition import (
+    _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
+    _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode,
+    _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -32,16 +41,16 @@ class BasicNode:
     """BasicNode is used to represent nodes in the nlgraph."""
 
     __slots__ = (
-        "successors",
-        "predecessors",
+        "is_in_graph",
+        "is_merged",
+        "is_traced",
         "merged_child_nodes",
         "merged_parent_nodes",
         "next_node_in_nlpath",
-        "previous_node_in_nlpath",
+        "predecessors",
         "previous_edge_in_nlapth",
-        "is_merged",
-        "is_in_graph",
-        "is_traced",
+        "previous_node_in_nlpath",
+        "successors",
         "trace_id",
     )
 
@@ -237,15 +246,13 @@ class Node(BasicNode):
         "_ref_end",
         "exons",
         "_introns",
-        "genes",  # WARN: delete and move to edge
         "gene_names",
         "query_name",
-        "annotation_code",
-        "splicing_code",
         "_unique_key",
         "is_polya",
         "cigartuples_without_soft",
         "identities",
+        "breakpoints",
         *BasicNode.__slots__,
     )
 
@@ -258,9 +265,6 @@ class Node(BasicNode):
         ref_end: int,
         identity: NodeIdentity,
         exons: Exons,
-        annot: int | None = None,
-        canonical: int | None = None,
-        genes: tuple[str, str] | None = None,
         cigartuples_without_soft: list[int] | None = None,
     ) -> None:
         """Initialize a Node object."""
@@ -274,16 +278,47 @@ class Node(BasicNode):
         self.exons = exons
         self._introns = exons.introns()
 
-        self.genes = genes
         self.gene_names: list[str] = []
 
-        self.annotation_code = annot
-        self.splicing_code = canonical
         self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
-        self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.query_name}"
+        self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
+
+        self.breakpoints = defaultdict(int)
+
+    def set_up_breakpoints(self) -> None:
+        logger.debug(f"Set up breakpoints for {self!r}")
+        if self.self_identity is NodeIdentity.HEAD:
+            if self.strand.is_reverse():
+                self.breakpoints[self.ref_start] += 1
+            else:
+                self.breakpoints[self.ref_end] += 1
+        elif self.self_identity is NodeIdentity.TAIL:
+            if self.strand.is_reverse():
+                self.breakpoints[self.ref_end] += 1
+            else:
+                self.breakpoints[self.ref_start] += 1
+
+    def update_breakpoint(self) -> int | None:
+        """Get final breakpoint of a node."""
+        if self.is_start_node():
+            logger.debug(f"Update start node's breakpoint {self.breakpoints}")
+            new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
+            if self.strand.is_reverse():
+                self.ref_start = new_breakpoint
+            else:
+                self.ref_end = new_breakpoint
+            return new_breakpoint
+        elif self.is_end_node():
+            logger.debug(f"Update end node's breakpoint {self.breakpoints}")
+            new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
+            if self.strand.is_reverse():
+                self.ref_end = new_breakpoint
+            else:
+                self.ref_start = new_breakpoint
+            return new_breakpoint
 
     @property
     def ref_start(self) -> int:
@@ -366,7 +401,6 @@ class Node(BasicNode):
     def merge(
         self,
         other: Node,
-        optional_attributes=("splicing_code", "annotation_code", "genes"),
     ) -> None:
         """Merge two nodes.
 
@@ -392,11 +426,9 @@ class Node(BasicNode):
             # WARN: do not check if they have same key <Yangyang Li>
             self.identities.update(other.identities)
 
-            update_node_with_other_node(
-                self,
-                other,
-                optional_attributes,
-            )
+            for key, value in other.breakpoints.items():
+                self.breakpoints[key] += value
+
             return
 
         msg = f"Cannot merge {self!r} and {other!r}"
@@ -483,6 +515,12 @@ class EdgeData:
     read_ids: list[str]
     mode1: MappingMode
     mode2: MappingMode
+
+    gene1: str | None  # find by breakpoint1
+    gene2: str | None  # find by breakpoint2
+    annotation_code: int
+    splicing_code: int
+
     insertion_info: Any | None = None
     original_sr: int = 1
 
@@ -496,6 +534,10 @@ class EdgeData:
             read_ids=[read_id],
             mode1=MappingMode.from_int(event.mode1),
             mode2=MappingMode.from_int(event.mode2),
+            gene1=event.genes[0],
+            gene2=event.genes[1],
+            annotation_code=event.annotation_code,
+            splicing_code=event.splicing_code,
         )
 
     def equal(
@@ -570,6 +612,22 @@ class Edge:
     def mode2(self): return self.edge_data.mode2
     @property
     def modes(self): return self.mode1, self.mode2
+    @property
+    def gene1(self): return self.edge_data.gene1
+    @gene1.setter
+    def gene1(self, value): self.edge_data.gene1 = value
+    @property
+    def gene2(self): return self.edge_data.gene2
+    @gene2.setter
+    def gene2(self, value): self.edge_data.gene2 = value
+    @property
+    def annotation_code(self): return self.edge_data.annotation_code
+    @annotation_code.setter
+    def annotation_code(self, value): self.edge_data.annotation_code = value
+    @property
+    def splicing_code(self): return self.edge_data.splicing_code
+    @splicing_code.setter
+    def splicing_code(self, value): self.edge_data.splicing_code = value
     # fmt: on
 
     @staticmethod
@@ -580,7 +638,7 @@ class Edge:
         if read_id not in self.edge_data.read_ids:
             self.edge_data.read_ids.append(read_id)
 
-    def merge(self, other: Edge, pnode_strand: Strand, nnode_strand: Strand):
+    def merge(self, other: Edge, pnode_strand: Strand, nnode_strand: Strand, *, merge_insertion_info=True):
         # WARN: update breakpoint in cmparing way <07-03-23, Yangyang Li>
 
         self.beak_point1 = (
@@ -607,10 +665,16 @@ class Edge:
             )
         )
 
-        merge_insertion(self, other)
+        if merge_insertion_info:
+            merge_insertion(self, other)
 
         self.sr += other.sr
         self.edge_data.read_ids.extend(other.read_ids)
+
+        self.gene1 = other.gene1
+        self.gene2 = other.gene2
+        self.annotation_code = other.annotation_code
+        self.splicing_code = other.splicing_code
 
         logger.trace(
             f"Merge edge {self.key} {self.read_ids=} with {other.key} {other.read_ids=}.",
@@ -734,6 +798,7 @@ class NLPath:
         self.is_in_graph = False
         self.id = -1
         self.merge_factor = 1
+        self.extension = False
 
     def add_edge(self, nodes: Node, nodet: Node, edge: Edge | None = None) -> None:
         """Add edge to the path."""
@@ -798,6 +863,19 @@ class NLPath:
         """Check if sv_type of all nodes in the series are DEL."""
         return all(edge.variation_type == VariationType.DEL for edge in self.edges.values())
 
+    def polish_edges(self) -> None:
+        """Polish edges in the path."""
+        for idx, node in enumerate(self.nodes[:-1]):
+            next_node = self.nodes[idx + 1]
+            edge = self.get_edge(node, next_node)
+            if edge is not None:
+                edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
+                edge.break_point2.pos = next_node.ref_start if next_node.strand.is_forward() else next_node.ref_end
+
+    def setup_breakpoints(self) -> None:
+        for node in self.nodes:
+            node.set_up_breakpoints()
+
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""
         logger.trace(f"Squeeze {self!r}")
@@ -854,6 +932,54 @@ class NLPath:
             edge_key = Edge.create_key_from_node(node, next_node)
             edge = new_edges[idx]
             self.edges[edge_key] = edge
+
+    def is_forming_circle(self, threshold: int = 20) -> bool:
+        """Check if this nlpath itself can form a circle."""
+        nlpath_len = len(self.nodes)
+        pair_indices = combinations(range(nlpath_len), 2)
+        for _a, _b in pair_indices:
+            node_a = self.nodes[_a]
+            node_b = self.nodes[_b]
+            if node_a.introns != node_b.introns or node_a.strand != node_b.strand or node_a.chrom != node_b.chrom:
+                continue
+
+            if (
+                # head vs middle
+                (
+                    _a == 0
+                    and _b < nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(node_a, node_b, threshold)
+                )
+                # middle vs. tail
+                or (
+                    _a > 0
+                    and _b == nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, threshold)
+                )
+                # head vs. tail
+                or (
+                    _a == 0
+                    and _b == nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b)
+                )
+                # middle vs middle
+                or (_a > 0 and _b < nlpath_len - 1 and node_a.ref_start == node_b.ref_start and node_a.ref_end == node_b.ref_end)
+            ):
+                return True
+
+        return False
+
+    def is_maximum_novel_insertion_length_valid(self, threshold: int = 50) -> bool:
+        """Check if nlpath with maximum insertion length > threshold, which indicates sequencing artifacts."""
+        maximum_insertion_length = 0
+        for event_id, _node in enumerate(self.nodes[:-1], 1):
+            _edge = self.next_edge(_node, event_id - 1)
+            if _edge.insertion_info and isinstance(_edge.insertion_info[1], NovelInsertion):
+                insertion = _edge.insertion_info[1]
+                _insertion_length = len(insertion.query_sequence)
+                maximum_insertion_length = max(_insertion_length, maximum_insertion_length)
+
+        return maximum_insertion_length <= threshold
 
     def is_minimum_node_length_larger_than_threshold(self, threshold: int = 10) -> bool:
         """Check if minimum length of all nodes in the series > threshold."""
@@ -954,6 +1080,18 @@ class NLPath:
 
         return output_event_list
 
+    def anno_extension(self):
+        read_ids_set = []
+        for edge in self.edges.values():
+            read_ids_set.append(set(edge.read_ids))
+
+        if not read_ids_set:
+            logger.warning(f"No read ids found in the path {self.nodes}")
+            return
+
+        if not set.intersection(*read_ids_set):
+            self.extension = True
+
     @classmethod
     def create_path_from_node_edge_list(cls, node_edges):
         """Create a path from a list of nodes and edges.
@@ -975,6 +1113,7 @@ class NLPath:
                 current_edge = node_edges[idx + 1]
                 instance.edges[current_edge.key] = current_edge
 
+        instance.anno_extension()
         return instance
 
     @classmethod
@@ -997,7 +1136,7 @@ class NLPath:
         cvg,
         gene_iv,
         motif_required,
-        blat,
+        aligner,
     ) -> NLPath:
         """Create a nlpath from a list of events."""
 
@@ -1009,12 +1148,19 @@ class NLPath:
 
         events_len = len(events)
 
+        query_name = read_chains[0].query_name
+
+        max_shift_length_in_events = 0
         for index, event in enumerate(events):
-            read1: Read = event.read1(read_chains)
-            read2: Read = event.read2(read_chains)
+            shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
+            max_shift_length_in_events = max(shift_length, max_shift_length_in_events)
+
+        for index, event in enumerate(events):
+            read1: Read = event.read1(read_chains, max_shift_length_in_events)
+            read2: Read = event.read2(read_chains, max_shift_length_in_events)
 
             read1_node = Node(
-                query_name=read1.query_name,
+                query_name=query_name,
                 chrom=event.chrom1,
                 strand=event.strand1,
                 ref_start=event.read1_ref_start,
@@ -1024,18 +1170,22 @@ class NLPath:
                 cigartuples_without_soft=read1.cigartuples_without_soft,
             )
 
-            edge_data = EdgeData.from_event(event, read_id=read1.query_name)
-
-            logger.trace(f"{read1=} {read2=}")
+            edge_data = EdgeData.from_event(event, read_id=query_name)
 
             # is insertions
             if event.has_insertion():
+                logger.trace(f"{read1=} {read2=}")
+
                 insertion_seq = event.insertion_seq1  # pick from the first read
                 insertion_seq = reverse_complement(insertion_seq) if event.strand1.is_reverse() else insertion_seq
 
-                flag, insertion = blat.query_insertion(insertion_seq)
+                if aligner is None:
+                    flag, insertion = False, NovelInsertion(hit_num=0, query_sequence=insertion_seq)
+                else:
+                    flag, insertion = aligner.query_insertion(insertion_seq)
 
                 insertion.query_name = read1.query_name
+
                 if flag:  # only one hit
                     # add first node and insertion node
                     source_s = event.source_s1
@@ -1082,7 +1232,6 @@ class NLPath:
                     if read1_insertion_event is None or insertion_read2_event is None:
                         # only add read1, False means that the insertion type (hit 1 insertion)
                         # are not added in series
-                        event.update_node_info(read1_node)
 
                         nodes.append(read1_node)
 
@@ -1094,8 +1243,6 @@ class NLPath:
                         # True means that the insertion type(hit 1 insertion) are added in series
                         read1_insertion_event = Event(read1_insertion_event)
                         insertion_read2_event = Event(insertion_read2_event)
-
-                        read1_insertion_event.update_node_info(read1_node)
 
                         edge_data = EdgeData.from_event(
                             read1_insertion_event,
@@ -1115,17 +1262,12 @@ class NLPath:
                             cigartuples_without_soft=insertion.cigartuples_without_soft,
                         )
 
-                        insertion_read2_event.update_insertion_node_info(insertion_node)
-
                         insertion_edge_data = EdgeData.from_event(
                             insertion_read2_event,
                             read1.query_name,
                         )
 
                         nodes.append(read1_node)
-                        logger.trace(
-                            f"auxiliary alignment[4] is effective here. reads_name:{read1.query_name} query_sequence:{insertion_seq}"
-                        )
                         logger.trace(f"Add Insertion {insertion_node=} to path")
                         nodes.append(insertion_node)
 
@@ -1137,8 +1279,6 @@ class NLPath:
                     # only add read1 with insertion info
                     # False means that the insertion type (hit more insertion) are
                     # not added in series
-                    event.update_node_info(read1_node)
-
                     nodes.append(read1_node)
                     edge_data.insertion_info = (False, insertion)
                     edges_data.append(edge_data)
@@ -1152,20 +1292,16 @@ class NLPath:
                 if event.strand1.is_reverse():
                     microhomology.reverse_completement_query()
 
-                event.update_node_info(read1_node)
                 nodes.append(read1_node)
                 edge_data.insertion_info = (False, microhomology)
                 edges_data.append(edge_data)
-
             else:
-                event.update_node_info(read1_node)
                 nodes.append(read1_node)
                 edges_data.append(edge_data)
-
             # add final node
             if index == events_len - 1:
                 final_node = Node(
-                    query_name=read2.query_name,
+                    query_name=query_name,
                     chrom=event.chrom2,
                     strand=event.strand2,
                     ref_start=event.read2_ref_start,
@@ -1175,9 +1311,7 @@ class NLPath:
                     cigartuples_without_soft=read2.cigartuples_without_soft,
                 )
                 check_end_node_is_ploya(final_node, genome_fasta)
-
                 nodes.append(final_node)
-
         return cls.from_nodes_and_edges_data(nodes, edges_data)
 
 
@@ -1247,15 +1381,21 @@ def _check_insertion_conditions_for_compare_insertion(
 
 def merge_insertion(edge1: Edge, edge2: Edge):
     """edge1 merge edge2."""
-    if edge1.insertion_info is not None and edge2.insertion_info is not None:
-        if edge1.sr > edge2.sr:
+    if edge1.sr < edge2.sr:
+        edge1.insertion_info = edge2.insertion_info
+    elif edge1.sr == edge2.sr:
+        # prefer blunt end of edge1
+        if edge1.insertion_info is None:
             return
 
-        if (edge1.sr < edge2.sr) or (
-            isinstance(edge1.insertion_info[1], MicroHomology)
-            and isinstance(
-                edge2.insertion_info[1],
-                NovelInsertion,
-            )
+        # prefer blunt end of edge2
+        if edge2.insertion_info is None:
+            edge1.insertion_info = edge2.insertion_info
+            return
+
+        # prefer micorhomology over novelinsertion
+        if isinstance(edge1.insertion_info[1], NovelInsertion) and isinstance(
+            edge2.insertion_info[1],
+            MicroHomology
         ):
             edge1.insertion_info = edge2.insertion_info

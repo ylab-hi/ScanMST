@@ -1,14 +1,7 @@
-"""Basic Read Class.
+"""Basic Read Class."""
 
-@Filename:    basicRead.py
-@Author:      YangyangLi
-@contact:     yangyang.li@northwestern.edu
-@Time:        1/9/22 12:13 PM
-"""
 from __future__ import annotations
-
 from scannls import cppext
-
 from .basic import CigarCode, Intervals, MappingMode, Strand
 
 
@@ -54,27 +47,27 @@ class Read:
     """
 
     __slots__ = (
-        "chrom",
-        "ref_start",
-        "strand",
-        "cigarstring",
-        "mapq",
-        "nm",
-        "query_sequence",
-        "query_qualities",
-        "query_name",
-        "lt_soft_len",
-        "rt_soft_len",
-        "read_match_size",
-        "reference_match_size",
-        "indel_size",
-        "cigartuples_without_soft",
-        "query_length",
-        "adhocsms",
         "adhocseq",
+        "adhocsms",
+        "chrom",
+        "cigarstring",
+        "cigartuples_without_soft",
+        "indel_size",
+        "lt_soft_len",
+        "mapq",
         "mode",
-        "sms",
+        "nm",
+        "query_length",
+        "query_name",
+        "query_qualities",
+        "query_sequence",
+        "read_match_size",
         "ref_end",
+        "ref_start",
+        "reference_match_size",
+        "rt_soft_len",
+        "sms",
+        "strand",
     )
 
     def __init__(
@@ -187,10 +180,10 @@ class Read:
             _len = self.cigartuples_without_soft[ind + 1]
 
             if op_code in {CigarCode.Match, CigarCode.Del}:  # M, D
-                current_pos = current_pos + _len
+                current_pos += _len
             elif op_code == CigarCode.Ref_skip:  # N
                 exons.append((start_pos, current_pos))
-                current_pos = current_pos + _len
+                current_pos += _len
                 start_pos = current_pos
 
         exons.append((start_pos, current_pos))

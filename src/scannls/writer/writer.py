@@ -1,9 +1,5 @@
-"""Writer for Fasta files and GTF files for Series object.
+"""Writer for Fasta, GTF, VCF files for nlpath object."""
 
-@Filename:    writer.py
-@Author:      YangyangLi
-@Time:        12/30/21 4:02 PM
-"""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

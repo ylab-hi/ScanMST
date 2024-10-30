@@ -1,3 +1,5 @@
+"""Init NLGraph."""
+
 from .basic_graph import (
     BasicNode,
     Edge,
@@ -13,20 +15,20 @@ from .nlgraph import NLGraph
 from .sr_rescuer import SRRescuer
 
 __all__ = [
+    "BasicNode",
+    "BasicNode",
     "ClusterFinder",
-    "Node",
-    "BasicNode",
-    "BasicNode",
-    "NodeIdentity",
-    "Node",
-    "VariationType",
-    "EdgeData",
     "Edge",
-    "NLGraph",
-    "NLPath",
-    "SRRescuer",
+    "EdgeData",
+    "GraphCytoscapeExporter",
     "GraphVis",
     "GraphVisitor",
-    "GraphCytoscapeExporter",
     "MatplotlibVisualizeGraph",
+    "NLGraph",
+    "NLPath",
+    "Node",
+    "Node",
+    "NodeIdentity",
+    "SRRescuer",
+    "VariationType",
 ]

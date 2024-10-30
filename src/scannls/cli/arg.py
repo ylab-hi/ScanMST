@@ -1,4 +1,5 @@
 """Parse command line arguments."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,40 +13,44 @@ from scannls import __version__
 class DefaultOptions:
     """Cli default options."""
 
-    input: str  # noqa: A003
+    input: str
     ref: str
     gtf: str
     output: str
-    two_bit: str
+    blat_two_bit: str
+    blat_closed: bool = True
+    blat_sleep: bool = True
+    blat_port: int = 88888
+    aligner: tuple[str, str] = ("blat", "")
     support_reads: int = 1
     splice_bin: int = 5
     mapq: int = 20
     noncanonical: bool = False
-    closed: bool = True
-    sleep: bool = True
     bound: bool = True
     graph: bool = False
     log: str = "warning"
     species: str = "human"
     species_choices: tuple[str, str] = ("human", "mouse")
     parallel: int = 1
-    port: int = 88888
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 50
-    ident_cutoff: float = 0.99
-    prune_threshold: int = 10
+    max_allowed_micro_insertion: int = 50
+    ident_cutoff: float = 0.90
+    prune_threshold: int = 10  # for merging conditions
     soft_len: int = 5
     mismatch: int = 3
     alignment_fraction: float = 0.8
-    long_indel_length: int = 5
+    long_indel_length: int = 10
     substitutions_num: int = 20
-    substitutions_fraction: float = 0.1
-    indel_fraction: float = 0.1
+    substitutions_fraction: float = 0.2
+    indel_fraction: float = 0.2
     circular_rna: str = "remove"
     circular_rna_choices: tuple[str, ...] = ("remove", "keep", "extract")
     # junctions within one annotated exon filter
     exon_filter: bool = True
     rt_switching_filter_len: int = 10
+    ignore_circle: bool = False
+    rescue_sr: bool = False
 
 
 COLOR = "bold magenta"
@@ -82,7 +87,7 @@ class RichArgParser(argparse.ArgumentParser):
         """Color message."""
         import re
 
-        pattern = re.compile(r"(?P<arg>-{1,2}[-|\w]+)")
+        pattern = re.compile(r'(?<!\w)(?P<arg>(?:--[\w-]+|-h))(?!\w)')
         return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
 
     def _print_message(self, message: str | None, _file: Any = None) -> None:
@@ -101,7 +106,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]scannls[/] :rocket: Nonlinear splicing "
+        description="[red]scannls[/] :rocket: Non-colinear splicing "
         "(NLS) events identification using transcriptomic"
         " long reads data",
         formatter_class=RichHelpFormatter,
@@ -182,12 +187,51 @@ def parse_args() -> argparse.ArgumentParser:
         help="set working mode in processor (default: %(default)s)",
     )
     parser.add_argument(
-        "--2bit",
+        "--aligner",
+        dest="aligner",
+        type=str,
+        choices=DefaultOptions.aligner,
+        help="aligner to use for mapping reads (default: %(default)s)",
+        required=False,
+    )
+    parser.add_argument(
+        "--blat-identity",
         action="store",
-        dest="two_bit",
-        help="reference genome in 2bit format",
+        dest="ident_cutoff",
+        type=float,
+        help="BLAT identity cutoff (default: %(default)s)",
+        default=DefaultOptions.ident_cutoff,
+    )
+    parser.add_argument(
+        "--blat-2bit",
+        action="store",
+        dest="blat_two_bit",
+        help="reference genome in 2bit format for blat aligner",
+        required=False,
+    )
+    parser.add_argument(
+        "--blat-nclosed",
+        action="store_false",
+        dest="blat_closed",
+        default=DefaultOptions.blat_closed,
+        help="close BLAT server when job has done (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--blat-nsleep",
+        action="store_false",
+        dest="blat_sleep",
+        default=DefaultOptions.blat_sleep,
+        help="if sleep randomly before starting BLAT server (default: %(default)s)",
     )
 
+    parser.add_argument(
+        "--blat-port",
+        action="store",
+        dest="blat_port",
+        type=int,
+        help="port for BLAT server (default: %(default)s)",
+        default=DefaultOptions.blat_port,
+    )
     parser.add_argument(
         "--species",
         action="store",
@@ -227,20 +271,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.noncanonical,
         help="considering Non canonical spliced sites  (default: %(default)s)",
     )
-    parser.add_argument(
-        "--nclosed",
-        action="store_false",
-        dest="closed",
-        default=DefaultOptions.closed,
-        help="close BLAT server when job has done (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--nsleep",
-        action="store_false",
-        dest="sleep",
-        default=DefaultOptions.sleep,
-        help="if sleep randomly before starting BLAT server (default: %(default)s)",
-    )
+
     parser.add_argument(
         "--graph",
         action="store_true",
@@ -255,14 +286,7 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.bound,
         help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
     )
-    parser.add_argument(
-        "--port",
-        action="store",
-        dest="port",
-        type=int,
-        help="port for BLAT server (default: %(default)s)",
-        default=DefaultOptions.port,
-    )
+
     parser.add_argument(
         "--max-allowed-nm",
         action="store",
@@ -271,13 +295,14 @@ def parse_args() -> argparse.ArgumentParser:
         help="maximum allowed NM to keep AS tag (default: %(default)s)",
         default=DefaultOptions.max_allowed_nm,
     )
+
     parser.add_argument(
-        "--identity",
+        "--max-allowed-ins",
         action="store",
-        dest="ident_cutoff",
-        type=float,
-        help="BLAT identity cutoff (default: %(default)s)",
-        default=DefaultOptions.ident_cutoff,
+        dest="max_allowed_ins",
+        type=int,
+        help="maximum allowed micro-insertion length (default: %(default)s)",
+        default=DefaultOptions.max_allowed_micro_insertion,
     )
 
     # Reads filter parameters
@@ -297,7 +322,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.substitutions_num,
         help="the allowed maximum substitution number in the reads (default: %(default)s)",
     )
-
     parser.add_argument(
         "--indel-fraction",
         action="store",
@@ -355,6 +379,20 @@ def parse_args() -> argparse.ArgumentParser:
         type=float,
         default=DefaultOptions.substitutions_fraction,
         help="the allowed maximum substitution fraction in the reads (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--ignore-circle",
+        action="store_true",
+        dest="ignore_circle",
+        default=DefaultOptions.ignore_circle,
+        help="if export result if the nlgraph has a circle  (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--rescue-sr",
+        action="store_true",
+        dest="rescue_sr",
+        default=DefaultOptions.rescue_sr,
+        help="if rescuing sr for edge  (default: %(default)s)",
     )
 
     return parser

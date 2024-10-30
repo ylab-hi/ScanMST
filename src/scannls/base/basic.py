@@ -1,3 +1,4 @@
+"""Basic operation units."""
 from __future__ import annotations
 
 from enum import Enum, IntEnum
@@ -11,7 +12,6 @@ class MappingMode(IntEnum):
     SM = 2  # 2 SM
 
     # fmt: off
-    def reverse(self): self = self.SM if self == self.MS else self.MS
     def reversed(self): return self.SM if self == self.MS else self.MS
     def is_sm(self): return self == self.SM
     def is_ms(self): return self == self.MS
@@ -38,8 +38,8 @@ class AnnotationCode(IntEnum):
     Type1 = 1
     Type2 = 2
 
-    def reverse(self):
-        self = self.Type2 if self == self.Type1 else self.Type1
+    def reversed(self):
+        return self.Type2 if self == self.Type1 else self.Type1
 
 
 class Strand(Enum):
@@ -51,12 +51,8 @@ class Strand(Enum):
     # fmt: off
     def is_reverse(self): return self == Strand.Reverse
     def is_forward(self): return self == Strand.Forward
-    def reverse(self): self = Strand.Reverse if self.is_forward() else Strand.Reverse
-    def reversed(self) -> Strand: return Strand.Reverse if self.is_forward() else Strand.Reverse
+    def reversed(self) -> Strand: return Strand.Reverse if self.is_forward() else Strand.Forward
     # fmt: on
-
-    def __repr__(self) -> str:
-        return super().__repr__()
 
     def __str__(self) -> str:
         if self.is_forward():

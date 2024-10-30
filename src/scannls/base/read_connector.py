@@ -1,6 +1,5 @@
-"""Connecter Reads.
-@Time:        12/15/21 2:14 PM.
-"""
+"""Connecter Reads."""
+
 import re
 from itertools import combinations
 from typing import Any
@@ -8,7 +7,7 @@ from typing import Any
 from Bio import SearchIO
 from loguru import logger
 
-from scannls.type import LoggerType
+from scannls.mtype import LoggerType
 from scannls.utils import cigar_validity
 
 from .basic import MappingMode, Strand
@@ -21,7 +20,6 @@ class ReadsConnector:
     """ReadsConnector class is used to connect the reads and identify the mode of the reads.
 
     :param read_list: the list of the alignment
-    :param blat: :class: `class.Blat` for the BLAT search
     :param logger: :class: `loguru.logger` for logging
 
     :Example:
@@ -40,11 +38,12 @@ class ReadsConnector:
     def __init__(
         self,
         read_list: list[Read],
-        blat: Blat,
+        aligner,
         logger: LoggerType,
+        mapq_cutoff: int,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
-        top: int = 3,
+        top: int = 5,
     ) -> None:
         """Initialize the ReadsConnector class."""
         self.candidate_nodes: list[Read] = []
@@ -52,7 +51,8 @@ class ReadsConnector:
         self.read_pair_mode_dict, self.insertion_dict = {}, {}  # type: ignore
         self.aln_list = read_list
         self.logger = logger
-        self.blat = blat
+        self.aligner = aligner
+        self.mapq_cutoff = mapq_cutoff
         self.index = 0
         self.num_added_reads = 0
 
@@ -91,13 +91,19 @@ class ReadsConnector:
         """Initialize the mode of the reads."""
 
         read1.mode = ReadsConnector._get_mode(read1.adhocsms)
-        read2.mode = read1.mode.reversed() if read1.strand == read2.strand else read1.mode
+        read2.mode = (
+            read1.mode.reversed() if read1.strand == read2.strand else read1.mode
+        )
 
     @staticmethod
-    def is_two_read_have_same_length_of_minimum_soft_clip(read1: Read, read2: Read) -> bool:
+    def is_two_read_have_same_length_of_minimum_soft_clip(
+        read1: Read, read2: Read
+    ) -> bool:
         """Check the minimum soft clipping length of two reads."""
 
-        return min(read1.lt_soft_len, read1.rt_soft_len) == min(read2.lt_soft_len, read2.rt_soft_len)
+        return min(read1.lt_soft_len, read1.rt_soft_len) == min(
+            read2.lt_soft_len, read2.rt_soft_len
+        )
 
     def check_if_ms_match(
         self,
@@ -132,7 +138,10 @@ class ReadsConnector:
         pattern = re.compile(f"({query_seq})")
         temp_indices = [item.span() for item in re.finditer(pattern, target_seq)]
         if temp_indices:
-            min_indices = [min(temp_index[0], len(target_seq) - temp_index[1]) for temp_index in temp_indices]
+            min_indices = [
+                min(temp_index[0], len(target_seq) - temp_index[1])
+                for temp_index in temp_indices
+            ]
             index = min(min_indices)
             if index <= minimum_terminal_length:
                 match_flag = True
@@ -167,13 +176,37 @@ class ReadsConnector:
         _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
         if prev_read_mode == MappingMode.SM:
             if next_read_mode == MappingMode.SM:
-                bp_region_seq_len = read_query_length - _rt_len_r1 - _rt_len_r2 - _read_match_r1 - _read_match_r2
+                bp_region_seq_len = (
+                    read_query_length
+                    - _rt_len_r1
+                    - _rt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
             elif next_read_mode == MappingMode.MS:
-                bp_region_seq_len = read_query_length - _rt_len_r1 - _lt_len_r2 - _read_match_r1 - _read_match_r2
+                bp_region_seq_len = (
+                    read_query_length
+                    - _rt_len_r1
+                    - _lt_len_r2
+                    - _read_match_r1
+                    - _read_match_r2
+                )
         elif next_read_mode == MappingMode.SM:
-            bp_region_seq_len = read_query_length - _lt_len_r1 - _rt_len_r2 - _read_match_r1 - _read_match_r2
+            bp_region_seq_len = (
+                read_query_length
+                - _lt_len_r1
+                - _rt_len_r2
+                - _read_match_r1
+                - _read_match_r2
+            )
         elif next_read_mode == MappingMode.MS:
-            bp_region_seq_len = read_query_length - _lt_len_r1 - _lt_len_r2 - _read_match_r1 - _read_match_r2
+            bp_region_seq_len = (
+                read_query_length
+                - _lt_len_r1
+                - _lt_len_r2
+                - _read_match_r1
+                - _read_match_r2
+            )
         is_microhomology = False
         microhomology_length = 0
 
@@ -257,7 +290,9 @@ class ReadsConnector:
         same_strand = start_read.adhocseq == read.query_sequence
 
         next_read_mode = MappingMode.SM
-        read_match_sequence = start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1]
+        read_match_sequence = start_read.adhocseq[
+            _lt_len_r1 : _lt_len_r1 + _read_match_r1
+        ]
 
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
@@ -318,7 +353,9 @@ class ReadsConnector:
         same_strand = start_read.adhocseq == read.query_sequence
 
         next_read_mode = MappingMode.MS
-        read_match_sequence = start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1]
+        read_match_sequence = start_read.adhocseq[
+            _lt_len_r1 : _lt_len_r1 + _read_match_r1
+        ]
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -400,28 +437,22 @@ class ReadsConnector:
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return self._match_right_softclip_segment(start_read, read)
-                else:
-                    return self._match_left_softclip_segment(start_read, read)
+                return self._match_left_softclip_segment(start_read, read)
             # starts with head (-)
-            else:
-                if not read.strand.is_reverse():
-                    return self._match_left_softclip_segment(start_read, read)
-                else:
-                    return self._match_right_softclip_segment(start_read, read)
+            if not read.strand.is_reverse():
+                return self._match_left_softclip_segment(start_read, read)
+            return self._match_right_softclip_segment(start_read, read)
         # MS
-        elif _lt_len_r1 < _rt_len_r1:
+        if _lt_len_r1 < _rt_len_r1:
             # starts with head (+)
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return self._match_left_softclip_segment(start_read, read)
-                else:
-                    return self._match_right_softclip_segment(start_read, read)
+                return self._match_right_softclip_segment(start_read, read)
             # starts with tail (-)
-            else:
-                if not read.strand.is_reverse():
-                    return self._match_right_softclip_segment(start_read, read)
-                else:
-                    return self._match_left_softclip_segment(start_read, read)
+            if not read.strand.is_reverse():
+                return self._match_right_softclip_segment(start_read, read)
+            return self._match_left_softclip_segment(start_read, read)
 
         self.logger.debug(
             "start read cannot connect with read and try to connect other reads",
@@ -441,30 +472,56 @@ class ReadsConnector:
 
     def _double_check_create_new_read_calculate_sms(
         self,
-        hsp,
+        record,
         query_seq: str,
         read: Read,
+        mapq: int,
     ) -> Read:
         """Double check creat new read and calculate sms."""
-        mapq = 60
-        chrom, position, strand, cigar_str, num_of_mismatch = self.blat.psl2sam(
-            hsp,
-            len(query_seq),
-        )
 
-        strand = Strand.from_str(strand)
-        lt_s_len = hsp.query_start
-        rt_s_len = len(query_seq) - hsp.query_end
-        new_read_mode = ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
-            read,
-            strand,
+        if isinstance(self.aligner, Blat):
+            chrom, position, strand, cigar_str, num_of_mismatch = self.aligner.psl2sam(
+                record,
+                len(query_seq),
+            )
+
+            strand = Strand.from_str(strand)
+            lt_s_len = record.query_start
+            rt_s_len = len(query_seq) - record.query_end
+        else:
+            mapq = record.mapping_quality
+            chrom = record.reference_name
+            position = record.reference_start
+            strand = "+" if not record.is_reverse else "-"
+            cigar_str = record.cigarstring
+            num_of_mismatch = record.get_tag("NM") if record.has_tag("NM") else 0
+
+            strand = Strand.from_str(strand)
+            lt_s_len = record.query_alignment_start
+            rt_s_len = len(query_seq) - record.query_alignment_end
+
+        new_read_mode = (
+            ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
+                read,
+                strand,
+            )
         )
 
         if new_read_mode == MappingMode.MS:
-            cigar_str = f"{lt_s_len}S" + cigar_str + f"{rt_s_len}S" + f"{read.read_match_size + read.rt_soft_len}S"
+            cigar_str = (
+                f"{lt_s_len}S"
+                + cigar_str
+                + f"{rt_s_len}S"
+                + f"{read.read_match_size + read.rt_soft_len}S"
+            )
             cigar_str = cigar_str[2:] if cigar_str.startswith("0S") else cigar_str
         else:
-            cigar_str = f"{read.lt_soft_len + read.read_match_size}S" f"{lt_s_len}S" f"{cigar_str}" f"{rt_s_len}S"
+            cigar_str = (
+                f"{read.lt_soft_len + read.read_match_size}S"
+                f"{lt_s_len}S"
+                f"{cigar_str}"
+                f"{rt_s_len}S"
+            )
             cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
         if read.query_qualities is None:
@@ -499,19 +556,22 @@ class ReadsConnector:
         if len(query_sequence) < align_len_threshold:
             return None
 
-        out_blat = self.blat.query(in_seq=query_sequence)
-        try:
-            blat_result = SearchIO.read(out_blat, "blat-psl")
-        except ValueError:
-            return None
+        if isinstance(self.aligner, Blat):
+            out_blat = self.aligner.query(in_seq=query_sequence)
+            try:
+                blat_result = SearchIO.read(out_blat, "blat-psl")
+            except ValueError:
+                return None
 
-        hit, keep_hsp = self.blat._query_insertion(
-            blat_result,
-            query_sequence,
-            threshold_identity,
-            top=top,
-        )
-        return hit, keep_hsp
+            hit, top_hsp, mapq = self.aligner._query_insertion(
+                blat_result,
+                query_sequence,
+                threshold_identity,
+                top=top,
+            )
+
+            return hit, top_hsp, mapq
+        return None
 
     def _double_check_for_start_end_read(
         self,
@@ -522,6 +582,9 @@ class ReadsConnector:
 
         To see if there are True first read or True end read.
         """
+
+        if self.aligner is None:
+            return
 
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
@@ -539,46 +602,53 @@ class ReadsConnector:
             self.top,
         )
 
-        self.logger.trace(f"start end read checking: {ret=}")
+        self.logger.trace(f"start/end read checking by BLAT: {ret=}")
 
-        if ret is None:
+        if ret is None or ret == (0, "", 0):
             return
 
-        hit, keep_hsp = ret
+        _, top_hsp, mapq = ret
 
-        if hit == 1:
-            self.num_added_reads += 1
-            hsp = keep_hsp[0]
-            new_read = self._double_check_create_new_read_calculate_sms(
-                hsp,
-                query_sequence,
-                read,
-            )
-            # discard blat alignments mapped to uncommon chromosome and mitochondrion
-            if "_" not in new_read.chrom and new_read.chrom not in {"chrM", "MT"}:
-                if read_type == "start":
-                    self.logger.trace(
-                        f"auxiliary alignment[1](start) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
-                    )
-                    self.logger.debug(f"Insert {new_read=} to start of reads chain")
-                    self.reads_chain.insert(0, new_read)
+        if mapq < self.mapq_cutoff:
+            return
 
-                    self.logger.debug(f"add {new_read=}, {read=} to mode dict")
-                    self.read_pair_mode_dict[(new_read, read)] = (
-                        new_read.mode,
-                        read.mode,
-                    )
-                else:
-                    self.logger.trace(
-                        f"auxiliary alignment[1](end) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
-                    )
-                    self.logger.debug(f"Add {read=} to end of reads chain")
-                    self.reads_chain.append(new_read)
-                    self.logger.debug(f"add {read=}, {new_read=} to mode dict")
-                    self.read_pair_mode_dict[(read, new_read)] = (
-                        read.mode,
-                        new_read.mode,
-                    )
+        self.num_added_reads += 1
+
+        self.logger.trace(
+            f"add start/end query sequence: {query_sequence} to form a new segment using BLAT"
+        )
+
+        new_read = self._double_check_create_new_read_calculate_sms(
+            top_hsp,
+            query_sequence,
+            read,
+            mapq,
+        )
+        # discard blat alignments mapped to mitochondrion
+        if new_read.chrom not in {"chrM", "MT"}:
+            if read_type == "start":
+                self.logger.trace(
+                    f"auxiliary alignment[1](start) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
+                )
+                self.logger.debug(f"Insert {new_read=} to start of reads chain")
+                self.reads_chain.insert(0, new_read)
+
+                self.logger.debug(f"add {new_read=}, {read=} to mode dict")
+                self.read_pair_mode_dict[(new_read, read)] = (
+                    new_read.mode,
+                    read.mode,
+                )
+            else:
+                self.logger.trace(
+                    f"auxiliary alignment[1](end) is effective here. reads_name:{new_read.query_name} query_sequence:{query_sequence}"
+                )
+                self.logger.debug(f"Add {read=} to end of reads chain")
+                self.reads_chain.append(new_read)
+                self.logger.debug(f"add {read=}, {new_read=} to mode dict")
+                self.read_pair_mode_dict[(read, new_read)] = (
+                    read.mode,
+                    new_read.mode,
+                )
 
     @staticmethod
     def __sort_candidate_reads_key(read: Read, start_read: Read) -> int:
@@ -591,41 +661,33 @@ class ReadsConnector:
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return abs(read.rt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.lt_soft_len - start_read_match_sequence)
+                return abs(read.lt_soft_len - start_read_match_sequence)
             # starts with head (-)
-            else:
-                if not read.strand.is_reverse():
-                    return abs(read.lt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.rt_soft_len - start_read_match_sequence)
+            if not read.strand.is_reverse():
+                return abs(read.lt_soft_len - start_read_match_sequence)
+            return abs(read.rt_soft_len - start_read_match_sequence)
         # MS
-        elif lt_soft_len < rt_soft_len:
+        if lt_soft_len < rt_soft_len:
             # starts with head (+)
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
                     return abs(read.lt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.rt_soft_len - start_read_match_sequence)
+                return abs(read.rt_soft_len - start_read_match_sequence)
             # starts with tail (-)
-            else:
-                if not read.strand.is_reverse():
-                    return abs(read.rt_soft_len - start_read_match_sequence)
-                else:
-                    return abs(read.lt_soft_len - start_read_match_sequence)
-        else:
-            return min(
-                abs(read.lt_soft_len - start_read_match_sequence),
-                abs(read.rt_soft_len - start_read_match_sequence),
-            )
+            if not read.strand.is_reverse():
+                return abs(read.rt_soft_len - start_read_match_sequence)
+            return abs(read.lt_soft_len - start_read_match_sequence)
+        return min(
+            abs(read.lt_soft_len - start_read_match_sequence),
+            abs(read.rt_soft_len - start_read_match_sequence),
+        )
 
     def connect(self) -> bool:
         """Find the best connected paths for a list of chimeric alignments.
 
         .. note::
             Read-to-Read chain scenarios
-            * [[Read1, Read2, Read3]]
-            * [[Read1, Read2, Read3],[Read4,Read5]]
+            * [Read1, Read2, Read3, Read4, Read5]
 
             Dictionary of Read-pair scenarios
             * (Read1, Read2) => mode-of-Read1, mode-of-Read2
@@ -653,7 +715,9 @@ class ReadsConnector:
             )
 
         # start read and end read have the same minimum length of softclipping
-        if ReadsConnector.is_two_read_have_same_length_of_minimum_soft_clip(temp_list[0], temp_list[1]):
+        if ReadsConnector.is_two_read_have_same_length_of_minimum_soft_clip(
+            temp_list[0], temp_list[1]
+        ):
             end_read = temp_list[1]
             self.candidate_nodes = temp_list[2:]
             self.candidate_nodes.sort(
@@ -685,7 +749,8 @@ class ReadsConnector:
                 self.logger.trace(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
                 if self.index == len(self.candidate_nodes):
                     logger.warning(
-                        f"ReadsConnector: cannot connect all reads in candidate_nodes " f"{start_read.query_name}",
+                        f"ReadsConnector: cannot connect all reads in candidate_nodes "
+                        f"{start_read.query_name}",
                     )
                     return False
                 read = self.candidate_nodes[self.index]
@@ -710,7 +775,8 @@ class ReadsConnector:
             )
             if not is_connected:
                 self.logger.warning(
-                    f"ReadsConnector: cannot connect end read " f"{start_read.query_name}",
+                    f"ReadsConnector: cannot connect end read "
+                    f"{start_read.query_name}",
                 )
                 return is_connected
             self._double_check_for_start_end_read(end_read, "end")
@@ -722,22 +788,21 @@ def detect_read_read_connections_from_cigar(
     read,
     mapq_cutoff: int,
     max_allowed_nm: int,
-    blat: Blat,
+    aligner,
+    blat_ident_pct_cutoff: float,
     logger: LoggerType,
 ):
     """Detecting read-read connections with chimeric alignments CIGAR string.
 
     :param logger:
-    :param blat:
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: NM cutoff
-    :return: Read-to-Read chain (a list of lists), a dictionary of Read-pair(Read1, Read2) =>
+    :return: Read-to-Read chain (a list of Read), a dictionary of Read-pair(Read1, Read2) =>
         mode-of-Read1, mode-of-Read2
 
     .. note::
         Read-to-Read chain scenarios
-        * [[Read1, Read2, Read3]]
-        * [[Read1, Read2, Read3],[Read4,Read5]]
+        * [Read1, Read2, Read3]
 
         Dictionary of Read-pair scenarios
         * (Read1, Read2) => mode-of-Read1, mode-of-Read2
@@ -777,7 +842,9 @@ def detect_read_read_connections_from_cigar(
         :param strand_sa: direction of supplementary read (-|+)
         :return: query sequence of supplementary alignment
         """
-        return query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
+        return (
+            query_seq_ra if strand_ra == strand_sa else reverse_complement(query_seq_ra)
+        )
 
     def mean(in_list: list[int]) -> float:
         """Helper function to calculate mean value of a list."""
@@ -804,10 +871,14 @@ def detect_read_read_connections_from_cigar(
                 mean_qualities_read2_match = 40.0
             else:
                 mean_qualities_read1_match = mean(
-                    read1.query_qualities[read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)],
+                    read1.query_qualities[
+                        read1.lt_soft_len : (read1.query_length - read1.rt_soft_len)
+                    ],
                 )
                 mean_qualities_read2_match = mean(
-                    read2.query_qualities[read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)],
+                    read2.query_qualities[
+                        read2.lt_soft_len : (read2.query_length - read2.rt_soft_len)
+                    ],
                 )
             if (
                 read1.strand != read2.strand
@@ -819,10 +890,17 @@ def detect_read_read_connections_from_cigar(
                     )
                     or (
                         (
-                            minimum_cutoff < abs(read1.ref_start - read2.ref_start) < maximum_cutoff
-                            or minimum_cutoff < abs(read1.ref_end - read2.ref_end) < maximum_cutoff
+                            minimum_cutoff
+                            < abs(read1.ref_start - read2.ref_start)
+                            < maximum_cutoff
+                            or minimum_cutoff
+                            < abs(read1.ref_end - read2.ref_end)
+                            < maximum_cutoff
                         )
-                        and (abs(mean_qualities_read1_match - mean_qualities_read2_match) > base_quality_cutoff)
+                        and (
+                            abs(mean_qualities_read1_match - mean_qualities_read2_match)
+                            > base_quality_cutoff
+                        )
                     )
                 )
             ):
@@ -853,7 +931,13 @@ def detect_read_read_connections_from_cigar(
     seq_ra = read.query_sequence
     query_qualities_ra = read.query_qualities
 
-    if chrm_ra is None or read.query_name is None or seq_ra is None or nm_ra is None or cigar_ra is None:
+    if (
+        chrm_ra is None
+        or read.query_name is None
+        or seq_ra is None
+        or nm_ra is None
+        or cigar_ra is None
+    ):
         msg = "None value found in read"
         raise ValueError(msg)
 
@@ -918,7 +1002,9 @@ def detect_read_read_connections_from_cigar(
             logger.debug(
                 f"{read.query_name=} does not pass number of mismatches filter",
             )
-    if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (min(mapq_list) < mapq_cutoff):
+    if (len(chimeric_aln_list) < 1 + len(chimeric_aln)) or (
+        min(mapq_list) < mapq_cutoff
+    ):
         logger.debug(f"{read.query_name=} does not pass MAPQ cutoff.")
         return noreturn
 
@@ -932,13 +1018,16 @@ def detect_read_read_connections_from_cigar(
     logger.debug(f"{len(chimeric_aln_list)} {chimeric_aln_list=}")
     read_connector = ReadsConnector(
         read_list=chimeric_aln_list,
-        blat=blat,
+        aligner=aligner,
+        mapq_cutoff=mapq_cutoff,
+        threshold_identity=blat_ident_pct_cutoff,
         logger=logger,
     )
 
     if read_connector.connect():
         logger.debug(
-            f"reads chain: {read_connector.reads_chain};" f" reads pair mode: {read_connector.read_pair_mode_dict}",
+            f"reads chain: {read_connector.reads_chain};"
+            f" reads pair mode: {read_connector.read_pair_mode_dict}",
         )
         return (
             read_connector.reads_chain,

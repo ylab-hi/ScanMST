@@ -1,4 +1,5 @@
 """Filters based on breakpoints or circurlarRNAs."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -214,6 +215,13 @@ class CircRNAFilter:
         ----------------------------------->
                                  [   1    ]
                 [          2              ]
+    7) false positive cases in ONT directRNA, since dorado cannot prefectly remove internal adapters
+        multihop events with other junction types besides TDUP
+        -------chr2>------ ---chr16------>
+       [ 1  ] --- [ 2 ]
+        [ 3 ] --- [ 4  ]
+                              [ 5 ]
+
     """
 
     def __init__(
@@ -242,13 +250,15 @@ class CircRNAFilter:
             _circular_condition1 = bool(
                 current_edge.variation_type.is_tdup()
                 and (
-                    current_node.introns
-                    and next_node.introns
-                    and len(current_node.introns) > 0
-                    and len(next_node.introns) > 0
-                    and (
-                        set(current_node.introns).issuperset(set(next_node.introns))
-                        or set(current_node.introns).issubset(set(next_node.introns))
+                    (
+                        current_node.introns
+                        and next_node.introns
+                        and len(current_node.introns) > 0
+                        and len(next_node.introns) > 0
+                        and (
+                            set(current_node.introns).issuperset(set(next_node.introns))
+                            or set(current_node.introns).issubset(set(next_node.introns))
+                        )
                     )
                     or (
                         set(current_node.exons).issuperset(set(next_node.exons))
@@ -270,12 +280,11 @@ class CircRNAFilter:
             # medium-confidence circular RNA
             _circular_condition3 = bool(
                 current_edge.variation_type.is_tdup()
-                and not current_node.introns
-                and not next_node.introns
                 and (
                     abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
                     or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
-                ),
+                )
+                and (current_node.introns == next_node.introns)
             )
 
             # low-confidence circular RNA
@@ -293,11 +302,17 @@ class CircRNAFilter:
         num_of_tdups = 0
         num_of_hops = len(nodes) - 1
         num_of_hops_satisfy_condition = 0
+        ont_condition = False
         for _id, current_node in enumerate(nodes[:-1], 1):
             current_edge = nlpath.next_edge(current_node, _id - 1)
             next_node = nlpath[_id]
             if current_edge.variation_type.is_tdup():
                 num_of_tdups += 1
+                if (
+                    abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                    or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
+                ) and (current_node.introns == next_node.introns):
+                    ont_condition = True
 
             # first hop
             if _id == 1:
@@ -310,10 +325,12 @@ class CircRNAFilter:
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issubset(set(next_node.introns))
                     )
-                    or (not current_node.introns)
-                    and (
-                        abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
-                        or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
+                    or (
+                        (not current_node.introns)
+                        and (
+                            abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                            or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
+                        )
                     )
                 ):
                     num_of_hops_satisfy_condition += 1
@@ -329,10 +346,12 @@ class CircRNAFilter:
                         and len(next_node.introns) > 0
                         and set(current_node.introns).issuperset(set(next_node.introns))
                     )
-                    or (not next_node.introns)
-                    and (
-                        abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
-                        or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
+                    or (
+                        (not next_node.introns)
+                        and (
+                            abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
+                            or abs(current_node.ref_end - next_node.ref_end) <= self.breakpoint_diff_threshold
+                        )
                     )
                 ):
                     num_of_hops_satisfy_condition += 1
@@ -344,7 +363,7 @@ class CircRNAFilter:
             ):
                 num_of_hops_satisfy_condition += 1
 
-        return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops
+        return num_of_hops_satisfy_condition == num_of_tdups == num_of_hops or ont_condition
 
     def is_two_megaexon_within_annotated_intron(
         self,

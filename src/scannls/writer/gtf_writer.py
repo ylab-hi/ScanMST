@@ -1,9 +1,5 @@
-"""GTF writer class.
+"""GTF writer class."""
 
-@Filename:    gtfWriter.py
-@Author:      YangyangLi
-@Time:        1/30/22 6:18 PM
-"""
 from __future__ import annotations
 
 import copy
@@ -12,14 +8,14 @@ from typing import IO, TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls import MicroHomology, NovelInsertion
+from scannls.base import MicroHomology, NovelInsertion
 from scannls.exception import ExonsNotFoundError
 from scannls.graph import Edge, NLPath, Node
 
 from .writer import Writer
 
 if TYPE_CHECKING:
-    from scannls.graph import Edge, NLPath, Node  # noqa: F811
+    from scannls.graph import Edge, NLPath, Node
 
 
 class GTFWriter(Writer):
@@ -41,9 +37,10 @@ class GTFWriter(Writer):
 
     num_fields: int = 9
 
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str, rescue_sr: bool) -> None:
         """Initialize GTFWriter object."""
         super().__init__(file_path)
+        self.rescue_sr = rescue_sr
 
     @property
     def is_opened(self) -> bool:
@@ -103,6 +100,7 @@ class GTFWriter(Writer):
         for node_gtf_feature in get_nodes_gtf_features_from_series(
             data_object,
             str(object_id),
+            self.rescue_sr,
         ):
             self.write_line(self.formatter(node_gtf_feature))
 
@@ -110,6 +108,7 @@ class GTFWriter(Writer):
 def get_nodes_gtf_features_from_series(
     nlpath: NLPath,
     cluster_id: str,
+    rescue_sr: bool,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
@@ -159,9 +158,11 @@ def get_nodes_gtf_features_from_series(
 
     nlpath_gtf_features[0] = add_info_to_attribute_column(
         format_gtf_features_for_nlpath(
-            f"{cluster_id}x{nlpath.id}",
-            min_nlpath_sr,
-            min_nlpath_originla_sr,
+            nlpath_id=f"{cluster_id}x{nlpath.id}",
+            nlpath_sr=min_nlpath_sr,
+            nlpath_originla_sr=min_nlpath_originla_sr,
+            rescue_sr=rescue_sr,
+            extend=nlpath.extension,
         ),
         f'gene_id "{cluster_id}";',
     )
@@ -171,7 +172,7 @@ def get_nodes_gtf_features_from_series(
 
 def add_info_to_attribute_column(col_list: list[str], add_info: str):
     """Add additional info. to the 9th column of GTF."""
-    col_list[-1] = col_list[-1] + add_info
+    col_list[-1] += add_info
     return col_list
 
 
@@ -179,19 +180,39 @@ def format_gtf_features_for_nlpath(
     nlpath_id: str,
     nlpath_sr: float,
     nlpath_originla_sr: float,
+    *,
+    rescue_sr: bool,
+    extend: bool = False,
 ) -> list[str]:
     """Get GTF features of transcript."""
-    return [
-        ".",
-        "scannls",
-        "transcript",
-        ".",
-        ".",
-        ".",
-        ".",
-        ".",
-        f'sr "{nlpath_sr}"; ' f'osr "{nlpath_originla_sr}"; ' f'transcript_id "{nlpath_id}"; ',
-    ]
+    if rescue_sr:
+        return [
+            ".",
+            "scannls",
+            "transcript",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            f'sr "{nlpath_sr}"; '
+            f'osr "{nlpath_originla_sr}"; '
+            f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
+        ]
+    else:
+        return [
+            ".",
+            "scannls",
+            "transcript",
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            f'sr "{nlpath_sr}"; '
+            f'osr "{nlpath_sr}"; '
+            f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
+        ]
 
 
 def get_gtf_features_from_insertion(
@@ -209,7 +230,8 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; ' f'sequence "{insertion.query_sequence}"; ',
+        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; '
+        f'sequence "{insertion.query_sequence}"; ',
     ]
 
 
@@ -262,15 +284,6 @@ def get_gtf_features_from_node(
         if isinstance(insertion, MicroHomology):
             microhomology_sequence += insertion.query_sequence
 
-    # last exon end position needs a correction if there is a microhomology.
-    if node.strand.is_forward() and exons.last.start < exons.last.end - len(
-        microhomology_sequence,
-    ):
-        copy_exons.last.end -= len(microhomology_sequence)
-
-    elif node.strand.is_reverse() and exons.last.start + len(microhomology_sequence) < exons.last.end:
-        copy_exons.last.start += len(microhomology_sequence)
-
     nodes_gtf_features = []
 
     for index, (start, end) in enumerate(copy_exons, 1):
@@ -284,7 +297,9 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; ' f'mega_exon_id "{node.trace_id:0>4}"; ' f'transcript_id "{nlpath_id}"; ',
+                f'exon_id "{index:0>3}"; '
+                f'mega_exon_id "{node.trace_id:0>4}"; '
+                f'transcript_id "{nlpath_id}"; ',
             ],
         )
 

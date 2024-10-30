@@ -1,8 +1,4 @@
-"""Init file for scannls.
-
-@Filename:    __init__.py
-@Time:        12/15/21 2:04 PM
-"""
+"""Init file for scannls."""
 
 from .basic import (
     AnnotationCode,
@@ -27,6 +23,7 @@ from .basic_read import Read
 from .blat import Blat
 from .filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
 from .my_logger import MyLogger
+from .nls_inference import infer_nls_from_connected_reads
 from .parallel import ParallelWorker
 from .read_connector import (
     ReadsConnector,
@@ -34,28 +31,29 @@ from .read_connector import (
 )
 
 __all__ = [
-    "CigarCode",
-    "MappingMode",
     "AnnotationCode",
+    "Blat",
+    "BreakPoint",
+    "CigarCode",
+    "CircRNAFilter",
+    "Event",
     "Exon",
+    "ExonFilter",
     "Exons",
-    "Introns",
-    "Strand",
+    "Insertion",
     "Interval",
     "Intervals",
-    "CircRNAFilter",
-    "ExonFilter",
-    "RTSwitchingFilter",
-    "BreakPoint",
-    "Event",
-    "Insertion",
+    "Introns",
+    "MappingMode",
     "MicroHomology",
-    "NovelInsertion",
-    "reverse_complement",
-    "Read",
-    "Blat",
     "MyLogger",
+    "NovelInsertion",
     "ParallelWorker",
+    "RTSwitchingFilter",
+    "Read",
     "ReadsConnector",
+    "Strand",
     "detect_read_read_connections_from_cigar",
+    "infer_nls_from_connected_reads",
+    "reverse_complement",
 ]

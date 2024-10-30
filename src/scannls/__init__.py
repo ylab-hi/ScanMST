@@ -1,10 +1,13 @@
 """Init file for scannls package."""
-__version__ = "0.0.1"
+
+__version__ = "0.1.0"
 __PACKAGE_NAME__ = "scannls"
+
+import sys
 
 from rich.traceback import install
 
-from . import blat, cli, cppext, graph, type, utils
+from . import blat, cli, cppext, graph, mtype, utils
 from .base import (
     Blat,
     BreakPoint,
@@ -35,41 +38,45 @@ from .exception import (
 from .graph import graphvis
 from .writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
+MAX_RECURSION_LIMIT = 10000
+if sys.getrecursionlimit() < MAX_RECURSION_LIMIT:
+    sys.setrecursionlimit(MAX_RECURSION_LIMIT)
+
 __all__ = [
-    "CigarCode",
-    "Strand",
-    "Interval",
-    "Intervals",
-    "CircRNAFilter",
-    "ExonFilter",
-    "RTSwitchingFilter",
-    "utils",
-    "cli",
-    "BreakPoint",
-    "type",
-    "graph",
-    "Read",
-    "Event",
-    "reverse_complement",
     "Blat",
-    "MyLogger",
-    "ParallelWorker",
-    "ReadsConnector",
-    "detect_read_read_connections_from_cigar",
+    "BreakPoint",
+    "BreakpointNotFoundError",
+    "CigarCode",
+    "CircRNAFilter",
+    "Event",
+    "ExonFilter",
     "FastaWriter",
     "GTFWriter",
+    "Insertion",
+    "Interval",
+    "Intervals",
+    "MicroHomology",
+    "ModesNotEqualError",
+    "MyLogger",
+    "NovelInsertion",
+    "ParallelWorker",
+    "RTSwitchingFilter",
+    "Read",
+    "ReadNotFoundError",
+    "ReadsConnector",
+    "Strand",
+    "ToolNotFoundError",
     "VCFWriter",
     "Writers",
-    "ToolNotFoundError",
-    "ReadNotFoundError",
-    "BreakpointNotFoundError",
-    "ModesNotEqualError",
-    "NovelInsertion",
-    "MicroHomology",
-    "Insertion",
-    "cppext",
     "blat",
+    "cli",
+    "cppext",
+    "detect_read_read_connections_from_cigar",
+    "graph",
     "graphvis",
+    "mtype",
+    "reverse_complement",
+    "utils",
 ]
 
 
