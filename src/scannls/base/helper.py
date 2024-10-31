@@ -910,7 +910,10 @@ def insertion2chimeric_alignment(
             valid_cigar_sa = cigar_validity(cigar_sa)
 
             nm_sa = nm_read - insertion_seq_len + nm_aligner
-            if nm_sa < max_allowed_nm and mapq_aligner >= mapq_cutoff:
+            # stringent position criteria and loose MAPQ criteria are used here.
+            mapq_aligner = 60
+
+            if nm_sa < max_allowed_nm:
                 chimeric_aln_str = (
                     f"{chrom_aligner},{original_ref_start + 1},"
                     f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
