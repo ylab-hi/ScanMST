@@ -1,9 +1,0 @@
-.	scannls	transcript	.	.	.	.	.	sr "2"; osr "2"; transcript_id "1x1"; extend "False"; gene_id "1";
-chr8	scannls	exon	30069642	30070036	.	-	.	exon_id "001"; mega_exon_id "0001"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30066777	30066918	.	-	.	exon_id "002"; mega_exon_id "0001"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30065988	30066139	.	-	.	exon_id "003"; mega_exon_id "0001"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30073877	30074055	.	-	.	exon_id "001"; mega_exon_id "0002"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30069642	30070059	.	-	.	exon_id "002"; mega_exon_id "0002"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30066777	30066918	.	-	.	exon_id "003"; mega_exon_id "0002"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30065988	30066139	.	-	.	exon_id "004"; mega_exon_id "0002"; transcript_id "1x1"; gene_id "1";
-chr8	scannls	exon	30063126	30063913	.	-	.	exon_id "005"; mega_exon_id "0002"; transcript_id "1x1"; gene_id "1";
