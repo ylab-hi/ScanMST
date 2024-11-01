@@ -65,6 +65,19 @@ class SRRescuer:
         self.node_rescued_sr_maximum = node_rescued_sr_maximum
         self.cache = {}
 
+    def init(self, graph) -> None:
+        """Calculate the depth on breakpoints no matter rescue SR or not.
+
+        changed in place
+
+        :param nodes_in_graph: Series
+        """
+        for node in graph:
+            self.update_breakpoint_depth(
+                graph,
+                node,
+            )
+
     def __call__(self, graph) -> None:
         """Rescue SR from soft-clipped non-chimeric reads.
 
@@ -93,7 +106,9 @@ class SRRescuer:
     @staticmethod
     def obtain_region_for_rescue_sr(node: Node, mode: MappingMode):
         """Obtain region from rescue."""
-        next_pos = node.exons.last.end if node.strand.is_forward() else node.exons.first.start
+        next_pos = (
+            node.exons.last.end if node.strand.is_forward() else node.exons.first.start
+        )
 
         if mode.is_sm():
             next_pos += 1
@@ -165,27 +180,6 @@ class SRRescuer:
 
                 edge.original_sr = edge.sr
                 edge.sr += current_node_rescued_sr
-                # update depth for breakpoint1 of edge
-                chrom_n, pos_n = edge.break_point1.to_tuple()
-
-                if mode1.is_ms():
-                    pos_n -= 1
-
-                edge.break_point1.depth = self.cppext_rescuer.count_reads(
-                    chrom_n,
-                    pos_n,
-                    pos_n + 1,
-                )
-
-                # update depth for breakpoint2 of edge
-                chrom_n, pos_n = edge.break_point2.to_tuple()
-                if mode2.is_ms():
-                    pos_n -= 1
-                edge.break_point2.depth = self.cppext_rescuer.count_reads(
-                    chrom_n,
-                    pos_n,
-                    pos_n + 1,
-                )
 
                 query_name_next = next_node.read_ids
                 chrom = edge.break_point2.chrom
@@ -214,6 +208,54 @@ class SRRescuer:
                     next_node.cigartuples_without_soft,
                 )
 
-                logger.trace(f"edge {region.to_string().strip()}, rescue sr {increased_sr}")
+                logger.trace(
+                    f"edge {region.to_string().strip()}, rescue sr {increased_sr}"
+                )
 
                 edge.sr += increased_sr
+
+    def update_breakpoint_depth(
+        self,
+        graph: NLGraph,
+        current_node: Node,
+    ) -> None:
+        """Update edge depth for input node."""
+        rescued_pre = False
+
+        for next_node in current_node.successors:
+            edges = graph.find_edges(current_node, next_node)
+
+            if len(edges) > 1:
+                logger.warning("detect multiple edges")
+
+            for edge in edges[:1]:
+                mode1, mode2 = edge.modes
+
+                edge.original_sr = edge.sr
+                # update depth for breakpoint1 of edge
+                chrom_n, pos_n = edge.break_point1.to_tuple()
+
+                if mode1.is_ms():
+                    pos_n -= 1
+
+                edge.break_point1.depth = self.cppext_rescuer.count_reads(
+                    chrom_n,
+                    pos_n,
+                    pos_n + 1,
+                )
+
+                # update depth for breakpoint2 of edge
+                chrom_n, pos_n = edge.break_point2.to_tuple()
+
+                if mode2.is_ms():
+                    pos_n -= 1
+
+                edge.break_point2.depth = self.cppext_rescuer.count_reads(
+                    chrom_n,
+                    pos_n,
+                    pos_n + 1,
+                )
+
+                if next_node.cigartuples_without_soft is None:
+                    msg = f"{next_node.query_name} with None value"
+                    raise ValueError(msg)

@@ -40,7 +40,7 @@ class NLGraph:
         merge_threshold,
         support_reads,
         input_bam_path: Path,
-        *,
+        rescue_sr: bool,
         ignore_circle: bool = False,
     ) -> None:
         """Initialize SpliceGraph."""
@@ -50,6 +50,7 @@ class NLGraph:
         self.dict_factory = NLGraph.dict_factory  # type: ignore
         self.list_factory = NLGraph.list_factory  # type: ignore
         self.rescuer = rescuer
+        self.rescue_sr = rescue_sr
         self.input_bam_path = input_bam_path
         self.has_circle = False
         self.ignore_circle = ignore_circle
@@ -86,7 +87,11 @@ class NLGraph:
 
         # sr rescuer
         self.logger.trace(f"NLGraph Node: {len(self)}")
-        if self.rescuer is not None:
+
+        # caluclate the depth on breakpoints only
+        self.rescuer.init(self)
+
+        if self.rescue_sr:
             self.rescuer(self)
 
         if not is_weakly_connected(self):
@@ -126,8 +131,7 @@ class NLGraph:
         rescue_sr: bool,
     ) -> NLGraph:
         """Create splice graph."""
-        rescuer = (
-            SRRescuer(
+        rescuer = SRRescuer(
                 input_bam,
                 mapq,
                 soft_len,
@@ -135,12 +139,9 @@ class NLGraph:
                 alignment_fraction,
                 node_rescued_sr_maximum,
                 average_read_depth,
-            )
-            if rescue_sr
-            else None
         )
 
-        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), ignore_circle=ignore_circle)
+        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), rescue_sr, ignore_circle)
 
     @property
     def trace_id(self) -> int:
