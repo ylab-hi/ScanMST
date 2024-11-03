@@ -1,3 +1,0 @@
-[submodule "dependency/rscannls"]
-	path = dependency/rscannls
-	url = https://github.com/ylab-hi/rscannls

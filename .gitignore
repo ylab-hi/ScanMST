@@ -4,6 +4,7 @@
 /.nox/
 /.python-version
 /.pytype/
+/.gitmodules/
 /dist/
 /tmp/
 /data/src/
