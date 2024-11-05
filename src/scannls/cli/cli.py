@@ -34,10 +34,11 @@ def get_writers(
     output_prefix: str,
     ref_path: str,
     rescue_sr: bool,
+    output_sequence_choice: str,
+    read_name_to_seq_dict: dict,
     bam_header: Any,
 ) -> Writers:
     """Get writers."""
-    fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path)
     gtf_writer = GTFWriter(f"{output_prefix}.gtf", rescue_sr)
     vcf_writer = VCFWriter(
         f"{output_prefix}.vcf",
@@ -45,8 +46,14 @@ def get_writers(
         ref_path,
         bam_header,
     )
+    if output_sequence_choice in {"reference", "haplotype"}:
+        fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, output_sequence_choice, read_name_to_seq_dict)
 
-    return Writers((fasta_writer, gtf_writer, vcf_writer))
+        return Writers((fasta_writer, gtf_writer, vcf_writer))
+    fasta_writer1 = FastaWriter(f"{output_prefix}.reference.fasta", ref_path, "reference", read_name_to_seq_dict)
+    fasta_writer2 = FastaWriter(f"{output_prefix}.haplotype.fasta", ref_path, "haplotype", read_name_to_seq_dict)
+
+    return Writers((fasta_writer1, fasta_writer2, gtf_writer, vcf_writer))
 
 
 def parse_nlgraph_for_cluster_seq(
@@ -211,7 +218,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
     # CIGAR string refinement
     motif_required = not options.noncanonical
     try:
-        intact_nlpaths, in_bam_header, avg_cov = scanbam_run(
+        intact_nlpaths, intact_read_query_name_to_sequence, in_bam_header, avg_cov = scanbam_run(
             blat_two_bit=options.blat_two_bit,
             blat_port=options.blat_port,
             tmp_dir=tmp_dir.name,
@@ -254,7 +261,9 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # cliques is generator
         clusters = cluster_finder.merge_cluster()
 
-        writers = get_writers(options.output, options.ref, options.rescue_sr, in_bam_header)
+        writers = get_writers(
+            options.output, options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
+        )
         parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
 
         node_rescued_sr_max = 100

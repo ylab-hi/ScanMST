@@ -18,6 +18,8 @@ class DefaultOptions:
     gtf: str
     output: str
     blat_two_bit: str
+    output_sequence_choices: tuple[str, str, str] = ("haplotype", "reference", "both")
+    output_sequence_choice: str = "reference"
     blat_closed: bool = True
     blat_sleep: bool = True
     blat_port: int = 88888
@@ -87,7 +89,7 @@ class RichArgParser(argparse.ArgumentParser):
         """Color message."""
         import re
 
-        pattern = re.compile(r'(?<!\w)(?P<arg>(?:--[\w-]+|-h))(?!\w)')
+        pattern = re.compile(r"(?<!\w)(?P<arg>(?:--[\w-]+|-h))(?!\w)")
         return pattern.sub(lambda m: f"[bold {color}]{m.group('arg')}[/]", message)
 
     def _print_message(self, message: str | None, _file: Any = None) -> None:
@@ -106,9 +108,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]scannls[/] :rocket: Non-colinear splicing "
-        "(NLS) events identification using transcriptomic"
-        " long reads data",
+        description="[red]scannls[/] :rocket: Non-colinear splicing " "(NLS) events identification using transcriptomic" " long reads data",
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
@@ -144,6 +144,14 @@ def parse_args() -> argparse.ArgumentParser:
         dest="output",
         help="output prefix",
         required=True,
+    )
+    parser.add_argument(
+        "--output-seq",
+        action="store",
+        dest="output_sequence_choice",
+        help="Output sequence type (default: %(default)s)",
+        choices=DefaultOptions.output_sequence_choices,
+        default=DefaultOptions.output_sequence_choice,
     )
     parser.add_argument(
         "--sr",

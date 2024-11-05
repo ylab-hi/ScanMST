@@ -252,12 +252,24 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
                     pre_evt.read1_ref_start = next_evt.read1_ref_start
                     pre_evt.read1_exons.first.start = next_evt.read1_ref_start
             updated_event_list.append(pre_evt)
-            pre_read_info = pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons
+            pre_read_info = (
+                pre_evt.read1_ref_start,
+                pre_evt.read1_ref_end,
+                pre_evt.read1_exons,
+            )
             if idx == hop_number - 1:
                 if next_evt.is_read_reversed:
-                    next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                    (
+                        next_evt.read2_ref_start,
+                        next_evt.read2_ref_end,
+                        next_evt.read2_exons,
+                    ) = pre_read_info
                 else:
-                    next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                    (
+                        next_evt.read1_ref_start,
+                        next_evt.read1_ref_end,
+                        next_evt.read1_exons,
+                    ) = pre_read_info
                 updated_event_list.append(next_evt)
         else:
             if pre_read_info:
@@ -281,12 +293,24 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
                     pre_evt.read2_ref_start = next_evt.read1_ref_start
                     pre_evt.read2_exons.first.start = next_evt.read1_ref_start
             updated_event_list.append(pre_evt)
-            pre_read_info = pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons
+            pre_read_info = (
+                pre_evt.read2_ref_start,
+                pre_evt.read2_ref_end,
+                pre_evt.read2_exons,
+            )
             if idx == hop_number - 1:
                 if next_evt.is_read_reversed:
-                    next_evt.read2_ref_start, next_evt.read2_ref_end, next_evt.read2_exons = pre_read_info
+                    (
+                        next_evt.read2_ref_start,
+                        next_evt.read2_ref_end,
+                        next_evt.read2_exons,
+                    ) = pre_read_info
                 else:
-                    next_evt.read1_ref_start, next_evt.read1_ref_end, next_evt.read1_exons = pre_read_info
+                    (
+                        next_evt.read1_ref_start,
+                        next_evt.read1_ref_end,
+                        next_evt.read1_exons,
+                    ) = pre_read_info
                 updated_event_list.append(next_evt)
     return updated_event_list
 
@@ -440,6 +464,8 @@ def _scan_bam_helper(
         )
 
     nls_src_forms_list = []
+    # read name: sequence at transcriptional direction
+    read_name_to_seq_dict = {}
 
     pat_left_s = re.compile(r"^(\d+)S")
     pat_right_s = re.compile(r"(\d+)S$")
@@ -448,13 +474,7 @@ def _scan_bam_helper(
     circ_rna_filter = CircRNAFilter(gtf, boundary_size, prune_threshold)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
-        if (
-            read.mapq >= mapq_cutoff
-            and not read.is_secondary
-            and not read.has_tag("XA")
-            and not read.is_unmapped
-            and not read.is_supplementary
-        ):
+        if read.mapq >= mapq_cutoff and not read.is_secondary and not read.has_tag("XA") and not read.is_unmapped and not read.is_supplementary:
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
@@ -526,9 +546,7 @@ def _scan_bam_helper(
                     )
 
                     if chimeric_aln_str:
-                        logger.trace(
-                            f"auxiliary alignment[2] is effective here. reads_name:{read.query_name} query_sequence:{soft_seq_ori}"
-                        )
+                        logger.trace(f"auxiliary alignment[2] is effective here. reads_name:{read.query_name} query_sequence:{soft_seq_ori}")
 
                         logger.trace(
                             f"Pre-checking: {read.query_name=} "
@@ -558,9 +576,7 @@ def _scan_bam_helper(
                     )
 
                     if primary_aln_cigarstring:
-                        logger.trace(
-                            f"auxiliary alignment[3] is effective here. reads_name:{read.query_name} query_sequence:{ins_seq}"
-                        )
+                        logger.trace(f"auxiliary alignment[3] is effective here. reads_name:{read.query_name} query_sequence:{ins_seq}")
                         logger.trace(
                             f"Pre-checking: {read.query_name=} "
                             f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag",
@@ -581,6 +597,9 @@ def _scan_bam_helper(
                 )
 
                 nm = read.get_tag("NM")
+
+                read_name = read.query_name
+                read_sequence = reverse_complement(read.query_sequence) if read.is_reverse else read.query_sequence
 
                 if read.cigarstring is None:
                     msg = f"{read}'s cigarstring is None"
@@ -647,9 +666,7 @@ def _scan_bam_helper(
 
                     # num of alignment segments should be equal to the number of hops + 1
                     # after exon, RT switching and other filtering, the condition may be not satisfied.
-                    if len(nls_event_list) > 0 and (
-                        len(nls_event_list) == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads
-                    ):
+                    if len(nls_event_list) > 0 and (len(nls_event_list) == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads):
                         logger.debug(f"{nls_event_list=}")
                         nlpath = NLPath.new(
                             events=nls_event_list,
@@ -661,6 +678,8 @@ def _scan_bam_helper(
                             motif_required=motif_required,
                             aligner=aligner,
                         )
+
+                        read_name_to_seq_dict[read_name] = read_sequence
 
                         nlpath.squeeze()
                         nlpath.setup_breakpoints()
@@ -700,7 +719,7 @@ def _scan_bam_helper(
     logger.debug(f"Total nlpaths: {nls_src_forms_list}")
     logger.complete()
     in_bam_io_object.close()
-    return nls_src_forms_list
+    return nls_src_forms_list, read_name_to_seq_dict
 
 
 def scanbam_run(
@@ -766,21 +785,26 @@ def scanbam_run(
     self_local_namespace = copy.copy(locals())
     # get the keyword arguments for the _scan_bam_helper function
     keyword_parameters_dict = {
-        key: self_local_namespace[key]
-        for key, value in inspect.signature(_scan_bam_helper).parameters.items()
-        if value.kind.name == "KEYWORD_ONLY"
+        key: self_local_namespace[key] for key, value in inspect.signature(_scan_bam_helper).parameters.items() if value.kind.name == "KEYWORD_ONLY"
     }
 
     intact_series_list = []
+    intact_read_query_name_to_sequence_dict = {}
 
     if parallel == 1:
-        intact_series_list = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
+        intact_series_list, intact_read_query_name_to_sequence_dict = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
     else:
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)
         for contig in contigs:
-            contig_series_list = result[contig]
+            contig_series_list, contig_read_query_name_to_sequence_dict = result[contig]
             intact_series_list.extend(contig_series_list)
+            intact_read_query_name_to_sequence_dict.update(contig_read_query_name_to_sequence_dict)
 
     bam_scanner.in_bam.close()
-    return intact_series_list, bam_scanner.header, avg_cov
+    return (
+        intact_series_list,
+        intact_read_query_name_to_sequence_dict,
+        bam_scanner.header,
+        avg_cov,
+    )

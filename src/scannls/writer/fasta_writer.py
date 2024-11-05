@@ -4,6 +4,7 @@ from functools import singledispatchmethod
 from pathlib import Path
 from typing import IO, Any
 
+import pyabpoa
 from loguru import logger
 from pyfaidx import Fasta, FastaNotFoundError
 
@@ -16,7 +17,13 @@ from .writer import Writer
 class FastaWriter(Writer):
     """Writer for Fasta files."""
 
-    def __init__(self, file_path: str, reference: str) -> None:
+    def __init__(
+        self,
+        file_path: str,
+        reference: str,
+        output_sequence_choice: str,
+        read_name_to_seq_dict: dict,
+    ) -> None:
         """Initialize FastaWriter object."""
         super().__init__(file_path)
         self.reference = Path(reference)
@@ -24,6 +31,10 @@ class FastaWriter(Writer):
             msg = f"{self.reference} does not exist."
             raise FastaNotFoundError(msg)
         self.reference_io = Fasta(reference, sequence_always_upper=True)
+        self.output_sequence_choice = output_sequence_choice
+        if output_sequence_choice == "haplotype":
+            self.read_name_to_seq_dict = read_name_to_seq_dict
+            self.msa_aligner = pyabpoa.msa_aligner()
         self.id = 1
 
     @property
@@ -72,19 +83,67 @@ class FastaWriter(Writer):
 
     @write_data.register
     def _(self, data_object: NLPath, object_id: str):
-        """Write Series to fasta file."""
+        """Write NLPath to fasta file. object_id is cluster_id."""
+
         if len(data_object.nodes) == 0:
             logger.warning(
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
-        sequence, node_length_str = get_nodes_sequence_from_series(
-            data_object,
-            reference_io=self.reference_io,
-        )
+        if self.output_sequence_choice == "reference":
+            sequence, node_length_str = get_nodes_sequence_from_series(
+                data_object,
+                reference_io=self.reference_io,
+            )
+        elif self.output_sequence_choice == "haplotype":
+            sequence, node_length_str = get_consensus_sequence_from_series(
+                data_object,
+                reference_io=self.reference_io,
+                read_name_to_seq_dict=self.read_name_to_seq_dict,
+                msa_aligner=self.msa_aligner,
+            )
 
         self.write_line(
             self.formatter(f"{object_id}x{data_object.id} {node_length_str}", sequence),
         )
+
+
+def get_consensus_sequence_from_series(
+    nlpath: NLPath,
+    reference_io: Fasta,
+    read_name_to_seq_dict: dict,
+    msa_aligner: pyabpoa.msa_aligner,
+) -> tuple[str, str]:
+    """Get sequence of nodes of series.
+
+    :param series: Series including nodes.
+    :param reference_io: ReferenceIO object.
+
+    :return: Sequence of nodes.
+    """
+    node_length_str = ""
+    read_names_for_nlpath = set()
+    for idx, node in enumerate(nlpath):
+        edge = nlpath.next_edge(node, idx)
+        read_names_at_edge = set(edge.read_ids)
+
+        if len(read_names_for_nlpath) == 0 or len(read_names_at_edge) < len(read_names_for_nlpath):
+            read_names_for_nlpath = read_names_at_edge
+
+        insertion_info = None if edge is None else edge.insertion_info
+        node_seq = get_exon_sequence_from_node(node, insertion_info, reference_io)
+        node_length_str += f"{len(node_seq)}|"
+
+    read_supporting_seqs = []
+    for read_name in read_names_for_nlpath:
+        if read_name in read_name_to_seq_dict:
+            read_supporting_seqs.append(read_name_to_seq_dict[read_name])
+        else:
+            logger.warning(f"{read_name=} is not found in name_to_seq_dict.")
+
+    result = msa_aligner.msa(read_supporting_seqs, out_cons=True, out_msa=False)
+    sequence = result.cons_seq[0]
+
+    return sequence, node_length_str[:-1]
 
 
 def get_nodes_sequence_from_series(
