@@ -124,9 +124,10 @@ def get_consensus_sequence_from_series(
     read_names_for_nlpath = set()
     for idx, node in enumerate(nlpath):
         edge = nlpath.next_edge(node, idx)
-        read_names_at_edge = set(edge.read_ids)
 
-        if len(read_names_for_nlpath) == 0 or len(read_names_at_edge) < len(read_names_for_nlpath):
+        read_names_at_edge = set() if edge is None else set(edge.read_ids)
+
+        if len(read_names_for_nlpath) == 0 or 0 < len(read_names_at_edge) < len(read_names_for_nlpath):
             read_names_for_nlpath = read_names_at_edge
 
         insertion_info = None if edge is None else edge.insertion_info
