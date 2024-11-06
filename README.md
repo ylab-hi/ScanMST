@@ -36,15 +36,16 @@ If you have some issues, please check the [document](https://scannls.readthedocs
 ```console
 ❯ scannls -h
 
- sage: scannls [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--sr SUPPORT_READS] [--splice-bin SPLICE_BIN] [--mapq MAPQ]
-               [--log-level {info,debug,trace}] [--parallel PARALLEL] [--2bit TWO_BIT] [--species {human,mouse}]
-               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--nclosed]
-               [--nsleep] [--graph] [--nbound] [--port PORT] [--max-allowed-nm MAX_ALLOWED_NM] [--identity IDENT_CUTOFF]
-               [--long-indel-length LONG_INDEL_LENGTH] [--substitution-num SUBSTITUTIONS_NUM] [--indel-fraction INDEL_FRACTION]
-               [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN] [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN]
-               [--alignment-fraction ALIGNMENT_FRACTION] [--substitution-fraction SUBSTITUTIONS_FRACTION]
+usage: scannls [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {haplotype,reference,both}] [--sr SUPPORT_READS]
+               [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--parallel PARALLEL] [--aligner {blat,}]
+               [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
+               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph]
+               [--nbound] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS] [--long-indel-length LONG_INDEL_LENGTH]
+               [--substitution-num SUBSTITUTIONS_NUM] [--indel-fraction INDEL_FRACTION] [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN]
+               [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
+               [--substitution-fraction SUBSTITUTIONS_FRACTION] [--ignore-circle] [--rescue-sr]
 
-scannls 🚀 Nonlinear splicing (NLS) events identification using transcriptomic long reads data
+scannls 🚀 Non-colinear splicing (NLS) events identification using transcriptomic long reads data
 
 options:
   -h, --help                              show this help message and exit
@@ -53,12 +54,19 @@ options:
   --ref REF                               reference genome in FASTA format (with fai index)
   --gtf GTF                               gene annotations in GTF format
   --output OUTPUT                         output prefix
+  --output-seq {haplotype,reference,both}
+                                          Output sequence type (default: reference)
   --sr SUPPORT_READS                      minimum number of support reads for reporting NLS (default: 1)
   --splice-bin SPLICE_BIN                 splice site bin size (default: 5)
-  --mapq MAPQ                             minimum MAPQ of reads for calling NLS (default: 15)
-  --log-level {info,debug,trace}          set log level (default: info)
+  --mapq MAPQ                             minimum MAPQ of reads for calling NLS (default: 20)
+  --log-level {info,debug,trace,warning}  set log level (default: warning)
   --parallel PARALLEL                     set working mode in processor (default: 1)
-  --2bit TWO_BIT                          reference genome in 2bit format
+  --aligner {blat,}                       aligner to use for mapping reads (default: None)
+  --blat-identity IDENT_CUTOFF            BLAT identity cutoff (default: 0.9)
+  --blat-2bit BLAT_TWO_BIT                reference genome in 2bit format for blat aligner
+  --blat-nclosed                          close BLAT server when job has done (default: True)
+  --blat-nsleep                           if sleep randomly before starting BLAT server (default: True)
+  --blat-port BLAT_PORT                   port for BLAT server (default: 88888)
   --species {human,mouse}                 species name for reference genome (default: human)
   --circular-rna-filter {remove,keep,extract}
                                           The way of dealing with circular RNAs (default: remove)
@@ -66,24 +74,24 @@ options:
   --rt-switching-filter RT_SWITCHING_FILTER_LEN
                                           Set RT switching filter (default length: 10)
   --ncan                                  considering Non canonical spliced sites (default: False)
-  --nclosed                               close BLAT server when job has done (default: True)
-  --nsleep                                if sleep randomly before starting BLAT server (default: True)
   --graph                                 if output graph (default: False)
   --nbound                                if add maximum increment limit using average reads depth when rescuing sr (default: True)
-  --port PORT                             port for BLAT server (default: 88888)
-  --max-allowed-nm MAX_ALLOWED_NM         maximum allowed NM to keep AS tag (default: 60)
-  --identity IDENT_CUTOFF                 BLAT identity cutoff (default: 0.99)
-  --long-indel-length LONG_INDEL_LENGTH   the length cutoff of defining long indel in the reads (default: 5)
+  --max-allowed-nm MAX_ALLOWED_NM         maximum allowed NM to keep AS tag (default: 50)
+  --max-allowed-ins MAX_ALLOWED_INS       maximum allowed micro-insertion length (default: 50)
+  --long-indel-length LONG_INDEL_LENGTH   the length cutoff of defining long indel in the reads (default: 10)
   --substitution-num SUBSTITUTIONS_NUM    the allowed maximum substitution number in the reads (default: 20)
-  --indel-fraction INDEL_FRACTION         the allowed maximum long indel fraction in the reads (default: 0.1)
-  --prune-threshold PRUNE_THRESHOLD       splice graph pruning length threshold (default: 3)
+  --indel-fraction INDEL_FRACTION         the allowed maximum long indel fraction in the reads (default: 0.2)
+  --prune-threshold PRUNE_THRESHOLD       splice graph pruning length threshold (default: 10)
   --soft-len SOFT_LEN                     minimum softclipped segment length to be rescued (default: 5)
   --mismatch MISMATCH                     maximum allowed mismatch bases of rescued segment (default: 3)
   --min-soft-seg-len MIN_SOFT_SEG_LEN     minimum softclipped segment length to trigger BLAT alignment (default: 200)
   --alignment-fraction ALIGNMENT_FRACTION
                                           minimal fraction of aligned part for smith waterman local alignment (default: 0.8)
   --substitution-fraction SUBSTITUTIONS_FRACTION
-                                          the allowed maximum substitution fraction in the reads (default: 0.1)
+                                          the allowed maximum substitution fraction in the reads (default: 0.2)
+  --ignore-circle                         if export result if the nlgraph has a circle (default: False)
+  --rescue-sr                             if rescuing sr for edge (default: False)
+
 ```
 
 Please see the [document](https://scannls.readthedocs.io/en/latest/) for details and more examples.
