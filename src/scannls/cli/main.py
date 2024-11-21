@@ -116,7 +116,7 @@ class BamScanner:
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
-        # "--MD" need to be used, MD tag store information about SNVs and DELs
+        # "--cs" need to be used, cs tag store information about SNVs and DELs
         self.logger.info("Iter bam file and Extracting supplementary alignments")
 
         for read in self.in_bam.fetch():
@@ -134,10 +134,9 @@ class BamScanner:
                 r_s_len = right_mat.group(1) if right_mat else ""
 
                 nm = read.get_tag("NM")
-                md_tag = read.get_tag("MD")
+                cs_tag = read.get_tag("cs")
                 num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
-                    read.cigarstring,
-                    md_tag,
+                    cs_tag,
                     self.long_indel_length,
                 )
 
@@ -605,8 +604,7 @@ def _scan_bam_helper(
                     msg = f"{read}'s cigarstring is None"
                     raise ValueError(msg)
                 num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
-                    read.cigarstring,
-                    read.get_tag("MD"),
+                    read.get_tag("cs"),
                     long_indel_length,
                 )
 

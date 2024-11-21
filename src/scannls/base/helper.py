@@ -8,6 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import alignparse
 import HTSeq  # type: ignore
 import yaml  # type: ignore
 
@@ -1921,56 +1922,54 @@ def diff_chrom_diff_strand_handler(
 
 
 def obtain_variants_stats(
-    cigar_str: str,
-    md_tag,
-    indel_len_cutoff: int = 4,
-) -> tuple[int, float, float]:
-    """Obtain variants stats from read matched part.
+    cs_tag_string: str,
+    large_indel_len_threshold: int = 4,
+) -> tuple[int, float, float, float]:
+    """Obtain variants stats from read matched part using cs tag.
 
-    :param cigar_str: CIGAR string
-    :param md_tag: MD tag
+    :param cs_tag_string: cs tag (compact string for differences)
     :param indel_len_cutoff: INDEL length threshold
     :return: number of substitutions, fraction of long insertions and fraction of long deletions.
 
     .. note::
-        'A': 65
-        'Z': 90
-        '^': 94
-        '0': 48
-        https://lh3.github.io/2018/03/27/the-history-the-cigar-x-operator-and-the-md-tag
-
+        https://github.com/lh3/minimap2#the-cs-optional-tag
+        https://jbloomlab.github.io/alignparse/alignparse.cs_tag.html
     """
-    parsed_cigar_result = cppext.parseCigar(cigar_str)
-    cigartuples_without_soft: list[int] = parsed_cigar_result.cigartuples_without_soft
 
-    del_num, ins_num = 0, 0
-    del_outlier_num, ins_outlier_num, dels_len_total = 0, 0, 0
+    cs_tuples = alignparse.cs_tag.split_cs(cs_tag_string, allow_intron=True)
 
-    for idx in range(0, len(cigartuples_without_soft), 2):
-        op_code = cigartuples_without_soft[idx]
-        _len = cigartuples_without_soft[idx + 1]
-        if op_code == CigarCode.Del:
-            del_num += 1
-            dels_len_total += _len
-            if _len >= indel_len_cutoff:
-                del_outlier_num += 1
-        elif op_code == CigarCode.Insertion:
-            ins_num += 1
-            if _len >= indel_len_cutoff:
+    del_outlier_num, ins_outlier_num = 0, 0
+
+    substitution_num = 0
+    insertion_num = 0
+    deletion_num = 0
+    # ignore perfect matches(:) and intron(~)
+    for _cs in cs_tuples:
+        # 1 mismatch
+        if _cs.startswith("*"):
+            substitution_num += 1
+        # insertion
+        elif _cs.startswith("+"):
+            insertion_num = +1
+            insertion_length = len(_cs[1:])
+            if insertion_length >= large_indel_len_threshold:
                 ins_outlier_num += 1
+        # deletion
+        elif _cs.startswith("-"):
+            deletion_num = +1
+            deletion_length = len(_cs[1:])
+            if deletion_length >= large_indel_len_threshold:
+                del_outlier_num += 1
 
-    sum_of_subs_dels = 0
-    for _letter in md_tag:
-        if ord(_letter) >= 65 and ord(_letter) <= 90:
-            sum_of_subs_dels += 1
+    total_num_of_mutations = substitution_num + insertion_num + deletion_num
 
-    num_of_subs = sum_of_subs_dels - dels_len_total
-    total_num_of_mutations = num_of_subs + ins_num + del_num
-    ins_fraction = 0 if ins_num == 0 else ins_outlier_num / total_num_of_mutations
-    del_fraction = 0 if del_num == 0 else del_outlier_num / total_num_of_mutations
-    subs_fraction = 0 if num_of_subs == 0 else num_of_subs / total_num_of_mutations
+    ins_fraction = 0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
+    del_fraction = 0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
+    subs_fraction = (
+        0 if substitution_num == 0 else substitution_num / total_num_of_mutations
+    )
 
-    return num_of_subs, subs_fraction, ins_fraction, del_fraction
+    return substitution_num, subs_fraction, ins_fraction, del_fraction
 
 
 def get_transcriptome_length(species: str) -> int:
