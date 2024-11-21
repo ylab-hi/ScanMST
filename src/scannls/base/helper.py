@@ -1963,10 +1963,10 @@ def obtain_variants_stats(
 
     total_num_of_mutations = substitution_num + insertion_num + deletion_num
 
-    ins_fraction = 0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
-    del_fraction = 0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
+    ins_fraction = 0.0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
+    del_fraction = 0.0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
     subs_fraction = (
-        0 if substitution_num == 0 else substitution_num / total_num_of_mutations
+        0.0 if substitution_num == 0 else substitution_num / total_num_of_mutations
     )
 
     return substitution_num, subs_fraction, ins_fraction, del_fraction
