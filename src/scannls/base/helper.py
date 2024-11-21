@@ -1950,13 +1950,13 @@ def obtain_variants_stats(
             substitution_num += 1
         # insertion
         elif _cs.startswith("+"):
-            insertion_num = +1
+            insertion_num += 1
             insertion_length = len(_cs[1:])
             if insertion_length >= large_indel_len_threshold:
                 ins_outlier_num += 1
         # deletion
         elif _cs.startswith("-"):
-            deletion_num = +1
+            deletion_num += 1
             deletion_length = len(_cs[1:])
             if deletion_length >= large_indel_len_threshold:
                 del_outlier_num += 1
