@@ -750,7 +750,9 @@ def blat2chimeric_alignment(
             strand_sa = insertion_info.strand
             cigar_sa_partial = insertion_info.cigarstring
             nm_sa = insertion_info.nm
-            mapq = insertion_info.mapq
+            # insertion_info.mapq
+            # loose MAPQ criteria are used here in order to obtain the possible longest transript.
+            mapq = 60
             if read_strand == strand_sa:
                 # same strand: different reads mode
                 # MS(1) ~ SM(2) or SM(2) ~ MS(1)
