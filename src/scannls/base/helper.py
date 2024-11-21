@@ -8,7 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import alignparse
+from alignparse import cs_tag
 import HTSeq  # type: ignore
 import yaml  # type: ignore
 
@@ -1936,7 +1936,7 @@ def obtain_variants_stats(
         https://jbloomlab.github.io/alignparse/alignparse.cs_tag.html
     """
 
-    cs_tuples = alignparse.cs_tag.split_cs(cs_tag_string, allow_intron=True)
+    cs_tuples = cs_tag.split_cs(cs_tag_string, allow_intron=True)
 
     del_outlier_num, ins_outlier_num = 0, 0
 
