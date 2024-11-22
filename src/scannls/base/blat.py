@@ -420,6 +420,7 @@ class Blat:
         _strand = hsp.query_strand_all[0]  # may need replace by query_strand
         ref_start, ref_end = hsp.hit_range
         ref_chrom = hsp.hit_id
+        # NM tag in SAM is edit distance which includes SNV, INS and DEL
         num_of_mismatch = hsp.mismatch_num
 
         if _strand == -1:
@@ -451,11 +452,13 @@ class Blat:
                     cigar += str(lz - ly) + "N"
                 else:
                     cigar += str(lz - ly) + "D"
+                    num_of_mismatch += (lz - ly)
                 y0, z0 = y[i], z[i]
             elif lz < ly:
                 # ins: the query gap is longer
                 cigar += str(z[i] - z0) + "M"
                 cigar += str(ly - lz) + "I"
+                num_of_mismatch += (ly - lz)
                 y0, z0 = y[i], z[i]
 
         cigar += str(query_end - y0) + "M"
