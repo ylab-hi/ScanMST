@@ -470,3 +470,61 @@ class Blat:
         strand = "+" if _strand == 1 else "-"
 
         return ref_chrom, ref_start, strand, cigar, num_of_mismatch
+
+    @staticmethod
+    def obtain_variants_stats(
+        hsp: Any,
+        in_seq_len: int,
+        large_indel_len_threshold: int = 4,
+    ) -> tuple[int, float, float, float]:
+        """Obtain variants stats from HSP."""
+
+        _strand = hsp.query_strand_all[0]
+        strand = "+" if _strand == 1 else "-"
+        if strand == "-":
+            query_ranges = [
+                (in_seq_len - end, in_seq_len - start)
+                for start, end in hsp.query_range_all
+            ]
+        else:
+            query_ranges = hsp.query_range_all
+        # reference ranges
+        hit_ranges = hsp.hit_range_all
+
+        substitution_num = hsp.mismatch_num
+        del_outlier_num, ins_outlier_num = 0, 0
+        insertion_num = 0
+        deletion_num = 0
+        for idx, _ in enumerate(query_ranges[:-1]):
+            # Gaps between consecutive query blocks
+            query_gap = query_ranges[idx + 1][0] - query_ranges[idx][1]
+            hit_gap = hit_ranges[idx + 1][0] - hit_ranges[idx][1]
+
+            # If query gap > hit gap, it's an insertion
+            if query_gap > hit_gap:
+                insertion_length = query_gap - hit_gap
+                insertion_num += 1
+                if insertion_length >= large_indel_len_threshold:
+                    ins_outlier_num += 1
+            # If hit gap > query gap, it's a deletion
+            elif hit_gap > query_gap:
+                deletion_length = hit_gap - query_gap
+                # treat it as intron when deletion_length >= 10
+                if deletion_length < 10:
+                    deletion_num += 1
+                    if deletion_length >= large_indel_len_threshold:
+                        del_outlier_num += 1
+
+        total_num_of_mutations = substitution_num + insertion_num + deletion_num
+
+        ins_fraction = (
+            0.0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
+        )
+        del_fraction = (
+            0.0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
+        )
+        subs_fraction = (
+            0.0 if substitution_num == 0 else substitution_num / total_num_of_mutations
+        )
+
+        return substitution_num, subs_fraction, ins_fraction, del_fraction
