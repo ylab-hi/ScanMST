@@ -42,7 +42,7 @@ class Blat:
     >>> blat.is_running()
     True
     >>> blat.query(in_seq='ATCGTCC')
-    /tmp/tmp_gfClient_in_seq_out.psl
+    /tmp/tmp_gfClient_in_seq_out.pslx
     >>> blat.query_insertion(insert_seq='ATCGTCC')
     True, Insertion(chr1:1-9:+,ATCGTCC, None, TPA, chr1:1, chr1:9 )
     >>> blat.query_insertion(insert_seq='ATCCATCC')

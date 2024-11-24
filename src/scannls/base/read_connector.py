@@ -559,7 +559,7 @@ class ReadsConnector:
         if isinstance(self.aligner, Blat):
             out_blat = self.aligner.query(in_seq=query_sequence)
             try:
-                blat_result = SearchIO.read(out_blat, "blat-psl")
+                blat_result = SearchIO.read(out_blat, "blat-psl", pslx=True)
             except ValueError:
                 return None
 
