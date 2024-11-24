@@ -213,7 +213,7 @@ class Blat:
             fasta_file.write(f">{ran_id}\n")
             fasta_file.write(f"{in_seq}\n")
 
-        out_psl = os.path.join(self.output_dir, f"{ran_id}.psl")
+        out_pslx = os.path.join(self.output_dir, f"{ran_id}.pslx")
 
         cwd = Path.cwd().absolute()
         logger.trace(f"{Path().cwd()}")
@@ -222,8 +222,8 @@ class Blat:
         logger.trace(f"{self.ref_dir=}")
         logger.trace(f"{Path().cwd()}")
         cmd = (
-            f"{self.gfclient} -minScore=20 -minIdentity={mini_identity} localhost {self.port} . "
-            f"{in_fasta} {out_psl}"
+            f"{self.gfclient} -minScore=20 -out=pslx -minIdentity={mini_identity} localhost {self.port} . "
+            f"{in_fasta} {out_pslx}"
         )
         logger.trace(f"{cmd=}")
         subprocess.check_call(
@@ -236,7 +236,7 @@ class Blat:
         logger.trace(f"{Path().cwd()}")
         self._remove(in_fasta)
 
-        return out_psl
+        return out_pslx
 
     def _check_if_self_ready(self, interval: int = 60 * 2) -> None:
         """Function for waiting the server service to be ready.
@@ -264,11 +264,11 @@ class Blat:
         ):  # self or other is running service
             try:
                 self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
-                out_psl = self._query(in_seq, mini_identity)
+                out_pslx = self._query(in_seq, mini_identity)
             except subprocess.CalledProcessError:
                 time.sleep(60 * 2)  # wait for other's service to be ready
             else:
-                return out_psl
+                return out_pslx
 
         # other kill service and self start
         self.start_server()
@@ -335,8 +335,10 @@ class Blat:
 
         out_blat = self.query(in_seq=insert_seq)
 
+        # https://biopython.org/docs/1.84/api/Bio.SearchIO.BlatIO.html
+        # HSPFragment carris query sequence (query) and hit sequence(hit)
         try:
-            blat_result = SearchIO.read(out_blat, "blat-psl")
+            blat_result = SearchIO.read(out_blat, "blat-psl", pslx=True)
         except ValueError:
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
