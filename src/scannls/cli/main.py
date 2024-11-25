@@ -39,6 +39,7 @@ from scannls.utils import (
     cigarstring2cigartuples,
     get_longest_insertion_sequence,
     get_softclip_length,
+    cigar_validity,
 )
 
 
@@ -60,6 +61,10 @@ class BamScanner:
         substitutions_num,
         substitutions_fraction,
         indels_fraction,
+        blat_info,
+        blat_two_bit,
+        blat_port,
+        tmp_dir,
     ) -> None:
         """Initialize the class."""
         self.in_bam_path = input_bam
@@ -67,7 +72,9 @@ class BamScanner:
 
         self.bam_chrom_info = {}
         self.mapq_cutoff = mapq_cutoff
-        self.ref_genome = ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        self.ref_genome = (
+            ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
+        )
         self.gtf = gtf.expanduser() if "~" in str(gtf) else gtf
 
         self.splice_bin = splice_in
@@ -85,7 +92,10 @@ class BamScanner:
         self.substitutions_num = substitutions_num
         self.substitutions_fraction = substitutions_fraction
         self.indels_fraction = indels_fraction
+
+        self.aligner = self._get_aligner(blat_info, blat_two_bit, blat_port, tmp_dir)
         self.representative_alignments_new_cigar = {}
+        self.representative_alignments_new_record = {}
 
     def _check_bam_sort(self, header) -> bool:
         """Check if the bam file is sorted."""
@@ -98,12 +108,29 @@ class BamScanner:
     def _count_chrom_info(self, read):
         """Count the chrom and the chrom start and the chrom end."""
         if read.reference_name in self.bam_chrom_info:
-            self.bam_chrom_info[read.reference_name][1] = max(read.reference_end, self.bam_chrom_info[read.reference_name][1])
+            self.bam_chrom_info[read.reference_name][1] = max(
+                read.reference_end, self.bam_chrom_info[read.reference_name][1]
+            )
         else:
             self.bam_chrom_info[read.reference_name] = [
                 read.reference_start,
                 read.reference_end,
             ]
+
+    def _get_aligner(self, blat_info, blat_two_bit, blat_port, tmp_dir):
+        """Get aligner."""
+        if blat_info is None:
+            aligner = None
+        else:
+            blat_log_file, blat_is_start_server = blat_info
+            aligner = Blat(
+                blat_two_bit,
+                blat_port,
+                tmp_dir,
+                fix_log_file=blat_log_file,
+                is_start_server=blat_is_start_server,
+            )
+        return aligner
 
     def _get_bam_header(self):
         """Get bam header."""
@@ -126,32 +153,121 @@ class BamScanner:
             if read.is_supplementary:
                 if read.cigarstring is None:
                     raise ValueError
+                read_strand = "-" if read.is_reverse else "+"
+                read_query_seq = read.query_sequence
+                read_mapq = read.mapping_quality
 
                 left_mat = self.pat_left_s.search(read.cigarstring)
                 right_mat = self.pat_right_s.search(read.cigarstring)
 
-                l_s_len = left_mat.group(1) if left_mat else ""
-                r_s_len = right_mat.group(1) if right_mat else ""
+                lt_soft_len = left_mat.group(1) if left_mat else ""
+                rt_soft_len = right_mat.group(1) if right_mat else ""
 
                 nm = read.get_tag("NM")
                 cs_tag = read.get_tag("cs")
-                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
-                    cs_tag,
-                    self.long_indel_length,
+                num_of_subs, subs_fraction, ins_fraction, del_fraction = (
+                    obtain_variants_stats(
+                        cs_tag,
+                        self.long_indel_length,
+                    )
                 )
 
                 if (
-                    not (num_of_subs > self.substitutions_num and subs_fraction > self.substitutions_fraction)
+                    not (
+                        num_of_subs > self.substitutions_num
+                        and subs_fraction > self.substitutions_fraction
+                    )
                     and ins_fraction <= self.indels_fraction
                     and del_fraction <= self.indels_fraction
                 ):
-                    self.representative_alignments_new_cigar[f"{read.qname}\t{l_s_len}\t{r_s_len}"] = read.cigarstring
+                    self.representative_alignments_new_cigar[
+                        f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"
+                    ] = read.cigarstring
                 else:
-                    self.logger.trace(
-                        f"{read.query_name=} does not pass the substitutions/indel cutoff. "
-                        f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}",
-                    )
-        return self.representative_alignments_new_cigar
+                    # realignment using BLAT
+                    is_passed_qc = False
+                    if self.aligner:
+                        read_matched_seq = get_read_matched_sequence(
+                            read_query_seq, lt_soft_len, rt_soft_len, read_strand
+                        )
+                        out_blat = self.aligner.query(in_seq=read_matched_seq)
+                        blat_result = None
+                        try:
+                            blat_result = SearchIO.read(out_blat, "blat-psl", pslx=True)
+                        except ValueError:
+                            return None
+
+                        if blat_result:
+                            hit, top_hsp, mapq_aligner = self.aligner._query_insertion(
+                                blat_result,
+                                read_matched_seq,
+                                threshold_identity=0.9,
+                                top=1,
+                            )
+                            if hit == 1:
+                                (
+                                    chrom_aligner,
+                                    position_aligner,
+                                    strand_aligner,
+                                    cigar_aligner,
+                                    nm_aligner,
+                                ) = self.aligner.psl2sam(
+                                    top_hsp,
+                                    in_seq_len=len(read_matched_seq),
+                                )
+                                (
+                                    substitution_num_aligner,
+                                    subs_fraction_aligner,
+                                    ins_fraction_aligner,
+                                    del_fraction_aligner,
+                                ) = self.aligner.obtain_variants_stats(
+                                    top_hsp, in_seq_len=len(read_matched_seq)
+                                )
+
+                                if strand_aligner == read_strand:
+                                    updated_cigar = cigar_validity(
+                                        f"{lt_soft_len}S{cigar_aligner}{rt_soft_len}S"
+                                    )
+                                else:
+                                    updated_cigar = cigar_validity(
+                                        f"{rt_soft_len}S{cigar_aligner}{lt_soft_len}S"
+                                    )
+
+                                if (
+                                    substitution_num_aligner < num_of_subs
+                                    and subs_fraction_aligner < subs_fraction
+                                    and ins_fraction_aligner <= ins_fraction
+                                    and del_fraction_aligner <= del_fraction
+                                ):
+                                    # use original mapq as realignment mapq temporarily
+                                    new_record = f"{chrom_aligner},{position_aligner+1},{strand_aligner},{updated_cigar},{read_mapq},{nm_aligner}"
+                                    self.representative_alignments_new_record[
+                                        f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"
+                                    ] = new_record
+                                    is_passed_qc = True
+
+                    if not is_passed_qc:
+                        self.logger.trace(
+                            f"{read.query_name=} does not pass the substitutions/indel cutoff. "
+                            f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}",
+                        )
+        return (
+            self.representative_alignments_new_cigar,
+            self.representative_alignments_new_record,
+        )
+
+
+def _get_read_matched_sequence(
+    read_query_seq, lt_soft_len, rt_soft_len, read_strand
+) -> str:
+    """Obtain the original read sequence matched part in cigar (M+I)."""
+    read_length = len(read_query_seq)
+    read_matched_part_in_bam = read_query_seq[lt_soft_len : read_length - rt_soft_len]
+    if read_strand == "+":
+        read_matched_seq = read_matched_part_in_bam
+    elif read_strand == "-":
+        read_matched_seq = reverse_complement(read_matched_part_in_bam)
+    return read_matched_seq
 
 
 def _get_genome_fasta(ref_genome):
@@ -227,7 +343,9 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
         # otherwise pre_read will be read1, intersected read will be read2
         if pre_evt.is_read_reversed:
             if pre_read_info:
-                pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = pre_read_info
+                pre_evt.read2_ref_start, pre_evt.read2_ref_end, pre_evt.read2_exons = (
+                    pre_read_info
+                )
             # intersected read is read1 for previous event
             is_start_match_for_pre_evt = is_start_match(pre_evt, check_bp1=True)
             # if is_read_reversed is False, intersected read will be read1
@@ -272,7 +390,9 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
                 updated_event_list.append(next_evt)
         else:
             if pre_read_info:
-                pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons = pre_read_info
+                pre_evt.read1_ref_start, pre_evt.read1_ref_end, pre_evt.read1_exons = (
+                    pre_read_info
+                )
 
             is_start_match_for_pre_evt = is_start_match(pre_evt)
             if next_evt.is_read_reversed:
@@ -413,6 +533,7 @@ def _scan_bam_helper(
     gtf,
     mapq_cutoff,
     representative_alignments_new_cigar,
+    representative_alignments_new_record,
     max_allowed_nm,
     min_soft_seg_len,
     blat_ident_pct_cutoff,
@@ -473,11 +594,18 @@ def _scan_bam_helper(
     circ_rna_filter = CircRNAFilter(gtf, boundary_size, prune_threshold)
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
-        if read.mapq >= mapq_cutoff and not read.is_secondary and not read.has_tag("XA") and not read.is_unmapped and not read.is_supplementary:
+        if (
+            read.mapping_quality >= mapq_cutoff
+            and not read.is_secondary
+            and not read.has_tag("XA")
+            and not read.is_unmapped
+            and not read.is_supplementary
+        ):
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
-                    f"Pre-checking: {read.query_name=} has SA; supplementary read: " f"{read.is_supplementary}",
+                    f"Pre-checking: {read.query_name=} has SA; supplementary read: "
+                    f"{read.is_supplementary}",
                 )
 
                 updated_chimeric_alns = []
@@ -501,18 +629,65 @@ def _scan_bam_helper(
                     l_s_len = left_mat.group(1) if left_mat else ""
                     r_s_len = right_mat.group(1) if right_mat else ""
 
-                    tgt_key = f"{read.qname}\t{l_s_len}\t{r_s_len}"
+                    tgt_key = f"{read.query_name}\t{l_s_len}\t{r_s_len}"
+                    # After realignment, the opposite strand will have opposite way of using soft-clipping
+                    alt_tgt_key = f"{read.query_name}\t{r_s_len}\t{l_s_len}"
 
                     if tgt_key in representative_alignments_new_cigar:
-                        updated_cigar = representative_alignments_new_cigar[tgt_key]
-                        # discard supplementary alignments with too many mismatches
-                        # supplementary alignments with lower MAPQ is allowed
-                        if not (int(nm_sa) > max_allowed_nm):
-                            updated_chimeric_alns.append(
-                                f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}",
+                        # realignment has the same strand as orignal one
+                        if (
+                            tgt_key in representative_alignments_new_record
+                            and not alt_tgt_key in representative_alignments_new_record
+                        ):
+                            updated_record_realignment = (
+                                representative_alignments_new_record[tgt_key]
                             )
+                            (
+                                chrm_realign,
+                                pos_realign,
+                                strand_realign,
+                                cigar_realign,
+                                mapq_realign,
+                                nm_realign,
+                            ) = updated_record_realignment.split(",")
+                            if int(nm_realign) <= max_allowed_nm:
+                                updated_chimeric_alns.append(updated_record_realignment)
+                        # realignment has the opposite strand as orignal one
+                        elif (
+                            alt_tgt_key in representative_alignments_new_record
+                            and not tgt_key in representative_alignments_new_record
+                        ):
+                            updated_record_realignment = (
+                                representative_alignments_new_record[alt_tgt_key]
+                            )
+                            (
+                                chrm_realign,
+                                pos_realign,
+                                strand_realign,
+                                cigar_realign,
+                                mapq_realign,
+                                nm_realign,
+                            ) = updated_record_realignment.split(",")
+                            if (
+                                strand_sa != strand_realign
+                                and int(nm_realign) <= max_allowed_nm
+                            ):
+                                updated_chimeric_alns.append(updated_record_realignment)
+                        # realignment not found use the orignal one
+                        else:
+                            updated_cigar = representative_alignments_new_cigar[tgt_key]
+                            # discard supplementary alignments with too long edit distance
+                            # supplementary alignments with lower MAPQ is allowed
+                            if not (int(nm_sa) > max_allowed_nm):
+                                updated_chimeric_alns.append(
+                                    f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}",
+                                )
 
-                if len(updated_chimeric_alns) == 0 | len(updated_chimeric_alns) != len(chimeric_alns):
+                if (
+                    len(updated_chimeric_alns)
+                    == 0 | len(updated_chimeric_alns)
+                    != len(chimeric_alns)
+                ):
                     read.set_tag("SA", None)
                 else:
                     read.set_tag("SA", "{};".format(";".join(updated_chimeric_alns)))
@@ -530,7 +705,9 @@ def _scan_bam_helper(
 
                 ret = get_softclip_length(read, mode=MappingMode.Type0)
                 if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
-                    soft_seq_ori = reverse_complement(ret[1]) if read.is_reverse else ret[1]
+                    soft_seq_ori = (
+                        reverse_complement(ret[1]) if read.is_reverse else ret[1]
+                    )
                     read_mode = ret[-1]
                     logger.trace("Funcion blat2chimeric_alignment works on it.")
                     chimeric_aln_str = blat2chimeric_alignment(
@@ -545,7 +722,9 @@ def _scan_bam_helper(
                     )
 
                     if chimeric_aln_str:
-                        logger.trace(f"auxiliary alignment[2] is effective here. reads_name:{read.query_name} query_sequence:{soft_seq_ori}")
+                        logger.trace(
+                            f"auxiliary alignment[2] is effective here. reads_name:{read.query_name} query_sequence:{soft_seq_ori}"
+                        )
 
                         logger.trace(
                             f"Pre-checking: {read.query_name=} "
@@ -575,7 +754,9 @@ def _scan_bam_helper(
                     )
 
                     if primary_aln_cigarstring:
-                        logger.trace(f"auxiliary alignment[3] is effective here. reads_name:{read.query_name} query_sequence:{ins_seq}")
+                        logger.trace(
+                            f"auxiliary alignment[3] is effective here. reads_name:{read.query_name} query_sequence:{ins_seq}"
+                        )
                         logger.trace(
                             f"Pre-checking: {read.query_name=} "
                             f"does not has SA, after BLAT [long insertion] (length={len(ins_seq)}bp), it has one SA tag",
@@ -598,18 +779,27 @@ def _scan_bam_helper(
                 nm = read.get_tag("NM")
 
                 read_name = read.query_name
-                read_sequence = reverse_complement(read.query_sequence) if read.is_reverse else read.query_sequence
+                read_sequence = (
+                    reverse_complement(read.query_sequence)
+                    if read.is_reverse
+                    else read.query_sequence
+                )
 
                 if read.cigarstring is None:
                     msg = f"{read}'s cigarstring is None"
                     raise ValueError(msg)
-                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
-                    read.get_tag("cs"),
-                    long_indel_length,
+                num_of_subs, subs_fraction, ins_fraction, del_fraction = (
+                    obtain_variants_stats(
+                        read.get_tag("cs"),
+                        long_indel_length,
+                    )
                 )
 
                 if (
-                    not (num_of_subs > substitutions_num and subs_fraction > substitutions_fraction)
+                    not (
+                        num_of_subs > substitutions_num
+                        and subs_fraction > substitutions_fraction
+                    )
                     and ins_fraction <= indels_fraction
                     and del_fraction <= indels_fraction
                 ):
@@ -664,7 +854,10 @@ def _scan_bam_helper(
 
                     # num of alignment segments should be equal to the number of hops + 1
                     # after exon, RT switching and other filtering, the condition may be not satisfied.
-                    if len(nls_event_list) > 0 and (len(nls_event_list) == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads):
+                    if len(nls_event_list) > 0 and (
+                        len(nls_event_list)
+                        == len(read.get_tag("SA")[:-1].split(";")) + num_added_reads
+                    ):
                         logger.debug(f"{nls_event_list=}")
                         nlpath = NLPath.new(
                             events=nls_event_list,
@@ -685,8 +878,12 @@ def _scan_bam_helper(
                         if (
                             not nlpath.is_all_type_del()
                             and not nlpath.is_forming_circle(prune_threshold)
-                            and nlpath.is_maximum_novel_insertion_length_valid(max_allowed_ins)
-                            and nlpath.is_minimum_node_length_larger_than_threshold(boundary_size)
+                            and nlpath.is_maximum_novel_insertion_length_valid(
+                                max_allowed_ins
+                            )
+                            and nlpath.is_minimum_node_length_larger_than_threshold(
+                                boundary_size
+                            )
                         ):
                             if circular_rna == "remove":
                                 if not circ_rna_filter.is_circrna(nlpath):
@@ -763,9 +960,15 @@ def scanbam_run(
         substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,
         indels_fraction=indels_fraction,
+        blat_info=blat_info,
+        blat_two_bit=blat_two_bit,
+        blat_port=blat_port,
+        tmp_dir=tmp_dir,
     )
     # iterate over all read of the bam file
-    representative_alignments_new_cigar = bam_scanner.iter_bam()
+    representative_alignments_new_cigar, representative_alignments_new_record = (
+        bam_scanner.iter_bam()
+    )
 
     avg_cov = math.ceil(bam_scanner.total_length / get_transcriptome_length(species))
 
@@ -775,7 +978,11 @@ def scanbam_run(
     )
     # get the chromosome name we want to scan
 
-    contigs = [contig for contig in bam_scanner.bam_chrom_info if "_" not in contig and "M" not in contig]
+    contigs = [
+        contig
+        for contig in bam_scanner.bam_chrom_info
+        if "_" not in contig and "M" not in contig
+    ]
 
     logger.info(f" Processing {contigs=}")
     running_mode = "normal" if parallel == 1 else "parallel"
@@ -783,21 +990,27 @@ def scanbam_run(
     self_local_namespace = copy.copy(locals())
     # get the keyword arguments for the _scan_bam_helper function
     keyword_parameters_dict = {
-        key: self_local_namespace[key] for key, value in inspect.signature(_scan_bam_helper).parameters.items() if value.kind.name == "KEYWORD_ONLY"
+        key: self_local_namespace[key]
+        for key, value in inspect.signature(_scan_bam_helper).parameters.items()
+        if value.kind.name == "KEYWORD_ONLY"
     }
 
     intact_series_list = []
     intact_read_query_name_to_sequence_dict = {}
 
     if parallel == 1:
-        intact_series_list, intact_read_query_name_to_sequence_dict = _scan_bam_helper(contigs, None, **keyword_parameters_dict)
+        intact_series_list, intact_read_query_name_to_sequence_dict = _scan_bam_helper(
+            contigs, None, **keyword_parameters_dict
+        )
     else:
         parallel_worker = ParallelWorker(_scan_bam_helper, logger, parallel)
         result = parallel_worker.run(*contigs, **keyword_parameters_dict)
         for contig in contigs:
             contig_series_list, contig_read_query_name_to_sequence_dict = result[contig]
             intact_series_list.extend(contig_series_list)
-            intact_read_query_name_to_sequence_dict.update(contig_read_query_name_to_sequence_dict)
+            intact_read_query_name_to_sequence_dict.update(
+                contig_read_query_name_to_sequence_dict
+            )
 
     bam_scanner.in_bam.close()
     return (

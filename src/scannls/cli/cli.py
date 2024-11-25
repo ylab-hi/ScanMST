@@ -210,10 +210,8 @@ def cli(options: argparse.Namespace | DefaultOptions):
             sleep(options.input)
         blat.start_server()
         blat_info = blat.log_file_path, blat.is_start_server
-    elif options.aligner is None:
-        blat_info, blat = None, None
     else:
-        blat_info, blat = "star", None
+        blat_info, blat = None, None
 
     # CIGAR string refinement
     motif_required = not options.noncanonical
