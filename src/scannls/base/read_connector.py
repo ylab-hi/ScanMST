@@ -514,7 +514,6 @@ class ReadsConnector:
                 + f"{rt_s_len}S"
                 + f"{read.read_match_size + read.rt_soft_len}S"
             )
-            cigar_str = cigar_str[2:] if cigar_str.startswith("0S") else cigar_str
         else:
             cigar_str = (
                 f"{read.lt_soft_len + read.read_match_size}S"
@@ -522,7 +521,6 @@ class ReadsConnector:
                 f"{cigar_str}"
                 f"{rt_s_len}S"
             )
-            cigar_str = cigar_str[:-2] if cigar_str.endswith("0S") else cigar_str
 
         if read.query_qualities is None:
             msg = "query_qualities is None"

@@ -118,7 +118,9 @@ def get_softclip_length(
         if parse_result.lt_soft_len < parse_result.rt_soft_len:
             return (
                 parse_result.rt_soft_len,
-                read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
+                read.query_sequence[
+                    parse_result.query_len - parse_result.rt_soft_len :
+                ],
                 ref_end,
                 MappingMode.MS,
             )
@@ -276,16 +278,21 @@ def cigar_validity(cigar_str: str) -> str:
     >>> cigarstring =  '1S2S5M3S2S'
     >>> cigar_validity(cigarstring)
     '3S5M5S'
+    >>> cigarstring =  '10S2S5M0S'
+    >>> cigar_validity(cigarstring)
+    '12S5M'
     """
     pattern = re.compile(r"((?P<length>\d+)(?P<op>\D))")
     items_list = pattern.findall(cigar_str)
-    stack = [items_list[0]]
-    for item in items_list[1:]:  # [('1S', '1', 'S'),..]
-        last_item = stack[-1]
-        if last_item[2] == item[2]:
-            length = int(last_item[1]) + int(item[1])
-            stack[-1] = (f"{length}{last_item[2]}", f"{length}", last_item[2])
+    stack = []
+    for item in items_list:
+        # Skip zero-length operations
+        if int(item[1]) == 0:
+            continue
+        # Merge with previous item if same operation type
+        if stack and stack[-1][2] == item[2]:
+            length = int(stack[-1][1]) + int(item[1])
+            stack[-1] = (f"{length}{stack[-1][2]}", f"{length}", stack[-1][2])
         else:
             stack.append(item)
-
     return "".join(i[0] for i in stack)

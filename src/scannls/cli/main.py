@@ -6,6 +6,7 @@ import math
 import re
 from itertools import chain
 from pathlib import Path
+from Bio import SearchIO
 
 import HTSeq
 import pyfaidx
@@ -160,8 +161,8 @@ class BamScanner:
                 left_mat = self.pat_left_s.search(read.cigarstring)
                 right_mat = self.pat_right_s.search(read.cigarstring)
 
-                lt_soft_len = left_mat.group(1) if left_mat else ""
-                rt_soft_len = right_mat.group(1) if right_mat else ""
+                lt_soft_len = int(left_mat.group(1)) if left_mat else 0
+                rt_soft_len = int(right_mat.group(1)) if right_mat else 0
 
                 nm = read.get_tag("NM")
                 cs_tag = read.get_tag("cs")
@@ -187,7 +188,7 @@ class BamScanner:
                     # realignment using BLAT
                     is_passed_qc = False
                     if self.aligner:
-                        read_matched_seq = get_read_matched_sequence(
+                        read_matched_seq = _get_read_matched_sequence(
                             read_query_seq, lt_soft_len, rt_soft_len, read_strand
                         )
                         out_blat = self.aligner.query(in_seq=read_matched_seq)
@@ -223,6 +224,9 @@ class BamScanner:
                                 ) = self.aligner.obtain_variants_stats(
                                     top_hsp, in_seq_len=len(read_matched_seq)
                                 )
+                                self.logger.trace(
+                                    f"{substitution_num_aligner=}, {subs_fraction_aligner=}, {ins_fraction_aligner=}, {del_fraction_aligner=}"
+                                )
 
                                 if strand_aligner == read_strand:
                                     updated_cigar = cigar_validity(
@@ -233,6 +237,7 @@ class BamScanner:
                                         f"{rt_soft_len}S{cigar_aligner}{lt_soft_len}S"
                                     )
 
+                                self.logger.trace(f"{cigar_aligner=},{updated_cigar=}")
                                 if (
                                     substitution_num_aligner < num_of_subs
                                     and subs_fraction_aligner < subs_fraction
@@ -592,6 +597,8 @@ def _scan_bam_helper(
 
     # Circular RNA filter
     circ_rna_filter = CircRNAFilter(gtf, boundary_size, prune_threshold)
+    logger.trace(f"{representative_alignments_new_cigar=}")
+    logger.trace(f"{representative_alignments_new_record=}")
     # update SA tags and iterate the BAM file
     for read in chrom_bam_io_object:
         if (
@@ -626,62 +633,62 @@ def _scan_bam_helper(
                     left_mat = pat_left_s.search(__cigar_sa)
                     right_mat = pat_right_s.search(__cigar_sa)
 
-                    l_s_len = left_mat.group(1) if left_mat else ""
-                    r_s_len = right_mat.group(1) if right_mat else ""
+                    l_s_len = int(left_mat.group(1)) if left_mat else 0
+                    r_s_len = int(right_mat.group(1)) if right_mat else 0
 
                     tgt_key = f"{read.query_name}\t{l_s_len}\t{r_s_len}"
-                    # After realignment, the opposite strand will have opposite way of using soft-clipping
+                    # After realignment, the segment with the opposite strand
+                    # will have opposite way of using soft-clipping
                     alt_tgt_key = f"{read.query_name}\t{r_s_len}\t{l_s_len}"
 
-                    if tgt_key in representative_alignments_new_cigar:
-                        # realignment has the same strand as orignal one
+                    # realignment has the same strand as orignal one
+                    if (
+                        tgt_key in representative_alignments_new_record
+                        and not alt_tgt_key in representative_alignments_new_record
+                    ):
+                        updated_record_realignment = (
+                            representative_alignments_new_record[tgt_key]
+                        )
+                        (
+                            chrm_realign,
+                            pos_realign,
+                            strand_realign,
+                            cigar_realign,
+                            mapq_realign,
+                            nm_realign,
+                        ) = updated_record_realignment.split(",")
+                        if int(nm_realign) <= max_allowed_nm:
+                            updated_chimeric_alns.append(updated_record_realignment)
+                    # realignment has the opposite strand as orignal one
+                    elif (
+                        alt_tgt_key in representative_alignments_new_record
+                        and not tgt_key in representative_alignments_new_record
+                    ):
+                        updated_record_realignment = (
+                            representative_alignments_new_record[alt_tgt_key]
+                        )
+                        (
+                            chrm_realign,
+                            pos_realign,
+                            strand_realign,
+                            cigar_realign,
+                            mapq_realign,
+                            nm_realign,
+                        ) = updated_record_realignment.split(",")
                         if (
-                            tgt_key in representative_alignments_new_record
-                            and not alt_tgt_key in representative_alignments_new_record
+                            strand_sa != strand_realign
+                            and int(nm_realign) <= max_allowed_nm
                         ):
-                            updated_record_realignment = (
-                                representative_alignments_new_record[tgt_key]
+                            updated_chimeric_alns.append(updated_record_realignment)
+                    # realignment not found use the orignal one
+                    elif tgt_key in representative_alignments_new_cigar:
+                        updated_cigar = representative_alignments_new_cigar[tgt_key]
+                        # discard supplementary alignments with too long edit distance
+                        # supplementary alignments with lower MAPQ is allowed
+                        if not (int(nm_sa) > max_allowed_nm):
+                            updated_chimeric_alns.append(
+                                f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}",
                             )
-                            (
-                                chrm_realign,
-                                pos_realign,
-                                strand_realign,
-                                cigar_realign,
-                                mapq_realign,
-                                nm_realign,
-                            ) = updated_record_realignment.split(",")
-                            if int(nm_realign) <= max_allowed_nm:
-                                updated_chimeric_alns.append(updated_record_realignment)
-                        # realignment has the opposite strand as orignal one
-                        elif (
-                            alt_tgt_key in representative_alignments_new_record
-                            and not tgt_key in representative_alignments_new_record
-                        ):
-                            updated_record_realignment = (
-                                representative_alignments_new_record[alt_tgt_key]
-                            )
-                            (
-                                chrm_realign,
-                                pos_realign,
-                                strand_realign,
-                                cigar_realign,
-                                mapq_realign,
-                                nm_realign,
-                            ) = updated_record_realignment.split(",")
-                            if (
-                                strand_sa != strand_realign
-                                and int(nm_realign) <= max_allowed_nm
-                            ):
-                                updated_chimeric_alns.append(updated_record_realignment)
-                        # realignment not found use the orignal one
-                        else:
-                            updated_cigar = representative_alignments_new_cigar[tgt_key]
-                            # discard supplementary alignments with too long edit distance
-                            # supplementary alignments with lower MAPQ is allowed
-                            if not (int(nm_sa) > max_allowed_nm):
-                                updated_chimeric_alns.append(
-                                    f"{chr_sa},{pos_sa},{strand_sa},{updated_cigar},{mapq_sa},{nm_sa}",
-                                )
 
                 if (
                     len(updated_chimeric_alns)
