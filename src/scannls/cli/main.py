@@ -121,7 +121,7 @@ class BamScanner:
         self._check_bam_sort(header)
         return header
 
-    def iter_bam(self):
+    def iter_bam(self) -> None:
         """Iterate the bam file."""
         # supplementary alignment cigarstring extraction
         # key: read.query_name + left S + right S
@@ -237,11 +237,6 @@ class BamScanner:
                         self.representative_alignments_new_cigar[
                             f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"
                         ] = read.cigarstring
-
-        return (
-            self.representative_alignments_new_cigar,
-            self.representative_alignments_new_record,
-        )
 
 
 def _get_read_matched_sequence(
@@ -943,9 +938,12 @@ def scanbam_run(
         aligner=aligner,
     )
     # iterate over all read of the bam file
-    representative_alignments_new_cigar, representative_alignments_new_record = (
-        bam_scanner.iter_bam()
-    )
+    bam_scanner.iter_bam()
+
+    representative_alignments_new_cigar = bam_scanner.representative_alignments_new_cigar
+    representative_alignments_new_record = bam_scanner.representative_alignments_new_record
+
+    logger.info(f"{representative_alignments_new_cigar=}, {representative_alignments_new_record=}")
 
     avg_cov = math.ceil(bam_scanner.total_length / get_transcriptome_length(species))
 
