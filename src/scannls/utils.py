@@ -38,6 +38,7 @@ __all__ = [
     "get_softclip_length",
     "sleep",
     "timeit",
+    "wait_for_aligner",
 ]
 
 
@@ -296,3 +297,24 @@ def cigar_validity(cigar_str: str) -> str:
         else:
             stack.append(item)
     return "".join(i[0] for i in stack)
+
+
+def wait_for_aligner(aligner, max_timeout=5*60, check_interval=60) -> None:
+    """
+    Wait for the aligner to start running, with a maximum timeout.
+    Args:
+        aligner: The aligner object to wait for
+        max_timeout (int): Maximum time to wait in seconds (default: 5 mins)
+        check_interval (int): Time between checks in seconds (default: 1 min)
+    Raises:
+        TimeoutError: If the aligner does not start running within max_timeout
+    """
+    start_time = time.time()
+    while not aligner.is_running():
+        # Check if we've exceeded the maximum timeout
+        if time.time() - start_time > max_timeout:
+            raise TimeoutError(f"Aligner did not start running within {max_timeout} seconds")
+        is_there_log_file = os.path.exists(aligner.log_file_path)
+        blat_info = aligner.log_file_path, aligner.is_start_server
+        logger.trace(f"{blat_info=}, {is_there_log_file=}, {aligner.is_running()=}")
+        time.sleep(check_interval)

@@ -62,10 +62,7 @@ class BamScanner:
         substitutions_num,
         substitutions_fraction,
         indels_fraction,
-        blat_info,
-        blat_two_bit,
-        blat_port,
-        tmp_dir,
+        aligner,
     ) -> None:
         """Initialize the class."""
         self.in_bam_path = input_bam
@@ -94,7 +91,7 @@ class BamScanner:
         self.substitutions_fraction = substitutions_fraction
         self.indels_fraction = indels_fraction
 
-        self.aligner = self._get_aligner(blat_info, blat_two_bit, blat_port, tmp_dir)
+        self.aligner = aligner
         self.representative_alignments_new_cigar = {}
         self.representative_alignments_new_record = {}
 
@@ -117,21 +114,6 @@ class BamScanner:
                 read.reference_start,
                 read.reference_end,
             ]
-
-    def _get_aligner(self, blat_info, blat_two_bit, blat_port, tmp_dir):
-        """Get aligner."""
-        if blat_info is None:
-            aligner = None
-        else:
-            blat_log_file, blat_is_start_server = blat_info
-            aligner = Blat(
-                blat_two_bit,
-                blat_port,
-                tmp_dir,
-                fix_log_file=blat_log_file,
-                is_start_server=blat_is_start_server,
-            )
-        return aligner
 
     def _get_bam_header(self):
         """Get bam header."""
@@ -252,10 +234,10 @@ class BamScanner:
                                     is_passed_qc = True
 
                     if not is_passed_qc:
-                        self.logger.trace(
-                            f"{read.query_name=} does not pass the substitutions/indel cutoff. "
-                            f"{nm=}, {num_of_subs=}, {subs_fraction=}, {ins_fraction=}, {del_fraction=}",
-                        )
+                        self.representative_alignments_new_cigar[
+                            f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"
+                        ] = read.cigarstring
+
         return (
             self.representative_alignments_new_cigar,
             self.representative_alignments_new_record,
@@ -533,6 +515,7 @@ def _scan_bam_helper(
     blat_port,
     tmp_dir,
     blat_info,
+    aligner,
     in_bam_path,
     ref_genome,
     gtf,
@@ -575,18 +558,8 @@ def _scan_bam_helper(
 
     logger.trace(f"{identified_key=} start")
 
-    if blat_info is None:
-        aligner = None
-    else:
-        blat_log_file, blat_is_start_server = blat_info
-        aligner = Blat(
-            blat_two_bit,
-            blat_port,
-            tmp_dir,
-            fix_log_file=blat_log_file,
-            is_start_server=blat_is_start_server,
-            lock=lock,
-        )
+    if aligner is not None:
+        aligner.lock = lock
 
     nls_src_forms_list = []
     # read name: sequence at transcriptional direction
@@ -934,7 +907,7 @@ def scanbam_run(
     ref_genome,
     gtf,
     splice_bin,
-    blat,
+    aligner,
     logger,
     motif_required,
     parallel,
@@ -967,10 +940,7 @@ def scanbam_run(
         substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,
         indels_fraction=indels_fraction,
-        blat_info=blat_info,
-        blat_two_bit=blat_two_bit,
-        blat_port=blat_port,
-        tmp_dir=tmp_dir,
+        aligner=aligner,
     )
     # iterate over all read of the bam file
     representative_alignments_new_cigar, representative_alignments_new_record = (

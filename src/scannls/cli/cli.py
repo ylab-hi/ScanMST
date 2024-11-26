@@ -14,7 +14,7 @@ from loguru import logger
 
 from scannls.base import Blat, MyLogger, ParallelWorker
 from scannls.graph import ClusterFinder, NLGraph
-from scannls.utils import find_2bit_file, sleep
+from scannls.utils import find_2bit_file, sleep, wait_for_aligner
 from scannls.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 
 from .main import scanbam_run
@@ -204,14 +204,23 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # find 2bit file
         if options.blat_two_bit is None:
             options.two_bit = find_2bit_file(options.ref)
-        blat = Blat(options.blat_two_bit, options.blat_port, tmp_dir.name)
+        aligner = Blat(options.blat_two_bit, options.blat_port, tmp_dir.name)
         # delay random seconds to preventing from starting multiple servers simultaneously
         if options.blat_sleep:
             sleep(options.input)
-        blat.start_server()
-        blat_info = blat.log_file_path, blat.is_start_server
+        aligner.start_server()
+        blat_info = aligner.log_file_path, aligner.is_start_server
     else:
-        blat_info, blat = None, None
+        blat_info, aligner = None, None
+
+    if aligner:
+        try:
+            wait_for_aligner(aligner)
+        except TimeoutError as e:
+            logger.error(str(e))
+            aligner.stop_server()
+            tmp_dir.cleanup()
+            raise SystemExit
 
     # CIGAR string refinement
     motif_required = not options.noncanonical
@@ -226,7 +235,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             ref_genome=options.ref,
             gtf=options.gtf,
             splice_bin=options.splice_bin,
-            blat=blat,
+            aligner=aligner,
             logger=logger,
             motif_required=motif_required,
             parallel=options.parallel,
@@ -278,12 +287,12 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
     except KeyboardInterrupt:
         logger.warning("KeyboardInterrupt")
-        if options.aligner == "blat" and blat and options.blat_closed and not blat.is_stop_server:
-            blat.stop_server()
+        if options.aligner == "blat" and aligner and options.blat_closed and not aligner.is_stop_server:
+            aligner.stop_server()
             tmp_dir.cleanup()
         raise
     finally:
         logger.info("Program ends")
-        if options.aligner == "blat" and blat and options.blat_closed and not blat.is_stop_server:
-            blat.stop_server()
+        if options.aligner == "blat" and aligner and options.blat_closed and not aligner.is_stop_server:
+            aligner.stop_server()
             tmp_dir.cleanup()
