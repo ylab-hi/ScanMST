@@ -35,7 +35,7 @@ class DefaultOptions:
     species_choices: tuple[str, str] = ("human", "mouse")
     parallel: int = 1
     min_soft_seg_len: int = 200
-    max_allowed_nm: int = 50
+    max_allowed_nm: int = 100
     max_allowed_micro_insertion: int = 50
     ident_cutoff: float = 0.90
     prune_threshold: int = 10  # for merging conditions
