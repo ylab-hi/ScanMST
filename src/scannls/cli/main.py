@@ -68,7 +68,7 @@ class BamScanner:
         self.in_bam_path = input_bam
         self.in_bam = pysam.AlignmentFile(input_bam, "rb")
 
-        self.bam_chrom_info = {}
+        self.bam_chrom_info = set()
         self.mapq_cutoff = mapq_cutoff
         self.ref_genome = (
             ref_genome.expanduser() if "~" in str(ref_genome) else ref_genome
@@ -105,15 +105,8 @@ class BamScanner:
 
     def _count_chrom_info(self, read):
         """Count the chrom and the chrom start and the chrom end."""
-        if read.reference_name in self.bam_chrom_info:
-            self.bam_chrom_info[read.reference_name][1] = max(
-                read.reference_end, self.bam_chrom_info[read.reference_name][1]
-            )
-        else:
-            self.bam_chrom_info[read.reference_name] = [
-                read.reference_start,
-                read.reference_end,
-            ]
+        if read.reference_name not in self.bam_chrom_info:
+            self.bam_chrom_info.add(read.reference_name)
 
     def _get_bam_header(self):
         """Get bam header."""
@@ -177,8 +170,9 @@ class BamScanner:
                         blat_result = None
                         try:
                             blat_result = SearchIO.read(out_blat, "blat-psl", pslx=True)
-                        except ValueError:
-                            return None
+                        except ValueError as e:
+                            self.logger.warning(f"Error reading BLAT result: {e}, read_name: {read.query_name}")
+                            blat_result = False
 
                         if blat_result:
                             hit, top_hsp, mapq_aligner = self.aligner._query_insertion(
