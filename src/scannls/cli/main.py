@@ -770,14 +770,7 @@ def _scan_bam_helper(
                     )
                 )
 
-                if (
-                    not (
-                        num_of_subs > substitutions_num
-                        and subs_fraction > substitutions_fraction
-                    )
-                    and ins_fraction <= indels_fraction
-                    and del_fraction <= indels_fraction
-                ):
+                if int(nm) <= max_allowed_nm:
                     if ret := detect_sv_from_cigar(
                         read=read,
                         mapq_cutoff=mapq_cutoff,
@@ -883,8 +876,8 @@ def _scan_bam_helper(
 
                 else:
                     logger.trace(
-                        f"{read.query_name= } does not pass the substitutions/indel cutoff. "
-                        f"{nm=}, {num_of_subs=}, {ins_fraction=}, {del_fraction=}",
+                        f"{read.query_name=} does not pass the num of mismatches(edit distance) cutoff."
+                        f"{nm=}",
                     )
     logger.debug(f"Total nlpaths: {nls_src_forms_list}")
     logger.complete()
