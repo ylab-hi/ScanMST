@@ -36,7 +36,7 @@ networkx = "^3.2"
 pybind11 = "^2.12.1"
 pyabpoa = "^1.5.3"
 alignparse = "^0.6.3"
-matplotlib = { version = "^3.8" }
+matplotlib = { version = "^3.9" }
 pyvis = { version = "^0.3.2", optional = true }
 intervaltree = "^3.1.0"
 numpy = "1.26.4"
