@@ -100,7 +100,7 @@ class Blat:
         """
         if not os.path.exists(self.log_file_path):
             raise RuntimeError(
-                f"the process start server but the log file is not exist: {self.log_file_path}",
+                f"the BLAT has started server but the log file does not exist: {self.log_file_path}",
             )
 
         this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
@@ -246,7 +246,8 @@ class Blat:
         # check self start server and sever is running
         if self.is_start_server:
             # check log file
-            if self.is_ready():
+            # it will take some time from start the server to create the log file
+            if os.path.exists(self.log_file_path) and self.is_ready():
                 return
             #  not ready yet, wait for a while
             time.sleep(interval)
@@ -257,7 +258,7 @@ class Blat:
 
         :param in_seq: the sequence of input sequence
         :param mini_identity: the threshold of the identity for aligning
-        :return: the path for PSL file
+        :return: the path for PSLX file
         """
         while (
             self.is_start_server or self.is_running()
