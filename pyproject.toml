@@ -88,7 +88,7 @@ pynvim = "^0.5.0"
 flake8-2020 = "^1.8.1"
 flake8-alfred = "^1.1.1"
 cohesion = "^1.0.0"
-tqdm = "^4.66.4"
+tqdm = "^4.67.1"
 wily = "^1.24.2"
 
 
