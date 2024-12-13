@@ -607,6 +607,10 @@ class ReadsConnector:
 
         _, top_hsp, mapq = ret
 
+        # keep the top hit, ignore mapq
+        if mapq > 0:
+            mapq = 60
+
         if mapq < self.mapq_cutoff:
             return
 
