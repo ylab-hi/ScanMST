@@ -18,8 +18,8 @@ class DefaultOptions:
     gtf: str
     output: str
     blat_two_bit: str
-    output_sequence_choices: tuple[str, str, str] = ("haplotype", "reference", "both")
-    output_sequence_choice: str = "reference"
+    output_sequence_choices: tuple[str, str, str] = ("consensus", "reference", "both")
+    output_sequence_choice: str = "consensus"
     blat_closed: bool = True
     blat_sleep: bool = True
     blat_port: int = 88888
