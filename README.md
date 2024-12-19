@@ -36,7 +36,7 @@ If you have some issues, please check the [document](https://scannls.readthedocs
 ```console
 ❯ scannls -h
 
-usage: scannls [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {haplotype,reference,both}] [--sr SUPPORT_READS]
+usage: scannls [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
                [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--parallel PARALLEL] [--aligner {blat,}]
                [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
                [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph]
@@ -54,8 +54,8 @@ options:
   --ref REF                               reference genome in FASTA format (with fai index)
   --gtf GTF                               gene annotations in GTF format
   --output OUTPUT                         output prefix
-  --output-seq {haplotype,reference,both}
-                                          Output sequence type (default: reference)
+  --output-seq {consensus,reference,both}
+                                          Output sequence type (default: consensus)
   --sr SUPPORT_READS                      minimum number of support reads for reporting NLS (default: 1)
   --splice-bin SPLICE_BIN                 splice site bin size (default: 5)
   --mapq MAPQ                             minimum MAPQ of reads for calling NLS (default: 20)
