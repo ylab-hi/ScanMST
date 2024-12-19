@@ -32,7 +32,7 @@ class FastaWriter(Writer):
             raise FastaNotFoundError(msg)
         self.reference_io = Fasta(reference, sequence_always_upper=True)
         self.output_sequence_choice = output_sequence_choice
-        if output_sequence_choice == "haplotype":
+        if output_sequence_choice == "consensus":
             self.read_name_to_seq_dict = read_name_to_seq_dict
             self.msa_aligner = pyabpoa.msa_aligner()
         self.id = 1
@@ -94,7 +94,7 @@ class FastaWriter(Writer):
                 data_object,
                 reference_io=self.reference_io,
             )
-        elif self.output_sequence_choice == "haplotype":
+        elif self.output_sequence_choice == "consensus":
             sequence, node_length_str = get_consensus_sequence_from_series(
                 data_object,
                 reference_io=self.reference_io,
