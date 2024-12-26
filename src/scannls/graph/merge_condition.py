@@ -150,9 +150,14 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
 
     .. note::
         nodes with different length may be merged. []: exon -: intron
-        node1: []-[]-[]
-        node2:    []-[]
+        node1: [ ]-[ ]-[ ]-[ ]
+        node2:      []-[ ]-[ ]
 
+        node1: [ ]-[ ]-[ ]-[ ]
+        node2:          []-[ ]
+
+        node1: [ ]-[ ]-[ ]-[ ]
+        node2:              []
     """
     # WARN:  compare break point, and edge still compare break point <06-08-23, Yangyang Li>
     if node1.chrom != node2.chrom:
@@ -162,9 +167,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     if node1.strand != node2.strand:
         return False
 
-    if node1.introns != node2.introns:
-        return False
-
+    # checking if breakpoints satisfy the threshold
     if node1.strand.is_forward():
         if abs(node1.ref_end - node2.ref_end) > threshold:
             return False
@@ -172,28 +175,77 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     elif abs(node1.ref_start - node2.ref_start) > threshold:
         return False
 
-    # no introns
+    # both have no introns
     if not node1.introns and not node2.introns:
         return True
 
-    if node1.introns is None or node2.introns is None:
-        return False
+    if node1.introns is None and node2.introns:
+        if node1.strand.is_forward():
+            return node2.exons.last.start <= node1.ref_start
+        else:
+            return node2.exons.first.end >= node1.ref_end
+    elif node1.introns and node2.introns is None:
+        if node1.strand.is_forward():
+            return node1.exons.last.start <= node2.ref_start
+        else:
+            return node1.exons.first.end >= node2.ref_end
+    elif node1.introns and node2.introns:
+        if node1.strand.is_forward():
+            return __intron_lists_containment_checker(node1, node2)
+        else:
+            return __intron_lists_containment_checker(node1, node2, True)
 
-    node1_introns = [] if node1.introns is None else node1.introns
-    node2_introns = [] if node2.introns is None else node2.introns
 
-    introns_group = (
-        zip_longest(node1_introns, node2_introns)  # type:ignore
-        if node1.strand.is_reverse()
-        else zip_longest(node1_introns[::-1], node2_introns[::-1])  # type:ignore
-    )
+def __intron_lists_containment_checker(node1, node2, reverse=False):
+    """Checks if intron_list from node1 are fully contained within intron_list of node2
+       Or intron_list of node2 are fully contained within intron_list of node1 consecutively.
 
-    # have introns
-    for node1_intron, node2_intron in introns_group:
-        if node1_intron != node2_intron:
-            return node1_intron is None or node2_intron is None
+    .. note::
+        nodes with different length may be merged. []: exon -: intron
+       list1: [ ]-[ ]-[ ]-[ ]
+       list2:      []-[ ]-[ ]
 
-    return True
+       list2: [ ]-[ ]-[ ]-[ ]
+       list1: [ ]-[ ]-[]
+    """
+    node1_introns = node1.introns
+    node2_introns = node2.introns
+    node1_exons = node1.exons
+    node2_exons = node2.exons
+    len1 = len(node1_introns)
+    len2 = len(node2_introns)
+
+    if len1 == len2:
+        return node1_introns == node2_introns
+    else:
+        if len1 > len2:
+            full_list = node1_introns
+            sub_list = node2_introns
+            full_exons = node1_exons
+            sub_exons = node2_exons
+        else:
+            full_list = node2_introns
+            sub_list = node1_introns
+            full_exons = node2_exons
+            sub_exons = node1_exons
+
+        sub_length = len(sub_list)
+        if sub_length < 1:
+            return False
+
+        if reverse:
+            # For reverse strand, check from start
+            return (
+                full_list[:sub_length] == sub_list[:]
+                and full_exons[sub_length].end >= sub_exons.last.end
+            )
+        else:
+            # For forward strand, check from end
+            return (
+                full_list[-sub_length:] == sub_list[:]
+                and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
+            )
+
 
 
 def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(

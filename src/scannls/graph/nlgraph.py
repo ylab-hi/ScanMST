@@ -334,7 +334,7 @@ class NLGraph:
         """
         logger.trace(f"compare merge: {node1=}, {node2=}")
 
-        if node1.strand != node2.strand:
+        if node1.strand != node2.strand or node1.chrom != node2.chrom:
             return False
 
         merge_condition = MergeCondition(threshold)

@@ -407,6 +407,13 @@ class Node(BasicNode):
         Merge two nodes for ref_start, ref_end, and identities.
         """
         if isinstance(other, Node):
+
+            # keep the Node with longer reference span, aka more introns
+            self_ref_span = self.ref_end - self.ref_start
+            other_ref_span = other.ref_end - other.ref_start
+            if other_ref_span > self_ref_span:
+                self.exons = other.exons
+
             # update exon coordinates
             self.ref_start = min(
                 self.exons.first.start,
