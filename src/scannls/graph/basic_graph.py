@@ -276,7 +276,8 @@ class Node(BasicNode):
         self._ref_end = ref_end
 
         self.exons = exons
-        self._introns = exons.introns()
+
+        self._introns = exons.introns()  # note we do not use this 2024-12-30
 
         self.gene_names: list[str] = []
 
@@ -284,7 +285,7 @@ class Node(BasicNode):
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
-        self._unique_key = f"{self.chrom}-{self.introns}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
+        self._unique_key = f"{self.chrom}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
 
         self.breakpoints = defaultdict(int)
 
@@ -372,21 +373,14 @@ class Node(BasicNode):
     @property
     def introns(self) -> Introns | None:
         """Get introns of a node."""
-        if self._introns is not None:
-            return self._introns
-
-        self._introns = self.exons.introns()
-        return self._introns
+        return self.exons.introns()
 
     @property
     def similar_key(self) -> str:
         """Get similar key of a node."""
-        introns = self.introns
-        chosen_intron = None
-        if introns:
-            chosen_intron = introns.last if self.strand.is_forward() else introns.first
+        chosen_intron = None  # do not consider introns as key
 
-        key = f"{chosen_intron!s}"
+        key = f"{chosen_intron}"
         return f"{self.chrom}_{key}"
 
     @property
