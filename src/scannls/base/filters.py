@@ -256,14 +256,10 @@ class CircRNAFilter:
                         and len(current_node.introns) > 0
                         and len(next_node.introns) > 0
                         and (
-                            set(current_node.introns).issuperset(set(next_node.introns))
-                            or set(current_node.introns).issubset(set(next_node.introns))
+                            set(current_node.introns).issuperset(set(next_node.introns)) or set(current_node.introns).issubset(set(next_node.introns))
                         )
                     )
-                    or (
-                        set(current_node.exons).issuperset(set(next_node.exons))
-                        or set(current_node.exons).issubset(set(next_node.exons))
-                    )
+                    or (set(current_node.exons).issuperset(set(next_node.exons)) or set(current_node.exons).issubset(set(next_node.exons)))
                     or (current_node.ref_start == next_node.ref_start or current_node.ref_end == next_node.ref_end)
                 )
                 and self.is_megaexon_superpose_with_annotated_exons(longest_node),
@@ -376,11 +372,7 @@ class CircRNAFilter:
         exons_of_first_node = set(first_node.exons)
         exons_of_second_node = set(second_node.exons)
         # rule out duplicated exons and interspersed exons
-        if (
-            len(exons_of_first_node.intersection(exons_of_second_node)) > 0
-            or strand_first != strand_second
-            or first_node.chrom != second_node.chrom
-        ):
+        if len(exons_of_first_node.intersection(exons_of_second_node)) > 0 or strand_first != strand_second or first_node.chrom != second_node.chrom:
             return False
 
         chrom = first_node.chrom
@@ -417,11 +409,7 @@ class CircRNAFilter:
         exons_of_first_node = set(first_node.exons)
         exons_of_second_node = set(second_node.exons)
         # rule out duplicated exons and interspersed exons
-        if (
-            len(exons_of_first_node.intersection(exons_of_second_node)) > 0
-            or strand_first != strand_second
-            or first_node.chrom != second_node.chrom
-        ):
+        if len(exons_of_first_node.intersection(exons_of_second_node)) > 0 or strand_first != strand_second or first_node.chrom != second_node.chrom:
             return False
 
         chrom = first_node.chrom
@@ -522,8 +510,7 @@ class CircRNAFilter:
         )[0]
 
         return bool(
-            start_position - largest_overlapping_exon.start < threshold
-            and largest_overlapping_exon.end - end_position < threshold,
+            start_position - largest_overlapping_exon.start < threshold and largest_overlapping_exon.end - end_position < threshold,
         )
 
     @staticmethod

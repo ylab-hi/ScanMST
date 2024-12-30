@@ -14,7 +14,7 @@ from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (
     BreakpointNotFoundError,
 )
-from scannls.graph import NLPath, Node  # noqa: TCH001
+from scannls.graph import NLPath, Node
 
 from .writer import Writer
 
@@ -259,14 +259,12 @@ class VCFWriter(Writer):
             if _id in {"TRANSCRIPT_ID", "SR_ID", "MEGAEXON1", "MEGAEXON2"}:
                 _number = "."
             header_lines.append(
-                f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},"
-                f'Description="{VCFWriter.description[_id]}">',
+                f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]}," f'Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_format:
             header_lines.append(
-                f"##FORMAT=<ID={_id},Number=1,Type={VCFWriter.reserved_format[_id]},"
-                f'Description="{VCFWriter.description[_id]}">',
+                f"##FORMAT=<ID={_id},Number=1,Type={VCFWriter.reserved_format[_id]}," f'Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_alt:

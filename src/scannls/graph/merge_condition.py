@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from itertools import zip_longest
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -182,18 +181,15 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     if node1.introns is None and node2.introns:
         if node1.strand.is_forward():
             return node2.exons.last.start <= node1.ref_start
-        else:
-            return node2.exons.first.end >= node1.ref_end
-    elif node1.introns and node2.introns is None:
+        return node2.exons.first.end >= node1.ref_end
+    if node1.introns and node2.introns is None:
         if node1.strand.is_forward():
             return node1.exons.last.start <= node2.ref_start
-        else:
-            return node1.exons.first.end >= node2.ref_end
-    elif node1.introns and node2.introns:
+        return node1.exons.first.end >= node2.ref_end
+    if node1.introns and node2.introns:
         if node1.strand.is_forward():
             return __intron_lists_containment_checker(node1, node2)
-        else:
-            return __intron_lists_containment_checker(node1, node2, True)
+        return __intron_lists_containment_checker(node1, node2, True)
 
 
 def __intron_lists_containment_checker(node1, node2, reverse=False):
@@ -217,35 +213,26 @@ def __intron_lists_containment_checker(node1, node2, reverse=False):
 
     if len1 == len2:
         return node1_introns == node2_introns
+    if len1 > len2:
+        full_list = node1_introns
+        sub_list = node2_introns
+        full_exons = node1_exons
+        sub_exons = node2_exons
     else:
-        if len1 > len2:
-            full_list = node1_introns
-            sub_list = node2_introns
-            full_exons = node1_exons
-            sub_exons = node2_exons
-        else:
-            full_list = node2_introns
-            sub_list = node1_introns
-            full_exons = node2_exons
-            sub_exons = node1_exons
+        full_list = node2_introns
+        sub_list = node1_introns
+        full_exons = node2_exons
+        sub_exons = node1_exons
 
-        sub_length = len(sub_list)
-        if sub_length < 1:
-            return False
+    sub_length = len(sub_list)
+    if sub_length < 1:
+        return False
 
-        if reverse:
-            # For reverse strand, check from start
-            return (
-                full_list[:sub_length] == sub_list[:]
-                and full_exons[sub_length].end >= sub_exons.last.end
-            )
-        else:
-            # For forward strand, check from end
-            return (
-                full_list[-sub_length:] == sub_list[:]
-                and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
-            )
-
+    if reverse:
+        # For reverse strand, check from start
+        return full_list[:sub_length] == sub_list[:] and full_exons[sub_length].end >= sub_exons.last.end
+    # For forward strand, check from end
+    return full_list[-sub_length:] == sub_list[:] and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
 
 
 def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
@@ -339,10 +326,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 
     # For nodes with polyA, a small difference in polyA positions is allowed.
     if node1.is_polya and node2.is_polya:
-        return (
-            abs(node1.exons.first.start - node2.exons.first.start) <= threshold
-            and abs(node1.exons.last.end - node2.exons.last.end) <= threshold
-        )
+        return abs(node1.exons.first.start - node2.exons.first.start) <= threshold and abs(node1.exons.last.end - node2.exons.last.end) <= threshold
 
     if node1.is_polya and not node2.is_polya:
         if node1.strand.is_forward():

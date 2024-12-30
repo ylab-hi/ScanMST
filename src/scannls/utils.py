@@ -119,9 +119,7 @@ def get_softclip_length(
         if parse_result.lt_soft_len < parse_result.rt_soft_len:
             return (
                 parse_result.rt_soft_len,
-                read.query_sequence[
-                    parse_result.query_len - parse_result.rt_soft_len :
-                ],
+                read.query_sequence[parse_result.query_len - parse_result.rt_soft_len :],
                 ref_end,
                 MappingMode.MS,
             )
@@ -299,7 +297,7 @@ def cigar_validity(cigar_str: str) -> str:
     return "".join(i[0] for i in stack)
 
 
-def wait_for_aligner(aligner, max_timeout=5*60, check_interval=60) -> None:
+def wait_for_aligner(aligner, max_timeout=5 * 60, check_interval=60) -> None:
     """
     Wait for the aligner to start running, with a maximum timeout.
     Args:

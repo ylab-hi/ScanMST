@@ -132,13 +132,13 @@ class NLGraph:
     ) -> NLGraph:
         """Create splice graph."""
         rescuer = SRRescuer(
-                input_bam,
-                mapq,
-                soft_len,
-                mismatch,
-                alignment_fraction,
-                node_rescued_sr_maximum,
-                average_read_depth,
+            input_bam,
+            mapq,
+            soft_len,
+            mismatch,
+            alignment_fraction,
+            node_rescued_sr_maximum,
+            average_read_depth,
         )
 
         return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), rescue_sr, ignore_circle)
@@ -370,9 +370,7 @@ class NLGraph:
                 # keeps in mind the next node in current series is not processed yet!!!!
                 # a -> b and b <- a
 
-                edge_data = (
-                    current_node.previous_edge_in_nlapth.edge_data if current_node.previous_edge_in_nlapth is not None else None
-                )
+                edge_data = current_node.previous_edge_in_nlapth.edge_data if current_node.previous_edge_in_nlapth is not None else None
 
                 similar_node_in_graph.add_predecessor(
                     current_node.previous_node_in_nlpath,
@@ -393,9 +391,7 @@ class NLGraph:
             # only consider nodes that have been processed: previous node in series
             # keeps in mind the next node in series is not processed yet!!!!
 
-            edge_data = (
-                current_node.previous_edge_in_nlapth.edge_data if current_node.previous_edge_in_nlapth is not None else None
-            )
+            edge_data = current_node.previous_edge_in_nlapth.edge_data if current_node.previous_edge_in_nlapth is not None else None
 
             current_node.add_predecessor(
                 current_node.previous_node_in_nlpath,

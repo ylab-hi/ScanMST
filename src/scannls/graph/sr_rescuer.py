@@ -106,9 +106,7 @@ class SRRescuer:
     @staticmethod
     def obtain_region_for_rescue_sr(node: Node, mode: MappingMode):
         """Obtain region from rescue."""
-        next_pos = (
-            node.exons.last.end if node.strand.is_forward() else node.exons.first.start
-        )
+        next_pos = node.exons.last.end if node.strand.is_forward() else node.exons.first.start
 
         if mode.is_sm():
             next_pos += 1
@@ -208,9 +206,7 @@ class SRRescuer:
                     next_node.cigartuples_without_soft,
                 )
 
-                logger.trace(
-                    f"edge {region.to_string().strip()}, rescue sr {increased_sr}"
-                )
+                logger.trace(f"edge {region.to_string().strip()}, rescue sr {increased_sr}")
 
                 edge.sr += increased_sr
 

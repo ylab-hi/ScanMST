@@ -1,6 +1,7 @@
 """Wrapper for loguru.logger."""
 
 from loguru._logger import Logger
+
 from scannls.mtype import LoggerType
 
 

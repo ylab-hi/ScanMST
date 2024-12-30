@@ -1,7 +1,9 @@
 """Basic Read Class."""
 
 from __future__ import annotations
+
 from scannls import cppext
+
 from .basic import CigarCode, Intervals, MappingMode, Strand
 
 

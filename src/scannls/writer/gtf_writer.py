@@ -195,24 +195,19 @@ def format_gtf_features_for_nlpath(
             ".",
             ".",
             ".",
-            f'sr "{nlpath_sr}"; '
-            f'osr "{nlpath_originla_sr}"; '
-            f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
+            f'sr "{nlpath_sr}"; ' f'osr "{nlpath_originla_sr}"; ' f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
         ]
-    else:
-        return [
-            ".",
-            "scannls",
-            "transcript",
-            ".",
-            ".",
-            ".",
-            ".",
-            ".",
-            f'sr "{nlpath_sr}"; '
-            f'osr "{nlpath_sr}"; '
-            f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
-        ]
+    return [
+        ".",
+        "scannls",
+        "transcript",
+        ".",
+        ".",
+        ".",
+        ".",
+        ".",
+        f'sr "{nlpath_sr}"; ' f'osr "{nlpath_sr}"; ' f'transcript_id "{nlpath_id}"; extend "{extend}"; ',
+    ]
 
 
 def get_gtf_features_from_insertion(
@@ -230,8 +225,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; '
-        f'sequence "{insertion.query_sequence}"; ',
+        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; ' f'sequence "{insertion.query_sequence}"; ',
     ]
 
 
@@ -297,9 +291,7 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; '
-                f'mega_exon_id "{node.trace_id:0>4}"; '
-                f'transcript_id "{nlpath_id}"; ',
+                f'exon_id "{index:0>3}"; ' f'mega_exon_id "{node.trace_id:0>4}"; ' f'transcript_id "{nlpath_id}"; ',
             ],
         )
 

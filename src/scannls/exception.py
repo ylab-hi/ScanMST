@@ -1,5 +1,6 @@
 """Module for the exception class."""
 
+
 class ScannlsExceptionError(Exception):
     """Base class for exceptions in this module."""
 

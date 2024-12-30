@@ -311,7 +311,7 @@ class Node(BasicNode):
             else:
                 self.ref_end = new_breakpoint
             return new_breakpoint
-        elif self.is_end_node():
+        if self.is_end_node():
             logger.debug(f"Update end node's breakpoint {self.breakpoints}")
             new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
             if self.strand.is_reverse():
@@ -407,7 +407,6 @@ class Node(BasicNode):
         Merge two nodes for ref_start, ref_end, and identities.
         """
         if isinstance(other, Node):
-
             # keep the Node with longer reference span, aka more introns
             self_ref_span = self.ref_end - self.ref_start
             other_ref_span = other.ref_end - other.ref_start
@@ -458,22 +457,13 @@ class Node(BasicNode):
                 return self.exons.first.start <= other.exons.first.start <= other.exons.last.end <= self.exons.last.end
 
             if same_left and same_right:
-                return (
-                    abs(self.exons.first.start - other.exons.first.start) <= threshold
-                    and self.exons.last.end == other.exons.last.end
-                )
+                return abs(self.exons.first.start - other.exons.first.start) <= threshold and self.exons.last.end == other.exons.last.end
 
             if same_left:
-                return (
-                    abs(self.exons.first.start - other.exons.first.start) <= threshold
-                    and self.exons.last.end - other.exons.last.end >= -threshold
-                )
+                return abs(self.exons.first.start - other.exons.first.start) <= threshold and self.exons.last.end - other.exons.last.end >= -threshold
 
             if same_right:
-                return (
-                    -threshold <= self.exons.first.start - other.exons.first.start
-                    and abs(self.exons.last.end - other.exons.last.end) <= threshold
-                )
+                return -threshold <= self.exons.first.start - other.exons.first.start and abs(self.exons.last.end - other.exons.last.end) <= threshold
 
         msg = f"{other} is not Node"
         raise ValueError(msg)
@@ -964,11 +954,7 @@ class NLPath:
                     and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, threshold)
                 )
                 # head vs. tail
-                or (
-                    _a == 0
-                    and _b == nlpath_len - 1
-                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b)
-                )
+                or (_a == 0 and _b == nlpath_len - 1 and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b))
                 # middle vs middle
                 or (_a > 0 and _b < nlpath_len - 1 and node_a.ref_start == node_b.ref_start and node_a.ref_end == node_b.ref_end)
             ):
@@ -1401,8 +1387,5 @@ def merge_insertion(edge1: Edge, edge2: Edge):
             return
 
         # prefer micorhomology over novelinsertion
-        if isinstance(edge1.insertion_info[1], NovelInsertion) and isinstance(
-            edge2.insertion_info[1],
-            MicroHomology
-        ):
+        if isinstance(edge1.insertion_info[1], NovelInsertion) and isinstance(edge2.insertion_info[1], MicroHomology):
             edge1.insertion_info = edge2.insertion_info
