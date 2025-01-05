@@ -37,6 +37,7 @@ class DefaultOptions:
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 100
     max_allowed_micro_insertion: int = 50
+    min_required_insertion_length: int = 100
     ident_cutoff: float = 0.90
     prune_threshold: int = 10  # for merging conditions
     soft_len: int = 5
@@ -311,6 +312,15 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         help="maximum allowed micro-insertion length (default: %(default)s)",
         default=DefaultOptions.max_allowed_micro_insertion,
+    )
+
+    parser.add_argument(
+        "--min-required-ins",
+        action="store",
+        dest="min_required_ins",
+        type=int,
+        help="minimum required insertion length in read (default: %(default)s)",
+        default=DefaultOptions.min_required_insertion_length,
     )
 
     # Reads filter parameters

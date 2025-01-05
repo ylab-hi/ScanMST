@@ -253,6 +253,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             rt_switching_filter_len=options.rt_switching_filter_len,
             prune_threshold=options.prune_threshold,
             max_allowed_ins=options.max_allowed_ins,
+            read_insertion_len_threshold=options.min_required_ins,
         )
 
         avg_cov = None if not options.bound else avg_cov

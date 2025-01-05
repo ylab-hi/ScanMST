@@ -136,8 +136,18 @@ class BamScanner:
                 lt_soft_len = int(left_mat.group(1)) if left_mat else 0
                 rt_soft_len = int(right_mat.group(1)) if right_mat else 0
 
+                if lt_soft_len == rt_soft_len == 0:
+                    self.logger.warning(f"soft clipping for supplementary alignments are needed, please align with -Y.")
+                    raise SystemExit
+
                 nm = read.get_tag("NM")
-                cs_tag = read.get_tag("cs")
+
+                try:
+                    cs_tag = read.get_tag("cs")
+                except KeyError as e:
+                    self.logger.warning(f"{e}, cs tag is missing, please align with --cs.")
+                    raise SystemExit
+
                 num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
                     cs_tag,
                     self.long_indel_length,
@@ -497,6 +507,7 @@ def _scan_bam_helper(
     rt_switching_filter_len,
     prune_threshold,
     max_allowed_ins,
+    read_insertion_len_threshold,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
@@ -670,6 +681,7 @@ def _scan_bam_helper(
                         max_allowed_nm,
                         aligner,
                         blat_ident_pct_cutoff,
+                        read_insertion_len_threshold,
                     )
 
                     if primary_aln_cigarstring:
@@ -840,6 +852,7 @@ def scanbam_run(
     rt_switching_filter_len,
     prune_threshold,
     max_allowed_ins,
+    read_insertion_len_threshold,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(

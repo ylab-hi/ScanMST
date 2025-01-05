@@ -786,8 +786,8 @@ def insertion2chimeric_alignment(
     max_allowed_nm: int,
     aligner,
     aligner_ident_pct_cutoff: float = 0.9,
+    align_len_threshold: int = 100,
     top: int = 3,
-    align_len_threshold: int = 50,
 ) -> tuple[str, str]:
     """Create chimeric alignments from the alignment with long insertion.
 

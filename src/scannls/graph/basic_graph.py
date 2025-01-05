@@ -1173,7 +1173,7 @@ class NLPath:
 
                 insertion.query_name = read1.query_name
 
-                if flag:  # only one hit
+                if flag:  # keep the top one hit, mapq does not work here
                     # add first node and insertion node
                     source_s = event.source_s1
 

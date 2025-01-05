@@ -1,4 +1,4 @@
-# ScanNLS: A powerful tool for detecting non-co-linear transcripts with long reads and nonlinear splicing graphs
+# ScanNLS: A powerful tool for detecting non-co-linear transcripts with long reads and transcript segment graphs
 
 [![pypi](https://img.shields.io/pypi/v/scannls.svg?style=for-the-badge)][pypi]
 ![conda](https://img.shields.io/conda/vn/bioconda/scannls?style=for-the-badge)
@@ -40,7 +40,7 @@ usage: scannls [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPU
                [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--parallel PARALLEL] [--aligner {blat,}]
                [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
                [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph]
-               [--nbound] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS] [--long-indel-length LONG_INDEL_LENGTH]
+               [--nbound] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS] [--min-required-ins MIN_REQUIRED_INS] [--long-indel-length LONG_INDEL_LENGTH]
                [--substitution-num SUBSTITUTIONS_NUM] [--indel-fraction INDEL_FRACTION] [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN]
                [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
                [--substitution-fraction SUBSTITUTIONS_FRACTION] [--ignore-circle] [--rescue-sr]
@@ -78,6 +78,7 @@ options:
   --nbound                                if add maximum increment limit using average reads depth when rescuing sr (default: True)
   --max-allowed-nm MAX_ALLOWED_NM         maximum allowed NM to keep AS tag (default: 50)
   --max-allowed-ins MAX_ALLOWED_INS       maximum allowed micro-insertion length (default: 50)
+  --min-required-ins MIN_REQUIRED_INS     minimum required insertion length in read (default: 100)
   --long-indel-length LONG_INDEL_LENGTH   the length cutoff of defining long indel in the reads (default: 10)
   --substitution-num SUBSTITUTIONS_NUM    the allowed maximum substitution number in the reads (default: 20)
   --indel-fraction INDEL_FRACTION         the allowed maximum long indel fraction in the reads (default: 0.2)
