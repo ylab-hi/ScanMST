@@ -286,7 +286,6 @@ class Node(BasicNode):
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
         self._unique_key = f"{self.chrom}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
-
         self.breakpoints = defaultdict(int)
 
     def set_up_breakpoints(self) -> None:

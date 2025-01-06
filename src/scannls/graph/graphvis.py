@@ -97,6 +97,7 @@ class GraphVis:
             strand=str(node.strand),
             is_head=node.is_start_node(),
             trace_id=node.trace_id,
+            exons=str(node.exons),
         )
 
     def add_edge_to_graph(
