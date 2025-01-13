@@ -858,7 +858,7 @@ class NLPath:
 
     def to_hash_identifier(self) -> str:
         """Get hash identifier of the path."""
-        return to_hash_identifier("-".join([node.unique_key for node in self.nodes]))
+        return to_hash_identifier("-".join([f"{node.chrom}_{node.ref_start}_{node.ref_end}_{node.trace_id}" for node in self.nodes]))
 
     def polish_edges(self) -> None:
         """Polish edges in the path."""
