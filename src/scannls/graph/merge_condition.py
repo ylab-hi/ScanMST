@@ -306,6 +306,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         if node1.strand.is_forward():
             return __intron_lists_containment_checker(node1, node2)
         return __intron_lists_containment_checker(node1, node2, True)
+    return None
 
 
 def __intron_lists_containment_checker(node1, node2, reverse=False):

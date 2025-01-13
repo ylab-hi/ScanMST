@@ -216,7 +216,6 @@ class SRRescuer:
         current_node: Node,
     ) -> None:
         """Update edge depth for input node."""
-        rescued_pre = False
 
         for next_node in current_node.successors:
             edges = graph.find_edges(current_node, next_node)

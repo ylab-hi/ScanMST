@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -319,6 +321,7 @@ class Node(BasicNode):
             else:
                 self.ref_start = new_breakpoint
             return new_breakpoint
+        return None
 
     @property
     def ref_start(self) -> int:
@@ -853,6 +856,10 @@ class NLPath:
         """Check if sv_type of all nodes in the series are DEL."""
         return all(edge.variation_type == VariationType.DEL for edge in self.edges.values())
 
+    def to_hash_identifier(self) -> str:
+        """Get hash identifier of the path."""
+        return to_hash_identifier("-".join([node.unique_key for node in self.nodes]))
+
     def polish_edges(self) -> None:
         """Polish edges in the path."""
         for idx, node in enumerate(self.nodes[:-1]):
@@ -1299,6 +1306,49 @@ class NLPath:
                 check_end_node_is_ploya(final_node, genome_fasta)
                 nodes.append(final_node)
         return cls.from_nodes_and_edges_data(nodes, edges_data)
+
+
+def to_hash_identifier(input_string: str, length: int | None = 16) -> str:
+    """
+    Convert a string to a hash-based identifier using SHA-256.
+
+    Args:
+        input_string: The string to convert
+        length: The desired length of the output identifier (default: 16)
+                If None, returns the full hash
+
+    Returns:
+        A valid identifier string derived from the SHA-256 hash
+
+    Example:
+        >>> to_hash_identifier("Hello World!")
+        >>> 'a591a6d40bf420'
+    """
+    if not isinstance(input_string, str):
+        msg = "Input must be a string"
+        raise TypeError(msg)
+
+    if length is not None and not isinstance(length, int):
+        msg = "Length must be an integer or None"
+        raise TypeError(msg)
+
+    if length is not None and length <= 0:
+        msg = "Length must be positive"
+        raise ValueError(msg)
+
+    # Create SHA-256 hash
+    hash_obj = hashlib.sha256(input_string.encode("utf-8"))
+    hash_hex = hash_obj.hexdigest()
+
+    # Take specified length of hash if provided
+    if length:
+        hash_hex = hash_hex[:length]
+
+    # Ensure the identifier starts with a letter (prefix with 'a' if it starts with a number)
+    if re.match(r"^[0-9]", hash_hex):
+        hash_hex = "a" + hash_hex[1:]
+
+    return hash_hex
 
 
 def update_node_with_other_node(

@@ -137,10 +137,10 @@ class BamScanner:
                 rt_soft_len = int(right_mat.group(1)) if right_mat else 0
 
                 if lt_soft_len == rt_soft_len == 0:
-                    self.logger.warning(f"soft clipping for supplementary alignments are needed, please align with -Y.")
+                    self.logger.warning("soft clipping for supplementary alignments are needed, please align with -Y.")
                     raise SystemExit
 
-                nm = read.get_tag("NM")
+                read.get_tag("NM")
 
                 try:
                     cs_tag = read.get_tag("cs")

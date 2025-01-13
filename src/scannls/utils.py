@@ -311,7 +311,8 @@ def wait_for_aligner(aligner, max_timeout=5 * 60, check_interval=60) -> None:
     while not aligner.is_running():
         # Check if we've exceeded the maximum timeout
         if time.time() - start_time > max_timeout:
-            raise TimeoutError(f"Aligner did not start running within {max_timeout} seconds")
+            msg = f"Aligner did not start running within {max_timeout} seconds"
+            raise TimeoutError(msg)
         is_there_log_file = os.path.exists(aligner.log_file_path)
         blat_info = aligner.log_file_path, aligner.is_start_server
         logger.trace(f"{blat_info=}, {is_there_log_file=}, {aligner.is_running()=}")
