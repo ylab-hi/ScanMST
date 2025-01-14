@@ -7,10 +7,12 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+import re
 
 import HTSeq  # type: ignore
 import yaml  # type: ignore
 from alignparse import cs_tag
+from loguru import logger
 
 from scannls import __PACKAGE_NAME__, cppext
 from scannls.base import Blat, Intervals, MappingMode
@@ -380,7 +382,10 @@ def splicing_confirmation_and_correction(
         :return: canonical splice sites are paired or not
         :rtype: bool
         """
-        return any(_donor in donor_seq and _acceptor in acceptor_seq for _donor, _acceptor in splice_motif_dict.items())
+        return any(
+            _donor in donor_seq and _acceptor in acceptor_seq
+            for _donor, _acceptor in splice_motif_dict.items()
+        )
 
     def donor_accepter_breakpoint_determintor(
         chrm1: str,
@@ -423,7 +428,9 @@ def splicing_confirmation_and_correction(
 
         return ret
 
-    def default_shift_prechecker(strand_donor, strand_acceptor, exons_donor, exons_acceptor, microhomology_length) -> bool:
+    def default_shift_prechecker(
+        strand_donor, strand_acceptor, exons_donor, exons_acceptor, microhomology_length
+    ) -> bool:
         """Determine if use the default shift settings: donor shift=0, acceptor shift=length of microhomology
         if return False, using alternative settings: donor shift=length of microhomology, acceptor shift=0
 
@@ -457,7 +464,10 @@ def splicing_confirmation_and_correction(
                 exons_acceptor.last.end - final_accecptor_shift,
             )
 
-        return border_exon_donor[0] < border_exon_donor[1] and border_exon_acceptor[0] < border_exon_acceptor[1]
+        return (
+            border_exon_donor[0] < border_exon_donor[1]
+            and border_exon_acceptor[0] < border_exon_acceptor[1]
+        )
 
     # key: strand of donor site, strand of accepter site
     # values: possible matched donor site and accepter site (>99% splice site using GT-AG)
@@ -510,10 +520,19 @@ def splicing_confirmation_and_correction(
             motif_ac = ""
 
         # Non-annotated coding exon boundary
-        if motif_do not in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-            donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
-            acceptor_seq = genome_fasta[chrm_ac][pos_ac - splice_bin : pos_ac + splice_bin].seq
-            if matched_candidate_sites_checker(donor_seq, acceptor_seq, splice_motif_dict):
+        if (
+            motif_do not in splice_motif_dict
+            and motif_ac not in splice_motif_dict.values()
+        ):
+            donor_seq = genome_fasta[chrm_do][
+                pos_do - splice_bin : pos_do + splice_bin
+            ].seq
+            acceptor_seq = genome_fasta[chrm_ac][
+                pos_ac - splice_bin : pos_ac + splice_bin
+            ].seq
+            if matched_candidate_sites_checker(
+                donor_seq, acceptor_seq, splice_motif_dict
+            ):
                 report_or_not, boundary_code, canonical_motif_or_not = True, 0, 1
             elif motif_required:
                 report_or_not, boundary_code, canonical_motif_or_not = False, 0, 0
@@ -521,8 +540,12 @@ def splicing_confirmation_and_correction(
                 report_or_not, boundary_code, canonical_motif_or_not = True, 0, 0
 
         # pos1 in annotated coding exon boundary, pos2 not.
-        elif motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values():
-            acceptor_seq = genome_fasta[chrm_ac][pos_ac - splice_bin : pos_ac + splice_bin].seq
+        elif (
+            motif_do in splice_motif_dict and motif_ac not in splice_motif_dict.values()
+        ):
+            acceptor_seq = genome_fasta[chrm_ac][
+                pos_ac - splice_bin : pos_ac + splice_bin
+            ].seq
             if splice_motif_dict[motif_do] in acceptor_seq:
                 report_or_not, boundary_code, canonical_motif_or_not = True, 2, 1
             elif motif_required:
@@ -531,8 +554,12 @@ def splicing_confirmation_and_correction(
                 report_or_not, boundary_code, canonical_motif_or_not = True, 2, 0
 
         # pos2 in annotated coding exon boundary, pos1 not.
-        elif motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values():
-            donor_seq = genome_fasta[chrm_do][pos_do - splice_bin : pos_do + splice_bin].seq
+        elif (
+            motif_do not in splice_motif_dict and motif_ac in splice_motif_dict.values()
+        ):
+            donor_seq = genome_fasta[chrm_do][
+                pos_do - splice_bin : pos_do + splice_bin
+            ].seq
 
             if possible_donors[motif_ac] in donor_seq:
                 report_or_not, boundary_code, canonical_motif_or_not = True, 1, 1
@@ -568,7 +595,9 @@ def splicing_confirmation_and_correction(
         final_donor_shift = 0
         final_accecptor_shift = microhomology_length - final_donor_shift
         if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
-            if not default_shift_prechecker(strand1, strand2, _exons1, _exons2, microhomology_length):
+            if not default_shift_prechecker(
+                strand1, strand2, _exons1, _exons2, microhomology_length
+            ):
                 final_accecptor_shift = 0
                 final_donor_shift = microhomology_length - final_accecptor_shift
 
@@ -589,7 +618,10 @@ def splicing_confirmation_and_correction(
 
                 donor_seq = genome_fasta[chrm1][donor_start:donor_end].seq
                 acceptor_seq = genome_fasta[chrm2][acceptor_start:acceptor_end].seq
-                if donor_seq == target_donor_seq and acceptor_seq == target_acceptor_seq:
+                if (
+                    donor_seq == target_donor_seq
+                    and acceptor_seq == target_acceptor_seq
+                ):
                     final_donor_shift = donor_shift
                     final_accecptor_shift = acceptor_shift
                     canonical_motif_or_not = 1
@@ -611,7 +643,9 @@ def splicing_confirmation_and_correction(
                 _exons2.last.end -= final_accecptor_shift
                 corrected_pos2 = pos2 - final_accecptor_shift
         else:
-            if not default_shift_prechecker(strand2, strand1, _exons2, _exons1, microhomology_length):
+            if not default_shift_prechecker(
+                strand2, strand1, _exons2, _exons1, microhomology_length
+            ):
                 final_accecptor_shift = 0
                 final_donor_shift = microhomology_length - final_accecptor_shift
 
@@ -632,7 +666,10 @@ def splicing_confirmation_and_correction(
 
                 donor_seq = genome_fasta[chrm2][donor_start:donor_end].seq
                 acceptor_seq = genome_fasta[chrm1][acceptor_start:acceptor_end].seq
-                if donor_seq == target_donor_seq and acceptor_seq == target_acceptor_seq:
+                if (
+                    donor_seq == target_donor_seq
+                    and acceptor_seq == target_acceptor_seq
+                ):
                     final_donor_shift = donor_shift
                     final_accecptor_shift = acceptor_shift
                     canonical_motif_or_not = 1
@@ -677,67 +714,313 @@ def splicing_confirmation_and_correction(
     )
 
 
+def _extract_read_sequence_from_matched_segment(
+    soft_seq_original: str,
+    seq_original: str,
+    read_strand: str,
+    read_mode: MappingMode,
+    potential_microhomology_length: int,
+) -> str:
+    """
+    Extract the sofclipping boundary read sequence in the matched segment.
+
+    :param soft_seq_original: softclipped segment of the aligned read (original sequence)
+    :param seq_original: sequence of the aligned read (original sequence)
+    :param read_strand: the strand of the aligned read (-/+)
+    :param read_mode: mode of the aligned read (MS or SM)
+    :param potential_microhomology_length: potential microinsertion length
+    """
+
+    soft_seq_len = len(soft_seq_original)
+    seq_len = len(seq_original)
+
+    if (read_strand == "+" and read_mode == MappingMode.MS) or (
+        read_strand == "-" and read_mode == MappingMode.SM
+    ):
+        _seq_match = seq_original[
+            seq_len - soft_seq_len - potential_microhomology_length : -soft_seq_len
+        ]
+
+    elif (read_strand == "+" and read_mode == MappingMode.SM) or (
+        read_strand == "-" and read_mode == MappingMode.MS
+    ):
+        _seq_match = seq_original[
+            soft_seq_len : soft_seq_len + potential_microhomology_length
+        ]
+
+    return _seq_match
+
+
+def find_match_length(a, b, left_or_right="right"):
+    """
+    Finds the length of identical substrings from the specified side of two strings.
+
+    Args:
+      a: The first string.
+      b: The second string.
+      left_or_right: Specifies the direction to check for matches.
+                      Valid values are "right" (default) or "left".
+
+    Returns:
+      The length of the identical substring.
+    """
+    if len(a) == 0 or len(b) == 0:
+        return 0
+
+    length = min(len(a), len(b))
+
+    if left_or_right == "right":
+        for i in range(length, 0, -1):
+            if a[-i:] == b[-i:]:
+                return i
+    elif left_or_right == "left":
+        for i in range(length):
+            if a[: i + 1] == b[: i + 1]:
+                continue
+            else:
+                return i
+    else:
+        raise ValueError("Invalid value for left_or_right. Must be 'right' or 'left'.")
+
+    return 0  # No match found
+
+
 def blat2chimeric_alignment(
-    in_seq: str,
+    soft_seq_original: str,
+    seq_original: str,
     read_length: int,
     read_strand: str,
-    read_mode: int,
+    read_mode: MappingMode,
     aligner,
     mapq_cutoff: int,
     max_allowed_nm: int,
+    genome_fasta: pyfaidx.Fasta,
+    rt_switching_filter_len: int,
     aligner_ident_pct_cutoff: float = 0.99,
 ) -> str:
     """Create chimeric alignments from the alignments.
 
     the alignments which has a long softclipped segment but without SA tag.
 
-    :param blat:
-    :param in_seq: softclipped segment of the aligned read
+    :param aligner:
+    :param soft_seq_original: softclipped segment of the aligned read (original sequence)
+    :param seq_original: sequence of the aligned read (original sequence)
     :param read_length: the length of the aligned read
     :param read_strand: the strand of the aligned read (-/+)
     :param read_mode: mode of the aligned read (1/2)
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
+    :param rt_switching_filter_len: RT switching length cutoff,
     :param blat_ident_pct_cutoff: BLAT HSP identity cutoff
     :return: putative supplementary alignment of the alignment which is ready for put in the SA tag
     """
 
+    potential_microhomology_length = rt_switching_filter_len + 5
+
     chimeric_aln_str = ""
-    in_seq_len = len(in_seq)
+    soft_seq_len = len(soft_seq_original)
 
     if aligner is None:
         return chimeric_aln_str
 
+    head_match_pattern = re.compile(r"^\d+M")
+    tail_match_pattern = re.compile(r"\d+M$")
+    read_hom_seq = _extract_read_sequence_from_matched_segment(
+        soft_seq_original,
+        seq_original,
+        read_strand,
+        read_mode,
+        potential_microhomology_length,
+    )
+
     if isinstance(aligner, Blat):
-        flag, insertion_info = aligner.query_insertion(in_seq, aligner_ident_pct_cutoff)
+        flag, insertion_info = aligner.query_insertion(
+            soft_seq_original, aligner_ident_pct_cutoff
+        )
         if flag:
             chrom_sa = insertion_info.chrom
-            pos_sa = insertion_info.ref_start
-            strand_sa = insertion_info.strand
+            pos_start_sa = insertion_info.ref_start
+            pos_end_sa = insertion_info.ref_end
+            strand_sa = str(insertion_info.strand)
             cigar_sa_partial = insertion_info.cigarstring
             nm_sa = insertion_info.nm
             # insertion_info.mapq
             # loose MAPQ criteria are used here in order to obtain the possible longest transript.
             mapq = 60
+            # same strand: different reads mode
             if read_strand == strand_sa:
-                # same strand: different reads mode
-                # MS(1) ~ SM(2) or SM(2) ~ MS(1)
-                # SM
-                cigar_sa = (
-                    f"{read_length - in_seq_len}S{cigar_sa_partial}" if read_mode == 1 else f"{cigar_sa_partial}{read_length - in_seq_len}S"
-                )  # MS
+                if read_mode == MappingMode.MS:
+                    # MappingMode.SM
+                    if strand_sa == "+":
+                        if head_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_start_sa
+                                - potential_microhomology_length : pos_start_sa
+                            ].seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "right"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_start_sa = pos_start_sa - shift_length
+                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+
+                        else:
+                            cigar_sa = (
+                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                            )
+                    else:
+                        if head_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_start_sa
+                                - potential_microhomology_length : pos_start_sa
+                            ].reverse.complement.seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "left"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_start_sa = pos_start_sa - shift_length
+                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+
+                        else:
+                            cigar_sa = (
+                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                            )
+                else:
+                    # MappingMode.MS
+                    if strand_sa == "+":
+                        if tail_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_end_sa : pos_end_sa + potential_microhomology_length
+                            ].seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "left"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_end_sa = pos_end_sa + shift_length
+                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
+
+                        else:
+                            cigar_sa = (
+                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                            )
+                    else:
+                        if tail_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_end_sa : pos_end_sa + potential_microhomology_length
+                            ].reverse.complement.seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "right"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_end_sa = pos_end_sa + shift_length
+                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
+
+                        else:
+                            cigar_sa = (
+                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                            )
+            # opposite strand: same reads mode
             else:
-                # opposite strand: same reads mode
-                # MS(1) ~ MS(1) or SM(2) ~ SM(2)
-                # MS
-                cigar_sa = (
-                    f"{cigar_sa_partial}{read_length - in_seq_len}S" if read_mode == 1 else f"{read_length - in_seq_len}S{cigar_sa_partial}"
-                )  # SM
+                if read_mode == MappingMode.MS:
+                    # MappingMode.MS
+                    if strand_sa == "+":
+                        if tail_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_end_sa : pos_end_sa + potential_microhomology_length
+                            ].seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "left"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_end_sa = pos_end_sa + shift_length
+                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
+
+                        else:
+                            cigar_sa = (
+                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                            )
+                    else:
+                        if tail_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_end_sa : pos_end_sa + potential_microhomology_length
+                            ].reverse.complement.seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "right"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_end_sa = pos_end_sa + shift_length
+                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
+
+                        else:
+                            cigar_sa = (
+                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                            )
+
+                else:
+                    # MappingMode.SM
+                    if strand_sa == "+":
+                        if head_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_start_sa
+                                - potential_microhomology_length : pos_start_sa
+                            ].seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "right"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_start_sa = pos_start_sa - shift_length
+                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+
+                        else:
+                            cigar_sa = (
+                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                            )
+                    else:
+                        if head_match_pattern.search(cigar_sa_partial):
+                            ref_hom_seq = genome_fasta[chrom_sa][
+                                pos_start_sa
+                                - potential_microhomology_length : pos_start_sa
+                            ].reverse.complement.seq
+                            shift_length = find_match_length(
+                                ref_hom_seq, read_hom_seq, "left"
+                            )
+
+                            if shift_length > rt_switching_filter_len:
+                                return chimeric_aln_str
+
+                            pos_start_sa = pos_start_sa - shift_length
+                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+
+                        else:
+                            cigar_sa = (
+                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                            )
 
             valid_cigar_sa = cigar_validity(cigar_sa)
 
             if mapq >= mapq_cutoff and int(nm_sa) < max_allowed_nm:
-                return f"{chrom_sa},{pos_sa+1},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
+                return f"{chrom_sa},{pos_start_sa+1},{strand_sa},{valid_cigar_sa},{mapq},{nm_sa};"
 
     return chimeric_aln_str
 
@@ -857,8 +1140,14 @@ def insertion2chimeric_alignment(
         if (
             chrom_aligner == read.reference_name
             and strand_aligner == read_strand
-            and (abs(pos_aligner - insertion_ref_pos) <= 10 and ref_end_aligner <= read.reference_end)
-        ) or (abs(ref_end_aligner - insertion_ref_pos) <= 10 and pos_aligner >= read.reference_start):
+            and (
+                abs(pos_aligner - insertion_ref_pos) <= 10
+                and ref_end_aligner <= read.reference_end
+            )
+        ) or (
+            abs(ref_end_aligner - insertion_ref_pos) <= 10
+            and pos_aligner >= read.reference_start
+        ):
             # SM
             cigar_ra = f"{read_length - right_cigar_read_seg_len}S{right_cigar_str}"
             # MS
@@ -872,7 +1161,10 @@ def insertion2chimeric_alignment(
             mapq_aligner = 60
 
             if nm_sa < max_allowed_nm:
-                chimeric_aln_str = f"{chrom_aligner},{original_ref_start + 1}," f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
+                chimeric_aln_str = (
+                    f"{chrom_aligner},{original_ref_start + 1},"
+                    f"{read_strand},{valid_cigar_sa},{mapq_aligner},{nm_sa};"
+                )
                 primary_aln_cigarstring = valid_cigar_ra
 
     return primary_aln_cigarstring, chimeric_aln_str
@@ -880,7 +1172,9 @@ def insertion2chimeric_alignment(
 
 def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
     """Check if the two strands are compatible with the two modes."""
-    return (strand1 == strand2 and mode1 != mode2) or (strand1 != strand2 and mode1 == mode2)
+    return (strand1 == strand2 and mode1 != mode2) or (
+        strand1 != strand2 and mode1 == mode2
+    )
 
 
 def softclipped_length_and_event_size_checker(
@@ -903,7 +1197,11 @@ def softclipped_length_and_event_size_checker(
     :return: whether event_size > softclipped_length (If it is True, it will be a TDUP event)
     :rtype: bool
     """
-    return read.lt_soft_len < event_size if mode == MappingMode.SM else read.rt_soft_len < event_size
+    return (
+        read.lt_soft_len < event_size
+        if mode == MappingMode.SM
+        else read.rt_soft_len < event_size
+    )
 
 
 def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
@@ -938,10 +1236,14 @@ def obtain_bp_region_seq(read, mode, bp_region_seq_len, genome_fasta) -> str:
     # microhomology
     elif bp_region_seq_len < 0:
         if mode == MappingMode.SM:  # SM
-            bp_region_seq = genome_fasta[chrom][read.ref_start : read.ref_start - bp_region_seq_len].seq
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_start : read.ref_start - bp_region_seq_len
+            ].seq
 
         elif mode == MappingMode.MS:  # MS
-            bp_region_seq = genome_fasta[chrom][read.ref_end + bp_region_seq_len : read.ref_end].seq
+            bp_region_seq = genome_fasta[chrom][
+                read.ref_end + bp_region_seq_len : read.ref_end
+            ].seq
 
         bp_region_seq = "-" + bp_region_seq
 
@@ -976,7 +1278,13 @@ def same_chrom_same_strand_mode21_handler(
         target_end = read_lt.ref_end
         target_offset = target_end - target_start
 
-        bp_region_seq_len = read_lt.query_length - read_lt.rt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        bp_region_seq_len = (
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
+        )
 
         logger.trace(f"{bp_region_seq_len=}")
 
@@ -1043,7 +1351,9 @@ def same_chrom_same_strand_mode21_handler(
                 cvg,
                 motif_required=motif_required,
             )
-            _genes = gene_annotation(lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv)
+            _genes = gene_annotation(
+                lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv
+            )
             # 1 => 2
             if is_reverse:
                 if _anno == 1:
@@ -1347,11 +1657,23 @@ def same_chrom_diff_strand_handler(
     if same_mode == MappingMode.MS:
         ra_bp = read_lt.ref_start + read_lt.reference_match_size
         sa_bp = read_rt.ref_start + read_rt.reference_match_size
-        bp_region_seq_len = read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        bp_region_seq_len = (
+            read_lt.query_length
+            - read_lt.lt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
+        )
     elif same_mode == MappingMode.SM:
         ra_bp = read_lt.ref_start
         sa_bp = read_rt.ref_start
-        bp_region_seq_len = read_lt.query_length - read_lt.rt_soft_len - read_rt.rt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        bp_region_seq_len = (
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.rt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
+        )
     logger.trace(f"{bp_region_seq_len=}")
 
     if bp_region_seq_len > microinsertion_cutoff:
@@ -1364,7 +1686,8 @@ def same_chrom_diff_strand_handler(
             genome_fasta,
         ) and not read_rt.splice_site_checker(genome_fasta):
             logger.debug(
-                f"Splice site checking[IDUP]: {read_lt.query_name=}, " f"{read_lt.cigarstring=}, {read_rt.cigarstring=}",
+                f"Splice site checking[IDUP]: {read_lt.query_name=}, "
+                f"{read_lt.cigarstring=}, {read_rt.cigarstring=}",
             )
             return noreturn
         chrm_start = lt_chrm
@@ -1531,7 +1854,9 @@ def same_chrom_diff_strand_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if _nls:
         return (
             "INV",
@@ -1577,7 +1902,13 @@ def diff_chrom_same_strand_mode21_handler(
     chrm_end = read_rt.chrom
     junc_end = read_rt.ref_start + read_rt.reference_match_size
 
-    bp_region_seq_len = read_lt.query_length - read_lt.rt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+    bp_region_seq_len = (
+        read_lt.query_length
+        - read_lt.rt_soft_len
+        - read_rt.lt_soft_len
+        - read_lt.read_match_size
+        - read_rt.read_match_size
+    )
 
     logger.trace(f"{bp_region_seq_len=}")
 
@@ -1620,7 +1951,9 @@ def diff_chrom_same_strand_mode21_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if is_reverse:
         if _anno == 1:
             _anno = 2
@@ -1747,13 +2080,25 @@ def diff_chrom_diff_strand_handler(
         junc_start = read_lt.ref_start + read_lt.reference_match_size
         chrm_end = read_rt.chrom
         junc_end = read_rt.ref_start + read_rt.reference_match_size
-        bp_region_seq_len = read_lt.query_length - read_lt.lt_soft_len - read_rt.lt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        bp_region_seq_len = (
+            read_lt.query_length
+            - read_lt.lt_soft_len
+            - read_rt.lt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
+        )
     elif same_mode == MappingMode.SM:
         chrm_start = read_lt.chrom
         junc_start = read_lt.ref_start
         chrm_end = read_rt.chrom
         junc_end = read_rt.ref_start
-        bp_region_seq_len = read_lt.query_length - read_lt.rt_soft_len - read_rt.rt_soft_len - read_lt.read_match_size - read_rt.read_match_size
+        bp_region_seq_len = (
+            read_lt.query_length
+            - read_lt.rt_soft_len
+            - read_rt.rt_soft_len
+            - read_lt.read_match_size
+            - read_rt.read_match_size
+        )
 
     logger.trace(f"{bp_region_seq_len=}")
 
@@ -1796,7 +2141,9 @@ def diff_chrom_diff_strand_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    _genes = gene_annotation(
+        chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv
+    )
     if _nls:
         return (
             "TRA",
@@ -1860,9 +2207,15 @@ def obtain_variants_stats(
 
     total_num_of_mutations = substitution_num + insertion_num + deletion_num
 
-    ins_fraction = 0.0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
-    del_fraction = 0.0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
-    subs_fraction = 0.0 if substitution_num == 0 else substitution_num / total_num_of_mutations
+    ins_fraction = (
+        0.0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
+    )
+    del_fraction = (
+        0.0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
+    )
+    subs_fraction = (
+        0.0 if substitution_num == 0 else substitution_num / total_num_of_mutations
+    )
 
     return substitution_num, subs_fraction, ins_fraction, del_fraction
 

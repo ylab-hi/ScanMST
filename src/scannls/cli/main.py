@@ -636,29 +636,35 @@ def _scan_bam_helper(
                 read_ori_nm = read.get_tag("NM")
                 read_length = int(read.query_length)
                 ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
+                query_sequence = read.query_sequence
 
                 ret = get_softclip_length(read, mode=MappingMode.Type0)
+                # ret[1] is query_sequence in the BAM
                 if ret is not None and ret[1] and len(ret[1]) >= min_soft_seg_len:
-                    soft_seq_ori = reverse_complement(ret[1]) if read.is_reverse else ret[1]
+                    seq_original = reverse_complement(read.query_sequence) if read.is_reverse else read.query_sequence
+                    soft_seq_original = reverse_complement(ret[1]) if read.is_reverse else ret[1]
                     read_mode = ret[-1]
                     logger.trace("Funcion blat2chimeric_alignment works on it.")
                     chimeric_aln_str = blat2chimeric_alignment(
-                        soft_seq_ori,
+                        soft_seq_original,
+                        seq_original,
                         read_length,
                         read_strand,
                         read_mode,
                         aligner,
                         mapq_cutoff,
                         max_allowed_nm,
+                        genome_fasta,
+                        rt_switching_filter_len,
                         blat_ident_pct_cutoff,
                     )
 
                     if chimeric_aln_str:
-                        logger.trace(f"auxiliary alignment[2] is effective here. reads_name:{read.query_name} query_sequence:{soft_seq_ori}")
+                        logger.trace(f"auxiliary alignment[2] is effective here. reads_name:{read.query_name} query_sequence:{soft_seq_original}")
 
                         logger.trace(
                             f"Pre-checking: {read.query_name=} "
-                            f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_ori)}bp), it "
+                            f"does not has SA, after BLAT [softclipped segment] (length={len(soft_seq_original)}bp), it "
                             f"has one SA tag ",
                         )
                         read.set_tag("SA", chimeric_aln_str)
