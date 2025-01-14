@@ -12,7 +12,6 @@ import re
 import HTSeq  # type: ignore
 import yaml  # type: ignore
 from alignparse import cs_tag
-from loguru import logger
 
 from scannls import __PACKAGE_NAME__, cppext
 from scannls.base import Blat, Intervals, MappingMode

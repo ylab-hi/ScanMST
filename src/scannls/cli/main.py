@@ -118,7 +118,8 @@ class BamScanner:
         # For minimap2, "-Y" need to be used, use soft clipping for supplementary alignments
         # "--cs" need to be used, cs tag store information about SNVs and DELs
         self.logger.info("Iter bam file and Extracting supplementary alignments")
-
+        num_of_supplementary_alignments_without_soft_clipping = 0
+        num_of_supplementary_alignments = 0
         for read in self.in_bam.fetch():
             self._count_chrom_info(read)
             self.total_length += read.query_length
@@ -137,10 +138,12 @@ class BamScanner:
                 rt_soft_len = int(right_mat.group(1)) if right_mat else 0
 
                 if lt_soft_len == rt_soft_len == 0:
+                    num_of_supplementary_alignments_without_soft_clipping += 1
+                num_of_supplementary_alignments += 1
+
+                if num_of_supplementary_alignments_without_soft_clipping >= num_of_supplementary_alignments:
                     self.logger.warning("soft clipping for supplementary alignments are needed, please align with -Y.")
                     raise SystemExit
-
-                read.get_tag("NM")
 
                 try:
                     cs_tag = read.get_tag("cs")
