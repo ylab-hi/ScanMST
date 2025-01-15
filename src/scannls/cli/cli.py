@@ -171,6 +171,8 @@ def cli(options: argparse.Namespace | DefaultOptions):
     """Cli function."""
     start = time.perf_counter()
 
+    working_dir = Path.cwd()
+
     options.input = Path(options.input).resolve().as_posix()
 
     logger.remove()
@@ -196,8 +198,17 @@ def cli(options: argparse.Namespace | DefaultOptions):
         )
 
     running_mode = "parallel" if options.parallel > 1 else "normal"
+
+    output_prefix_path = Path(options.output)
+    if output_prefix_path.is_absolute():
+        output_file_path = output_prefix_path
+    else:
+        out_file_path = working_dir / output_prefix_path
+        output_file_path = out_file_path.resolve()
+
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.blat_closed=}")
+    logger.info(f"{output_file_path=}")
     logger.info(f"{options.bound=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
@@ -271,7 +282,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         clusters = cluster_finder.merge_cluster()
 
         writers = get_writers(
-            options.output, options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
+            str(output_file_path), options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
         )
         parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
 
