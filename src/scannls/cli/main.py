@@ -639,7 +639,6 @@ def _scan_bam_helper(
                 read_ori_nm = read.get_tag("NM")
                 read_length = int(read.query_length)
                 ins_ref_pos, ins_seq, ins_len = get_longest_insertion_sequence(read)
-                query_sequence = read.query_sequence
 
                 ret = get_softclip_length(read, mode=MappingMode.Type0)
                 # ret[1] is query_sequence in the BAM

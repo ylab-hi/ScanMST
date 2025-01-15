@@ -97,7 +97,7 @@ def _extract_annotated_exons(
     trx_to_intron = defaultdict(list)
 
     for feature in gtf_file:
-        if feature.type == "exon":
+        if feature.type == "exon" and "_" not in feature.iv.chrom:
             trx_id = feature.attr["transcript_id"]
             trx_to_exon[trx_id].append(feature.iv)
 
