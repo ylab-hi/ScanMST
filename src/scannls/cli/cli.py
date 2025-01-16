@@ -63,6 +63,7 @@ def parse_nlgraph_for_cluster_seq(
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
+    output_dir: Path,
     average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -77,6 +78,7 @@ def parse_nlgraph_for_cluster_seq(
         options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
+        output_dir,
         ignore_circle=options.ignore_circle,
         rescue_sr=options.rescue_sr,
     )
@@ -98,6 +100,7 @@ def _parse_nlgraph_for_cluster_par(
     clusters: Any,
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
+    output_dir: Path,
     average_read_depth: int | None,
 ):
     """Parse splice graph for cliques."""
@@ -116,6 +119,7 @@ def _parse_nlgraph_for_cluster_par(
         options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
+        output_dir,
         ignore_circle=options.ignore_circle,
         rescue_sr=options.rescue_sr,
     )
@@ -137,6 +141,7 @@ def parse_nlgraph_for_cluster_par(
     options: DefaultOptions | argparse.Namespace,
     node_rescued_sr_maximum: int,
     logger: LoggerType,
+    output_dir: Path,
     average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
@@ -145,6 +150,7 @@ def parse_nlgraph_for_cluster_par(
             _parse_nlgraph_for_cluster_par,
             options=options,
             node_rescued_sr_maximum=node_rescued_sr_maximum,
+            output_dir=output_dir,
             average_read_depth=average_read_depth,
         ),
         logger,
@@ -205,6 +211,11 @@ def cli(options: argparse.Namespace | DefaultOptions):
     else:
         out_file_path = working_dir / output_prefix_path
         output_file_path = out_file_path.resolve()
+
+    output_dir = output_file_path.parent
+    if not output_dir.is_dir():
+        raise SystemExit(f"Error: The directory {output_dir} does not exist.")
+
 
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.blat_closed=}")
@@ -293,6 +304,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             options,
             node_rescued_sr_max,
             logger,  # type: ignore
+            output_dir,
             avg_cov,
         )
 

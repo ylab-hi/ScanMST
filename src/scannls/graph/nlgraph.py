@@ -40,6 +40,7 @@ class NLGraph:
         merge_threshold,
         support_reads,
         input_bam_path: Path,
+        output_dir: Path,
         rescue_sr: bool,
         ignore_circle: bool = False,
     ) -> None:
@@ -52,6 +53,7 @@ class NLGraph:
         self.rescuer = rescuer
         self.rescue_sr = rescue_sr
         self.input_bam_path = input_bam_path
+        self.output_dir = output_dir
         self.has_circle = False
         self.ignore_circle = ignore_circle
 
@@ -108,7 +110,7 @@ class NLGraph:
             yield current_path
 
         if is_plot and not self.has_circle and node_list:
-            plot_result = Path(f"graph_{self.input_bam_path.stem}")
+            plot_result = self.output_dir / Path(f"graph_{self.input_bam_path.stem}")
             plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
             default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1).visualize()
@@ -126,6 +128,7 @@ class NLGraph:
         support_reads: int,
         node_rescued_sr_maximum: int,
         average_read_depth: int | None,
+        output_dir: Path,
         *,
         ignore_circle: bool,
         rescue_sr: bool,
@@ -141,7 +144,7 @@ class NLGraph:
             average_read_depth,
         )
 
-        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), rescue_sr, ignore_circle)
+        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), output_dir, rescue_sr, ignore_circle)
 
     @property
     def trace_id(self) -> int:
