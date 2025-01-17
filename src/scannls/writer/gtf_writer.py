@@ -208,7 +208,7 @@ def format_gtf_features_for_nlpath(
         ".",
         ".",
         ".",
-        f'sr "{nlpath_sr}"; osr "{nlpath_sr}"; transcript_id "{nlpath_id}"; extend "{extend}"; aurora_id: "{aurora_id}"; ',
+        f'sr "{nlpath_sr}"; osr "{nlpath_sr}"; transcript_id "{nlpath_id}"; extend "{extend}"; aurora_id "{aurora_id}"; ',
     ]
 
 
