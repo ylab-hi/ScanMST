@@ -257,6 +257,8 @@ class NLGraph:
                         edge_node_identity,
                     ):
                         edges.append(edge)
+                    else:
+                        logger.warning(f"Read guided: {current_node} and {successor}")
                 else:
                     edges.append(edge)
 

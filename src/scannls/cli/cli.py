@@ -216,7 +216,6 @@ def cli(options: argparse.Namespace | DefaultOptions):
     if not output_dir.is_dir():
         raise SystemExit(f"Error: The directory {output_dir} does not exist.")
 
-
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.blat_closed=}")
     logger.info(f"{output_file_path=}")
