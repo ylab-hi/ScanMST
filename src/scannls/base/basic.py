@@ -6,7 +6,10 @@ from enum import Enum, IntEnum
 
 
 class MappingMode(IntEnum):
-    """Mode code."""
+    """Mode code.
+
+    f-strings will use the numeric value for enums.
+    """
 
     Type0 = 0
     MS = 1  # 1 MS

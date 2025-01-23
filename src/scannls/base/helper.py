@@ -14,7 +14,7 @@ import yaml  # type: ignore
 from alignparse import cs_tag
 
 from scannls import __PACKAGE_NAME__, cppext
-from scannls.base import Blat, Intervals, MappingMode
+from scannls.base import Blat, Intervals, MappingMode, Strand
 from scannls.exception import ModesNotEqualError
 from scannls.utils import cigar_validity
 
@@ -303,15 +303,15 @@ def gene_annotation(
 def splicing_confirmation_and_correction(
     chrm1: str,
     pos1: int,
-    strand1: str,
-    mode1: int,
+    strand1: Strand,
+    mode1: MappingMode,
     ref_start1: int,
     ref_end1: int,
     exons1: Intervals,
     chrm2: str,
     pos2: int,
-    strand2: str,
-    mode2: int,
+    strand2: Strand,
+    mode2: MappingMode,
     ref_start2: int,
     ref_end2: int,
     exons2: Intervals,
@@ -391,11 +391,11 @@ def splicing_confirmation_and_correction(
         chrm1: str,
         pos1: int,
         strand1: str,
-        mode1: int,
+        mode1: MappingMode,
         chrm2: str,
         pos2: int,
         strand2: str,
-        mode2: int,
+        mode2: MappingMode,
     ) -> tuple[tuple[str, int, str], tuple[str, int, str]]:
         """Determine the donor breakpoint and the accepter breakpoint.
 
@@ -421,9 +421,9 @@ def splicing_confirmation_and_correction(
             "-+11": (_breakpoint2, _breakpoint1),
         }
 
-        ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1}{mode2}", None)
+        ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1.value}{mode2.value}", None)
         if ret is None:
-            msg = f"Unexpected breakpoint combination: {strand1}{strand2}{mode1}{mode2}"
+            msg = f"Unexpected breakpoint combination: {strand1}{strand2}{mode1.value}{mode2.value}"
             raise ValueError(msg)
 
         return ret
@@ -807,7 +807,7 @@ def blat2chimeric_alignment(
     :param seq_original: sequence of the aligned read (original sequence)
     :param read_length: the length of the aligned read
     :param read_strand: the strand of the aligned read (-/+)
-    :param read_mode: mode of the aligned read (1/2)
+    :param read_mode: mode of the aligned read (MappingMode.SM/MappingMode.MS)
     :param mapq_cutoff: MAPQ cutoff
     :param max_allowed_nm: mismatches cutoff used for discarding supplementary alignments
     :param rt_switching_filter_len: RT switching length cutoff,
@@ -1170,7 +1170,7 @@ def insertion2chimeric_alignment(
     return primary_aln_cigarstring, chimeric_aln_str
 
 
-def strand_mode_checker(strand1: str, strand2: str, mode1: int, mode2: int) -> bool:
+def strand_mode_checker(strand1: str|Strand, strand2: str|Strand, mode1: MappingMode, mode2: MappingMode) -> bool:
     """Check if the two strands are compatible with the two modes."""
     return (strand1 == strand2 and mode1 != mode2) or (
         strand1 != strand2 and mode1 == mode2
