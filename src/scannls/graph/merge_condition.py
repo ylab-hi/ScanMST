@@ -305,18 +305,20 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
     if node1.introns and node2.introns:
         if node1.strand.is_forward():
             return __intron_lists_containment_checker(node1, node2)
-        return __intron_lists_containment_checker(node1, node2, None, True)
+        return __intron_lists_containment_checker(
+            node1, node2, None, reverse_strand=True
+        )
 
     return False
 
 
 def __intron_lists_containment_checker(
-    node1,
-    node2,
-    ref_node,
-    reverse_strand=False,
-    control_start_or_end_when_equal_length="start",
-):
+    node1: Node,
+    node2: Node,
+    ref_node: Node,
+    reverse_strand: bool = False,
+    control_start_or_end_when_equal_length: str = "start",
+) -> bool:
     """Checks if intron_list from node1 are fully contained within intron_list of node2
        Or intron_list of node2 are fully contained within intron_list of node1 consecutively.
        When the number of introns is the same, control start position or end position based on
@@ -345,24 +347,19 @@ def __intron_lists_containment_checker(
                     have_identical_introns
                     and node1.exons.first.start <= node2.exon.first.start
                 )
-            else:
-                return (
-                    have_identical_introns
-                    and node1.exons.last.end >= node2.exon.last.end
-                )
-        elif ref_node == node2:
+            return (
+                have_identical_introns and node1.exons.last.end >= node2.exon.last.end
+            )
+        if ref_node == node2:
             if control_start_or_end_when_equal_length == "start":
                 return (
                     have_identical_introns
                     and node2.exons.first.start <= node1.exon.first.start
                 )
-            else:
-                return (
-                    have_identical_introns
-                    and node2.exons.last.end >= node1.exon.last.end
-                )
-        else:
-            return have_identical_introns
+            return (
+                have_identical_introns and node2.exons.last.end >= node1.exon.last.end
+            )
+        return have_identical_introns
 
     if len1 > len2:
         full_list = node1_introns
@@ -439,6 +436,15 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     return False
 
 
+def __obtain_the_node_with_longer_span(node1, node2) -> Node:
+    """Obtain the node with longer span."""
+    node1_ref_span = node1.ref_end - node1.ref_start
+    node2_ref_span = node2.ref_end - node2.ref_start
+    if node1_ref_span >= node2_ref_span:
+        return node1, node2
+    return node2, node1
+
+
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     node1: Node,
     node2: Node,
@@ -467,9 +473,6 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     if node1.strand != node2.strand:
         return False
 
-    if node1.introns != node2.introns:
-        return False
-
     if node1.strand.is_forward():
         if abs(node1.ref_start - node2.ref_start) > threshold:
             return False
@@ -477,27 +480,80 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         return False
 
     # For nodes with polyA, a small difference in polyA positions is allowed.
+    # introns must be the same
     if node1.is_polya and node2.is_polya:
         return (
-            abs(node1.exons.first.start - node2.exons.first.start) <= threshold
+            node1.introns == node2.introns
+            and abs(node1.exons.first.start - node2.exons.first.start) <= threshold
             and abs(node1.exons.last.end - node2.exons.last.end) <= threshold
         )
 
-    if node1.is_polya and not node2.is_polya:
-        if node1.strand.is_forward():
-            return node1.contains(node2, same_left=True, threshold=threshold)
-        return node1.contains(node2, same_right=True, threshold=threshold)
+    long_node, short_node = __obtain_the_node_with_longer_span(node1, node2)
 
-    if not node1.is_polya and node2.is_polya:
-        if node1.strand.is_forward():
-            return node2.contains(node1, same_left=True, threshold=threshold)
-        return node2.contains(node1, same_right=True, threshold=threshold)
+    if long_node.is_polya and not short_node.is_polya:
+        if long_node.strand.is_forward():
+            if long_node.introns is None and short_node.introns is None:
+                return long_node.ref_end >= short_node.ref_end
+            if long_node.introns and short_node.introns is None:
+                return long_node.exons.first.end >= short_node.ref_end
+            if long_node.introns is None and short_node.introns:
+                return False
+            if long_node.introns and short_node.introns:
+                __intron_lists_containment_checker(
+                    long_node,
+                    short_node,
+                    long_node,
+                    reverse_strand=False,
+                    control_start_or_end_when_equal_length="end",
+                )
+        elif long_node.introns is None and short_node.introns is None:
+            return long_node.ref_start <= short_node.ref_start
+        elif long_node.introns and short_node.introns is None:
+            return long_node.exons.last.start <= short_node.ref_start
+        elif long_node.introns is None and short_node.introns:
+            return False
+        elif long_node.introns and short_node.introns:
+            __intron_lists_containment_checker(
+                long_node,
+                short_node,
+                long_node,
+                reverse_strand=True,
+                control_start_or_end_when_equal_length="start",
+            )
 
-    if not node1.is_polya and not node2.is_polya:
-        if node1.strand.is_forward():
-            return abs(node1.exons.first.start - node2.exons.first.start) <= threshold
-        return abs(node1.exons.last.end - node2.exons.last.end) <= threshold
+    if not long_node.is_polya and short_node.is_polya:
+        return False
 
+    if not long_node.is_polya and not short_node.is_polya:
+        if long_node.strand.is_forward():
+            if long_node.introns is None and short_node.introns is None:
+                return long_node.ref_end >= short_node.ref_end
+            if long_node.introns and short_node.introns is None:
+                return long_node.exons.first.end >= short_node.ref_end
+            if long_node.introns is None and short_node.introns:
+                return False
+            if long_node.introns and short_node.introns:
+                __intron_lists_containment_checker(
+                    long_node,
+                    short_node,
+                    long_node,
+                    reverse_strand=False,
+                    control_start_or_end_when_equal_length="end",
+                )
+        elif long_node.introns is None and short_node.introns is None:
+            return long_node.ref_start <= short_node.ref_start
+        elif long_node.introns and short_node.introns is None:
+            return long_node.exons.last.start <= short_node.ref_start
+        elif long_node.introns is None and short_node.introns:
+            return False
+        elif long_node.introns and short_node.introns:
+            __intron_lists_containment_checker(
+                long_node,
+                short_node,
+                long_node,
+                reverse_strand=True,
+                control_start_or_end_when_equal_length="start",
+            )
     return False
 
 
@@ -540,28 +596,36 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
     if node1.introns is None and node2.introns is None:
         if node1.strand.is_forward():
             return node1.ref_start >= node2.ref_start
-        else:
-            return node1.ref_end <= node2.ref_end
+        return node1.ref_end <= node2.ref_end
     # start node has no intron, while middle node has introns
-    elif node1.introns is None and node2.introns:
+    if node1.introns is None and node2.introns:
         if node1.strand.is_forward():
             return node2.exons.last.start <= node1.ref_start
         return node2.exons.first.end >= node1.ref_end
 
     # start node has introns, while middle node no introns
-    elif node1.introns and node2.introns is None:
+    if node1.introns and node2.introns is None:
         return False
 
     # both have introns
-    elif node1.introns and node2.introns:
+    if node1.introns and node2.introns:
         if len(node1.introns) > len(node2.introns):
             return False
-        else:
-            if node1.strand.is_forward():
-                return __intron_lists_containment_checker(
-                    node1, node2, node2, False, "start"
-                )
-            return __intron_lists_containment_checker(node1, node2, node2, True, "end")
+        if node1.strand.is_forward():
+            return __intron_lists_containment_checker(
+                node1,
+                node2,
+                node2,
+                reverse_strand=False,
+                control_start_or_end_when_equal_length="start",
+            )
+        return __intron_lists_containment_checker(
+            node1,
+            node2,
+            node2,
+            reverse_strand=True,
+            control_start_or_end_when_equal_length="end",
+        )
 
     return False
 
@@ -607,29 +671,35 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
     if node1.introns is None and node2.introns is None:
         if node1.strand.is_forward():
             return node1.ref_end <= node2.ref_end
-        else:
-            return node1.ref_start >= node2.ref_start
+        return node1.ref_start >= node2.ref_start
     # tail node has no intron, while middle node has introns
-    elif node1.introns is None and node2.introns:
+    if node1.introns is None and node2.introns:
         if node1.strand.is_forward():
             return node2.exons.first.end >= node1.ref_end
         return node2.exons.last.start <= node1.ref_start
 
     # tail node has introns, while middle node no introns
-    elif node1.introns and node2.introns is None:
+    if node1.introns and node2.introns is None:
         return False
 
     # both have introns
-    elif node1.introns and node2.introns:
+    if node1.introns and node2.introns:
         if len(node1.introns) > len(node2.introns):
             return False
-        else:
-            if node1.strand.is_forward():
-                return __intron_lists_containment_checker(
-                    node1, node2, node2, False, "end"
-                )
+        if node1.strand.is_forward():
             return __intron_lists_containment_checker(
-                node1, node2, node2, True, "start"
+                node1,
+                node2,
+                node2,
+                reverse_strand=False,
+                control_start_or_end_when_equal_length="end",
             )
+        return __intron_lists_containment_checker(
+            node1,
+            node2,
+            node2,
+            reverse_strand=True,
+            control_start_or_end_when_equal_length="start",
+        )
 
     return False
