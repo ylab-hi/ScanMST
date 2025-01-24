@@ -343,23 +343,23 @@ def __intron_lists_containment_checker(
             if control_start_or_end_when_equal_length == "start":
                 return (
                     have_identical_introns
-                    and node1.exons.first.start <= node2.exon.first.start
+                    and node1.exons.first.start <= node2.exons.first.start
                 )
             else:
                 return (
                     have_identical_introns
-                    and node1.exons.last.end >= node2.exon.last.end
+                    and node1.exons.last.end >= node2.exons.last.end
                 )
         elif ref_node == node2:
             if control_start_or_end_when_equal_length == "start":
                 return (
                     have_identical_introns
-                    and node2.exons.first.start <= node1.exon.first.start
+                    and node2.exons.first.start <= node1.exons.first.start
                 )
             else:
                 return (
                     have_identical_introns
-                    and node2.exons.last.end >= node1.exon.last.end
+                    and node2.exons.last.end >= node1.exons.last.end
                 )
         else:
             return have_identical_introns
