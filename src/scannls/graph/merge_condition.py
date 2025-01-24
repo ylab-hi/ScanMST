@@ -67,6 +67,7 @@ class MergeCondition:
         return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
             node1,
             node2,
+            self.threshold,
         )
 
     def head2mid(self, node1: Node, node2: Node) -> bool:
@@ -304,7 +305,9 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         return node1.exons.first.end >= node2.ref_end
     if node1.introns and node2.introns:
         if node1.strand.is_forward():
-            return __intron_lists_containment_checker(node1, node2, None, reverse_strand=False)
+            return __intron_lists_containment_checker(
+                node1, node2, None, reverse_strand=False
+            )
         return __intron_lists_containment_checker(
             node1, node2, None, reverse_strand=True
         )
@@ -389,14 +392,146 @@ def __intron_lists_containment_checker(
     )
 
 
+def find_shared_interval_indices(a, b):
+    """
+    Finds the indices of shared intervals between two lists of intervals.
+
+    Args:
+      a: A list of tuples, where each tuple represents an interval (start, end).
+      b: A list of tuples, where each tuple represents an interval (start, end).
+
+    Returns:
+      A tuple containing two lists:
+        - The indices of shared intervals in list 'a'.
+        - The indices of shared intervals in list 'b'.
+    """
+    shared_indices_a = []
+    shared_indices_b = []
+
+    for i, interval_a in enumerate(a):
+        for j, interval_b in enumerate(b):
+            if interval_a == interval_b:
+                shared_indices_a.append(i)
+                shared_indices_b.append(j)
+
+    return shared_indices_a, shared_indices_b
+
+
+def is_consecutive_from_beginning(indices):
+    """
+    Checks if the given indices are consecutive and start from the beginning of a list.
+
+    Args:
+      indices: A list of indices.
+
+    Returns:
+      True if the indices are consecutive and start from 0, False otherwise.
+    """
+
+    if not indices:
+        return False
+
+    # Check if the first index is 0
+    if indices[0] != 0:
+        return False
+
+    # Check if the indices are consecutive
+    return all(indices[i] == indices[i - 1] + 1 for i in range(1, len(indices)))
+
+
+def is_consecutive_from_end(indices, list_length):
+    """
+    Checks if the given indices are consecutive and end at the end of a list.
+
+    Args:
+      indices: A list of indices.
+      list_length: The length of the list.
+
+    Returns:
+      True if the indices are consecutive and end at the last index of the list,
+      False otherwise.
+    """
+
+    if not indices:
+        return False
+
+    # Check if the last index is the last index of the list
+    if indices[-1] != list_length - 1:
+        return False
+
+    # Check if the indices are consecutive
+    return all(indices[i] == indices[i + 1] - 1 for i in range(len(indices) - 1))
+
+
+def __intron_lists_sharing_checker(
+    node1: Node,
+    node2: Node,
+    reverse_strand: bool = False,
+) -> bool:
+    """Checks if introns from node1 (head node) and introns of node2 (tail node)
+       are shared and if they can be merged.
+
+    .. note::
+       nodes with different length may be merged. []: exon -: intron
+       node2: [ ]-[ ]-[ ]-[ ]
+       node1:              []-[ ]-[ ]
+
+       node2: [ ]-[ ]-[ ]-[]
+       node1:      []-[ ]-[ ]-[ ]
+    """
+    node1_introns = node1.introns
+    node2_introns = node2.introns
+    node1_exons = node1.exons
+    node2_exons = node2.exons
+    len1 = len(node1_introns)
+    len2 = len(node2_introns)
+
+    shared_node1_indices, shared_node2_indices = find_shared_interval_indices(
+        node1_introns, node2_introns
+    )
+
+    # no shared introns
+    if len(shared_node1_indices) == 0:
+        if reverse_strand:
+            return (
+                node1_exons.last.end <= node2_exons.first.end
+                and node1_exons.last.start <= node2_exons.first.start
+            )
+        return (
+            node2_exons.last.end <= node1_exons.first.end
+            and node2_exons.last.start <= node1_exons.first.start
+        )
+    # shared introns on the positive strand
+    if is_consecutive_from_beginning(
+        shared_node1_indices
+    ) and is_consecutive_from_end(shared_node2_indices, len2):
+        return (
+            node2_exons.last.end <= node1_exons[shared_node1_indices[-1] + 1].end
+            and node1_exons.first.start >= node2_exons[shared_node2_indices[0]].start
+        )
+
+    # shared introns on the negative strand
+    if (
+        reverse_strand
+        and is_consecutive_from_beginning(shared_node2_indices)
+        and is_consecutive_from_end(shared_node1_indices, len1)
+    ):
+        return (
+            node1_exons.last.end <= node2_exons[shared_node2_indices[-1] + 1].end
+            and node2_exons.first.start >= node1_exons[shared_node1_indices[0]].start
+        )
+
+    return False
+
+
 def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     node1: Node,
     node2: Node,
-    percentage_threshold: float = 0.5,
+    threshold: int = 20,
 ) -> bool:
     """Check if node1 and node2 can be merged based on overlap info.
 
-    node1 is head node, node2 is tail node Using mean overlap ratio to
+    node1 is head node, node2 is tail node Using threshold to
     check if they can be merged.
 
     :param node1:  node1
@@ -416,22 +551,36 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     if node1.strand != node2.strand:
         return False
 
-    if node1.introns != node2.introns:
-        return False
-
+    # tail node must have an internal polyA
     if node2.is_polya:
         return False
 
     if node1.strand.is_forward():
         if node2.ref_start <= node1.ref_start < node2.ref_end <= node1.ref_end:
             overlap = node2.ref_end - node1.ref_start
-            union = node1.ref_end - node2.ref_start
-            return overlap / union >= percentage_threshold
+            if overlap < threshold:
+                return False
+            if node1.introns is None and node2.introns is None:
+                return True
+            if node1.introns and node2.introns is None:
+                return node1.exons.first.end >= node2.ref_end
+            if node1.introns is None and node2.introns:
+                return node2.exons.last.start <= node1.ref_start
+            if node1.introns and node2.introns:
+                return __intron_lists_sharing_checker(node1, node2, reverse_strand=False)
 
     elif node1.ref_start <= node2.ref_start < node1.ref_end <= node2.ref_end:
         overlap = node1.ref_end - node2.ref_start
-        union = node2.ref_end - node1.ref_start
-        return overlap / union >= percentage_threshold
+        if overlap < threshold:
+            return False
+        if node1.introns is None and node2.introns is None:
+            return True
+        if node1.introns and node2.introns is None:
+            return node1.exons.last.start <= node2.ref_start
+        if node1.introns is None and node2.introns:
+            return node2.exons.first.end >= node1.ref_end
+        if node1.introns and node2.introns:
+            return __intron_lists_sharing_checker(node1, node2, reverse_strand=True)
 
     return False
 
