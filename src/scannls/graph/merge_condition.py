@@ -304,7 +304,7 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         return node1.exons.first.end >= node2.ref_end
     if node1.introns and node2.introns:
         if node1.strand.is_forward():
-            return __intron_lists_containment_checker(node1, node2)
+            return __intron_lists_containment_checker(node1, node2, None, reverse_strand=False)
         return __intron_lists_containment_checker(
             node1, node2, None, reverse_strand=True
         )
