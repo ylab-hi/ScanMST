@@ -525,8 +525,8 @@ class EdgeData:
             break_point2=BreakPoint.from_str(event.bp2),
             sr=1,
             read_ids=[read_id],
-            mode1=MappingMode.from_int(event.mode1),
-            mode2=MappingMode.from_int(event.mode2),
+            mode1=event.mode1,
+            mode2=event.mode2,
             gene1=event.genes[0],
             gene2=event.genes[1],
             annotation_code=event.annotation_code,
@@ -1028,7 +1028,7 @@ class NLPath:
         +2;-2 => down;up
         """
         is_bp1_upstream = NLPath.reorder_conditions_dict.get(
-            f"{evt.strand1}{evt.strand2}{evt.mode1}{evt.mode2}",
+            f"{evt.strand1}{evt.strand2}{evt.mode1.value}{evt.mode2.value}",
             None,
         )
 
@@ -1191,7 +1191,7 @@ class NLPath:
                     )
 
                     logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
-                    insertion_mode = (2 if event.mode1 == 1 else 1) if event.strand1 == insertion.strand else event.mode1
+                    insertion_mode = (MappingMode.SM if event.mode1 == MappingMode.MS else MappingMode.MS) if event.strand1 == insertion.strand else event.mode1
                     logger.trace("nls reference for read1 and insertion")
 
                     read1_insertion_event = infer_nls_from_connected_reads(
@@ -1207,7 +1207,7 @@ class NLPath:
                     )
 
                     # get type of insertion between insertion node and second node
-                    insertion_mode = (2 if event.mode2 == 1 else 1) if insertion.strand == read2.strand else event.mode2
+                    insertion_mode = (MappingMode.SM if event.mode2 == MappingMode.MS else MappingMode.MS) if insertion.strand == read2.strand else event.mode2
 
                     logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = infer_nls_from_connected_reads(
