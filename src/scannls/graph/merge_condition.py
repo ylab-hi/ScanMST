@@ -379,7 +379,7 @@ def __intron_lists_containment_checker(
     if sub_length < 1:
         return False
 
-    if reverse:
+    if reverse_strand:
         # For reverse strand, check from start
         return (
             full_list[:sub_length] == sub_list[:]
