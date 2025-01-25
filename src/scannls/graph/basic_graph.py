@@ -16,6 +16,8 @@ from scannls.base import (
     BreakPoint,
     Event,
     Exons,
+    Interval,
+    Intervals,
     Introns,
     MappingMode,
     MicroHomology,
@@ -395,23 +397,23 @@ class Node(BasicNode):
         return self._unique_key
 
     @staticmethod
-    def union_of_intervals(intervals):
+    def union_of_intervals(intervals: Intervals) -> Intervals:
         """Finds the union of a list of intervals."""
 
         if not intervals:
             return []
 
-        intervals.sort(key=lambda x: x[0])  # Sort intervals by start
+        intervals.sort() # Sort intervals by start
         merged = [intervals[0]]
 
         for start, end in intervals[1:]:
             last_end = merged[-1][1]
             if start <= last_end:
-                merged[-1] = (merged[-1][0], max(last_end, end))
+                merged[-1] = Interval(merged[-1][0], max(last_end, end))
             else:
-                merged.append((start, end))
+                merged.append(Interval(start, end))
 
-        return merged
+        return Intervals(exon_list=merged)
 
     def merge(
         self,
@@ -422,8 +424,10 @@ class Node(BasicNode):
         Merge two nodes for ref_start, ref_end, and identities.
         """
         if isinstance(other, Node):
-            temp_exons = self.exons + other.exons
+            temp_exons = self.exons.__concat__(other.exons)
             self.exons = Node.union_of_intervals(temp_exons)
+            temp_exons = None
+
             self.ref_start = self.exons.first.start
 
             # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
@@ -1377,7 +1381,7 @@ def update_node_with_other_node(
 def check_end_node_is_ploya(
     node: Node,
     genome_fasta: pyfaidx.Fasta,
-    ratio: float = 0.7,
+    ratio: float = 0.1,
     length: int = 20,
 ) -> None:
     """Check whether the node is bona fide polyA or internal priming events."""

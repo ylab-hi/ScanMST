@@ -311,6 +311,16 @@ class Intervals:
         message = f"{other} is not int or Intervals"
         raise TypeError(message)
 
+    def __concat__(self, other: Intervals) -> Intervals:
+        """Concatenate another Intervals object to this one.
+
+        This method mimics the behavior of the list '+' operator,
+        concatenating the exons of both Intervals objects.
+        """
+        if not isinstance(other, Intervals):
+            raise TypeError(f"Can only concatenate with another Intervals object, not {type(other)}")
+        return Intervals(self.exon_list + other.exon_list)
+
     def __sub__(self, other: int | Intervals) -> Intervals:
         if isinstance(other, int):
             return Intervals([exon - other for exon in self.exon_list])
@@ -345,6 +355,10 @@ class Intervals:
         else:
             msg = f"item: {item} is not Intervals"
             raise TypeError(msg)
+
+    def sort(self, reverse=False):
+        """Sort the exons within the Intervals object."""
+        self.exon_list.sort(key=lambda x: x.start, reverse=reverse)
 
     @classmethod
     def from_list(cls, item: list[list[int] | tuple[int, int]]):
