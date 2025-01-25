@@ -394,6 +394,25 @@ class Node(BasicNode):
     def unique_key(self) -> str:
         return self._unique_key
 
+    @staticmethod
+    def union_of_intervals(intervals):
+        """Finds the union of a list of intervals."""
+
+        if not intervals:
+            return []
+
+        intervals.sort(key=lambda x: x[0])  # Sort intervals by start
+        merged = [intervals[0]]
+
+        for start, end in intervals[1:]:
+            last_end = merged[-1][1]
+            if start <= last_end:
+                merged[-1] = (merged[-1][0], max(last_end, end))
+            else:
+                merged.append((start, end))
+
+        return merged
+
     def merge(
         self,
         other: Node,
@@ -403,22 +422,12 @@ class Node(BasicNode):
         Merge two nodes for ref_start, ref_end, and identities.
         """
         if isinstance(other, Node):
-            # keep the Node with longer reference span, aka more introns
-            self_ref_span = self.ref_end - self.ref_start
-            other_ref_span = other.ref_end - other.ref_start
-            if other_ref_span > self_ref_span:
-                self.exons = other.exons
+            temp_exons = self.exons + other.exons
+            self.exons = Node.union_of_intervals(temp_exons)
+            self.ref_start = self.exons.first.start
 
-            # update exon coordinates
-            self.ref_start = min(
-                self.exons.first.start,
-                other.exons.first.start,
-            )
             # WARN: ref_end may be not consistent with prev_breakpoint of next edge <Yangyang Li>
-            self.ref_end = max(
-                self.exons.last.end,
-                other.exons.last.end,
-            )
+            self.ref_end = self.exons.last.end
 
             if other.query_name in self.read_ids:
                 logger.warning(
