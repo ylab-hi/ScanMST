@@ -1381,7 +1381,7 @@ def update_node_with_other_node(
 def check_end_node_is_ploya(
     node: Node,
     genome_fasta: pyfaidx.Fasta,
-    ratio: float = 0.1,
+    ratio: float = 0.7,
     length: int = 20,
 ) -> None:
     """Check whether the node is bona fide polyA or internal priming events."""
