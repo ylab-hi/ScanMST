@@ -449,49 +449,36 @@ class ReadsConnector:
             )
 
             strand = Strand.from_str(strand)
-            lt_s_len = record.query_start
-            rt_s_len = len(query_seq) - record.query_end
-        else:
-            mapq = record.mapping_quality
-            chrom = record.reference_name
-            position = record.reference_start
-            strand = "+" if not record.is_reverse else "-"
-            cigar_str = record.cigarstring
-            num_of_mismatch = record.get_tag("NM") if record.has_tag("NM") else 0
 
-            strand = Strand.from_str(strand)
-            lt_s_len = record.query_alignment_start
-            rt_s_len = len(query_seq) - record.query_alignment_end
+            new_read_mode = ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
+                read,
+                strand,
+            )
 
-        new_read_mode = ReadsConnector._double_check_for_start_end_read_determine_new_read_mode(
-            read,
-            strand,
-        )
+            if new_read_mode == MappingMode.MS:
+                cigar_str = f"{cigar_str}{read.read_match_size + read.rt_soft_len}S"
+            else:
+                cigar_str = f"{read.lt_soft_len + read.read_match_size}S{cigar_str}"
 
-        if new_read_mode == MappingMode.MS:
-            cigar_str = f"{lt_s_len}S" + cigar_str + f"{rt_s_len}S" + f"{read.read_match_size + read.rt_soft_len}S"
-        else:
-            cigar_str = f"{read.lt_soft_len + read.read_match_size}S" f"{lt_s_len}S" f"{cigar_str}" f"{rt_s_len}S"
+            if read.query_qualities is None:
+                msg = "query_qualities is None"
+                raise ValueError(msg)
 
-        if read.query_qualities is None:
-            msg = "query_qualities is None"
-            raise ValueError(msg)
+            new_read = Read.new(
+                read.query_name,
+                chrom,
+                position,
+                strand,
+                cigar_validity(cigar_str),
+                mapq,
+                num_of_mismatch,
+                read.query_sequence,
+                read.query_qualities,
+            )
 
-        new_read = Read.new(
-            read.query_name,
-            chrom,
-            position,
-            strand,
-            cigar_validity(cigar_str),
-            mapq,
-            num_of_mismatch,
-            read.query_sequence,
-            read.query_qualities,
-        )
+            new_read.mode = new_read_mode
 
-        new_read.mode = new_read_mode
-
-        return new_read
+            return new_read
 
     def __double_check_blat_query(
         self,
