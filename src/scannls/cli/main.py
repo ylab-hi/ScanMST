@@ -406,6 +406,7 @@ def detect_sv_from_cigar(
     gene_iv: HTSeq.GenomicArrayOfSets,
     motif_required: bool,
     blat_ident_pct_cutoff: float,
+    rt_switching_filter_len: int,
     aligner,
     logger: LoggerType,
 ):
@@ -433,6 +434,8 @@ def detect_sv_from_cigar(
         max_allowed_nm=max_allowed_nm,
         aligner=aligner,
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
+        genome_fasta=genome_fasta,
+        rt_switching_filter_len=rt_switching_filter_len,
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
@@ -685,7 +688,6 @@ def _scan_bam_helper(
                         ins_seq,
                         read_length,
                         read_strand,
-                        mapq_cutoff,
                         max_allowed_nm,
                         aligner,
                         blat_ident_pct_cutoff,
@@ -737,6 +739,7 @@ def _scan_bam_helper(
                         gene_iv=gene_iv,
                         motif_required=motif_required,
                         aligner=aligner,
+                        rt_switching_filter_len=rt_switching_filter_len,
                         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
                         logger=logger,  # type: ignore
                     ):

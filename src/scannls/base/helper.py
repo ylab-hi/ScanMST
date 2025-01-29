@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import copy
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-import re
 
 import HTSeq  # type: ignore
 import yaml  # type: ignore
@@ -777,8 +777,7 @@ def find_match_length(a, b, left_or_right="right"):
         for i in range(length):
             if a[: i + 1] == b[: i + 1]:
                 continue
-            else:
-                return i
+            return i
     else:
         raise ValueError("Invalid value for left_or_right. Must be 'right' or 'left'.")
 
@@ -871,151 +870,144 @@ def blat2chimeric_alignment(
                             cigar_sa = (
                                 f"{read_length - soft_seq_len}S{cigar_sa_partial}"
                             )
+                    elif head_match_pattern.search(cigar_sa_partial):
+                        ref_hom_seq = genome_fasta[chrom_sa][
+                            pos_start_sa
+                            - potential_microhomology_length : pos_start_sa
+                        ].reverse.complement.seq
+                        shift_length = find_match_length(
+                            ref_hom_seq, read_hom_seq, "left"
+                        )
+
+                        if shift_length > rt_switching_filter_len:
+                            return chimeric_aln_str
+
+                        pos_start_sa = pos_start_sa - shift_length
+                        cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+
                     else:
-                        if head_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_start_sa
-                                - potential_microhomology_length : pos_start_sa
-                            ].reverse.complement.seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "left"
-                            )
+                        cigar_sa = (
+                            f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                        )
+                # MappingMode.MS
+                elif strand_sa == "+":
+                    if tail_match_pattern.search(cigar_sa_partial):
+                        ref_hom_seq = genome_fasta[chrom_sa][
+                            pos_end_sa : pos_end_sa + potential_microhomology_length
+                        ].seq
+                        shift_length = find_match_length(
+                            ref_hom_seq, read_hom_seq, "left"
+                        )
 
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
+                        if shift_length > rt_switching_filter_len:
+                            return chimeric_aln_str
 
-                            pos_start_sa = pos_start_sa - shift_length
-                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+                        pos_end_sa = pos_end_sa + shift_length
+                        cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
-                        else:
-                            cigar_sa = (
-                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
-                            )
+                    else:
+                        cigar_sa = (
+                            f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                        )
+                elif tail_match_pattern.search(cigar_sa_partial):
+                    ref_hom_seq = genome_fasta[chrom_sa][
+                        pos_end_sa : pos_end_sa + potential_microhomology_length
+                    ].reverse.complement.seq
+                    shift_length = find_match_length(
+                        ref_hom_seq, read_hom_seq, "right"
+                    )
+
+                    if shift_length > rt_switching_filter_len:
+                        return chimeric_aln_str
+
+                    pos_end_sa = pos_end_sa + shift_length
+                    cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
+
                 else:
-                    # MappingMode.MS
-                    if strand_sa == "+":
-                        if tail_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_end_sa : pos_end_sa + potential_microhomology_length
-                            ].seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "left"
-                            )
-
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
-
-                            pos_end_sa = pos_end_sa + shift_length
-                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
-
-                        else:
-                            cigar_sa = (
-                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
-                            )
-                    else:
-                        if tail_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_end_sa : pos_end_sa + potential_microhomology_length
-                            ].reverse.complement.seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "right"
-                            )
-
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
-
-                            pos_end_sa = pos_end_sa + shift_length
-                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
-
-                        else:
-                            cigar_sa = (
-                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
-                            )
+                    cigar_sa = (
+                        f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                    )
             # opposite strand: same reads mode
-            else:
-                if read_mode == MappingMode.MS:
-                    # MappingMode.MS
-                    if strand_sa == "+":
-                        if tail_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_end_sa : pos_end_sa + potential_microhomology_length
-                            ].seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "left"
-                            )
+            elif read_mode == MappingMode.MS:
+                # MappingMode.MS
+                if strand_sa == "+":
+                    if tail_match_pattern.search(cigar_sa_partial):
+                        ref_hom_seq = genome_fasta[chrom_sa][
+                            pos_end_sa : pos_end_sa + potential_microhomology_length
+                        ].seq
+                        shift_length = find_match_length(
+                            ref_hom_seq, read_hom_seq, "left"
+                        )
 
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
+                        if shift_length > rt_switching_filter_len:
+                            return chimeric_aln_str
 
-                            pos_end_sa = pos_end_sa + shift_length
-                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
+                        pos_end_sa = pos_end_sa + shift_length
+                        cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
-                        else:
-                            cigar_sa = (
-                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
-                            )
                     else:
-                        if tail_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_end_sa : pos_end_sa + potential_microhomology_length
-                            ].reverse.complement.seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "right"
-                            )
+                        cigar_sa = (
+                            f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                        )
+                elif tail_match_pattern.search(cigar_sa_partial):
+                    ref_hom_seq = genome_fasta[chrom_sa][
+                        pos_end_sa : pos_end_sa + potential_microhomology_length
+                    ].reverse.complement.seq
+                    shift_length = find_match_length(
+                        ref_hom_seq, read_hom_seq, "right"
+                    )
 
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
+                    if shift_length > rt_switching_filter_len:
+                        return chimeric_aln_str
 
-                            pos_end_sa = pos_end_sa + shift_length
-                            cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
-
-                        else:
-                            cigar_sa = (
-                                f"{cigar_sa_partial}{read_length - soft_seq_len}S"
-                            )
+                    pos_end_sa = pos_end_sa + shift_length
+                    cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
                 else:
-                    # MappingMode.SM
-                    if strand_sa == "+":
-                        if head_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_start_sa
-                                - potential_microhomology_length : pos_start_sa
-                            ].seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "right"
-                            )
+                    cigar_sa = (
+                        f"{cigar_sa_partial}{read_length - soft_seq_len}S"
+                    )
 
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
+            # MappingMode.SM
+            elif strand_sa == "+":
+                if head_match_pattern.search(cigar_sa_partial):
+                    ref_hom_seq = genome_fasta[chrom_sa][
+                        pos_start_sa
+                        - potential_microhomology_length : pos_start_sa
+                    ].seq
+                    shift_length = find_match_length(
+                        ref_hom_seq, read_hom_seq, "right"
+                    )
 
-                            pos_start_sa = pos_start_sa - shift_length
-                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+                    if shift_length > rt_switching_filter_len:
+                        return chimeric_aln_str
 
-                        else:
-                            cigar_sa = (
-                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
-                            )
-                    else:
-                        if head_match_pattern.search(cigar_sa_partial):
-                            ref_hom_seq = genome_fasta[chrom_sa][
-                                pos_start_sa
-                                - potential_microhomology_length : pos_start_sa
-                            ].reverse.complement.seq
-                            shift_length = find_match_length(
-                                ref_hom_seq, read_hom_seq, "left"
-                            )
+                    pos_start_sa = pos_start_sa - shift_length
+                    cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
 
-                            if shift_length > rt_switching_filter_len:
-                                return chimeric_aln_str
+                else:
+                    cigar_sa = (
+                        f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                    )
+            elif head_match_pattern.search(cigar_sa_partial):
+                ref_hom_seq = genome_fasta[chrom_sa][
+                    pos_start_sa
+                    - potential_microhomology_length : pos_start_sa
+                ].reverse.complement.seq
+                shift_length = find_match_length(
+                    ref_hom_seq, read_hom_seq, "left"
+                )
 
-                            pos_start_sa = pos_start_sa - shift_length
-                            cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+                if shift_length > rt_switching_filter_len:
+                    return chimeric_aln_str
 
-                        else:
-                            cigar_sa = (
-                                f"{read_length - soft_seq_len}S{cigar_sa_partial}"
-                            )
+                pos_start_sa = pos_start_sa - shift_length
+                cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
+
+            else:
+                cigar_sa = (
+                    f"{read_length - soft_seq_len}S{cigar_sa_partial}"
+                )
 
             valid_cigar_sa = cigar_validity(cigar_sa)
 
@@ -1065,7 +1057,6 @@ def insertion2chimeric_alignment(
     insertion_seq: str,
     read_length: int,
     read_strand: str,
-    mapq_cutoff: int,
     max_allowed_nm: int,
     aligner,
     aligner_ident_pct_cutoff: float = 0.9,
@@ -1181,7 +1172,6 @@ def softclipped_length_and_event_size_checker(
     read,
     mode,
     event_size,
-    bp_region_seq_len,
 ) -> bool:
     """When read length > predicted tandem duplication size.
 
@@ -1477,7 +1467,6 @@ def same_chrom_same_strand_mode21_handler(
             read_lt,
             lt_mode,
             evt_size,
-            bp_region_seq_len,
         ):
             logger.trace("softclipped length < event size: TDUP")
             is_dup = True
