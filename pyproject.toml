@@ -55,7 +55,7 @@ scannls = "scannls.__main__:main"
 ruff = "^0.8.5"
 codespell = "^2.2.2"
 ipdb = "^0.13.11"
-isort = "^5.13.2"
+isort = "^6.0.0"
 pytest = "^8.2.2"
 coverage = { extras = ["toml"], version = "^7.6" }
 safety = "^3.2.10"
