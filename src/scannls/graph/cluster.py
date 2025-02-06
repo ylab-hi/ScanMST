@@ -6,6 +6,8 @@ import networkx as nx
 from loguru import logger
 from networkx import connected_components
 
+from scannls.base import MicroHomology, NovelInsertion
+
 from .basic_graph import NLPath, Node
 from .merge_condition import MergeCondition
 
@@ -99,8 +101,29 @@ def create_sort_key_for_node(node: Node):
 def creat_sort_key_for_nlpath(nlpath: NLPath):
     return (
         len(nlpath),
+        obtain_edge_info_signature_for_nlpath(nlpath),
         *[create_sort_key_for_node(node) for node in nlpath],
     )
+
+def obtain_edge_info_signature_for_nlpath(nlpath: NLPath):
+    """Obtain edge info signature.
+       for every hop
+       blunt end: 2
+       microhomology: 1
+       microinsertion: 0
+    """
+    edge_info_signature = 0
+    for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
+        current_edge = nlpath.next_edge(current_node, event_id - 1)
+        if current_edge.insertion_info:
+            if isinstance(current_edge.insertion_info[1], NovelInsertion):
+                edge_info_signature += 0
+            elif isinstance(current_edge.insertion_info[1], MicroHomology):
+                edge_info_signature += 1
+        else:
+            # blunt end
+            edge_info_signature += 2
+    return edge_info_signature
 
 
 def create_sort_key_by_merge_factor(nlpath: NLPath):
