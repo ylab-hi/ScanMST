@@ -98,10 +98,9 @@ def create_sort_key_for_node(node: Node):
     return middle_node_signature(node)
 
 
-def creat_sort_key_for_nlpath(nlpath: NLPath):
+def create_sort_key_for_nlpath(nlpath: NLPath):
     return (
         len(nlpath),
-        obtain_edge_info_signature_for_nlpath(nlpath),
         *[create_sort_key_for_node(node) for node in nlpath],
     )
 
@@ -130,11 +129,12 @@ def create_sort_key_by_merge_factor(nlpath: NLPath):
     return (
         len(nlpath),
         nlpath.merge_factor,
+        obtain_edge_info_signature_for_nlpath(nlpath),
         *[create_sort_key_for_node(node) for node in nlpath],
     )
 
 
-def sort_cluster(cluster, key=creat_sort_key_for_nlpath, *, reverse=False):
+def sort_cluster(cluster, key=create_sort_key_for_nlpath, *, reverse=False):
     return sorted(
         cluster,
         key=key,
