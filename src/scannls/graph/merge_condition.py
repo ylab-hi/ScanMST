@@ -648,7 +648,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
             if long_node.introns is None and short_node.introns:
                 return False
             if long_node.introns and short_node.introns:
-                __intron_lists_containment_checker(
+                return __intron_lists_containment_checker(
                     long_node,
                     short_node,
                     long_node,
@@ -662,7 +662,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         elif long_node.introns is None and short_node.introns:
             return False
         elif long_node.introns and short_node.introns:
-            __intron_lists_containment_checker(
+            return __intron_lists_containment_checker(
                 long_node,
                 short_node,
                 long_node,
@@ -682,7 +682,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
             if long_node.introns is None and short_node.introns:
                 return False
             if long_node.introns and short_node.introns:
-                __intron_lists_containment_checker(
+                return __intron_lists_containment_checker(
                     long_node,
                     short_node,
                     long_node,
@@ -696,7 +696,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
         elif long_node.introns is None and short_node.introns:
             return False
         elif long_node.introns and short_node.introns:
-            __intron_lists_containment_checker(
+            return __intron_lists_containment_checker(
                 long_node,
                 short_node,
                 long_node,
