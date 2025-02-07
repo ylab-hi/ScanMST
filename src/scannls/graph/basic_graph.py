@@ -10,6 +10,7 @@ from enum import Enum, auto
 from itertools import combinations
 from typing import TYPE_CHECKING, Any, ClassVar
 
+import pyfaidx
 from loguru import logger
 
 from scannls.base import (
@@ -35,8 +36,6 @@ from .merge_condition import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-
-    import pyfaidx
 
     from scannls.base.basic_read import Read
 
@@ -249,11 +248,11 @@ class Node(BasicNode):
         "_ref_start",
         "_ref_end",
         "exons",
+        "genome_fasta_file",
         "_introns",
         "gene_names",
         "query_name",
         "_unique_key",
-        "is_polya",
         "cigartuples_without_soft",
         "identities",
         "breakpoints",
@@ -269,6 +268,7 @@ class Node(BasicNode):
         ref_end: int,
         identity: NodeIdentity,
         exons: Exons,
+        genome_fasta_file: str,
         cigartuples_without_soft: list[int] | None = None,
     ) -> None:
         """Initialize a Node object."""
@@ -284,8 +284,8 @@ class Node(BasicNode):
         self._introns = exons.introns()  # note we do not use this 2024-12-30
 
         self.gene_names: list[str] = []
+        self.genome_fasta_file = genome_fasta_file
 
-        self.is_polya = False
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
 
@@ -476,6 +476,29 @@ class Node(BasicNode):
 
         msg = f"{other} is not Node"
         raise ValueError(msg)
+
+    @property
+    def is_polya(self):
+        if self.genome_fasta_file is None:
+            msg = f"{self} genome_fasta must be set before accessing is_polya feature."
+            raise ValueError(msg)
+        return self._calculate_is_polya()
+
+    def _calculate_is_polya(self, ratio: float = 0.7, length: int = 20) -> bool:
+        """Check whether the tail node is bona fide polyA or internal priming event."""
+        if self.ref_end is None or self.ref_start is None:
+            msg = f"{self} has no start or end position"
+            raise SystemExit(msg)
+
+        genome_fasta = pyfaidx.Fasta(self.genome_fasta_file, sequence_always_upper=True)
+        if self.strand.is_forward():
+            seq = genome_fasta[self.chrom][self.ref_end : self.ref_end + length].seq
+        else:
+            seq = genome_fasta[self.chrom][self.ref_start - length : self.ref_start].reverse.complement.seq
+
+        counter: dict[str, int] = Counter(seq)
+        return counter["A"] <= ratio * len(seq)
+
 
 
 class VariationType(Enum):
@@ -1157,6 +1180,9 @@ class NLPath:
         query_name = read_chains[0].query_name
 
         max_shift_length_in_events = 0
+        # pyfaidx.Fasta cannot be deepcopied, so we use filename instead
+        genome_fasta_file = genome_fasta.filename
+
         for index, event in enumerate(events):
             shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
             max_shift_length_in_events = max(shift_length, max_shift_length_in_events)
@@ -1173,6 +1199,7 @@ class NLPath:
                 ref_end=event.read1_ref_end,
                 identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
                 exons=Exons.from_list(event.read1_exons),
+                genome_fasta_file=genome_fasta_file,
                 cigartuples_without_soft=read1.cigartuples_without_soft,
             )
 
@@ -1265,6 +1292,7 @@ class NLPath:
                             ref_end=insertion.ref_end,
                             identity=NodeIdentity.MID,
                             exons=insertion.get_exons(),
+                            genome_fasta_file=genome_fasta_file,
                             cigartuples_without_soft=insertion.cigartuples_without_soft,
                         )
 
@@ -1314,9 +1342,9 @@ class NLPath:
                     ref_end=event.read2_ref_end,
                     identity=NodeIdentity.TAIL,
                     exons=Exons.from_list(event.read2_exons),
+                    genome_fasta_file=genome_fasta_file,
                     cigartuples_without_soft=read2.cigartuples_without_soft,
                 )
-                check_end_node_is_ploya(final_node, genome_fasta)
                 nodes.append(final_node)
         return cls.from_nodes_and_edges_data(nodes, edges_data)
 
@@ -1376,27 +1404,6 @@ def update_node_with_other_node(
     for feature in features:
         if getattr(node, feature) is None:
             setattr(node, feature, getattr(other_node, feature))
-
-
-def check_end_node_is_ploya(
-    node: Node,
-    genome_fasta: pyfaidx.Fasta,
-    ratio: float = 0.7,
-    length: int = 20,
-) -> None:
-    """Check whether the node is bona fide polyA or internal priming events."""
-    if node.ref_end is None or node.ref_start is None:
-        msg = f"{node} has no start or end position"
-        raise SystemExit(msg)
-
-    if node.strand.is_forward():
-        seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
-    else:
-        seq = genome_fasta[node.chrom][node.ref_start - length : node.ref_start].reverse.complement.seq
-
-    counter: dict[str, int] = Counter(seq)
-    if counter["A"] <= ratio * len(seq):
-        node.is_polya = True
 
 
 def _check_insertion_conditions_for_compare_insertion(
