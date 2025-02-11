@@ -973,7 +973,7 @@ class NLPath:
         for _a, _b in pair_indices:
             node_a = self.nodes[_a]
             node_b = self.nodes[_b]
-            if node_a.introns != node_b.introns or node_a.strand != node_b.strand or node_a.chrom != node_b.chrom:
+            if node_a.strand != node_b.strand or node_a.chrom != node_b.chrom:
                 continue
 
             if (
