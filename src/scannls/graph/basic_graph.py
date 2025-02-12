@@ -449,34 +449,6 @@ class Node(BasicNode):
         msg = f"Cannot merge {self!r} and {other!r}"
         raise TypeError(msg)
 
-    def contains(
-        self,
-        other: Node,
-        *,
-        same_left=False,
-        same_right=False,
-        check_introns=False,
-        threshold=0,
-    ):
-        if isinstance(other, Node):
-            if check_introns and self.introns != other.introns:
-                return False
-
-            if not same_left and not same_right:
-                return self.exons.first.start <= other.exons.first.start <= other.exons.last.end <= self.exons.last.end
-
-            if same_left and same_right:
-                return abs(self.exons.first.start - other.exons.first.start) <= threshold and self.exons.last.end == other.exons.last.end
-
-            if same_left:
-                return abs(self.exons.first.start - other.exons.first.start) <= threshold and self.exons.last.end - other.exons.last.end >= -threshold
-
-            if same_right:
-                return -threshold <= self.exons.first.start - other.exons.first.start and abs(self.exons.last.end - other.exons.last.end) <= threshold
-
-        msg = f"{other} is not Node"
-        raise ValueError(msg)
-
     @property
     def is_polya(self):
         if self.genome_fasta_file is None:
@@ -498,7 +470,6 @@ class Node(BasicNode):
 
         counter: dict[str, int] = Counter(seq)
         return counter["A"] <= ratio * len(seq)
-
 
 
 class VariationType(Enum):
