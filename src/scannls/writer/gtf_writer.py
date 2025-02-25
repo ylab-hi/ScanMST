@@ -293,7 +293,7 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; mega_exon_id "{node.trace_id:0>4}"; transcript_id "{nlpath_id}"; ',
+                f'exon_id "{index:0>3}"; mega_exon_id "{node.trace_id:0>4}"; ptc "{node.ptc}"; ptf "{node.ptf}"; transcript_id "{nlpath_id}"; ',
             ],
         )
 

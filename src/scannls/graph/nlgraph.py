@@ -41,7 +41,6 @@ class NLGraph:
         support_reads,
         input_bam_path: Path,
         output_dir: Path,
-        *,
         rescue_sr: bool,
         ignore_circle: bool = False,
     ) -> None:
