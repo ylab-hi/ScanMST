@@ -536,8 +536,9 @@ class ReadsConnector:
                     continue
                 return i
         else:
+            msg = "Invalid value for left_or_right. Must be 'right' or 'left'."
             raise ValueError(
-                "Invalid value for left_or_right. Must be 'right' or 'left'."
+                msg
             )
 
         return 0  # No match found

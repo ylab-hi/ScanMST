@@ -256,6 +256,8 @@ class Node(BasicNode):
         "cigartuples_without_soft",
         "identities",
         "breakpoints",
+        "ptc",  #  Path Traversal Count (PTC)
+        "ptf",  #  Path Traversal Fraction (PTF)
         *BasicNode.__slots__,
     )
 
@@ -291,6 +293,8 @@ class Node(BasicNode):
 
         self._unique_key = f"{self.chrom}-{self.ref_start}-{self.ref_end}-{self.strand}-{self.query_name}"
         self.breakpoints = defaultdict(int)
+
+        self.ptc, self.ptf = 0, 0.0
 
     def set_up_breakpoints(self) -> None:
         logger.debug(f"Set up breakpoints for {self!r}")
@@ -403,7 +407,7 @@ class Node(BasicNode):
         if not intervals:
             return []
 
-        intervals.sort() # Sort intervals by start
+        intervals.sort()  # Sort intervals by start
         merged = [intervals[0]]
 
         for start, end in intervals[1:]:
@@ -1202,7 +1206,9 @@ class NLPath:
                     )
 
                     logger.trace(f"{insertion.strand=}, {insertion.cigarstring}")
-                    insertion_mode = (MappingMode.SM if event.mode1 == MappingMode.MS else MappingMode.MS) if event.strand1 == insertion.strand else event.mode1
+                    insertion_mode = (
+                        (MappingMode.SM if event.mode1 == MappingMode.MS else MappingMode.MS) if event.strand1 == insertion.strand else event.mode1
+                    )
                     logger.trace("nls reference for read1 and insertion")
 
                     read1_insertion_event = infer_nls_from_connected_reads(
@@ -1218,7 +1224,9 @@ class NLPath:
                     )
 
                     # get type of insertion between insertion node and second node
-                    insertion_mode = (MappingMode.SM if event.mode2 == MappingMode.MS else MappingMode.MS) if insertion.strand == read2.strand else event.mode2
+                    insertion_mode = (
+                        (MappingMode.SM if event.mode2 == MappingMode.MS else MappingMode.MS) if insertion.strand == read2.strand else event.mode2
+                    )
 
                     logger.trace("nls reference for read2 and insertion")
                     insertion_read2_event = infer_nls_from_connected_reads(

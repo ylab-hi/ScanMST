@@ -318,7 +318,8 @@ class Intervals:
         concatenating the exons of both Intervals objects.
         """
         if not isinstance(other, Intervals):
-            raise TypeError(f"Can only concatenate with another Intervals object, not {type(other)}")
+            msg = f"Can only concatenate with another Intervals object, not {type(other)}"
+            raise TypeError(msg)
         return Intervals(self.exon_list + other.exon_list)
 
     def __sub__(self, other: int | Intervals) -> Intervals:

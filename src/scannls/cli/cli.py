@@ -50,7 +50,6 @@ def get_writers(
         fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, output_sequence_choice, read_name_to_seq_dict)
 
         return Writers((fasta_writer, gtf_writer, vcf_writer))
-    # output_sequence_choice: both
     fasta_writer1 = FastaWriter(f"{output_prefix}.reference.fasta", ref_path, "reference", read_name_to_seq_dict)
     fasta_writer2 = FastaWriter(f"{output_prefix}.consensus.fasta", ref_path, "consensus", read_name_to_seq_dict)
 
@@ -214,7 +213,8 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
     output_dir = output_file_path.parent
     if not output_dir.is_dir():
-        raise SystemExit(f"Error: The directory {output_dir} does not exist.")
+        msg = f"Error: The directory {output_dir} does not exist."
+        raise SystemExit(msg)
 
     logger.info(f"scannls starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.blat_closed=}")

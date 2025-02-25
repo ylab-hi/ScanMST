@@ -41,6 +41,7 @@ class NLGraph:
         support_reads,
         input_bam_path: Path,
         output_dir: Path,
+        *,
         rescue_sr: bool,
         ignore_circle: bool = False,
     ) -> None:
@@ -101,19 +102,24 @@ class NLGraph:
 
         node_list = []
         # trace path
+        all_paths = []
         for idx, node_list in enumerate(self.trace(), 1):
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
             current_path.id = idx
             current_path.polish_edges()
-            yield current_path
+            all_paths.append(current_path)
 
         if is_plot and not self.has_circle and node_list:
             plot_result = self.output_dir / Path(f"graph_{self.input_bam_path.stem}")
             plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
             default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1).visualize()
+
+        update_node_ptf_in_path(all_paths, len(all_paths))
+
+        return all_paths
 
     @classmethod
     def create_graph(
@@ -442,6 +448,7 @@ class NLGraph:
         """
         if not start_node or self.has_circle:
             # successor be [] or None
+            update_node_ptc_in_path(path)
             group_paths.append(path)
 
         elif successors := start_node.successors:
@@ -535,3 +542,18 @@ def merge_nodes(
     :return: None
     """
     updated_node.merge(current_node)
+
+
+def update_node_ptc_in_path(path: list[Node | Edge]) -> None:
+    """Update PTC information in path."""
+    for node in path:
+        if isinstance(node, Node):
+            node.ptc += 1
+
+
+def update_node_ptf_in_path(paths: list[NLPath], total_path: int) -> None:
+    """Update PTF information in path."""
+    for path in paths:
+        for node in path:
+            if isinstance(node, Node):
+                node.ptf = node.ptc / total_path

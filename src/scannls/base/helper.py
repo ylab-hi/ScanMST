@@ -779,7 +779,8 @@ def find_match_length(a, b, left_or_right="right"):
                 continue
             return i
     else:
-        raise ValueError("Invalid value for left_or_right. Must be 'right' or 'left'.")
+        msg = "Invalid value for left_or_right. Must be 'right' or 'left'."
+        raise ValueError(msg)
 
     return 0  # No match found
 
