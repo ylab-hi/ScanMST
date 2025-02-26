@@ -99,7 +99,9 @@ class NLGraph:
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
 
-        node_list = []
+        node_list: list[Node | Edge] = []
+
+        all_paths = []
         # trace path
         for idx, node_list in enumerate(self.trace(), 1):
             current_path = NLPath.create_path_from_node_edge_list(
@@ -107,13 +109,16 @@ class NLGraph:
             )
             current_path.id = idx
             current_path.polish_edges()
-            yield current_path
+            all_paths.append(current_path)
 
         if is_plot and not self.has_circle and node_list:
             plot_result = self.output_dir / Path(f"graph_{self.input_bam_path.stem}")
             plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
             default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1).visualize()
+
+        update_node_ptf_in_path(all_paths, len(all_paths))
+        return all_paths
 
     @classmethod
     def create_graph(
