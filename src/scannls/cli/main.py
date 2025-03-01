@@ -898,7 +898,7 @@ def scanbam_run(
     )
     # get the chromosome name we want to scan
 
-    contigs = [contig for contig in bam_scanner.bam_chrom_info if "_" not in contig and "M" not in contig]
+    contigs = [contig for contig in sorted(bam_scanner.bam_chrom_info) if "_" not in contig and "M" not in contig]
 
     logger.info(f" Processing {contigs=}")
     running_mode = "normal" if parallel == 1 else "parallel"
@@ -923,8 +923,11 @@ def scanbam_run(
             intact_read_query_name_to_sequence_dict.update(contig_read_query_name_to_sequence_dict)
 
     bam_scanner.in_bam.close()
+
+    sorted_intact_series_list = sorted(intact_series_list)
+
     return (
-        intact_series_list,
+        sorted_intact_series_list,
         intact_read_query_name_to_sequence_dict,
         bam_scanner.header,
         avg_cov,

@@ -804,6 +804,21 @@ class NLPath:
         self.merge_factor = 1
         self.extension = False
 
+    def __lt__(self, other) -> bool:
+        """Implementation sorted function."""
+        self_str = ",".join(NLPath.create_node_signature(_node) for _node in self.nodes)
+        other_str = ",".join(NLPath.create_node_signature(_node) for _node in other.nodes)
+
+        if len(self.nodes) != len(other.nodes):
+            return len(self.nodes) < len(other.nodes)
+        return self_str < other_str
+
+    @staticmethod
+    def create_node_signature(node: Node) -> str:
+        """Middle node signature using chrom, exons and strand."""
+        exons_string = (f"{x[0]}-{x[1]}" for x in node.exons)  # type: ignore
+        return f"{node.chrom}:{';'.join(exons_string)};{node.strand}"
+
     def add_edge(self, nodes: Node, nodet: Node, edge: Edge | None = None) -> None:
         """Add edge to the path."""
         if nodes not in self.nodes:
