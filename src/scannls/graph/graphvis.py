@@ -304,7 +304,6 @@ class TSGraphExporter(GraphVisitor):
 
             # write node attributes sr
             for node in graph.nodes(data=True):
-                f.write(f"A\tN\t{node[0]}\tsr\tf\t{node[1]['sr']}\n")
                 f.write(f"A\tN\t{node[0]}\tptc\ti\t{node[1]['ptc']}\n")
                 f.write(f"A\tN\t{node[0]}\tptf\tf\t{node[1]['ptf']}\n")
 
