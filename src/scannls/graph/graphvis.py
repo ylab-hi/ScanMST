@@ -300,7 +300,7 @@ class TSGraphExporter(GraphVisitor):
 
             # write edges
             for edge in graph.edges(data=True):
-                f.write(f"E\t{edge[2]['label']}\t{edge[0]}\t{edge[1]},{edge[2]['breakpoints']}\n")
+                f.write(f"E\t{edge[2]['label']}\t{edge[0]}\t{edge[1]}\t{edge[2]['breakpoints']}\n")
 
             # write node attributes sr
             for node in graph.nodes(data=True):
