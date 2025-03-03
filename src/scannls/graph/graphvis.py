@@ -290,7 +290,7 @@ class TSGraphExporter(GraphVisitor):
         A	O	transcript2	tpm	f	3.7
         """
         # write header
-        with self.file_name.open("w") as f:
+        with Path(f"{self.file_name}.tsg").open("w", encoding="utf-8") as f:
             f.write("H\tTSG\t1.0\n")
             f.write("H\treference\tGRCh38\n")
 
