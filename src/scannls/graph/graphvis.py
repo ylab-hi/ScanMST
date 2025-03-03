@@ -296,7 +296,7 @@ class TSGraphExporter(GraphVisitor):
 
             # write nodes
             for node in graph.nodes(data=True):
-                f.write(f"N\t{node[0]}\t{node[1]['chrom']}:{node[1]['strand']!s}:{node[1]['exon'][1:-1]!s}\t{node[1]['reads']}\n")
+                f.write(f"N\t{node[0]}\t{node[1]['chrom']}:{node[1]['strand']!s}:{node[1]['exons'][1:-1]!s}\t{node[1]['reads']}\n")
 
             # write edges
             for edge in graph.edges(data=True):
