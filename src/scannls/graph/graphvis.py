@@ -285,9 +285,9 @@ class TSGraphExporter(GraphVisitor):
         # Sets (grouping elements)
         U	exon_set	n1	n2	n3
         # Attributes (metadata)
-        A	N	n1	expression	f	10.5
-        A	O	transcript1	tpm	f	8.2
-        A	O	transcript2	tpm	f	3.7
+        A	N	n1	expression:f:10.5
+        A	O	transcript1	tpm:f:8.2
+        A	O	transcript2	tpm:f:3.7
         """
         # write header
         with Path(f"{self.file_name}.tsg").open("w", encoding="utf-8") as f:
@@ -304,12 +304,12 @@ class TSGraphExporter(GraphVisitor):
 
             # write node attributes sr
             for node in graph.nodes(data=True):
-                f.write(f"A\tN\t{node[0]}\tptc\ti\t{node[1]['ptc']}\n")
-                f.write(f"A\tN\t{node[0]}\tptf\tf\t{node[1]['ptf']}\n")
+                f.write(f"A\tN\t{node[0]}\tptc:i:{node[1]['ptc']}\n")
+                f.write(f"A\tN\t{node[0]}\tptf:f:{node[1]['ptf']}\n")
 
             # write edge attributes sr
             for edge in graph.edges(data=True):
-                f.write(f"A\tE\t{edge[2]['label']}\tsr\tf\t{edge[2]['weight']}\n")
+                f.write(f"A\tE\t{edge[2]['label']}\tsr:i:{edge[2]['weight']}\n")
 
 
 def _cal_figure_size(nodes_size: int):
