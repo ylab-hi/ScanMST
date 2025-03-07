@@ -151,11 +151,6 @@ class NLGraph:
 
         return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), output_dir, rescue_sr, ignore_circle)
 
-    @property
-    def trace_id(self) -> int:
-        self._trace_id += 1
-        return self._trace_id
-
     def add_edge(self, node1: Node, node2: Node, edge_data):
         """Add edge from node1 -> node2."""
         edge = Edge.from_nodes(node1, node2, edge_data)
@@ -475,7 +470,6 @@ class NLGraph:
                         path[-1].update_breakpoint()
                         edge.break_point1.pos = new_break_point
 
-                    successor.set_trace_id(self.trace_id)
                     self._trace_forward(
                         successor,
                         [*path, edge, successor],
@@ -497,7 +491,6 @@ class NLGraph:
 
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
-        self._trace_id = 0
         self.has_circle = False
 
         result_series_list = []
@@ -506,7 +499,6 @@ class NLGraph:
             self.logger.warning(f"A circle may exist in graph {self.nodes.values()}")
 
         for start_node in self.get_start_nodes():
-            start_node.set_trace_id(self.trace_id)
             group_paths = []
             self._trace_forward(
                 start_node,

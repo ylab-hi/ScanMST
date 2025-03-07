@@ -93,7 +93,7 @@ class VCFWriter(Writer):
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
         "OSR": "The number of support reads for the breakpoints before rescuer",
-        "PSI": "Estimated Percent splice-in in the range (0,1], " "representing the percentage of NLS transcripts",
+        "PSI": "Estimated Percent splice-in in the range (0,1], representing the percentage of NLS transcripts",
         "SVTYPE": "The type of event, DEL, TDUP, IDUP, INV, TRA.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for END coordinate in case of a translocation",
@@ -224,10 +224,10 @@ class VCFWriter(Writer):
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
                 # multiple transcripts go through the same one hop
-                out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
-                out_vcf_dict[type_position_key]["MEGAEXON1"] += f',{hop_feature[type_position_key]["MEGAEXON1"]}'
-                out_vcf_dict[type_position_key]["MEGAEXON2"] += f',{hop_feature[type_position_key]["MEGAEXON2"]}'
-                out_vcf_dict[type_position_key]["SR_ID"] += f',{hop_feature[type_position_key]["SR_ID"]}'
+                out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
+                out_vcf_dict[type_position_key]["MEGAEXON1"] += f",{hop_feature[type_position_key]['MEGAEXON1']}"
+                out_vcf_dict[type_position_key]["MEGAEXON2"] += f",{hop_feature[type_position_key]['MEGAEXON2']}"
+                out_vcf_dict[type_position_key]["SR_ID"] += f",{hop_feature[type_position_key]['SR_ID']}"
                 # deal with 'Y' shape NLS graph
                 if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
                     out_vcf_dict[type_position_key]["READS"].update(hop_feature[type_position_key]["READS"])
@@ -244,7 +244,7 @@ class VCFWriter(Writer):
 
         date = datetime.datetime.today().strftime("%Y%m%d")
         source = "ScanNLS"
-        reference = f"<CMD={obtain_reference_from_bam_header(self.bam_header)}," 'Description="Alignment parameters">'
+        reference = f'<CMD={obtain_reference_from_bam_header(self.bam_header)},Description="Alignment parameters">'
 
         header_lines = [
             "##fileformat=VCFv4.3",
@@ -259,12 +259,12 @@ class VCFWriter(Writer):
             if _id in {"TRANSCRIPT_ID", "SR_ID", "MEGAEXON1", "MEGAEXON2"}:
                 _number = "."
             header_lines.append(
-                f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]}," f'Description="{VCFWriter.description[_id]}">',
+                f'##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_format:
             header_lines.append(
-                f"##FORMAT=<ID={_id},Number=1,Type={VCFWriter.reserved_format[_id]}," f'Description="{VCFWriter.description[_id]}">',
+                f'##FORMAT=<ID={_id},Number=1,Type={VCFWriter.reserved_format[_id]},Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_alt:
@@ -375,7 +375,7 @@ def get_vcf_features_from_nlpath(
 
         path_hops_features.append(
             {
-                f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}" f"_{_chrom2}|{_pos2 + 1}": {
+                f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}_{_chrom2}|{_pos2 + 1}": {
                     "CHROM": _chrom1,
                     "POS": f"{_pos1 + 1}",
                     "REF": ".",
@@ -393,19 +393,20 @@ def get_vcf_features_from_nlpath(
                     "SVLEN": f"{sv_distance}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
-                    "MEGAEXON1": f"{current_node.trace_id}",
-                    "MEGAEXON2": f"{next_node.trace_id}",
+                    "SEGMENT1": current_node.id,
+                    "SEGMENT2": next_node.id,
                     "STRAND1": f"{current_node.strand}",
                     "STRAND2": f"{next_node.strand}",
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
-                    "TRANSCRIPT_ID": f"{cluster_id}x{nlpath.id}",
+                    "TRANSCRIPT_ID": nlpath.id,
                     "GENE_ID": f"{cluster_id}",
                     "SR_ID": f"{'|'.join(current_edge.read_ids)}",
                     "READS": set(current_edge.read_ids),
                     "SVMETHOD": "ScanNLS",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
                     "INSSEQ": microinsertion_sequence if microinsertion_sequence else ".",
+                    "ID": current_edge.id,
                 },
             },
         )
@@ -416,17 +417,17 @@ def get_vcf_features_from_nlpath(
 def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]:
     """VCF feature transformer."""
     info_field = (
-        f'{feature_dict["CAN"]};BOUNDARY={feature_dict["BOUNDARY"]};'
-        f'SVTYPE={feature_dict["SVTYPE"]};SR={feature_dict["SR"]};OSR={feature_dict["OSR"]};'
-        f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
-        f'DP2={feature_dict["DP2"]};PSI={feature_dict["PSI"]};SVLEN={feature_dict["SVLEN"]};'
-        f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
-        f'MEGAEXON1={feature_dict["MEGAEXON1"]};MEGAEXON2={feature_dict["MEGAEXON2"]};'
-        f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
-        f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
-        f'HOMSEQ={feature_dict["HOMSEQ"]};INSSEQ={feature_dict["INSSEQ"]};'
-        f'TRANSCRIPT_ID={feature_dict["TRANSCRIPT_ID"]};GENE_ID={feature_dict["GENE_ID"]};'
-        f'SR_ID={feature_dict["SR_ID"]};SVMETHOD={feature_dict["SVMETHOD"]}'
+        f"{feature_dict['CAN']};BOUNDARY={feature_dict['BOUNDARY']};"
+        f"SVTYPE={feature_dict['SVTYPE']};SR={feature_dict['SR']};OSR={feature_dict['OSR']};"
+        f"CHR2={feature_dict['CHR2']};SVEND={feature_dict['SVEND']};DP1={feature_dict['DP1']};"
+        f"DP2={feature_dict['DP2']};PSI={feature_dict['PSI']};SVLEN={feature_dict['SVLEN']};"
+        f"GENE1={feature_dict['GENE1']};GENE2={feature_dict['GENE2']};"
+        f"SEGMENT1={feature_dict['SEGMENT1']};SEGMENT2={feature_dict['SEGMENT2']};"
+        f"STRAND1={feature_dict['STRAND1']};STRAND2={feature_dict['STRAND2']};"
+        f"MODE1={feature_dict['MODE1']};MODE2={feature_dict['MODE2']};"
+        f"HOMSEQ={feature_dict['HOMSEQ']};INSSEQ={feature_dict['INSSEQ']};"
+        f"TRANSCRIPT_ID={feature_dict['TRANSCRIPT_ID']};GENE_ID={feature_dict['GENE_ID']};"
+        f"SR_ID={feature_dict['SR_ID']};SVMETHOD={feature_dict['SVMETHOD']}"
     )
 
     return [
