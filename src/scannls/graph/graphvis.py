@@ -298,7 +298,7 @@ class TSGraphExporter(GraphVisitor):
 
             # write edges
             for edge in graph.edges(data=True):
-                f.write(f"E\t{edge[2]['label']}\t{edge[0]}\t{edge[1]}\t{edge[2]['breakpoints']}\n")
+                f.write(f"E\t{edge[2]['id']}\t{edge[0]}\t{edge[1]}\t{edge[2]['breakpoints']}\n")
 
             # write node attributes sr
             for node in graph.nodes(data=True):
@@ -307,7 +307,7 @@ class TSGraphExporter(GraphVisitor):
 
             # write edge attributes sr
             for edge in graph.edges(data=True):
-                f.write(f"A\tE\t{edge[2]['label']}\tsr:i:{edge[2]['weight']}\n")
+                f.write(f"A\tE\t{edge[2]['id']}\tsr:i:{edge[2]['weight']}\n")
 
 
 def _cal_figure_size(nodes_size: int):
