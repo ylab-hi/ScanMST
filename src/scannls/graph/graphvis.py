@@ -106,7 +106,6 @@ class GraphVis:
             ref_end=node.ref_end,
             strand=str(node.strand),
             is_head=node.is_start_node(),
-            node_id=node.id,
             exons=str(node.exons),
             reads=",".join(idendities),
             ptc=node.ptc,
@@ -127,14 +126,13 @@ class GraphVis:
         breakpoints = f"{edge.break_point1.chrom},{edge.break_point2.chrom},{edge.break_point1.pos},{edge.break_point2.pos},{edge.variation_type}"
 
         if graph.has_edge(node1_label, node2_label):
-            current_edge_label = [i["label"] for i in graph[node1_label][node2_label].values()]
+            current_edge_label = [i["id"] for i in graph[node1_label][node2_label].values()]
             if edge_label not in current_edge_label:
                 logger.warning(f"vis: multiple edges between {node1_label} and {node2_label}")
                 graph.add_edge(
                     node1_label,
                     node2_label,
-                    label=edge_label,
-                    edge_id=edge.id,
+                    id=edge.id,
                     weight=edge.sr,
                     read_ids=edge.read_ids,
                     gene1=edge.gene1,
@@ -145,8 +143,7 @@ class GraphVis:
             graph.add_edge(
                 node1_label,
                 node2_label,
-                label=edge_label,
-                edge_id=edge.id,
+                id=edge.id,
                 weight=edge.sr,
                 read_ids=edge.read_ids,
                 breakpoints=breakpoints,
