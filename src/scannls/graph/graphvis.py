@@ -83,8 +83,7 @@ class GraphVis:
     @staticmethod
     def get_label_from_node(node: Node) -> str:
         """Get label from node."""
-        head_node = "H" if node.is_start_node() else "T"
-        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}_{node.trace_id}"
+        return node.id
 
     @staticmethod
     def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
@@ -107,7 +106,7 @@ class GraphVis:
             ref_end=node.ref_end,
             strand=str(node.strand),
             is_head=node.is_start_node(),
-            node_id=node.trace_id,
+            node_id=node.id,
             exons=str(node.exons),
             reads=",".join(idendities),
             ptc=node.ptc,
@@ -122,7 +121,7 @@ class GraphVis:
         graph: nx.Graph,
     ) -> None:
         """Add edge to graph."""
-        edge_label = f"{edge.variation_type}_{edge.insertion_info}_{edge.sr}"
+        edge_label = edge.id
         node1_label = GraphVis.get_label_from_node(node1)
         node2_label = GraphVis.get_label_from_node(node2)
         breakpoints = f"{edge.break_point1.chrom},{edge.break_point2.chrom},{edge.break_point1.pos},{edge.break_point2.pos},{edge.variation_type}"
@@ -135,6 +134,7 @@ class GraphVis:
                     node1_label,
                     node2_label,
                     label=edge_label,
+                    edge_id=edge.id,
                     weight=edge.sr,
                     read_ids=edge.read_ids,
                     gene1=edge.gene1,
@@ -146,6 +146,7 @@ class GraphVis:
                 node1_label,
                 node2_label,
                 label=edge_label,
+                edge_id=edge.id,
                 weight=edge.sr,
                 read_ids=edge.read_ids,
                 breakpoints=breakpoints,
@@ -280,8 +281,8 @@ class TSGraphExporter(GraphVisitor):
         C	chain1	n1	e1	n3	e2	n4
         C	chain2	n2	e3	n3  e4  n5
         # Paths (traversals through the constructed graph)
-        O	transcript1	n1+	e1+	n3+	e2+	n4+
-        O	transcript2	n2+	e3+	n3+ e4+ n5+
+        P	transcript1	n1+	e1+	n3+	e2+	n4+
+        P	transcript2	n2+	e3+	n3+ e4+ n5+
         # Sets (grouping elements)
         U	exon_set	n1	n2	n3
         # Attributes (metadata)

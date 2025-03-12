@@ -54,7 +54,6 @@ class BasicNode:
         "previous_edge_in_nlapth",
         "previous_node_in_nlpath",
         "successors",
-        "trace_id",
     )
 
     def __init__(self) -> None:
@@ -69,22 +68,10 @@ class BasicNode:
         self.previous_node_in_nlpath: Node | None = None
         self.previous_edge_in_nlapth: Edge | None = None
         self.is_merged, self.is_in_graph, self.is_traced = False, False, False
-        self.trace_id: int = -1
 
     def __eq__(self, other) -> bool:
         """Compare two nodes in strict mode same memory address."""
         return id(self) == id(other)
-
-    def set_trace_id(self, trace_id: int) -> None:
-        """Set trace_id."""
-        if not self.is_traced:
-            self.trace_id = trace_id
-            self.is_traced = True
-
-    def reset_trace_id(self) -> None:
-        """Reset trace_id."""
-        self.trace_id = -1
-        self.is_traced = False
 
     def is_start_node(self) -> bool:
         """Return True if Insertion object is start node."""
@@ -258,6 +245,7 @@ class Node(BasicNode):
         "breakpoints",
         "ptc",  #  Path Traversal Count (PTC)
         "ptf",  #  Path Traversal Fraction (PTF)
+        "id",
         *BasicNode.__slots__,
     )
 
@@ -295,6 +283,7 @@ class Node(BasicNode):
         self.breakpoints = defaultdict(int)
 
         self.ptc, self.ptf = 0, 0.0
+        self.id = to_hash_identifier(self._unique_key)
 
     def set_up_breakpoints(self) -> None:
         logger.debug(f"Set up breakpoints for {self!r}")
@@ -350,7 +339,7 @@ class Node(BasicNode):
     def __repr__(self) -> str:
         """Get a string representation of a node."""
         return (
-            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.trace_id=} {self.self_identity} "
+            f"Node({self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand}, {self.id=} {self.self_identity} "
             f"{self.exons!s}, read_ids={self.read_ids})"
         )
 
@@ -579,6 +568,7 @@ class Edge:
         self.node1_key = node1_key
         self.node2_key = node2_key
         self.edge_data = edge_data
+        self.id = to_hash_identifier(f"{node1_key}-{node2_key}")
 
     def __repr__(self) -> str:
         return f"Edge(data={self.edge_data})"
@@ -800,9 +790,12 @@ class NLPath:
         self.nodes = nodes
         self.edges: dict[str, Edge] = {}
         self.is_in_graph = False
-        self.id = -1
         self.merge_factor = 1
         self.extension = False
+
+    @property
+    def id(self) -> str:
+        return to_hash_identifier("-".join([f"{node.id}" for node in self.nodes]))
 
     def __lt__(self, other) -> bool:
         """Implementation sorted function."""
@@ -881,10 +874,6 @@ class NLPath:
     def is_all_type_del(self) -> bool:
         """Check if sv_type of all nodes in the series are DEL."""
         return all(edge.variation_type == VariationType.DEL for edge in self.edges.values())
-
-    def to_hash_identifier(self) -> str:
-        """Get hash identifier of the path."""
-        return to_hash_identifier("-".join([f"{node.chrom}_{node.ref_start}_{node.ref_end}_{node.trace_id}" for node in self.nodes]))
 
     def polish_edges(self) -> None:
         """Polish edges in the path."""
