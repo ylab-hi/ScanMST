@@ -68,8 +68,8 @@ class VCFWriter(Writer):
         "MODE2": "String",
         "GENE1": "String",
         "GENE2": "String",
-        "MEGAEXON1": "String",
-        "MEGAEXON2": "String",
+        "SEGMENT1": "String",
+        "SEGMENT2": "String",
         "HOMSEQ": "String",
         "INSSEQ": "String",
         "TRANSCRIPT_ID": "String",
@@ -101,8 +101,8 @@ class VCFWriter(Writer):
         "END": "A placeholder for END coordinate in case of a translocation",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
-        "MEGAEXON1": "ID for source mega exon",  # Given multiple transcripts, there may be multiple megaexons
-        "MEGAEXON2": "ID for target mega exon",
+        "SEGMENT1": "ID for source mega exon",  # Given multiple transcripts, there may be multiple megaexons
+        "SEGMENT2": "ID for target mega exon",
         "TRANSCRIPT_ID": "Transcript ID",
         "GENE_ID": "Gene ID",
         "SR_ID": "Support read ID",
@@ -225,8 +225,8 @@ class VCFWriter(Writer):
             else:
                 # multiple transcripts go through the same one hop
                 out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
-                out_vcf_dict[type_position_key]["MEGAEXON1"] += f",{hop_feature[type_position_key]['MEGAEXON1']}"
-                out_vcf_dict[type_position_key]["MEGAEXON2"] += f",{hop_feature[type_position_key]['MEGAEXON2']}"
+                out_vcf_dict[type_position_key]["SEGMENT1"] += f",{hop_feature[type_position_key]['SEGMENT1']}"
+                out_vcf_dict[type_position_key]["SEGMENT2"] += f",{hop_feature[type_position_key]['SEGMENT2']}"
                 out_vcf_dict[type_position_key]["SR_ID"] += f",{hop_feature[type_position_key]['SR_ID']}"
                 # deal with 'Y' shape NLS graph
                 if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
@@ -256,7 +256,7 @@ class VCFWriter(Writer):
 
         for _id in VCFWriter.reserved_info:
             _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
-            if _id in {"TRANSCRIPT_ID", "SR_ID", "MEGAEXON1", "MEGAEXON2"}:
+            if _id in {"TRANSCRIPT_ID", "SR_ID", "SEGMENT1", "SEGMENT2"}:
                 _number = "."
             header_lines.append(
                 f'##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},Description="{VCFWriter.description[_id]}">',
