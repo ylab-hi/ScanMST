@@ -383,7 +383,6 @@ class ClusterFinder:
             nlpaths = []
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]
-                current_nlpath.id = i
                 nlpaths.append(current_nlpath)
 
             sorted_nlpaths = sort_cluster(nlpaths)

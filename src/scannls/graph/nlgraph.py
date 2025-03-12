@@ -107,7 +107,6 @@ class NLGraph:
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
-            current_path.id = idx
             current_path.polish_edges()
             all_paths.append(current_path)
 
