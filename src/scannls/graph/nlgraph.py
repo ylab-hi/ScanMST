@@ -16,6 +16,7 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
+    to_hash_identifier,
 )
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition
@@ -103,7 +104,7 @@ class NLGraph:
 
         all_paths = []
         # trace path
-        for idx, node_list in enumerate(self.trace(), 1):
+        for _idx, node_list in enumerate(self.trace(), 1):
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
@@ -517,6 +518,11 @@ class NLGraph:
             )
 
         return result_series_list
+
+    @property
+    def id(self) -> str:
+        """Get id of graph."""
+        return to_hash_identifier("-".join(node.id for node in self.nodes.values()))
 
 
 def merge_nodes(

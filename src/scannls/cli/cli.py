@@ -16,6 +16,7 @@ from scannls.base import Blat, MyLogger, ParallelWorker
 from scannls.graph import ClusterFinder, NLGraph
 from scannls.utils import find_2bit_file, sleep, wait_for_aligner
 from scannls.writer import FastaWriter, GTFWriter, VCFWriter, Writers
+from scannls.writer.tsg_writer import TSGWriter
 
 from .main import scanbam_run
 
@@ -46,6 +47,8 @@ def get_writers(
         ref_path,
         bam_header,
     )
+    tsg_writer = TSGWriter(f"{output_prefix}.tsg")
+
     if output_sequence_choice in {"reference", "consensus"}:
         fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, output_sequence_choice, read_name_to_seq_dict)
 
@@ -53,7 +56,7 @@ def get_writers(
     fasta_writer1 = FastaWriter(f"{output_prefix}.reference.fasta", ref_path, "reference", read_name_to_seq_dict)
     fasta_writer2 = FastaWriter(f"{output_prefix}.consensus.fasta", ref_path, "consensus", read_name_to_seq_dict)
 
-    return Writers((fasta_writer1, fasta_writer2, gtf_writer, vcf_writer))
+    return Writers((fasta_writer1, fasta_writer2, gtf_writer, vcf_writer, tsg_writer))
 
 
 def parse_nlgraph_for_cluster_seq(

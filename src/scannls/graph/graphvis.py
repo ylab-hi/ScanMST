@@ -26,6 +26,120 @@ def default_visitors(graph: NLGraph, figure_name: str, support_reads: int = 1) -
     )
 
 
+def get_label_from_node(node: Node) -> str:
+    """Get label from node."""
+    return node.id
+
+
+def add_node_to_nxgraph(node: Node, graph: nx.Graph) -> None:
+    """Add node to graph."""
+    node_label = get_label_from_node(node)
+    idendities = []
+    for rid, identity in node.identities.items():
+        if identity.is_head():
+            identity_str = "SO"
+        elif identity.is_tail():
+            identity_str = "SI"
+        else:
+            identity_str = "IN"
+        idendities.append(f"{rid}:{identity_str}")
+
+    graph.add_node(
+        node_label,
+        chrom=node.chrom,
+        ref_start=node.ref_start,
+        ref_end=node.ref_end,
+        strand=str(node.strand),
+        is_head=node.is_start_node(),
+        exons=str(node.exons),
+        reads=",".join(idendities),
+        ptc=node.ptc,
+        ptf=node.ptf,
+    )
+
+
+def add_edge_to_nxgraph(
+    node1: Node,
+    node2: Node,
+    edge: Edge,
+    graph: nx.Graph,
+) -> None:
+    """Add edge to graph."""
+    edge_label = edge.id
+    node1_label = get_label_from_node(node1)
+    node2_label = get_label_from_node(node2)
+    breakpoints = f"{edge.break_point1.chrom},{edge.break_point2.chrom},{edge.break_point1.pos},{edge.break_point2.pos},{edge.variation_type}"
+
+    if graph.has_edge(node1_label, node2_label):
+        current_edge_label = [i["id"] for i in graph[node1_label][node2_label].values()]
+        if edge_label not in current_edge_label:
+            logger.warning(f"vis: multiple edges between {node1_label} and {node2_label}")
+            graph.add_edge(
+                node1_label,
+                node2_label,
+                id=edge.id,
+                weight=edge.sr,
+                read_ids=edge.read_ids,
+                gene1=edge.gene1,
+                gene2=edge.gene2,
+                breakpoints=breakpoints,
+            )
+    else:
+        graph.add_edge(
+            node1_label,
+            node2_label,
+            id=edge.id,
+            weight=edge.sr,
+            read_ids=edge.read_ids,
+            breakpoints=breakpoints,
+        )
+
+
+def create_nxgraph(nlgraph, min_support_reads: int = 1) -> nx.DiGraph:
+    # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
+
+    g = nx.MultiDiGraph()
+
+    try:
+        for start_node in nlgraph.get_start_nodes():
+            _create_nxgraph(start_node, [start_node], g, nlgraph, min_support_reads)  # type: ignore
+    except RecursionError:
+        logger.error("RecursionError: maximum recursion depth exceeded when export graph")
+    return g
+
+
+def _create_nxgraph(
+    start_node: Node,
+    path,
+    nx_graph: nx.Graph,
+    graph,
+    min_support_reads,
+) -> None:
+    """Plot graph helper."""
+    if not start_node:
+        return
+
+    add_node_to_nxgraph(start_node, nx_graph)
+
+    if successors := start_node.successors:
+        for successor in successors:
+            for idx, edge in enumerate(
+                graph.get_possible_edges(
+                    path,
+                    start_node,
+                    successor,
+                    min_support_reads,  # minimal support_reads,
+                    filter_edges=False,
+                )
+            ):
+                if idx > 0:
+                    logger.warning("Vis: multiple edges between {} and {}", start_node, successor)
+
+                add_node_to_nxgraph(successor, nx_graph)
+                add_edge_to_nxgraph(start_node, successor, edge, nx_graph)
+                _create_nxgraph(successor, [*path, edge, successor], nx_graph, graph, min_support_reads)
+
+
 class GraphVis:
     GRAPH_LINK_DATA: ClassVar[dict[str, str]] = {
         "link": "edges",
@@ -33,15 +147,15 @@ class GraphVis:
         "target": "target",
     }
 
-    def __init__(self, nlgraph: NLGraph, visitors: list[GraphVisitor] | None = None, min_supprt_reads=1):
+    def __init__(self, nlgraph: NLGraph, visitors: list[GraphVisitor] | None = None, min_support_reads=1):
         self.nlgraph = nlgraph
         self.visitors: list[GraphVisitor] = [] if visitors is None else visitors
-        self.min_supprt_reads = min_supprt_reads
+        self.min_support_reads = min_support_reads
 
     @classmethod
-    def from_visitors(cls, nlgraph: NLGraph, visitors: list[GraphVisitor], min_supprt_reads) -> GraphVis:
+    def from_visitors(cls, nlgraph: NLGraph, visitors: list[GraphVisitor], min_support_reads) -> GraphVis:
         """Create GraphVis from visitors."""
-        return cls(nlgraph, visitors, min_supprt_reads)
+        return cls(nlgraph, visitors, min_support_reads)
 
     @staticmethod
     def load(file_name: str | Path):
@@ -73,130 +187,12 @@ class GraphVis:
 
     def visualize(self, *, visitors: list[GraphVisitor] | None = None) -> None:
         """Plot graph."""
-        g = self.create_nxgraph()
+        g = create_nxgraph(self.nlgraph, self.min_support_reads)
         if visitors is None:
             visitors = []
 
         for visitor in self.visitors + visitors:
             visitor.visit(g)
-
-    @staticmethod
-    def get_label_from_node(node: Node) -> str:
-        """Get label from node."""
-        return node.id
-
-    @staticmethod
-    def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
-        """Add node to graph."""
-        node_label = GraphVis.get_label_from_node(node)
-        idendities = []
-        for rid, identity in node.identities.items():
-            if identity.is_head():
-                identity_str = "SO"
-            elif identity.is_tail():
-                identity_str = "SI"
-            else:
-                identity_str = "IN"
-            idendities.append(f"{rid}:{identity_str}")
-
-        graph.add_node(
-            node_label,
-            chrom=node.chrom,
-            ref_start=node.ref_start,
-            ref_end=node.ref_end,
-            strand=str(node.strand),
-            is_head=node.is_start_node(),
-            exons=str(node.exons),
-            reads=",".join(idendities),
-            ptc=node.ptc,
-            ptf=node.ptf,
-        )
-
-    def add_edge_to_graph(
-        self,
-        node1: Node,
-        node2: Node,
-        edge: Edge,
-        graph: nx.Graph,
-    ) -> None:
-        """Add edge to graph."""
-        edge_label = edge.id
-        node1_label = GraphVis.get_label_from_node(node1)
-        node2_label = GraphVis.get_label_from_node(node2)
-        breakpoints = f"{edge.break_point1.chrom},{edge.break_point2.chrom},{edge.break_point1.pos},{edge.break_point2.pos},{edge.variation_type}"
-
-        if graph.has_edge(node1_label, node2_label):
-            current_edge_label = [i["id"] for i in graph[node1_label][node2_label].values()]
-            if edge_label not in current_edge_label:
-                logger.warning(f"vis: multiple edges between {node1_label} and {node2_label}")
-                graph.add_edge(
-                    node1_label,
-                    node2_label,
-                    id=edge.id,
-                    weight=edge.sr,
-                    read_ids=edge.read_ids,
-                    gene1=edge.gene1,
-                    gene2=edge.gene2,
-                    breakpoints=breakpoints,
-                )
-        else:
-            graph.add_edge(
-                node1_label,
-                node2_label,
-                id=edge.id,
-                weight=edge.sr,
-                read_ids=edge.read_ids,
-                breakpoints=breakpoints,
-            )
-
-    def create_nxgraph(self) -> nx.DiGraph:
-        # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
-
-        g = nx.MultiDiGraph()
-
-        try:
-            for start_node in self.nlgraph.get_start_nodes():
-                self._traverse_graph(start_node, [start_node], g, self.nlgraph)  # type: ignore
-        except RecursionError:
-            logger.error("RecursionError: maximum recursion depth exceeded when export graph")
-
-        return g
-
-    def _traverse_graph(
-        self,
-        start_node: Node,
-        path,
-        nx_graph: nx.Graph,
-        graph,
-    ) -> None:
-        """Plot graph helper."""
-        if not start_node:
-            return
-
-        self.add_node_to_graph(start_node, nx_graph)
-
-        if successors := start_node.successors:
-            for successor in successors:
-                for idx, edge in enumerate(
-                    graph.get_possible_edges(
-                        path,
-                        start_node,
-                        successor,
-                        self.min_supprt_reads,  # minimal support_reads,
-                        filter_edges=False,
-                    )
-                ):
-                    if idx > 0:
-                        logger.warning("Vis: multiple edges between {} and {}", start_node, successor)
-
-                    self.add_node_to_graph(successor, nx_graph)
-                    self.add_edge_to_graph(start_node, successor, edge, nx_graph)
-                    self._traverse_graph(
-                        successor,
-                        [*path, edge, successor],
-                        nx_graph,
-                        graph,
-                    )
 
 
 # https://networkx.org/documentation/latest/auto_examples/drawing/plot_weighted_graph.html#sphx-glr-auto-examples-drawing-plot-weighted-graph-py
