@@ -9,10 +9,9 @@ from typing import IO, TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls.graph.nlgraph import NLGraph
-
 if TYPE_CHECKING:
     from scannls.graph import NLPath
+    from scannls.graph.nlgraph import NLGraph
 
 
 class Writer(ABC):

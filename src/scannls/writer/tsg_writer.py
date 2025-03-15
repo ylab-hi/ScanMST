@@ -41,11 +41,12 @@ class TSGWriter(Writer):
         if self.is_opened:
             logger.warning(f"{self.__class__.__name__}: File is already opened.")
         self.io = self.file_path.open(mode)
+
         if hasattr(self, "write_header"):
             self.write_header()  # type: ignore
         return self.io
 
-    def writer_header(self) -> None:
+    def write_header(self) -> None:
         """Write header to file."""
         header = "\n".join([f"H\t{k}\t{v}" for k, v in self.HEADER.items()])
         self.write_line(header)
@@ -89,10 +90,10 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
     nxgraph = create_nxgraph(nlgraph, min_support_reads=min_support_reads)
     result = []
 
-    if gid is not None or gid != "":
-        result.append(f"G\t{gid}")
+    if gid:
+        result.append(f"\nG\t{gid}")
     else:
-        result.append(f"G\t{nlgraph.id}")
+        result.append(f"\nG\t{nlgraph.id}")
 
     for node in nxgraph.nodes(data=True):
         result.append(f"N\t{node[0]}\t{node[1]['chrom']}:{node[1]['strand']!s}:{node[1]['exons'][1:-1]!s}\t{node[1]['reads']}")

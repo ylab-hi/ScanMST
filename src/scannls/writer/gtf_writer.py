@@ -129,14 +129,11 @@ def get_nodes_gtf_features_from_nlpath(
             min_nlpath_originla_sr = min(min_nlpath_originla_sr, edge.original_sr)
 
         nlpath_gtf_features.extend(
-            [
-                x
-                for x in get_gtf_features_from_node(
+            list(get_gtf_features_from_node(
                     node,
                     edge,
                     nlpath.id,
-                )
-            ],
+                )),
         )
 
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):

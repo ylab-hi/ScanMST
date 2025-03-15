@@ -522,7 +522,7 @@ class NLGraph:
     @property
     def id(self) -> str:
         """Get id of graph."""
-        return to_hash_identifier("-".join(node.id for node in self.nodes.values()))
+        return to_hash_identifier("-".join(node.id for node in self))
 
 
 def merge_nodes(
