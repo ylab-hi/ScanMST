@@ -69,7 +69,7 @@ def parse_nlgraph_for_cluster_seq(
     average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
-    splice_graph = NLGraph.create_graph(
+    nlgraph = NLGraph.create_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -88,7 +88,7 @@ def parse_nlgraph_for_cluster_seq(
     with writers.open():
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
-            for nlpath in splice_graph(cluster, ind, is_plot=options.graph):
+            for nlpath in nlgraph(cluster, ind, is_plot=options.graph):
                 if len(nlpath) == 1:
                     logger.warning(
                         f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
@@ -96,6 +96,8 @@ def parse_nlgraph_for_cluster_seq(
 
                 logger.debug(f"cluster {ind=} output {nlpath=} ")
                 writers.write_path(nlpath, f"{ind}")
+
+            writers.write_graph(nlgraph)
 
 
 def _parse_nlgraph_for_cluster_par(

@@ -99,7 +99,6 @@ class GTFWriter(Writer):
 
         for node_gtf_feature in get_nodes_gtf_features_from_nlpath(
             data_object,
-            str(object_id),
             self.rescue_sr,
         ):
             self.write_line(self.formatter(node_gtf_feature))
@@ -107,7 +106,6 @@ class GTFWriter(Writer):
 
 def get_nodes_gtf_features_from_nlpath(
     nlpath: NLPath,
-    cluster_id: str,
     rescue_sr: bool,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
@@ -132,10 +130,7 @@ def get_nodes_gtf_features_from_nlpath(
 
         nlpath_gtf_features.extend(
             [
-                add_info_to_attribute_column(
-                    x,
-                    f'gene_id "{cluster_id}";',
-                )
+                x
                 for x in get_gtf_features_from_node(
                     node,
                     edge,
@@ -146,25 +141,19 @@ def get_nodes_gtf_features_from_nlpath(
 
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):
             nlpath_gtf_features.append(
-                add_info_to_attribute_column(
-                    get_gtf_features_from_insertion(
-                        insertion_info[1],
-                        nlpath.id,
-                        node.id,
-                    ),
-                    f'gene_id "{cluster_id}";',
+                get_gtf_features_from_insertion(
+                    insertion_info[1],
+                    nlpath.id,
+                    node.id,
                 ),
             )
 
-    nlpath_gtf_features[0] = add_info_to_attribute_column(
-        format_gtf_features_for_nlpath(
-            nlpath_id=nlpath.id,
-            nlpath_sr=min_nlpath_sr,
-            nlpath_originla_sr=min_nlpath_originla_sr,
-            rescue_sr=rescue_sr,
-            extend=nlpath.extension,
-        ),
-        f'gene_id "{cluster_id}";',
+    nlpath_gtf_features[0] = format_gtf_features_for_nlpath(
+        nlpath_id=nlpath.id,
+        nlpath_sr=min_nlpath_sr,
+        nlpath_originla_sr=min_nlpath_originla_sr,
+        rescue_sr=rescue_sr,
+        extend=nlpath.extension,
     )
 
     return nlpath_gtf_features

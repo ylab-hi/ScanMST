@@ -210,7 +210,6 @@ class VCFWriter(Writer):
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
         for _hop_vcf_feature in get_vcf_features_from_nlpath(
             data_object,
-            cluster_id,
             self.rescue_sr,
         ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
@@ -315,7 +314,6 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 
 def get_vcf_features_from_nlpath(
     nlpath: NLPath,
-    cluster_id: str,
     rescue_sr: bool,
 ):
     """Obtain hop vcf features from one series."""
@@ -400,7 +398,7 @@ def get_vcf_features_from_nlpath(
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": nlpath.id,
-                    "GENE_ID": f"{cluster_id}",
+                    "GENE_ID": f"{nlpath.id}",
                     "SR_ID": f"{'|'.join(current_edge.read_ids)}",
                     "READS": set(current_edge.read_ids),
                     "SVMETHOD": "ScanNLS",

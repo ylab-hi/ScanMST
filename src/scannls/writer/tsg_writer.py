@@ -29,6 +29,7 @@ class TSGWriter(Writer):
     def __init__(self, file_path: str) -> None:
         """Initialize GTFWriter object."""
         super().__init__(file_path)
+        self.path_writer = False
 
     @property
     def is_opened(self) -> bool:
@@ -88,7 +89,7 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
     nxgraph = create_nxgraph(nlgraph, min_support_reads=min_support_reads)
     result = []
 
-    if gid is not None:
+    if gid is not None or gid != "":
         result.append(f"G\t{gid}")
     else:
         result.append(f"G\t{nlgraph.id}")
