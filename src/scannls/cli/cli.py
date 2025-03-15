@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import log
 import os
 import sys
 import tempfile
@@ -48,6 +49,7 @@ def get_writers(
         bam_header,
     )
     tsg_writer = TSGWriter(f"{output_prefix}.tsg")
+    logger.debug(f"add tsg writer {output_prefix}.tsg")
 
     if output_sequence_choice in {"reference", "consensus"}:
         fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, output_sequence_choice, read_name_to_seq_dict)
