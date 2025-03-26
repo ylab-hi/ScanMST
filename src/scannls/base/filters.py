@@ -398,6 +398,7 @@ class CircRNAFilter:
         # no overlapping annotated transcript
         common_intron_condition = len(common_introns) > 0
 
+        mono_exon_condition = None
         # mono-exon even not within an intronic region, could be indicative of circular RNA
         if len(exons_of_first_node) == len(exons_of_second_node) == 1:
             if str(strand_first) == "+":
