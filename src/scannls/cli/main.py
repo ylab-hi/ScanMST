@@ -216,7 +216,7 @@ class BamScanner:
                                     and del_fraction_aligner <= del_fraction
                                 ):
                                     # use original mapq as realignment mapq temporarily
-                                    new_record = f"{chrom_aligner},{position_aligner+1},{strand_aligner},{updated_cigar},{read_mapq},{nm_aligner}"
+                                    new_record = f"{chrom_aligner},{position_aligner + 1},{strand_aligner},{updated_cigar},{read_mapq},{nm_aligner}"
                                     self.representative_alignments_new_record[f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"] = new_record
                                     is_passed_qc = True
 
@@ -492,7 +492,6 @@ def _scan_bam_helper(
     blat_port,
     tmp_dir,
     blat_info,
-    aligner,
     in_bam_path,
     ref_genome,
     gtf,
@@ -535,9 +534,18 @@ def _scan_bam_helper(
         )
 
     logger.trace(f"{identified_key=} start")
+    from scannls.base import Blat
 
-    if aligner is not None:
-        aligner.lock = lock
+    if blat_info is not None:
+        blat_log_file, blat_is_start_server = blat_info
+        aligner = Blat(
+            blat_two_bit,
+            blat_port,
+            tmp_dir,
+            fix_log_file=blat_log_file,
+            is_start_server=blat_is_start_server,
+            lock=lock,
+        )
 
     nls_src_forms_list = []
     # read name: sequence at transcriptional direction
@@ -562,7 +570,7 @@ def _scan_bam_helper(
             # update SA tag of representative alignments (START)
             if read.has_tag("SA"):
                 logger.trace(
-                    f"Pre-checking: {read.query_name=} has SA; supplementary read: " f"{read.is_supplementary}",
+                    f"Pre-checking: {read.query_name=} has SA; supplementary read: {read.is_supplementary}",
                 )
 
                 updated_chimeric_alns = []
@@ -828,7 +836,7 @@ def _scan_bam_helper(
 
                 else:
                     logger.trace(
-                        f"{read.query_name=} does not pass the num of mismatches(edit distance) cutoff." f"{nm=}",
+                        f"{read.query_name=} does not pass the num of mismatches(edit distance) cutoff.{nm=}",
                     )
     logger.debug(f"Total nlpaths: {nls_src_forms_list}")
     logger.complete()
@@ -923,7 +931,6 @@ def scanbam_run(
             intact_read_query_name_to_sequence_dict.update(contig_read_query_name_to_sequence_dict)
 
     bam_scanner.in_bam.close()
-
     sorted_intact_series_list = sorted(intact_series_list)
 
     return (
