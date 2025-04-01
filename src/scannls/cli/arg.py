@@ -188,9 +188,9 @@ def parse_args() -> argparse.ArgumentParser:
         help="set log level (default: %(default)s)",
     )
     parser.add_argument(
-        "--parallel",
+        "--thread",
         action="store",
-        dest="parallel",
+        dest="thread",
         type=int,
         default=DefaultOptions.thread,
         help="set working mode in processor (default: %(default)s)",
