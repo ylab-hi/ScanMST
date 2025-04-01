@@ -33,7 +33,7 @@ class DefaultOptions:
     log: str = "warning"
     species: str = "human"
     species_choices: tuple[str, str] = ("human", "mouse")
-    parallel: int = 1
+    thread: int = 1
     min_soft_seg_len: int = 200
     max_allowed_nm: int = 100
     max_allowed_micro_insertion: int = 50
@@ -192,7 +192,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="parallel",
         type=int,
-        default=DefaultOptions.parallel,
+        default=DefaultOptions.thread,
         help="set working mode in processor (default: %(default)s)",
     )
     parser.add_argument(

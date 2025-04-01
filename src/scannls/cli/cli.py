@@ -131,7 +131,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             diagnose=True,
         )
 
-    running_mode = "parallel" if options.parallel > 1 else "normal"
+    running_mode = "parallel" if options.thread > 1 else "normal"
 
     output_prefix_path = Path(options.output)
     if output_prefix_path.is_absolute():
@@ -189,7 +189,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             aligner=aligner,
             logger=logger,
             motif_required=motif_required,
-            parallel=options.parallel,
+            parallel=options.thread,
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
