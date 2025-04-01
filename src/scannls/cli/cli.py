@@ -6,16 +6,16 @@ import os
 import sys
 import tempfile
 import time
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from scannls.base import Blat, MyLogger, ParallelWorker
+from scannls.base import Blat
 from scannls.graph import ClusterFinder, NLGraph
 from scannls.utils import find_2bit_file, sleep, wait_for_aligner
 from scannls.writer import FastaWriter, GTFWriter, VCFWriter, Writers
+from scannls.writer.tsg_writer import TSGWriter
 
 from .main import scanbam_run
 
@@ -46,14 +46,16 @@ def get_writers(
         ref_path,
         bam_header,
     )
+    tsg_writer = TSGWriter(f"{output_prefix}.tsg")
+
     if output_sequence_choice in {"reference", "consensus"}:
         fasta_writer = FastaWriter(f"{output_prefix}.fasta", ref_path, output_sequence_choice, read_name_to_seq_dict)
+        return Writers((fasta_writer, gtf_writer, vcf_writer, tsg_writer))
 
-        return Writers((fasta_writer, gtf_writer, vcf_writer))
     fasta_writer1 = FastaWriter(f"{output_prefix}.reference.fasta", ref_path, "reference", read_name_to_seq_dict)
     fasta_writer2 = FastaWriter(f"{output_prefix}.consensus.fasta", ref_path, "consensus", read_name_to_seq_dict)
 
-    return Writers((fasta_writer1, fasta_writer2, gtf_writer, vcf_writer))
+    return Writers((fasta_writer1, fasta_writer2, gtf_writer, vcf_writer, tsg_writer))
 
 
 def parse_nlgraph_for_cluster_seq(
@@ -66,7 +68,7 @@ def parse_nlgraph_for_cluster_seq(
     average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
-    splice_graph = NLGraph.create_graph(
+    nlgraph = NLGraph.create_graph(
         options.input,
         options.mapq,
         options.soft_len,
@@ -82,10 +84,12 @@ def parse_nlgraph_for_cluster_seq(
         rescue_sr=options.rescue_sr,
     )
 
+    input_stem = Path(options.input).stem
+
     with writers.open():
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
-            for nlpath in splice_graph(cluster, ind, is_plot=options.graph):
+            for nlpath in nlgraph(cluster, ind, is_plot=options.graph):
                 if len(nlpath) == 1:
                     logger.warning(
                         f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
@@ -94,82 +98,7 @@ def parse_nlgraph_for_cluster_seq(
                 logger.debug(f"cluster {ind=} output {nlpath=} ")
                 writers.write_path(nlpath, f"{ind}")
 
-
-def _parse_nlgraph_for_cluster_par(
-    clusters: Any,
-    options: DefaultOptions | argparse.Namespace,
-    node_rescued_sr_maximum: int,
-    output_dir: Path,
-    average_read_depth: int | None,
-):
-    """Parse splice graph for cliques."""
-    from loguru import logger
-
-    logger = MyLogger(f"PID-{os.getpid()}", logger)  # type: ignore
-
-    splice_graph = NLGraph.create_graph(
-        options.input,
-        options.mapq,
-        options.soft_len,
-        options.mismatch,
-        options.alignment_fraction,
-        logger,
-        options.prune_threshold,
-        options.support_reads,
-        node_rescued_sr_maximum,
-        average_read_depth,
-        output_dir,
-        ignore_circle=options.ignore_circle,
-        rescue_sr=options.rescue_sr,
-    )
-
-    result = []
-    # use time to generate unique name
-    import secrets
-
-    unique_name = secrets.token_hex(4)
-    for ind, cluster in enumerate(clusters, 1):
-        result.append(list(splice_graph(cluster, f"{os.getpid()}_{unique_name}_{ind}", is_plot=options.graph)))
-
-    return result
-
-
-def parse_nlgraph_for_cluster_par(
-    clusters: Any,
-    writers: Writers,
-    options: DefaultOptions | argparse.Namespace,
-    node_rescued_sr_maximum: int,
-    logger: LoggerType,
-    output_dir: Path,
-    average_read_depth: int | None = None,
-) -> None:
-    """Parse splice graph for cliques."""
-    parallel_workers = ParallelWorker(
-        partial(
-            _parse_nlgraph_for_cluster_par,
-            options=options,
-            node_rescued_sr_maximum=node_rescued_sr_maximum,
-            output_dir=output_dir,
-            average_read_depth=average_read_depth,
-        ),
-        logger,
-        options.parallel,
-    )
-    clusters = [[list(cluster)] for cluster in clusters]
-    result = parallel_workers.map(
-        clusters,
-        chunksize=max(1, len(clusters) // parallel_workers.n_jobs),
-    )
-
-    with writers.open() as _:
-        for ind, cluster in enumerate(result, 1):
-            for nlpath in cluster[0]:  # reduce list depth
-                if len(nlpath) == 1:
-                    logger.warning(
-                        f"Single path {ind}: {nlpath}{nlpath[0].query_name}",
-                    )
-                logger.debug(f"Output Cluster {ind}: {nlpath}")
-                writers.write_path(nlpath, f"{ind}")
+            writers.write_graph(nlgraph, f"{input_stem}_{ind}")
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
@@ -294,7 +223,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         writers = get_writers(
             str(output_file_path), options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
         )
-        parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
+        parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq
 
         node_rescued_sr_max = 100
         parse_splice_graph_for_cluster(

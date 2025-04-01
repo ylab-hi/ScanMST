@@ -388,15 +388,25 @@ class CircRNAFilter:
             anchor1 = HTSeq.GenomicPosition(chrom, first_node.ref_start, "-")
             anchor2 = HTSeq.GenomicPosition(chrom, second_node.ref_end, "-")
 
+        common_introns = set()
+
         if anchor1 and anchor2:
             intron_set1 = self.introns_gas[anchor1]
             intron_set2 = self.introns_gas[anchor2]
             common_introns = intron_set1.intersection(intron_set2)
 
-            # no overlapping annotated transcript
-            return len(common_introns) != 0
+        # no overlapping annotated transcript
+        common_intron_condition = len(common_introns) > 0
 
-        return False
+        mono_exon_condition = None
+        # mono-exon even not within an intronic region, could be indicative of circular RNA
+        if len(exons_of_first_node) == len(exons_of_second_node) == 1:
+            if str(strand_first) == "+":
+                mono_exon_condition = first_node.ref_start > second_node.ref_end
+            elif str(strand_first) == "-":
+                mono_exon_condition =  first_node.ref_end < second_node.ref_start
+
+        return common_intron_condition or mono_exon_condition
 
     def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
         self,

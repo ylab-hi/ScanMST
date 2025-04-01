@@ -11,6 +11,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from scannls.graph import NLPath
+    from scannls.graph.nlgraph import NLGraph
 
 
 class Writer(ABC):
@@ -22,6 +23,7 @@ class Writer(ABC):
         if self.file_path.exists():
             logger.warning(f"{self.file_path} exists, will be overwritten.")
         self.io: IO | None = None
+        self.path_writer = True
 
     @abstractmethod
     def write_data(self, data_object: Any, object_id: str):
@@ -63,7 +65,18 @@ class Writers:
              This method need all writers to be opened.
         """
         for writer in self.writers_list:
-            writer.write_data(nlpath, cluster_id)
+            if writer.path_writer:
+                writer.write_data(nlpath, cluster_id)
+
+    def write_graph(self, graph: NLGraph, cluster_id: str) -> None:
+        """Write graph.
+
+        .. note::
+             This method need all writers to be opened.
+        """
+        for writer in self.writers_list:
+            if not writer.path_writer:
+                writer.write_data(graph, cluster_id)
 
     def open_writers(self, mode: str = "w") -> list[IO]:
         """Open writers."""

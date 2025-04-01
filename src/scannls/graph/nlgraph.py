@@ -16,6 +16,7 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
+    to_hash_identifier,
 )
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition
@@ -103,11 +104,10 @@ class NLGraph:
 
         all_paths = []
         # trace path
-        for idx, node_list in enumerate(self.trace(), 1):
+        for _idx, node_list in enumerate(self.trace(), 1):
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
-            current_path.id = idx
             current_path.polish_edges()
             all_paths.append(current_path)
 
@@ -150,11 +150,6 @@ class NLGraph:
         )
 
         return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), output_dir, rescue_sr, ignore_circle)
-
-    @property
-    def trace_id(self) -> int:
-        self._trace_id += 1
-        return self._trace_id
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
         """Add edge from node1 -> node2."""
@@ -475,7 +470,6 @@ class NLGraph:
                         path[-1].update_breakpoint()
                         edge.break_point1.pos = new_break_point
 
-                    successor.set_trace_id(self.trace_id)
                     self._trace_forward(
                         successor,
                         [*path, edge, successor],
@@ -497,7 +491,6 @@ class NLGraph:
 
     def trace(self) -> Any:
         """Trace forward through graph and find all paths."""
-        self._trace_id = 0
         self.has_circle = False
 
         result_series_list = []
@@ -506,7 +499,6 @@ class NLGraph:
             self.logger.warning(f"A circle may exist in graph {self.nodes.values()}")
 
         for start_node in self.get_start_nodes():
-            start_node.set_trace_id(self.trace_id)
             group_paths = []
             self._trace_forward(
                 start_node,
@@ -526,6 +518,11 @@ class NLGraph:
             )
 
         return result_series_list
+
+    @property
+    def id(self) -> str:
+        """Get id of graph."""
+        return to_hash_identifier("-".join(node.id for node in self))
 
 
 def merge_nodes(
