@@ -109,7 +109,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]scannls[/] :rocket: Non-colinear splicing " "(NLS) events identification using transcriptomic" " long reads data",
+        description="[red]scannls[/] :rocket: Non-colinear splicing (NLS) events identification using transcriptomic long reads data",
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(

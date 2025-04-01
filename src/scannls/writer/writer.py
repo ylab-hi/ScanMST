@@ -68,7 +68,7 @@ class Writers:
             if writer.path_writer:
                 writer.write_data(nlpath, cluster_id)
 
-    def write_graph(self, graph: NLGraph) -> None:
+    def write_graph(self, graph: NLGraph, cluster_id: str) -> None:
         """Write graph.
 
         .. note::
@@ -76,7 +76,7 @@ class Writers:
         """
         for writer in self.writers_list:
             if not writer.path_writer:
-                writer.write_data(graph, "")
+                writer.write_data(graph, cluster_id)
 
     def open_writers(self, mode: str = "w") -> list[IO]:
         """Open writers."""

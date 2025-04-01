@@ -84,6 +84,8 @@ def parse_nlgraph_for_cluster_seq(
         rescue_sr=options.rescue_sr,
     )
 
+    input_stem = Path(options.input).stem
+
     with writers.open():
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
@@ -96,7 +98,7 @@ def parse_nlgraph_for_cluster_seq(
                 logger.debug(f"cluster {ind=} output {nlpath=} ")
                 writers.write_path(nlpath, f"{ind}")
 
-            writers.write_graph(nlgraph)
+            writers.write_graph(nlgraph, f"{input_stem}_{ind}")
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
