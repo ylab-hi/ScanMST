@@ -536,6 +536,7 @@ def _scan_bam_helper(
     logger.trace(f"{identified_key=} start")
     from scannls.base import Blat
 
+    aligner = None
     if blat_info is not None:
         blat_log_file, blat_is_start_server = blat_info
         aligner = Blat(
