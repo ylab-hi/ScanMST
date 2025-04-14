@@ -283,7 +283,7 @@ class Node(BasicNode):
         self.breakpoints = defaultdict(int)
 
         self.ptc, self.ptf = 0, 0.0
-        self.id = to_hash_identifier(self._unique_key)
+        self.id = "N." + to_hash_identifier(self._unique_key)
 
     def set_up_breakpoints(self) -> None:
         logger.debug(f"Set up breakpoints for {self!r}")
@@ -568,7 +568,7 @@ class Edge:
         self.node1_key = node1_key
         self.node2_key = node2_key
         self.edge_data = edge_data
-        self.id = to_hash_identifier(f"{node1_key}-{node2_key}")
+        self.id = "E." + to_hash_identifier(f"{node1_key}-{node2_key}")
 
     def __repr__(self) -> str:
         return f"Edge(data={self.edge_data})"

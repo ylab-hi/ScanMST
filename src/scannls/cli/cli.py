@@ -98,7 +98,7 @@ def parse_nlgraph_for_cluster_seq(
                 logger.debug(f"cluster {ind=} output {nlpath=} ")
                 writers.write_path(nlpath, f"{ind}")
 
-            writers.write_graph(nlgraph, f"{input_stem}_{ind}")
+            writers.write_graph(nlgraph, "G." + f"{input_stem}_{ind}")
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
