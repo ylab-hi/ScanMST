@@ -110,20 +110,6 @@ class MergeCondition:
             self.threshold,
         )
 
-    def head2head4distance(self, node1: Node, node2: Node) -> bool:
-        return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode_for_distance(
-            node1,
-            node2,
-            self.threshold,
-        )
-
-    def tail2tail4distance(self, node1: Node, node2: Node) -> bool:
-        return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode_for_distance(
-            node1,
-            node2,
-            self.threshold,
-        )
-
     def merged(self, node1: Node, node2: Node) -> bool:
         node1_self_identity = node1.self_identity
         node2_self_identity = node2.self_identity
@@ -151,101 +137,6 @@ class MergeCondition:
             return self.tail2tail(node1, node2)
         msg = "Invalid node identity"
         raise ValueError(msg)
-
-
-def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode_for_distance(
-    node1: Node,
-    node2: Node,
-    threshold: int,
-    jaccard_threshold: float = 0.5,
-) -> bool:
-    """Check if both head nodes shared most of the introns.
-
-    :param threshold:
-
-    .. note::
-        nodes with different length may be merged. []: exon -: intron
-        node1: [    ]-[ ]-[ ]-[ ]
-        node2: [ ]-[]-[ ]-[ ]-[ ]
-
-        node1: [ ]-----[ ]-[ ]-[ ]
-        node2:     [ ]-[ ]-[ ]-[ ]
-
-    """
-    if node1.chrom != node2.chrom:
-        return False
-
-    # merge will not work for nodes on the different strands
-    if node1.strand != node2.strand:
-        return False
-
-    # checking if breakpoints satisfy the threshold
-    if node1.strand.is_forward():
-        if abs(node1.ref_end - node2.ref_end) > threshold:
-            return False
-
-    elif abs(node1.ref_start - node2.ref_start) > threshold:
-        return False
-
-    # both have no introns
-    if not node1.introns and not node2.introns:
-        return True
-
-    if node1.introns and node2.introns:
-        set1 = set(node1.introns)
-        set2 = set(node2.introns)
-        jaccard_index = len(set1 & set2) / len(set1 | set2)
-        return jaccard_index > jaccard_threshold
-
-    return False
-
-
-def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode_for_distance(
-    node1: Node,
-    node2: Node,
-    threshold: int,
-    jaccard_threshold: float = 0.5,
-) -> bool:
-    """Check if two end nodes shared most of introns.
-
-    node1 is tail node, node2 is tail node
-    check if they shared at a certain level.
-    alternative polyadenylation (APA) is common phenomenon for genes.
-
-    :param threshold: threshold for checking if two nodes are merged
-    :param node1:  node1
-    :param node2:  node2
-    :return:  True if two nodes are merged, otherwise False
-
-    .. note::
-
-        -> [node1]
-        -> [node2]
-    """
-
-    if node1.chrom != node2.chrom:
-        return False
-
-    # merge will not work for nodes on the different strands
-    if node1.strand != node2.strand:
-        return False
-
-    if node1.strand.is_forward():
-        if abs(node1.ref_start - node2.ref_start) > threshold:
-            return False
-    elif abs(node1.ref_end - node2.ref_end) > threshold:
-        return False
-
-    # both have no introns
-    if not node1.introns and not node2.introns:
-        return True
-
-    if node1.introns and node2.introns:
-        set1 = set(node1.introns)
-        set2 = set(node2.introns)
-        jaccard_index = len(set1 & set2) / len(set1 | set2)
-        return jaccard_index > jaccard_threshold
-    return False
 
 
 def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(

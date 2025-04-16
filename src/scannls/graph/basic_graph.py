@@ -795,7 +795,7 @@ class NLPath:
 
     @property
     def id(self) -> str:
-        return to_hash_identifier("-".join([f"{node.id}" for node in self.nodes]))
+        return "T." + to_hash_identifier("-".join([f"{node.id}" for node in self.nodes]))
 
     def __lt__(self, other) -> bool:
         """Implementation sorted function."""
