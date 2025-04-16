@@ -60,7 +60,7 @@ options:
   --splice-bin SPLICE_BIN                 splice site bin size (default: 5)
   --mapq MAPQ                             minimum MAPQ of reads for calling NLS (default: 20)
   --log-level {info,debug,trace,warning}  set log level (default: warning)
-  --parallel PARALLEL                     set working mode in processor (default: 1)
+  --thread THREAD                         set the thread number (default: 1)
   --aligner {blat,}                       aligner to use for mapping reads (default: None)
   --blat-identity IDENT_CUTOFF            BLAT identity cutoff (default: 0.9)
   --blat-2bit BLAT_TWO_BIT                reference genome in 2bit format for blat aligner
