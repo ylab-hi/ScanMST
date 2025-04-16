@@ -100,6 +100,7 @@ class GTFWriter(Writer):
         for node_gtf_feature in get_nodes_gtf_features_from_nlpath(
             data_object,
             self.rescue_sr,
+            object_id,
         ):
             self.write_line(self.formatter(node_gtf_feature))
 
@@ -107,6 +108,7 @@ class GTFWriter(Writer):
 def get_nodes_gtf_features_from_nlpath(
     nlpath: NLPath,
     rescue_sr: bool,
+    cluster_id: str,
 ) -> list[list[str]]:
     """Get GTF features of nodes of series.
 
@@ -129,11 +131,14 @@ def get_nodes_gtf_features_from_nlpath(
             min_nlpath_originla_sr = min(min_nlpath_originla_sr, edge.original_sr)
 
         nlpath_gtf_features.extend(
-            list(get_gtf_features_from_node(
+            list(
+                get_gtf_features_from_node(
                     node,
                     edge,
                     nlpath.id,
-                )),
+                    cluster_id,
+                )
+            ),
         )
 
         if insertion_info and isinstance(insertion_info[1], NovelInsertion):
@@ -142,6 +147,7 @@ def get_nodes_gtf_features_from_nlpath(
                     insertion_info[1],
                     nlpath.id,
                     node.id,
+                    cluster_id=cluster_id,
                 ),
             )
 
@@ -149,6 +155,7 @@ def get_nodes_gtf_features_from_nlpath(
         nlpath_id=nlpath.id,
         nlpath_sr=min_nlpath_sr,
         nlpath_originla_sr=min_nlpath_originla_sr,
+        cluster_id=cluster_id,
         rescue_sr=rescue_sr,
         extend=nlpath.extension,
     )
@@ -166,6 +173,7 @@ def format_gtf_features_for_nlpath(
     nlpath_id: str,
     nlpath_sr: float,
     nlpath_originla_sr: float,
+    cluster_id: str,
     *,
     rescue_sr: bool,
     extend: bool = False,
@@ -181,7 +189,7 @@ def format_gtf_features_for_nlpath(
             ".",
             ".",
             ".",
-            f'sr "{nlpath_sr}"; osr "{nlpath_originla_sr}"; transcript_id "{nlpath_id}"; extend "{extend}";',
+            f'sr "{nlpath_sr}"; osr "{nlpath_originla_sr}"; transcript_id "{nlpath_id}"; gene_id "{cluster_id}"; extend "{extend}";',
         ]
     return [
         ".",
@@ -192,7 +200,7 @@ def format_gtf_features_for_nlpath(
         ".",
         ".",
         ".",
-        f'sr "{nlpath_sr}"; osr "{nlpath_sr}"; transcript_id "{nlpath_id}"; extend "{extend}";',
+        f'sr "{nlpath_sr}"; osr "{nlpath_originla_sr}"; transcript_id "{nlpath_id}"; gene_id "{cluster_id}"; extend "{extend}";',
     ]
 
 
@@ -200,6 +208,7 @@ def get_gtf_features_from_insertion(
     insertion: NovelInsertion,
     nlpath_id: str,
     node_id: str,
+    cluster_id: str,
 ) -> list[str]:
     """Get GTF features of novel insertion."""
     return [
@@ -211,7 +220,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'segment_id "{node_id}"; transcript_id "{nlpath_id}"; sequence "{insertion.query_sequence}"; ',
+        f'segment_id "{node_id}"; transcript_id "{nlpath_id}"; gene_id "{cluster_id}"; sequence "{insertion.query_sequence}";',
     ]
 
 
@@ -219,6 +228,7 @@ def get_gtf_features_from_node(
     node: Node,
     edge: Edge | None,
     nlpath_id: str,
+    cluster_id: str,
 ) -> list[list[str]]:
     """Get exon gtf features of a node.
 
@@ -277,7 +287,7 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; segment_id "{node.id}"; ptc "{node.ptc}"; ptf "{node.ptf}"; transcript_id "{nlpath_id}"; ',
+                f'exon_id "{index:0>3}"; segment_id "{node.id}"; ptc "{node.ptc}"; ptf "{node.ptf}"; transcript_id "{nlpath_id}"; gene_id "{cluster_id}";',
             ],
         )
 

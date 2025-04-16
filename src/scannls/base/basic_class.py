@@ -173,7 +173,7 @@ class Insertion(Read):
 
     def __repr__(self) -> str:
         """Represent Insertion object."""
-        return f"{self.__class__.__name__}({self.hit_num=}," f"{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand})"
+        return f"{self.__class__.__name__}({self.hit_num=},{self.chrom}:{self.ref_start}-{self.ref_end}:{self.strand})"
 
     def update_cigarstring_sms(
         self,

@@ -315,6 +315,7 @@ def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
 def get_vcf_features_from_nlpath(
     nlpath: NLPath,
     rescue_sr: bool,
+    cluster_id: str,
 ):
     """Obtain hop vcf features from one series."""
     path_hops_features = []
@@ -326,9 +327,7 @@ def get_vcf_features_from_nlpath(
         next_node = nlpath[event_id]
 
         can_field = can_field_dict[current_edge.splicing_code]
-
         anno_field = anno_field_dict.get(current_edge.annotation_code, "BOTH")
-
         gene1, gene2 = current_edge.gene1, current_edge.gene2
 
         _mode1, _mode2 = current_edge.modes
@@ -359,9 +358,7 @@ def get_vcf_features_from_nlpath(
 
         sv_distance = abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
         _dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
-
         _dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
-
         _pso = 0 if _dp1 == 0 or _dp2 == 0 else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
 
         if rescue_sr:
@@ -398,7 +395,7 @@ def get_vcf_features_from_nlpath(
                     "MODE1": f"{mode1}",
                     "MODE2": f"{mode2}",
                     "TRANSCRIPT_ID": nlpath.id,
-                    "GENE_ID": f"{nlpath.id}",
+                    "GENE_ID": f"{cluster_id}",
                     "SR_ID": f"{'|'.join(current_edge.read_ids)}",
                     "READS": set(current_edge.read_ids),
                     "SVMETHOD": "ScanNLS",

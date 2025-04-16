@@ -104,12 +104,13 @@ def create_sort_key_for_nlpath(nlpath: NLPath):
         *[create_sort_key_for_node(node) for node in nlpath],
     )
 
+
 def obtain_edge_info_signature_for_nlpath(nlpath: NLPath):
     """Obtain edge info signature.
-       for every hop
-       blunt end: 2
-       microhomology: 1
-       microinsertion: 0
+    for every hop
+    blunt end: 2
+    microhomology: 1
+    microinsertion: 0
     """
     edge_info_signature = 0
     for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):

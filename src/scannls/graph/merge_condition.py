@@ -82,20 +82,13 @@ class MergeCondition:
 
     @staticmethod
     def mid2mid(node1: Node, node2: Node) -> bool:
-        if (
-            node1.chrom != node2.chrom
-            or node1.strand != node2.strand
-            or node1.introns != node2.introns
-        ):
+        if node1.chrom != node2.chrom or node1.strand != node2.strand or node1.introns != node2.introns:
             return False
 
         if node1.exons is None or node2.exons is None:
             raise ValueError
 
-        return (
-            node1.exons.first.start == node2.exons.first.start
-            and node1.exons.last.end == node2.exons.last.end
-        )
+        return node1.exons.first.start == node2.exons.first.start and node1.exons.last.end == node2.exons.last.end
 
     def mid2tail(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
@@ -305,12 +298,8 @@ def _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
         return node1.exons.first.end >= node2.ref_end
     if node1.introns and node2.introns:
         if node1.strand.is_forward():
-            return __intron_lists_containment_checker(
-                node1, node2, None, reverse_strand=False
-            )
-        return __intron_lists_containment_checker(
-            node1, node2, None, reverse_strand=True
-        )
+            return __intron_lists_containment_checker(node1, node2, None, reverse_strand=False)
+        return __intron_lists_containment_checker(node1, node2, None, reverse_strand=True)
 
     return False
 
@@ -346,22 +335,12 @@ def __intron_lists_containment_checker(
         have_identical_introns = node1_introns == node2_introns
         if ref_node == node1:
             if control_start_or_end_when_equal_length == "start":
-                return (
-                    have_identical_introns
-                    and node1.exons.first.start <= node2.exons.first.start
-                )
-            return (
-                have_identical_introns and node1.exons.last.end >= node2.exons.last.end
-            )
+                return have_identical_introns and node1.exons.first.start <= node2.exons.first.start
+            return have_identical_introns and node1.exons.last.end >= node2.exons.last.end
         if ref_node == node2:
             if control_start_or_end_when_equal_length == "start":
-                return (
-                    have_identical_introns
-                    and node2.exons.first.start <= node1.exons.first.start
-                )
-            return (
-                have_identical_introns and node2.exons.last.end >= node1.exons.last.end
-            )
+                return have_identical_introns and node2.exons.first.start <= node1.exons.first.start
+            return have_identical_introns and node2.exons.last.end >= node1.exons.last.end
         return have_identical_introns
 
     if len1 > len2:
@@ -381,15 +360,9 @@ def __intron_lists_containment_checker(
 
     if reverse_strand:
         # For reverse strand, check from start
-        return (
-            full_list[:sub_length] == sub_list[:]
-            and full_exons[sub_length].end >= sub_exons.last.end
-        )
+        return full_list[:sub_length] == sub_list[:] and full_exons[sub_length].end >= sub_exons.last.end
     # For forward strand, check from end
-    return (
-        full_list[-sub_length:] == sub_list[:]
-        and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
-    )
+    return full_list[-sub_length:] == sub_list[:] and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
 
 
 def find_shared_interval_indices(a, b):
@@ -486,36 +459,22 @@ def __intron_lists_sharing_checker(
     len1 = len(node1_introns)
     len2 = len(node2_introns)
 
-    shared_node1_indices, shared_node2_indices = find_shared_interval_indices(
-        node1_introns, node2_introns
-    )
+    shared_node1_indices, shared_node2_indices = find_shared_interval_indices(node1_introns, node2_introns)
 
     # no shared introns
     if len(shared_node1_indices) == 0:
         if reverse_strand:
-            return (
-                node1_exons.last.end <= node2_exons.first.end
-                and node1_exons.last.start <= node2_exons.first.start
-            )
-        return (
-            node2_exons.last.end <= node1_exons.first.end
-            and node2_exons.last.start <= node1_exons.first.start
-        )
+            return node1_exons.last.end <= node2_exons.first.end and node1_exons.last.start <= node2_exons.first.start
+        return node2_exons.last.end <= node1_exons.first.end and node2_exons.last.start <= node1_exons.first.start
     # shared introns on the positive strand
-    if is_consecutive_from_beginning(
-        shared_node1_indices
-    ) and is_consecutive_from_end(shared_node2_indices, len2):
+    if is_consecutive_from_beginning(shared_node1_indices) and is_consecutive_from_end(shared_node2_indices, len2):
         return (
             node2_exons.last.end <= node1_exons[shared_node1_indices[-1] + 1].end
             and node1_exons.first.start >= node2_exons[shared_node2_indices[0]].start
         )
 
     # shared introns on the negative strand
-    if (
-        reverse_strand
-        and is_consecutive_from_beginning(shared_node2_indices)
-        and is_consecutive_from_end(shared_node1_indices, len1)
-    ):
+    if reverse_strand and is_consecutive_from_beginning(shared_node2_indices) and is_consecutive_from_end(shared_node1_indices, len1):
         return (
             node1_exons.last.end <= node2_exons[shared_node2_indices[-1] + 1].end
             and node2_exons.first.start >= node1_exons[shared_node1_indices[0]].start

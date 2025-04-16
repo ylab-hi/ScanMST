@@ -36,7 +36,7 @@ class ExonInfo:
 
     def __repr__(self) -> str:
         """Get a string representation of an Exon."""
-        return f"Exon({self.chrom}:{self.start}-{self.end}:{self.strand}, " f"{self.trx_id})"
+        return f"Exon({self.chrom}:{self.start}-{self.end}:{self.strand}, {self.trx_id})"
 
     def __hash__(self) -> int:
         """Hash an exon."""
@@ -404,7 +404,7 @@ class CircRNAFilter:
             if str(strand_first) == "+":
                 mono_exon_condition = first_node.ref_start > second_node.ref_end
             elif str(strand_first) == "-":
-                mono_exon_condition =  first_node.ref_end < second_node.ref_start
+                mono_exon_condition = first_node.ref_end < second_node.ref_start
 
         return common_intron_condition or mono_exon_condition
 
