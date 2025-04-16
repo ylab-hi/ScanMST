@@ -208,10 +208,7 @@ class VCFWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {cluster_id} Series.",
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
-        for _hop_vcf_feature in get_vcf_features_from_nlpath(
-            data_object,
-            self.rescue_sr,
-        ):
+        for _hop_vcf_feature in get_vcf_features_from_nlpath(data_object, self.rescue_sr, cluster_id=cluster_id):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
     def write_data_helper(self) -> None:
