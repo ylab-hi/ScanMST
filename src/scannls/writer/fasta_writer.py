@@ -90,12 +90,12 @@ class FastaWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to file in Clique {object_id} Series.",
             )
         if self.output_sequence_choice == "reference":
-            sequence, node_length_str = get_nodes_sequence_from_series(
+            sequence, node_length_str = get_nodes_sequence_from_path(
                 data_object,
                 reference_io=self.reference_io,
             )
         elif self.output_sequence_choice == "consensus":
-            sequence, node_length_str = get_consensus_sequence_from_series(
+            sequence, node_length_str = get_consensus_sequence_from_path(
                 data_object,
                 reference_io=self.reference_io,
                 read_name_to_seq_dict=self.read_name_to_seq_dict,
@@ -107,7 +107,7 @@ class FastaWriter(Writer):
         )
 
 
-def get_consensus_sequence_from_series(
+def get_consensus_sequence_from_path(
     nlpath: NLPath,
     reference_io: Fasta,
     read_name_to_seq_dict: dict,
@@ -147,7 +147,7 @@ def get_consensus_sequence_from_series(
     return sequence, node_length_str[:-1]
 
 
-def get_nodes_sequence_from_series(
+def get_nodes_sequence_from_path(
     nlpath: NLPath,
     reference_io: Fasta,
 ) -> tuple[str, str]:
