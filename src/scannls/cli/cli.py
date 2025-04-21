@@ -89,16 +89,17 @@ def parse_nlgraph_for_cluster_seq(
     with writers.open():
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
-            for nlpath in nlgraph(cluster, ind, is_plot=options.graph):
+            graph_id = f"TSG{ind:05d}"
+            for nlpath in nlgraph(cluster, graph_id, is_plot=options.graph):
                 if len(nlpath) == 1:
                     logger.warning(
                         f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
                     )
 
-                logger.debug(f"cluster {ind=} output {nlpath=} ")
-                writers.write_path(nlpath, f"{input_stem}_{ind}")
+                logger.debug(f"cluster {graph_id=} output {nlpath=} ")
+                writers.write_path(nlpath, graph_id)
 
-            writers.write_graph(nlgraph, "G." + f"{input_stem}_{ind}")
+            writers.write_graph(nlgraph, graph_id)
 
 
 def cli(options: argparse.Namespace | DefaultOptions):
