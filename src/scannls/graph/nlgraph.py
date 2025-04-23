@@ -522,7 +522,36 @@ class NLGraph:
     @property
     def id(self) -> str:
         """Get id of graph."""
-        return to_hash_identifier("-".join(node.id for node in self))
+        identifier = to_hash_identifier("-".join(node.id for node in self))
+        return f"TSN{identifier}"
+
+    def refine(self):
+        """Refine the graph by merging nodes and edges.
+
+        1. check every pair of nodes in the graph
+        2. if the nodes are same information including chr, strand, start, end, exons.
+        3. use one node with higher sr to merge another node, and update the edges of the nodes (by merging edges)
+        4. remove the merged nodes from the graph, and remove the edges of the merged nodes
+        5. update the graph structure to reflect the changes
+        """
+        # find the pair of nodes that are the same first
+        # and merge them
+
+
+def compare_node(node1: Node, node2: Node) -> bool:
+    """Compare two nodes.
+
+    :param node1: node1
+    :param node2: node2
+    :return: True if the nodes are equal, otherwise False
+    """
+    return (
+        node1.chrom == node2.chrom
+        and node1.strand == node2.strand
+        and node1.introns == node2.introns
+        and node1.ref_start == node2.ref_start
+        and node1.ref_end == node2.ref_end
+    )
 
 
 def merge_nodes(

@@ -366,11 +366,12 @@ class Intervals:
         """Create Exons from list."""
         return cls(exon_list=[Interval.from_list(exon) for exon in item])
 
-    def introns(self) -> Intervals | None:
-        if len(self) < Interval._index:
-            return None
-
+    def introns(self) -> Intervals:
         introns = Intervals([])
+
+        if len(self) < Interval._index:
+            return introns
+
         for exon_group in zip(self.exon_list, self.exon_list[1:]):
             introns.append(Interval(exon_group[0].end, exon_group[1].start))
 

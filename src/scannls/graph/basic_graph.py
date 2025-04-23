@@ -368,7 +368,7 @@ class Node(BasicNode):
         return ret
 
     @property
-    def introns(self) -> Introns | None:
+    def introns(self) -> Introns:
         """Get introns of a node."""
         return self.exons.introns()
 
