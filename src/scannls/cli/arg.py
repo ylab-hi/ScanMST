@@ -54,6 +54,7 @@ class DefaultOptions:
     rt_switching_filter_len: int = 10
     ignore_circle: bool = False
     rescue_sr: bool = False
+    refine: bool = False
 
 
 COLOR = "bold magenta"
@@ -280,7 +281,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.noncanonical,
         help="considering Non canonical spliced sites  (default: %(default)s)",
     )
-
     parser.add_argument(
         "--graph",
         action="store_true",
@@ -288,6 +288,14 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.graph,
         help="if output graph (default: %(default)s)",
     )
+    parser.add_argument(
+        "--refine",
+        action="store_true",
+        dest="refine",
+        default=DefaultOptions.refine,
+        help="if refine the graph (default: %(default)s)",
+    )
+
     parser.add_argument(
         "--nbound",
         action="store_false",

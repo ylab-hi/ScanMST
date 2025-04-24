@@ -283,7 +283,7 @@ class Node(BasicNode):
         self.breakpoints = defaultdict(int)
 
         self.ptc, self.ptf = 0, 0.0
-        self.id = "N." + to_hash_identifier(self._unique_key)
+        self.id = "TSN" + to_hash_identifier(self._unique_key)
 
     def set_up_breakpoints(self) -> None:
         logger.debug(f"Set up breakpoints for {self!r}")
@@ -394,7 +394,7 @@ class Node(BasicNode):
         """Finds the union of a list of intervals."""
 
         if not intervals:
-            return []
+            return Intervals([])
 
         intervals.sort()  # Sort intervals by start
         merged = [intervals[0]]
@@ -419,7 +419,6 @@ class Node(BasicNode):
         if isinstance(other, Node):
             temp_exons = self.exons.__concat__(other.exons)
             self.exons = Node.union_of_intervals(temp_exons)
-            temp_exons = None
 
             self.ref_start = self.exons.first.start
 

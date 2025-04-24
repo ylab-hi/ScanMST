@@ -44,6 +44,7 @@ class NLGraph:
         output_dir: Path,
         rescue_sr: bool,
         ignore_circle: bool = False,
+        if_refine: bool = False,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -57,6 +58,7 @@ class NLGraph:
         self.output_dir = output_dir
         self.has_circle = False
         self.ignore_circle = ignore_circle
+        self.if_refine = if_refine
 
     def __call__(
         self,
@@ -97,8 +99,13 @@ class NLGraph:
         if self.rescue_sr:
             self.rescuer(self)
 
+        if self.if_refine:
+            self.refine()
+
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
+
+        self.polish_edges()
 
         node_list: list[Node | Edge] = []
 
@@ -108,7 +115,7 @@ class NLGraph:
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
-            current_path.polish_edges()
+            # current_path.polish_edges()
             all_paths.append(current_path)
 
         if is_plot and not self.has_circle and node_list:
@@ -137,6 +144,7 @@ class NLGraph:
         *,
         ignore_circle: bool,
         rescue_sr: bool,
+        refine: bool = False,
     ) -> NLGraph:
         """Create splice graph."""
         rescuer = SRRescuer(
@@ -149,7 +157,7 @@ class NLGraph:
             average_read_depth,
         )
 
-        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), output_dir, rescue_sr, ignore_circle)
+        return cls(logger, rescuer, prune_threshold, support_reads, Path(input_bam), output_dir, rescue_sr, ignore_circle, refine)
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
         """Add edge from node1 -> node2."""
@@ -188,7 +196,7 @@ class NLGraph:
     def find_edges(self, node1: Node, node2: Node):
         edge_key = Edge.create_key_from_node(node1, node2)
         if self.edges.get(edge_key) is None:
-            msg = f"Edge {edge_key} not found in splice graph."
+            msg = f"Edge {edge_key} not found in graph."
             raise KeyError(msg)
         return self.edges[edge_key]
 
@@ -293,6 +301,16 @@ class NLGraph:
     def get_end_nodes(self) -> Iterable[Node]:
         """Get end nodes based if node has successors."""
         return (node for nodes in self.nodes.values() for node in nodes if node.is_end_node())
+
+    def remove_edge(self, edge: Edge) -> None:
+        """Remove edge from graph.
+
+        :param edge: edge to be removed
+        """
+        if edge.key is None:
+            msg = f"edge.key is None, {edge}"
+            raise ValueError(msg)
+        self.edges[edge.key].remove(edge)
 
     def remove_node(self, node: Node) -> None:
         """Remove node from graph.
@@ -493,7 +511,7 @@ class NLGraph:
         """Trace forward through graph and find all paths."""
         self.has_circle = False
 
-        result_series_list = []
+        result_paths_list = []
 
         if not self.get_start_nodes() and len(self.nodes.values()) > 0:
             self.logger.warning(f"A circle may exist in graph {self.nodes.values()}")
@@ -507,17 +525,17 @@ class NLGraph:
             )
 
             if not self.ignore_circle and self.has_circle:
-                result_series_list.clear()
+                result_paths_list.clear()
                 break
 
-            result_series_list.extend(group_paths)
+            result_paths_list.extend(group_paths)
 
-        if not result_series_list:
+        if not result_paths_list:
             self.logger.info(
                 f"No path is found in graph {self.nodes.values()}",
             )
 
-        return result_series_list
+        return result_paths_list
 
     @property
     def id(self) -> str:
@@ -533,12 +551,100 @@ class NLGraph:
         3. use one node with higher sr to merge another node, and update the edges of the nodes (by merging edges)
         4. remove the merged nodes from the graph, and remove the edges of the merged nodes
         5. update the graph structure to reflect the changes
+        6. Only iterate the nodes once, so the time complexity is O(n^2)
         """
         # find the pair of nodes that are the same first
         # and merge them
+        nodes_to_merge: list[tuple[Node, Node]] = []
+        node_unique_keys = [node.unique_key for node in self]
+        from itertools import combinations
+
+        for node1_key, node2_key in combinations(node_unique_keys, 2):
+            if node1_key == node2_key:
+                continue
+
+            node1 = self.get_node_with_unique_key(node1_key)
+            node2 = self.get_node_with_unique_key(node2_key)
+
+            if compare_node_when_refine(node1, node2):
+                if len(node1.read_ids) > len(node2.read_ids):
+                    nodes_to_merge.append((node1, node2))
+                else:
+                    nodes_to_merge.append((node2, node1))
+
+        # merge the nodes
+        for node1, node2 in nodes_to_merge:
+            # check if node1 and node2 have same predecessor and successor
+            # if they do have same predecessor merge the edges from predecessor to node1 and node2
+            # if they do have same successor merge the edges from node1 and node2 to successor
+            for predecessor in node2.predecessors:
+                if predecessor in node1.predecessors:
+                    # merge the edge of predecessor to node2 to the edge of predecessor to node1
+                    for node1_edges in self.find_edges(predecessor, node1):
+                        for node2_edges in self.find_edges(predecessor, node2):
+                            if len(node1_edges) > 1:
+                                logger.warning(f"Multiple edges {node1_edges} found between {predecessor} and {node1}")
+                            if len(node2_edges) > 1:
+                                logger.warning(f"Multiple edges {node2_edges} found between {predecessor} and {node2}")
+
+                            node1_edge = node1_edges[0]
+                            node2_edge = node2_edges[0]
+                            node1_edge.merge(node2_edge, predecessor.strand, node1.strand)
+
+                            predecessor.successors.remove(node2)
+                            self.remove_edge(node2_edge)
+
+            # check if node1 and node2 have same successor
+            # if they do have same successor merge the edges from node1 and node2 to successor
+            for successor in node2.successors:
+                if successor in node1.successors:
+                    # merge the edge of node1 to successor and node2 to successor
+                    for node1_edges in self.find_edges(node1, successor):
+                        for node2_edges in self.find_edges(node2, successor):
+                            if len(node1_edges) > 1:
+                                logger.warning(f"Multiple edges {node1_edges} found between {node1} and {successor}")
+                            if len(node2_edges) > 1:
+                                logger.warning(f"Multiple edges {node2_edges} found between {node2} and {successor}")
+
+                            node1_edge = node1_edges[0]
+                            node2_edge = node2_edges[0]
+                            node1_edge.merge(node2_edge, node1.strand, successor.strand)
+
+                            successor.predecessors.remove(node2)
+                            self.remove_edge(node2_edge)
+
+            # merge the nodes
+            node1.merge(node2)
+
+            # make predecessor and successor of node2 to node1
+            for predecessor in node2.predecessors:
+                if predecessor not in node1.predecessors:
+                    node1.predecessors.append(predecessor)
+
+            for successor in node2.successors:
+                if successor not in node1.successors:
+                    node1.successors.append(successor)
+
+            # remove the node2 from the graph
+            self.remove_node(node2)
+
+    def polish_edges(self) -> None:
+        """Polish edges in the graph."""
+
+        # iterate all nodes in the graph
+        # get every predecessor and successor of the node
+        # update the break point of the edge
+        for node in self:
+            for successor in node.successors:
+                # update edge from node to successor
+                for edge in self.find_edges(node, successor):
+                    if len(edge) > 1:
+                        logger.warning(f"Multiple edges {edge} found between {node} and {successor}")
+                    edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
+                    edge.break_point2.pos = successor.ref_start if successor.strand.is_forward() else successor.ref_end
 
 
-def compare_node(node1: Node, node2: Node) -> bool:
+def compare_node_when_refine(node1: Node, node2: Node, threshold=0) -> bool:
     """Compare two nodes.
 
     :param node1: node1
@@ -549,8 +655,8 @@ def compare_node(node1: Node, node2: Node) -> bool:
         node1.chrom == node2.chrom
         and node1.strand == node2.strand
         and node1.introns == node2.introns
-        and node1.ref_start == node2.ref_start
-        and node1.ref_end == node2.ref_end
+        and abs(node1.ref_start - node2.ref_start) <= threshold
+        and abs(node1.ref_end - node2.ref_end) <= threshold
     )
 
 

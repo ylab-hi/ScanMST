@@ -82,6 +82,7 @@ def parse_nlgraph_for_cluster_seq(
         output_dir,
         ignore_circle=options.ignore_circle,
         rescue_sr=options.rescue_sr,
+        refine=options.refine,
     )
 
     with writers.open():
