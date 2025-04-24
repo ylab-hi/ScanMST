@@ -295,7 +295,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.refine,
         help="if refine the graph (default: %(default)s)",
     )
-
     parser.add_argument(
         "--nbound",
         action="store_false",
@@ -303,7 +302,6 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.bound,
         help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
     )
-
     parser.add_argument(
         "--max-allowed-nm",
         action="store",
