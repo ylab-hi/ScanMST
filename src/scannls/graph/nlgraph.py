@@ -193,7 +193,7 @@ class NLGraph:
 
             self.edges[edge.key].append(edge)
 
-    def find_edges(self, node1: Node, node2: Node):
+    def find_edges(self, node1: Node, node2: Node) -> list[Edge]:
         edge_key = Edge.create_key_from_node(node1, node2)
         if self.edges.get(edge_key) is None:
             msg = f"Edge {edge_key} not found in graph."
@@ -640,9 +640,11 @@ class NLGraph:
         for node in self:
             for successor in node.successors:
                 # update edge from node to successor
-                for edge in self.find_edges(node, successor):
-                    if len(edge) > 1:
-                        logger.warning(f"Multiple edges {edge} found between {node} and {successor}")
+                edges = self.find_edges(node, successor)
+                if len(edges) > 1:
+                    logger.warning(f"Multiple edges {edges} found between {node} and {successor}")
+
+                for edge in edges:
                     edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
                     edge.break_point2.pos = successor.ref_start if successor.strand.is_forward() else successor.ref_end
 
