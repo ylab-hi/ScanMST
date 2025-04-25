@@ -321,7 +321,24 @@ class NLGraph:
         if node.similar_key is None:
             msg = f"node.similar_key is None, {node.query_name}"
             raise ValueError(msg)
-        self.get_nodes_with_similar_key(node.similar_key).remove(node)
+
+        # Get the list of nodes with the same similar_key
+        nodes_list = self.get_nodes_with_similar_key(node.similar_key)
+
+        # Check if the node is actually in the list
+        if node in nodes_list:
+            nodes_list.remove(node)
+        else:
+            # If the node is not in the list, try to find it by unique_key
+            logger.warning(f"Node {node} not found in similar_key list. Attempting to find by unique_key.")
+            for n in list(nodes_list):
+                if n.unique_key == node.unique_key:
+                    nodes_list.remove(n)
+                    logger.info(f"Removed node with matching unique_key instead: {n}")
+                    return
+
+            # If we get here, the node wasn't found by either method
+            logger.warning(f"Failed to remove node {node} (similar_key={node.similar_key}): not found in graph")
 
     def get_node_with_unique_key(self, unique_key: str) -> Node | None:
         """Get node with unique key.
