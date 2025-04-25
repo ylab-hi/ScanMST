@@ -553,9 +553,10 @@ class NLGraph:
         5. update the graph structure to reflect the changes
         6. Only iterate the nodes once, so the time complexity is O(n^2)
         """
+        logger.trace(f"Refine graph: number of nodes before refine: {len(self)}")
         # find the pair of nodes that are the same first
         # and merge them
-        nodes_to_merge: list[tuple[Node, Node]] = []
+        nodes_to_merge = []
         node_unique_keys = [node.unique_key for node in self]
         from itertools import combinations
 
@@ -627,6 +628,8 @@ class NLGraph:
 
             # remove the node2 from the graph
             self.remove_node(node2)
+
+        self.logger.info(f"Refinement process completed: number of nodes after refine: {len(self)}")
 
     def polish_edges(self) -> None:
         """Polish edges in the graph."""
