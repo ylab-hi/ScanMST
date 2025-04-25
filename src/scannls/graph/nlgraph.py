@@ -575,11 +575,13 @@ class NLGraph:
 
         # merge the nodes
         for node1, node2 in nodes_to_merge:
+            logger.trace(f"Refine graph: merging {node1} and {node2}")
             # check if node1 and node2 have same predecessor and successor
             # if they do have same predecessor merge the edges from predecessor to node1 and node2
             # if they do have same successor merge the edges from node1 and node2 to successor
             for predecessor in node2.predecessors:
                 if predecessor in node1.predecessors:
+                    logger.trace(f"Refine graph: merging {node1} and {node2} with predecessor {predecessor}")
                     # merge the edge of predecessor to node2 to the edge of predecessor to node1
                     node1_edges = self.find_edges(predecessor, node1)
                     node2_edges = self.find_edges(predecessor, node2)
@@ -599,6 +601,7 @@ class NLGraph:
             # if they do have same successor merge the edges from node1 and node2 to successor
             for successor in node2.successors:
                 if successor in node1.successors:
+                    logger.trace(f"Refine graph: merging {node1} and {node2} with successor {successor}")
                     # merge the edge of node1 to successor and node2 to successor
 
                     node1_edges = self.find_edges(node1, successor)
