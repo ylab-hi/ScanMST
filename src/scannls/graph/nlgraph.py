@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from itertools import combinations
 import types
 from collections import defaultdict
 from pathlib import Path
@@ -554,86 +555,143 @@ class NLGraph:
         6. Only iterate the nodes once, so the time complexity is O(n^2)
         """
         logger.trace(f"Refine graph: number of nodes before refine: {len(self)}")
-        # find the pair of nodes that are the same first
-        # and merge them
-        nodes_to_merge = []
-        node_unique_keys = [node.unique_key for node in self]
-        from itertools import combinations
 
-        for node1_key, node2_key in combinations(node_unique_keys, 2):
+        # Find similar nodes to merge
+        nodes_to_merge = []
+
+        # Create a dictionary for faster node lookup
+        node_dict = {node.unique_key: node for node in self}
+
+        # Find pairs of nodes to merge - O(n²) operation
+        for node1_key, node2_key in combinations(node_dict.keys(), 2):
             if node1_key == node2_key:
                 continue
 
-            node1 = self.get_node_with_unique_key(node1_key)
-            node2 = self.get_node_with_unique_key(node2_key)
+            node1 = node_dict[node1_key]
+            node2 = node_dict[node2_key]
 
             if compare_node_when_refine(node1, node2):
-                if len(node1.read_ids) > len(node2.read_ids):
+                # Select the node with more read IDs as the primary node
+                if len(node1.read_ids) >= len(node2.read_ids):
                     nodes_to_merge.append((node1, node2))
                 else:
                     nodes_to_merge.append((node2, node1))
 
-        # merge the nodes
+        # Merge the nodes
         for node1, node2 in nodes_to_merge:
             logger.trace(f"Refine graph: merging {node1} and {node2}")
-            # check if node1 and node2 have same predecessor and successor
-            # if they do have same predecessor merge the edges from predecessor to node1 and node2
-            # if they do have same successor merge the edges from node1 and node2 to successor
-            for predecessor in node2.predecessors:
-                if predecessor in node1.predecessors:
-                    logger.trace(f"Refine graph: merging {node1} and {node2} with predecessor {predecessor}")
-                    # merge the edge of predecessor to node2 to the edge of predecessor to node1
-                    node1_edges = self.find_edges(predecessor, node1)
-                    node2_edges = self.find_edges(predecessor, node2)
-                    if len(node1_edges) > 1:
-                        logger.error(f"Multiple edges {node1_edges} found between {predecessor} and {node1}")
-                    if len(node2_edges) > 1:
-                        logger.error(f"Multiple edges {node2_edges} found between {predecessor} and {node2}")
 
-                    node1_edge = node1_edges[0]
-                    node2_edge = node2_edges[0]
-                    node1_edge.merge(node2_edge, predecessor.strand, node1.strand)
+            # Process predecessors
+            self._merge_node_predecessors(node1, node2)
 
-                    predecessor.successors.remove(node2)
-                    self.remove_edge(node2_edge)
+            # Process successors
+            self._merge_node_successors(node1, node2)
 
-            # check if node1 and node2 have same successor
-            # if they do have same successor merge the edges from node1 and node2 to successor
-            for successor in node2.successors:
-                if successor in node1.successors:
-                    logger.trace(f"Refine graph: merging {node1} and {node2} with successor {successor}")
-                    # merge the edge of node1 to successor and node2 to successor
-
-                    node1_edges = self.find_edges(node1, successor)
-                    node2_edges = self.find_edges(node2, successor)
-                    if len(node1_edges) > 1:
-                        logger.error(f"Multiple edges {node1_edges} found between {node1} and {successor}")
-                    if len(node2_edges) > 1:
-                        logger.error(f"Multiple edges {node2_edges} found between {node2} and {successor}")
-
-                    node1_edge = node1_edges[0]
-                    node2_edge = node2_edges[0]
-                    node1_edge.merge(node2_edge, node1.strand, successor.strand)
-
-                    successor.predecessors.remove(node2)
-                    self.remove_edge(node2_edge)
-
-            # merge the nodes
+            # Merge node data
             node1.merge(node2)
 
-            # make predecessor and successor of node2 to node1
-            for predecessor in node2.predecessors:
-                if predecessor not in node1.predecessors:
-                    node1.predecessors.append(predecessor)
-
-            for successor in node2.successors:
-                if successor not in node1.successors:
-                    node1.successors.append(successor)
-
-            # remove the node2 from the graph
+            # Remove the merged node from the graph
             self.remove_node(node2)
 
         self.logger.info(f"Refinement process completed: number of nodes after refine: {len(self)}")
+
+    def _merge_node_predecessors(self, primary_node, secondary_node):
+        """Handle predecessor merging during node refinement.
+
+        Args:
+            primary_node: The node that will remain in the graph
+            secondary_node: The node that will be removed
+        """
+        # Process common predecessors
+        common_predecessors = set(primary_node.predecessors) & set(secondary_node.predecessors)
+        for predecessor in common_predecessors:
+            try:
+                # Merge edges for common predecessors
+                primary_edges = self.find_edges(predecessor, primary_node)
+                secondary_edges = self.find_edges(predecessor, secondary_node)
+
+                if len(primary_edges) > 1:
+                    logger.error(f"Multiple edges {primary_edges} found between {predecessor} and {primary_node}")
+                if len(secondary_edges) > 1:
+                    logger.error(f"Multiple edges {secondary_edges} found between {predecessor} and {secondary_node}")
+
+                primary_edge = primary_edges[0]
+                secondary_edge = secondary_edges[0]
+                primary_edge.merge(secondary_edge, predecessor.strand, primary_node.strand)
+
+                # Remove the secondary connection
+                predecessor.successors.remove(secondary_node)
+                self.remove_edge(secondary_edge)
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error merging edges from {predecessor}: {e}")
+
+        # Process unique predecessors
+        unique_predecessors = set(secondary_node.predecessors) - set(primary_node.predecessors)
+        for predecessor in unique_predecessors:
+            try:
+                # Get the edge data and create a new edge
+                edge_data = self.find_edges(predecessor, secondary_node)[0].edge_data
+
+                # Add to primary node's predecessors
+                primary_node.predecessors.append(predecessor)
+
+                # Create edge between predecessor and primary node
+                self.add_edge(predecessor, primary_node, edge_data)
+
+                # Update predecessor's successors list
+                predecessor.successors.remove(secondary_node)
+                predecessor.successors.append(primary_node)
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error creating edge from {predecessor} to {primary_node}: {e}")
+
+    def _merge_node_successors(self, primary_node, secondary_node):
+        """Handle successor merging during node refinement.
+
+        Args:
+            primary_node: The node that will remain in the graph
+            secondary_node: The node that will be removed
+        """
+        # Process common successors
+        common_successors = set(primary_node.successors) & set(secondary_node.successors)
+        for successor in common_successors:
+            try:
+                # Merge edges for common successors
+                primary_edges = self.find_edges(primary_node, successor)
+                secondary_edges = self.find_edges(secondary_node, successor)
+
+                if len(primary_edges) > 1:
+                    logger.error(f"Multiple edges {primary_edges} found between {primary_node} and {successor}")
+                if len(secondary_edges) > 1:
+                    logger.error(f"Multiple edges {secondary_edges} found between {secondary_node} and {successor}")
+
+                primary_edge = primary_edges[0]
+                secondary_edge = secondary_edges[0]
+                primary_edge.merge(secondary_edge, primary_node.strand, successor.strand)
+
+                # Remove the secondary connection
+                successor.predecessors.remove(secondary_node)
+                self.remove_edge(secondary_edge)
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error merging edges to {successor}: {e}")
+
+        # Process unique successors
+        unique_successors = set(secondary_node.successors) - set(primary_node.successors)
+        for successor in unique_successors:
+            try:
+                # Get the edge data and create a new edge
+                edge_data = self.find_edges(secondary_node, successor)[0].edge_data
+
+                # Add to primary node's successors
+                primary_node.successors.append(successor)
+
+                # Create edge between primary node and successor
+                self.add_edge(primary_node, successor, edge_data)
+
+                # Update successor's predecessors list
+                successor.predecessors.remove(secondary_node)
+                successor.predecessors.append(primary_node)
+            except (IndexError, KeyError) as e:
+                logger.error(f"Error creating edge from {primary_node} to {successor}: {e}")
 
     def polish_edges(self) -> None:
         """Polish edges in the graph."""
