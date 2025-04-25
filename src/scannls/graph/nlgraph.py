@@ -581,38 +581,39 @@ class NLGraph:
             for predecessor in node2.predecessors:
                 if predecessor in node1.predecessors:
                     # merge the edge of predecessor to node2 to the edge of predecessor to node1
-                    for node1_edges in self.find_edges(predecessor, node1):
-                        for node2_edges in self.find_edges(predecessor, node2):
-                            if len(node1_edges) > 1:
-                                logger.warning(f"Multiple edges {node1_edges} found between {predecessor} and {node1}")
-                            if len(node2_edges) > 1:
-                                logger.warning(f"Multiple edges {node2_edges} found between {predecessor} and {node2}")
+                    node1_edges = self.find_edges(predecessor, node1)
+                    node2_edges = self.find_edges(predecessor, node2)
+                    if len(node1_edges) > 1:
+                        logger.error(f"Multiple edges {node1_edges} found between {predecessor} and {node1}")
+                    if len(node2_edges) > 1:
+                        logger.error(f"Multiple edges {node2_edges} found between {predecessor} and {node2}")
 
-                            node1_edge = node1_edges[0]
-                            node2_edge = node2_edges[0]
-                            node1_edge.merge(node2_edge, predecessor.strand, node1.strand)
+                    node1_edge = node1_edges[0]
+                    node2_edge = node2_edges[0]
+                    node1_edge.merge(node2_edge, predecessor.strand, node1.strand)
 
-                            predecessor.successors.remove(node2)
-                            self.remove_edge(node2_edge)
+                    predecessor.successors.remove(node2)
+                    self.remove_edge(node2_edge)
 
             # check if node1 and node2 have same successor
             # if they do have same successor merge the edges from node1 and node2 to successor
             for successor in node2.successors:
                 if successor in node1.successors:
                     # merge the edge of node1 to successor and node2 to successor
-                    for node1_edges in self.find_edges(node1, successor):
-                        for node2_edges in self.find_edges(node2, successor):
-                            if len(node1_edges) > 1:
-                                logger.warning(f"Multiple edges {node1_edges} found between {node1} and {successor}")
-                            if len(node2_edges) > 1:
-                                logger.warning(f"Multiple edges {node2_edges} found between {node2} and {successor}")
 
-                            node1_edge = node1_edges[0]
-                            node2_edge = node2_edges[0]
-                            node1_edge.merge(node2_edge, node1.strand, successor.strand)
+                    node1_edges = self.find_edges(node1, successor)
+                    node2_edges = self.find_edges(node2, successor)
+                    if len(node1_edges) > 1:
+                        logger.error(f"Multiple edges {node1_edges} found between {node1} and {successor}")
+                    if len(node2_edges) > 1:
+                        logger.error(f"Multiple edges {node2_edges} found between {node2} and {successor}")
 
-                            successor.predecessors.remove(node2)
-                            self.remove_edge(node2_edge)
+                    node1_edge = node1_edges[0]
+                    node2_edge = node2_edges[0]
+                    node1_edge.merge(node2_edge, node1.strand, successor.strand)
+
+                    successor.predecessors.remove(node2)
+                    self.remove_edge(node2_edge)
 
             # merge the nodes
             node1.merge(node2)
@@ -642,7 +643,7 @@ class NLGraph:
                 # update edge from node to successor
                 edges = self.find_edges(node, successor)
                 if len(edges) > 1:
-                    logger.warning(f"Multiple edges {edges} found between {node} and {successor}")
+                    logger.error(f"Multiple edges {edges} found between {node} and {successor}")
 
                 for edge in edges:
                     edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
