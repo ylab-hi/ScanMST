@@ -206,7 +206,7 @@ class Read:
         exons = self.get_exons()
         introns = exons.introns()
 
-        if introns is None:
+        if len(introns) == 0:
             return True
 
         intron_count = len(introns)
