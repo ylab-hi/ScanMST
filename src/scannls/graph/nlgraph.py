@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import copy
-from itertools import combinations
 import types
 from collections import defaultdict
+from itertools import combinations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -685,8 +685,11 @@ class NLGraph:
                 secondary_edge = secondary_edges[0]
                 primary_edge.merge(secondary_edge, primary_node.strand, successor.strand)
 
-                # Remove the secondary connection
-                successor.predecessors.remove(secondary_node)
+                # Remove the secondary connection - use safe removal
+                if secondary_node in successor.predecessors:
+                    successor.predecessors.remove(secondary_node)
+                else:
+                    logger.warning(f"Secondary node {secondary_node} not found in {successor}'s predecessors list")
                 self.remove_edge(secondary_edge)
             except (IndexError, KeyError) as e:
                 logger.error(f"Error merging edges to {successor}: {e}")
@@ -704,8 +707,12 @@ class NLGraph:
                 # Create edge between primary node and successor
                 self.add_edge(primary_node, successor, edge_data)
 
-                # Update successor's predecessors list
-                successor.predecessors.remove(secondary_node)
+                # Update successor's predecessors list - use safe removal
+                if secondary_node in successor.predecessors:
+                    successor.predecessors.remove(secondary_node)
+                else:
+                    logger.warning(f"Secondary node {secondary_node} not found in {successor}'s predecessors list")
+
                 successor.predecessors.append(primary_node)
             except (IndexError, KeyError) as e:
                 logger.error(f"Error creating edge from {primary_node} to {successor}: {e}")
