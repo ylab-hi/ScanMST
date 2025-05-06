@@ -794,7 +794,7 @@ class NLPath:
 
     @property
     def id(self) -> str:
-        return "T." + to_hash_identifier("-".join([f"{node.id}" for node in self.nodes]))
+        return "NLT." + to_hash_identifier("-".join([f"{node.id}" for node in self.nodes]))
 
     def __lt__(self, other) -> bool:
         """Implementation sorted function."""
@@ -1008,21 +1008,19 @@ class NLPath:
         """Return the number of events."""
         return len(self.nodes)
 
-    def __lt__(self, other: Any) -> bool:
-        """Return True if the event is less than the other event."""
-        return len(self.nodes) < len(other.nodes)
-
     def __repr__(self) -> str:
         """Return the string representation of the event."""
         string = "\nNLPath("
         space = " " * 4
         for idx, n in enumerate(self.nodes):
-            string += f"\n{space}\u001b[36m{n!r}"
+            string += f"\n{space}{n!r}"
             if idx < len(self.nodes) - 1:
                 edge = self.get_edge(n, nodes_idx=idx)
-                string += f"\n{space}\u001b[31m{edge!r}\u001b[36m"
+                string += f"\n{space}{edge!r}"
         string += ")"
         return string
+
+    __str__ = __repr__
 
     def __iter__(self) -> Iterator[Node]:
         """Return an iterator over the events."""

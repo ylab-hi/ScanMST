@@ -1,6 +1,8 @@
 """cluster NLpaths."""
 
 from itertools import combinations
+import json
+from pathlib import Path
 
 import networkx as nx
 from loguru import logger
@@ -370,7 +372,6 @@ class ClusterFinder:
     @staticmethod
     def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]], threshold: float):
         """Check if nlpath1 can merge nlpath2."""
-
         if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
             return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys, threshold)
 
@@ -378,7 +379,9 @@ class ClusterFinder:
         raise ValueError(msg)
 
     def merge_cluster(self):
-        for cluster_index in self.find_cluster_index():
+        for cluster_id, cluster_index in enumerate(self.find_cluster_index()):
+            export_connected_component_to_graph(self._graph, self.intact_nlpaths, component_id=cluster_id, component=cluster_index)
+
             nlpaths = []
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]
@@ -415,3 +418,44 @@ class ClusterFinder:
             nlpaths = [nlpath for nlpath in nlpaths if nlpath not in removed_nlpaths]
             result.append(selected_nlpath)
         return result
+
+
+def export_connected_component_to_graph(graph, intact_nlpaths, component_id: int, component: set[int]) -> None:
+    """Export connected components to graph.
+
+    Creates a subgraph from a connected component found in the ClusterFinder.
+
+    Args:
+        graph: The original networkx graph containing all NLPath nodes
+        intact_nlpaths: The intact NLPath instances
+        component_id: Identifier for the component
+        component: Set of node indices in the component
+
+    Returns:
+        A networkx Graph representing the connected component
+    """
+    # Create a new graph for this component
+    component_graph = nx.Graph()
+
+    # Add nodes from this component
+    for node_idx in component:
+        nlpath = intact_nlpaths[node_idx]
+        read_id = nlpath.nodes[0].query_name
+        component_graph.add_node(
+            node_idx,
+            cluster_id=component_id,
+            read_id=read_id,
+            path_info=str(nlpath),
+        )
+
+    # Add edges that connect nodes within this component
+    for u, v in graph.edges():
+        if u in component and v in component:
+            # Copy the edge and its attributes to the component graph
+            component_graph.add_edge(u, v)
+
+    data = nx.cytoscape_data(component_graph)
+    file_name = f"cluster_{component_id}.json"
+
+    with Path(file_name).open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
