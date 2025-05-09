@@ -153,7 +153,7 @@ def parse_nlgraph_for_cluster_par(
             average_read_depth=average_read_depth,
         ),
         logger,
-        options.parallel,
+        options.thread,
     )
     clusters = [[list(cluster)] for cluster in clusters]
     result = parallel_workers.map(
@@ -294,7 +294,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
         writers = get_writers(
             str(output_file_path), options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
         )
-        parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.parallel == 1 else parse_nlgraph_for_cluster_par
+        parse_splice_graph_for_cluster = parse_nlgraph_for_cluster_seq if options.thread == 1 else parse_nlgraph_for_cluster_par
 
         node_rescued_sr_max = 100
         parse_splice_graph_for_cluster(
