@@ -6,6 +6,7 @@ import networkx as nx
 from loguru import logger
 from networkx import connected_components
 from pathlib import Path
+import json
 
 from scannls.base import MicroHomology, NovelInsertion
 
@@ -402,7 +403,7 @@ class ClusterFinder:
         cluster_output_dir = self.output_dir / Path(f"cluster_{self.input_bam_path.stem}")
         cluster_output_dir.mkdir(exist_ok=True)
 
-        for cluster_id, cluster_index in enumerate(self.find_cluster_index()):
+        for cluster_id, cluster_index in enumerate(self.find_cluster_index(), 1):
             export_connected_component_to_graph(
                 self._graph,
                 self.intact_nlpaths,
