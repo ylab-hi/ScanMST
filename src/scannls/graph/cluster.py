@@ -5,6 +5,7 @@ from itertools import combinations
 import networkx as nx
 from loguru import logger
 from networkx import connected_components
+from pathlib import Path
 
 from scannls.base import MicroHomology, NovelInsertion
 
@@ -104,12 +105,13 @@ def create_sort_key_for_nlpath(nlpath: NLPath):
         *[create_sort_key_for_node(node) for node in nlpath],
     )
 
+
 def obtain_edge_info_signature_for_nlpath(nlpath: NLPath):
     """Obtain edge info signature.
-       for every hop
-       blunt end: 2
-       microhomology: 1
-       microinsertion: 0
+    for every hop
+    blunt end: 2
+    microhomology: 1
+    microinsertion: 0
     """
     edge_info_signature = 0
     for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
@@ -181,8 +183,15 @@ def merge_nlpath(path1: NLPath, path2: NLPath, start_index: int):
                 nodes=updated_node,
                 nodes_idx=start_index + idx,
             )
-        ) is not None and (node2_edge := path2.next_edge(nodes=current_node, nodes_idx=idx)) is not None:
-            node1_edge.merge(node2_edge, current_node.strand, path2[idx + 1].strand, merge_insertion_info=False)
+        ) is not None and (
+            node2_edge := path2.next_edge(nodes=current_node, nodes_idx=idx)
+        ) is not None:
+            node1_edge.merge(
+                node2_edge,
+                current_node.strand,
+                path2[idx + 1].strand,
+                merge_insertion_info=False,
+            )
 
 
 def merge_same_len_node_list(
@@ -207,9 +216,12 @@ def merge_same_len_node_list(
 
         same_edge = True
         if node2_edge is not None and node1_edge is not None:
-            same_edge = node1_edge.insertion_info == node2_edge.insertion_info and node1_edge.merged(
-                node2_edge,
-                compared_break_point=False,
+            same_edge = (
+                node1_edge.insertion_info == node2_edge.insertion_info
+                and node1_edge.merged(
+                    node2_edge,
+                    compared_break_point=False,
+                )
             )
 
         if not same_edge:
@@ -266,12 +278,16 @@ class ClusterFinder:
         self,
         intact_nlpaths: list[NLPath],
         prune_threshold: int,
+        input_bam_path: Path,
+        output_dir: Path,
         threshold: float = 0.2,
     ) -> None:
         """Initialize CliqueFinder."""
         self.ruler = Ruler(prune_threshold)
         self.intact_nlpaths = intact_nlpaths
         self.intact_nlpaths_len = len(intact_nlpaths)
+        self.input_bam_path = input_bam_path
+        self.output_dir = output_dir
         self.threshold = threshold
         self.distance_dict: dict[tuple[int, int], float] = {}
         self._graph = nx.Graph()
@@ -369,17 +385,32 @@ class ClusterFinder:
         return False
 
     @staticmethod
-    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]], threshold: float):
+    def check_merge(
+        path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]], threshold: float
+    ):
         """Check if nlpath1 can merge nlpath2."""
 
         if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
-            return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys, threshold)
+            return ClusterFinder.check_if_two_nlpath_merge(
+                path1, path2, merge_keys, threshold
+            )
 
         msg = "nlpath1 is shorter than nlpath2"
         raise ValueError(msg)
 
     def merge_cluster(self):
-        for cluster_index in self.find_cluster_index():
+        cluster_output_dir = self.output_dir / Path(f"cluster_{self.input_bam_path.stem}")
+        cluster_output_dir.mkdir(exist_ok=True)
+
+        for cluster_id, cluster_index in enumerate(self.find_cluster_index()):
+            export_connected_component_to_graph(
+                self._graph,
+                self.intact_nlpaths,
+                component_id=cluster_id,
+                component=cluster_index,
+                cluster_output_dir=cluster_output_dir,
+            )
+
             nlpaths = []
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]
@@ -390,7 +421,9 @@ class ClusterFinder:
             logger.debug(f"{len(sorted_nlpaths)=} nlpaths for merge: {sorted_nlpaths}")
 
             merge_keys = self.creat_merge_indexs(sorted_nlpaths)
-            new_cluster = ClusterFinder._merge_cluster(sorted_nlpaths, merge_keys, self.ruler.prune_threshold)
+            new_cluster = ClusterFinder._merge_cluster(
+                sorted_nlpaths, merge_keys, self.ruler.prune_threshold
+            )
             yield sort_cluster(
                 new_cluster,
                 key=create_sort_key_by_merge_factor,  # type: ignore
@@ -400,7 +433,9 @@ class ClusterFinder:
     @staticmethod
     def _merge_cluster(nlpaths, merge_keys, threshold: int):
         result = []
-        removed_nlpaths = set()  # Use a set to keep track of removed paths for efficiency
+        removed_nlpaths = (
+            set()
+        )  # Use a set to keep track of removed paths for efficiency
 
         while nlpaths:
             selected_nlpath = nlpaths.pop()
@@ -410,10 +445,59 @@ class ClusterFinder:
                     continue  # Skip this one as it's already marked for removal
 
                 # Check if the selected and current nlpaths should be merged
-                if ClusterFinder.check_merge(selected_nlpath, current_nlpath, merge_keys, threshold):
+                if ClusterFinder.check_merge(
+                    selected_nlpath, current_nlpath, merge_keys, threshold
+                ):
                     removed_nlpaths.add(current_nlpath)
 
             # Remove all marked nlpaths from the main list after checking
             nlpaths = [nlpath for nlpath in nlpaths if nlpath not in removed_nlpaths]
             result.append(selected_nlpath)
         return result
+
+
+def export_connected_component_to_graph(
+    graph,
+    intact_nlpaths,
+    component_id: int,
+    component: set[int],
+    cluster_output_dir: Path,
+) -> None:
+    """Export connected components to graph.
+
+    Creates a subgraph from a connected component found in the ClusterFinder.
+
+    Args:
+        graph: The original networkx graph containing all NLPath nodes
+        intact_nlpaths: The intact NLPath instances
+        component_id: Identifier for the component
+        component: Set of node indices in the component
+
+    Returns:
+        A networkx Graph representing the connected component
+    """
+    # Create a new graph for this component
+    component_graph = nx.Graph()
+
+    # Add nodes from this component
+    for node_idx in component:
+        nlpath = intact_nlpaths[node_idx]
+        read_id = nlpath.nodes[0].query_name
+        component_graph.add_node(
+            node_idx,
+            cluster_id=component_id,
+            read_id=read_id,
+            path_info=str(nlpath),
+        )
+
+    # Add edges that connect nodes within this component
+    for u, v in graph.edges():
+        if u in component and v in component:
+            # Copy the edge and its attributes to the component graph
+            component_graph.add_edge(u, v)
+
+    data = nx.cytoscape_data(component_graph)
+    file_name = cluster_output_dir / f"cluster_{component_id}.json"
+
+    with file_name.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
