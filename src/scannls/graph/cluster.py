@@ -58,9 +58,7 @@ class Ruler:
         merge_condition: MergeCondition = MergeCondition(self.prune_threshold)
 
         if (
-            merge_condition.head2head4distance(head_node_a, head_node_b)
-            or merge_condition.tail2tail4distance(tail_node_a, tail_node_b)
-            or merge_condition.head2head(head_node_a, head_node_b)
+            merge_condition.head2head(head_node_a, head_node_b)
             or merge_condition.tail2tail(tail_node_a, tail_node_b)
             or merge_condition.head2tail(head_node_a, tail_node_b)
             or merge_condition.head2tail(head_node_b, tail_node_a)
