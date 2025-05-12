@@ -251,11 +251,11 @@ class VCFWriter(Writer):
         header_lines += self.get_contigs()
 
         for _id in VCFWriter.reserved_info:
-            _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
+            number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
             if _id in {"TRANSCRIPT_ID", "SR_ID", "SEGMENT1", "SEGMENT2"}:
-                _number = "."
+                number = "."
             header_lines.append(
-                f'##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]},Description="{VCFWriter.description[_id]}">',
+                f'##INFO=<ID={_id},Number={number},Type={VCFWriter.reserved_info[_id]},Description="{VCFWriter.description[_id]}">',
             )
 
         for _id in VCFWriter.reserved_format:
@@ -327,15 +327,15 @@ def get_vcf_features_from_nlpath(
         anno_field = anno_field_dict.get(current_edge.annotation_code, "BOTH")
         gene1, gene2 = current_edge.gene1, current_edge.gene2
 
-        _mode1, _mode2 = current_edge.modes
-        mode1 = _mode1.to_str()
-        mode2 = _mode2.to_str()
+        mode1_, mode2_ = current_edge.modes
+        mode1 = mode1_.to_str()
+        mode2 = mode2_.to_str()
 
         if current_edge is None:
             raise BreakpointNotFoundError(current_node.query_name)
 
-        _chrom1, _pos1 = current_edge.break_point1.to_tuple()
-        _chrom2, _pos2 = current_edge.break_point2.to_tuple()
+        chrom1, pos1 = current_edge.break_point1.to_tuple()
+        chrom2, pos2 = current_edge.break_point2.to_tuple()
 
         microhomology_sequence = ""
         microinsertion_sequence = ""
@@ -353,10 +353,10 @@ def get_vcf_features_from_nlpath(
                     current_node,
                 )
 
-        sv_distance = abs(_pos1 - _pos2) if not current_edge.variation_type.is_tra() else 0
-        _dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
-        _dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
-        _pso = 0 if _dp1 == 0 or _dp2 == 0 else current_edge.sr / (current_edge.sr + (_dp1 + _dp2) / 2)
+        sv_distance = abs(pos1 - pos2) if not current_edge.variation_type.is_tra() else 0
+        dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
+        dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
+        pso = 0 if dp1 == 0 or dp2 == 0 else current_edge.sr / (current_edge.sr + (dp1 + dp2) / 2)
 
         if rescue_sr:
             sr = current_edge.sr
@@ -367,9 +367,9 @@ def get_vcf_features_from_nlpath(
 
         path_hops_features.append(
             {
-                f"{current_edge.variation_type}_{_chrom1}|{_pos1 + 1}_{_chrom2}|{_pos2 + 1}": {
-                    "CHROM": _chrom1,
-                    "POS": f"{_pos1 + 1}",
+                f"{current_edge.variation_type}_{chrom1}|{pos1 + 1}_{chrom2}|{pos2 + 1}": {
+                    "CHROM": chrom1,
+                    "POS": f"{pos1 + 1}",
                     "REF": ".",
                     "ALT": f"<{current_edge.variation_type}>",
                     "SVTYPE": current_edge.variation_type,
@@ -377,11 +377,11 @@ def get_vcf_features_from_nlpath(
                     "OSR": osr,
                     "CAN": can_field,
                     "BOUNDARY": anno_field,
-                    "CHR2": _chrom2,
-                    "SVEND": f"{_pos2 + 1}",
-                    "DP1": f"{_dp1}",
-                    "DP2": f"{_dp2}",
-                    "PSI": f"{_pso:.3g}",
+                    "CHR2": chrom2,
+                    "SVEND": f"{pos2 + 1}",
+                    "DP1": f"{dp1}",
+                    "DP2": f"{dp2}",
+                    "PSI": f"{pso:.3g}",
                     "SVLEN": f"{sv_distance}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",

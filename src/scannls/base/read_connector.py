@@ -85,9 +85,9 @@ class ReadsConnector:
             the length of left s more than right s, the mode is 2
             the length of left s less than right s, the mode is 1
         """
-        _lt, _, _rt = sms
+        lt, _, rt = sms
         # SM
-        if _lt > _rt:
+        if lt > rt:
             return MappingMode.SM
         # MS
         return MappingMode.MS
@@ -169,17 +169,17 @@ class ReadsConnector:
         )
 
         bp_region_seq_len = 0
-        _lt_len_r1, _read_match_r1, _rt_len_r1 = prev_sms
-        _lt_len_r2, _read_match_r2, _rt_len_r2 = next_sms
+        lt_len_r1, read_match_r1, rt_len_r1 = prev_sms
+        lt_len_r2, read_match_r2, rt_len_r2 = next_sms
         if prev_read_mode == MappingMode.SM:
             if next_read_mode == MappingMode.SM:
-                bp_region_seq_len = read_query_length - _rt_len_r1 - _rt_len_r2 - _read_match_r1 - _read_match_r2
+                bp_region_seq_len = read_query_length - rt_len_r1 - rt_len_r2 - read_match_r1 - read_match_r2
             elif next_read_mode == MappingMode.MS:
-                bp_region_seq_len = read_query_length - _rt_len_r1 - _lt_len_r2 - _read_match_r1 - _read_match_r2
+                bp_region_seq_len = read_query_length - rt_len_r1 - lt_len_r2 - read_match_r1 - read_match_r2
         elif next_read_mode == MappingMode.SM:
-            bp_region_seq_len = read_query_length - _lt_len_r1 - _rt_len_r2 - _read_match_r1 - _read_match_r2
+            bp_region_seq_len = read_query_length - lt_len_r1 - rt_len_r2 - read_match_r1 - read_match_r2
         elif next_read_mode == MappingMode.MS:
-            bp_region_seq_len = read_query_length - _lt_len_r1 - _lt_len_r2 - _read_match_r1 - _read_match_r2
+            bp_region_seq_len = read_query_length - lt_len_r1 - lt_len_r2 - read_match_r1 - read_match_r2
         is_microhomology = False
         microhomology_length = 0
 
@@ -256,14 +256,14 @@ class ReadsConnector:
         condition1 = False
         self.logger.debug("testing case M vs LS")
 
-        _lt_len_r1, _read_match_r1, _ = start_read.adhocsms
-        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+        lt_len_r1, read_match_r1, _ = start_read.adhocsms
+        lt_len_r2, read_match_r2, rt_len_r2 = read.sms
 
         read_query_sequence = read.query_sequence
         same_strand = start_read.adhocseq == read.query_sequence
 
         next_read_mode = MappingMode.SM
-        read_match_sequence = start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1]
+        read_match_sequence = start_read.adhocseq[lt_len_r1 : lt_len_r1 + read_match_r1]
 
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
@@ -276,7 +276,7 @@ class ReadsConnector:
 
         match_flag1 = self.check_if_ms_match(
             read_match_sequence,
-            read.query_sequence[:_lt_len_r2],
+            read.query_sequence[:lt_len_r2],
             same_strand=same_strand,
         )
         if match_flag1:
@@ -289,7 +289,7 @@ class ReadsConnector:
         if match_flag1 and condition1:  # may same
             read.mode = MappingMode.SM
             self.logger.debug(f"{start_read.mode=}, {read.mode=}")
-            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.read_pair_mode_dict[start_read, read] = (start_read.mode, read.mode)
             self.logger.debug(f"Add {read=} to reads chain")
             self.reads_chain.append(read)
 
@@ -298,7 +298,7 @@ class ReadsConnector:
                 self.reset_index()
 
             start_read = read
-            start_read.adhocsms = 0, _lt_len_r2 + _read_match_r2, _rt_len_r2
+            start_read.adhocsms = 0, lt_len_r2 + read_match_r2, rt_len_r2
             start_read.adhocseq = read.query_sequence
 
             return True, start_read
@@ -317,14 +317,14 @@ class ReadsConnector:
         """
         condition2 = False
         self.logger.debug("testing case M vs RS")
-        _lt_len_r1, _read_match_r1, _ = start_read.adhocsms
-        _lt_len_r2, _read_match_r2, _rt_len_r2 = read.sms
+        lt_len_r1, read_match_r1, _ = start_read.adhocsms
+        lt_len_r2, read_match_r2, rt_len_r2 = read.sms
 
         read_query_sequence = read.query_sequence
         same_strand = start_read.adhocseq == read.query_sequence
 
         next_read_mode = MappingMode.MS
-        read_match_sequence = start_read.adhocseq[_lt_len_r1 : _lt_len_r1 + _read_match_r1]
+        read_match_sequence = start_read.adhocseq[lt_len_r1 : lt_len_r1 + read_match_r1]
         read_match_sequence = ReadsConnector.update_query_sequence(
             read_match_sequence,
             read_query_sequence,
@@ -336,7 +336,7 @@ class ReadsConnector:
 
         match_flag2 = self.check_if_ms_match(
             read_match_sequence,
-            read.query_sequence[-_rt_len_r2:],
+            read.query_sequence[-rt_len_r2:],
             same_strand=same_strand,
         )
 
@@ -352,7 +352,7 @@ class ReadsConnector:
             read.mode = MappingMode.MS
 
             self.logger.debug(f"add {start_read=}, {read=} to mode dict")
-            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.read_pair_mode_dict[start_read, read] = (start_read.mode, read.mode)
 
             self.logger.debug(f"Add {read=} to reads chain")
             self.reads_chain.append(read)
@@ -363,8 +363,8 @@ class ReadsConnector:
 
             start_read = read
             start_read.adhocsms = (
-                _lt_len_r2,
-                _read_match_r2 + _rt_len_r2,
+                lt_len_r2,
+                read_match_r2 + rt_len_r2,
                 0,
             )
             start_read.adhocseq = read.query_sequence
@@ -394,14 +394,14 @@ class ReadsConnector:
 
         if not is_compare_for_ms:  # one hop
             self.logger.debug(f"add pair {start_read=} {read=}")
-            self.read_pair_mode_dict[(start_read, read)] = (start_read.mode, read.mode)
+            self.read_pair_mode_dict[start_read, read] = (start_read.mode, read.mode)
             self.reads_chain.append(read)
             return True, start_read
 
-        _lt_len_r1, _, _rt_len_r1 = start_read.adhocsms
+        lt_len_r1, _, rt_len_r1 = start_read.adhocsms
 
         # SM
-        if _lt_len_r1 > _rt_len_r1:
+        if lt_len_r1 > rt_len_r1:
             # starts with tail (+)
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
@@ -412,7 +412,7 @@ class ReadsConnector:
                 return self._match_left_softclip_segment(start_read, read)
             return self._match_right_softclip_segment(start_read, read)
         # MS
-        if _lt_len_r1 < _rt_len_r1:
+        if lt_len_r1 < rt_len_r1:
             # starts with head (+)
             if not start_read.strand.is_reverse():
                 if not read.strand.is_reverse():
@@ -566,7 +566,7 @@ class ReadsConnector:
                             if shift_length > self.rt_switching_filter_len:
                                 return None
 
-                            pos_start_blat = pos_start_blat - shift_length
+                            pos_start_blat -= shift_length
                             cigar_str = f"{read.lt_soft_len + read.read_match_size - shift_length}S{shift_length}M{cigar_blat_partial}"
                         # not starts with M for cigar_blat_partial
                         else:
@@ -579,7 +579,7 @@ class ReadsConnector:
                         if shift_length > self.rt_switching_filter_len:
                             return None
 
-                        pos_start_blat = pos_start_blat - shift_length
+                        pos_start_blat -= shift_length
                         cigar_str = f"{read.lt_soft_len + read.read_match_size - shift_length}S{shift_length}M{cigar_blat_partial}"
                     # "-" strand and not starts with M for cigar_blat_partial
                     else:
@@ -594,7 +594,7 @@ class ReadsConnector:
                         if shift_length > self.rt_switching_filter_len:
                             return None
 
-                        pos_end_blat = pos_end_blat + shift_length
+                        pos_end_blat += shift_length
                         cigar_str = f"{cigar_blat_partial}{shift_length}M{read.read_match_size + read.rt_soft_len - shift_length}S"
 
                     # "+" strand and not ends with M for cigar_blat_partial
@@ -608,7 +608,7 @@ class ReadsConnector:
                     if shift_length > self.rt_switching_filter_len:
                         return None
 
-                    pos_end_blat = pos_end_blat + shift_length
+                    pos_end_blat += shift_length
                     cigar_str = f"{cigar_blat_partial}{shift_length}M{read.read_match_size + read.rt_soft_len - shift_length}S"
 
                 # "-" strand and not ends with M for cigar_blat_partial
@@ -627,7 +627,7 @@ class ReadsConnector:
                         if shift_length > self.rt_switching_filter_len:
                             return None
 
-                        pos_end_blat = pos_end_blat + shift_length
+                        pos_end_blat += shift_length
                         cigar_str = f"{cigar_blat_partial}{shift_length}M{read.read_match_size + read.lt_soft_len - shift_length}S"
 
                     # not ends with M for cigar_blat_partial
@@ -641,7 +641,7 @@ class ReadsConnector:
                     if shift_length > self.rt_switching_filter_len:
                         return None
 
-                    pos_end_blat = pos_end_blat + shift_length
+                    pos_end_blat += shift_length
                     cigar_str = f"{cigar_blat_partial}{shift_length}M{read.read_match_size + read.lt_soft_len - shift_length}S"
 
                 # "-" strand and not ends with M for cigar_blat_partial
@@ -659,7 +659,7 @@ class ReadsConnector:
                     if shift_length > self.rt_switching_filter_len:
                         return None
 
-                    pos_start_blat = pos_start_blat - shift_length
+                    pos_start_blat -= shift_length
                     cigar_str = f"{read.rt_soft_len + read.read_match_size - shift_length}S{shift_length}M{cigar_blat_partial}"
                 # not starts with M for cigar_blat_partial
                 else:
@@ -672,7 +672,7 @@ class ReadsConnector:
                 if shift_length > self.rt_switching_filter_len:
                     return None
 
-                pos_start_blat = pos_start_blat - shift_length
+                pos_start_blat -= shift_length
                 cigar_str = f"{read.rt_soft_len + read.read_match_size - shift_length}S{shift_length}M{cigar_blat_partial}"
             # "-" strand and not starts with M for cigar_blat_partial
             else:
@@ -791,7 +791,7 @@ class ReadsConnector:
                 self.reads_chain.insert(0, new_read)
 
                 self.logger.debug(f"add {new_read=}, {read=} to mode dict")
-                self.read_pair_mode_dict[(new_read, read)] = (
+                self.read_pair_mode_dict[new_read, read] = (
                     new_read.mode,
                     read.mode,
                 )
@@ -800,7 +800,7 @@ class ReadsConnector:
                 self.logger.debug(f"Add {read=} to end of reads chain")
                 self.reads_chain.append(new_read)
                 self.logger.debug(f"add {read=}, {new_read=} to mode dict")
-                self.read_pair_mode_dict[(read, new_read)] = (
+                self.read_pair_mode_dict[read, new_read] = (
                     read.mode,
                     new_read.mode,
                 )

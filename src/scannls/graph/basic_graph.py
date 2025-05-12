@@ -243,8 +243,8 @@ class Node(BasicNode):
         "cigartuples_without_soft",
         "identities",
         "breakpoints",
-        "ptc",  #  Path Traversal Count (PTC)
-        "ptf",  #  Path Traversal Fraction (PTF)
+        "ptc",  # Path Traversal Count (PTC)
+        "ptf",  # Path Traversal Fraction (PTF)
         "id",
         *BasicNode.__slots__,
     )
@@ -302,7 +302,7 @@ class Node(BasicNode):
         """Get final breakpoint of a node."""
         if self.is_start_node():
             logger.debug(f"Update start node's breakpoint {self.breakpoints}")
-            new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
+            new_breakpoint = max(self.breakpoints, key=self.breakpoints.get)
             if self.strand.is_reverse():
                 self.ref_start = new_breakpoint
             else:
@@ -310,7 +310,7 @@ class Node(BasicNode):
             return new_breakpoint
         if self.is_end_node():
             logger.debug(f"Update end node's breakpoint {self.breakpoints}")
-            new_breakpoint = max(self.breakpoints, key=lambda x: self.breakpoints.get(x))
+            new_breakpoint = max(self.breakpoints, key=self.breakpoints.get)
             if self.strand.is_reverse():
                 self.ref_end = new_breakpoint
             else:
@@ -980,11 +980,11 @@ class NLPath:
         """Check if nlpath with maximum insertion length > threshold, which indicates sequencing artifacts."""
         maximum_insertion_length = 0
         for event_id, _node in enumerate(self.nodes[:-1], 1):
-            _edge = self.next_edge(_node, event_id - 1)
-            if _edge.insertion_info and isinstance(_edge.insertion_info[1], NovelInsertion):
-                insertion = _edge.insertion_info[1]
-                _insertion_length = len(insertion.query_sequence)
-                maximum_insertion_length = max(_insertion_length, maximum_insertion_length)
+            edge = self.next_edge(_node, event_id - 1)
+            if edge.insertion_info and isinstance(edge.insertion_info[1], NovelInsertion):
+                insertion = edge.insertion_info[1]
+                insertion_length = len(insertion.query_sequence)
+                maximum_insertion_length = max(insertion_length, maximum_insertion_length)
 
         return maximum_insertion_length <= threshold
 

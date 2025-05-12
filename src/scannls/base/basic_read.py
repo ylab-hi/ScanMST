@@ -179,13 +179,13 @@ class Read:
 
         for ind in range(0, len(self.cigartuples_without_soft), 2):
             op_code = self.cigartuples_without_soft[ind]
-            _len = self.cigartuples_without_soft[ind + 1]
+            len_ = self.cigartuples_without_soft[ind + 1]
 
             if op_code in {CigarCode.Match, CigarCode.Del}:  # M, D
-                current_pos += _len
+                current_pos += len_
             elif op_code == CigarCode.Ref_skip:  # N
                 exons.append((start_pos, current_pos))
-                current_pos += _len
+                current_pos += len_
                 start_pos = current_pos
 
         exons.append((start_pos, current_pos))

@@ -317,8 +317,8 @@ def draw_multiedge_labels(graph, pos):
     edge_labels = {}
     for u, v, _key, data in graph.edges(keys=True, data=True):
         if (u, v) not in edge_labels:
-            edge_labels[(u, v)] = []
-        edge_labels[(u, v)].append(str(data["label"]))
+            edge_labels[u, v] = []
+        edge_labels[u, v].append(str(data["label"]))
 
     for (u, v), labels in edge_labels.items():
         label = "\n".join(labels)

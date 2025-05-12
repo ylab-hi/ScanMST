@@ -405,17 +405,17 @@ def splicing_confirmation_and_correction(
         :param strand1: strand for breakpoint1
         :param strand2: strand for breakpoint2
         """
-        _breakpoint1 = (chrm1, pos1, strand1)
-        _breakpoint2 = (chrm2, pos2, strand2)
+        breakpoint1 = (chrm1, pos1, strand1)
+        breakpoint2 = (chrm2, pos2, strand2)
         donor_accepter_dict = {
-            "++21": (_breakpoint2, _breakpoint1),
-            "++12": (_breakpoint1, _breakpoint2),
-            "--21": (_breakpoint1, _breakpoint2),
-            "--12": (_breakpoint2, _breakpoint1),
-            "+-22": (_breakpoint2, _breakpoint1),
-            "+-11": (_breakpoint1, _breakpoint2),
-            "-+22": (_breakpoint1, _breakpoint2),
-            "-+11": (_breakpoint2, _breakpoint1),
+            "++21": (breakpoint2, breakpoint1),
+            "++12": (breakpoint1, breakpoint2),
+            "--21": (breakpoint1, breakpoint2),
+            "--12": (breakpoint2, breakpoint1),
+            "+-22": (breakpoint2, breakpoint1),
+            "+-11": (breakpoint1, breakpoint2),
+            "-+22": (breakpoint1, breakpoint2),
+            "-+11": (breakpoint2, breakpoint1),
         }
 
         ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1.value}{mode2.value}", None)
@@ -493,8 +493,8 @@ def splicing_confirmation_and_correction(
         msg = "Invalid strand combination"
         raise ValueError(msg)
 
-    _exons1 = copy.deepcopy(exons1)
-    _exons2 = copy.deepcopy(exons2)
+    exons1_ = copy.deepcopy(exons1)
+    exons2_ = copy.deepcopy(exons2)
 
     # for microinsertion or blunt end, search for splice_bin of the donor and acceptor sites
     if bp_region_seq_len >= 0:
@@ -558,8 +558,8 @@ def splicing_confirmation_and_correction(
     # and correct the breakpoints positions and exons (first or last)
     else:
         microhomology_length = abs(bp_region_seq_len)
-        _breakpoint1 = (chrm1, pos1, strand1)
-        _breakpoint2 = (chrm2, pos2, strand2)
+        breakpoint1 = (chrm1, pos1, strand1)
+        breakpoint2 = (chrm2, pos2, strand2)
 
         target_donor_seq = next(iter(splice_motif_dict.keys()))
         target_acceptor_seq = splice_motif_dict[target_donor_seq]
@@ -569,8 +569,8 @@ def splicing_confirmation_and_correction(
 
         final_donor_shift = 0
         final_accecptor_shift = microhomology_length - final_donor_shift
-        if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
-            if not default_shift_prechecker(strand1, strand2, _exons1, _exons2, microhomology_length):
+        if (donor_bp, acceptor_bp) == (breakpoint1, breakpoint2):
+            if not default_shift_prechecker(strand1, strand2, exons1_, exons2_, microhomology_length):
                 final_accecptor_shift = 0
                 final_donor_shift = microhomology_length - final_accecptor_shift
 
@@ -598,22 +598,22 @@ def splicing_confirmation_and_correction(
                     break
             if strand1 == "+":
                 ref_end1 -= final_donor_shift
-                _exons1.last.end -= final_donor_shift
+                exons1_.last.end -= final_donor_shift
                 corrected_pos1 = pos1 - final_donor_shift
             elif strand1 == "-":
                 ref_start1 += final_donor_shift
-                _exons1.first.start += final_donor_shift
+                exons1_.first.start += final_donor_shift
                 corrected_pos1 = pos1 + final_donor_shift
             if strand2 == "+":
                 ref_start2 += final_accecptor_shift
-                _exons2.first.start += final_accecptor_shift
+                exons2_.first.start += final_accecptor_shift
                 corrected_pos2 = pos2 + final_accecptor_shift
             elif strand2 == "-":
                 ref_end2 -= final_accecptor_shift
-                _exons2.last.end -= final_accecptor_shift
+                exons2_.last.end -= final_accecptor_shift
                 corrected_pos2 = pos2 - final_accecptor_shift
         else:
-            if not default_shift_prechecker(strand2, strand1, _exons2, _exons1, microhomology_length):
+            if not default_shift_prechecker(strand2, strand1, exons2_, exons1_, microhomology_length):
                 final_accecptor_shift = 0
                 final_donor_shift = microhomology_length - final_accecptor_shift
 
@@ -642,19 +642,19 @@ def splicing_confirmation_and_correction(
 
             if strand2 == "+":
                 ref_end2 -= final_donor_shift
-                _exons2.last.end -= final_donor_shift
+                exons2_.last.end -= final_donor_shift
                 corrected_pos2 = pos2 - final_donor_shift
             elif strand2 == "-":
                 ref_start2 += final_donor_shift
-                _exons2.first.start += final_donor_shift
+                exons2_.first.start += final_donor_shift
                 corrected_pos2 = pos2 + final_donor_shift
             if strand1 == "+":
                 ref_start1 += final_accecptor_shift
-                _exons1.first.start += final_accecptor_shift
+                exons1_.first.start += final_accecptor_shift
                 corrected_pos1 = pos1 + final_accecptor_shift
             elif strand1 == "-":
                 ref_end1 -= final_accecptor_shift
-                _exons1.last.end -= final_accecptor_shift
+                exons1_.last.end -= final_accecptor_shift
                 corrected_pos1 = pos1 - final_accecptor_shift
 
         if canonical_motif_or_not == 1:
@@ -672,10 +672,10 @@ def splicing_confirmation_and_correction(
         corrected_pos2,
         ref_start1,
         ref_end1,
-        _exons1,
+        exons1_,
         ref_start2,
         ref_end2,
-        _exons2,
+        exons2_,
     )
 
 
@@ -700,12 +700,12 @@ def _extract_read_sequence_from_matched_segment(
     seq_len = len(seq_original)
 
     if (read_strand == "+" and read_mode == MappingMode.MS) or (read_strand == "-" and read_mode == MappingMode.SM):
-        _seq_match = seq_original[seq_len - soft_seq_len - potential_microhomology_length : -soft_seq_len]
+        seq_match = seq_original[seq_len - soft_seq_len - potential_microhomology_length : -soft_seq_len]
 
     elif (read_strand == "+" and read_mode == MappingMode.SM) or (read_strand == "-" and read_mode == MappingMode.MS):
-        _seq_match = seq_original[soft_seq_len : soft_seq_len + potential_microhomology_length]
+        seq_match = seq_original[soft_seq_len : soft_seq_len + potential_microhomology_length]
 
-    return _seq_match
+    return seq_match
 
 
 def find_match_length(a, b, left_or_right="right"):
@@ -814,7 +814,7 @@ def blat2chimeric_alignment(
                             if shift_length > rt_switching_filter_len:
                                 return chimeric_aln_str
 
-                            pos_start_sa = pos_start_sa - shift_length
+                            pos_start_sa -= shift_length
                             cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
 
                         else:
@@ -826,7 +826,7 @@ def blat2chimeric_alignment(
                         if shift_length > rt_switching_filter_len:
                             return chimeric_aln_str
 
-                        pos_start_sa = pos_start_sa - shift_length
+                        pos_start_sa -= shift_length
                         cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
 
                     else:
@@ -840,7 +840,7 @@ def blat2chimeric_alignment(
                         if shift_length > rt_switching_filter_len:
                             return chimeric_aln_str
 
-                        pos_end_sa = pos_end_sa + shift_length
+                        pos_end_sa += shift_length
                         cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
                     else:
@@ -852,7 +852,7 @@ def blat2chimeric_alignment(
                     if shift_length > rt_switching_filter_len:
                         return chimeric_aln_str
 
-                    pos_end_sa = pos_end_sa + shift_length
+                    pos_end_sa += shift_length
                     cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
                 else:
@@ -868,7 +868,7 @@ def blat2chimeric_alignment(
                         if shift_length > rt_switching_filter_len:
                             return chimeric_aln_str
 
-                        pos_end_sa = pos_end_sa + shift_length
+                        pos_end_sa += shift_length
                         cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
                     else:
@@ -880,7 +880,7 @@ def blat2chimeric_alignment(
                     if shift_length > rt_switching_filter_len:
                         return chimeric_aln_str
 
-                    pos_end_sa = pos_end_sa + shift_length
+                    pos_end_sa += shift_length
                     cigar_sa = f"{cigar_sa_partial}{shift_length}M{read_length - soft_seq_len - shift_length}S"
 
                 else:
@@ -895,7 +895,7 @@ def blat2chimeric_alignment(
                     if shift_length > rt_switching_filter_len:
                         return chimeric_aln_str
 
-                    pos_start_sa = pos_start_sa - shift_length
+                    pos_start_sa -= shift_length
                     cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
 
                 else:
@@ -907,7 +907,7 @@ def blat2chimeric_alignment(
                 if shift_length > rt_switching_filter_len:
                     return chimeric_aln_str
 
-                pos_start_sa = pos_start_sa - shift_length
+                pos_start_sa -= shift_length
                 cigar_sa = f"{read_length - soft_seq_len - shift_length}S{shift_length}M{cigar_sa_partial}"
 
             else:
@@ -947,10 +947,10 @@ def obtain_read_segment_length_from_cigar_string(cigar_str: str) -> int:
 
     for idx in range(0, len(cigartuples), 2):
         op_code = cigartuples[idx]
-        _len = cigartuples[idx + 1]
+        len_ = cigartuples[idx + 1]
 
         if op_code in {0, 1, 4}:  # M, I or S
-            read_seg_len += _len
+            read_seg_len += len_
 
     return read_seg_len
 
@@ -1189,16 +1189,16 @@ def same_chrom_same_strand_mode21_handler(
             del_end = del_start + abs(evt_size)
             (
                 _,
-                _anno,
-                _can,
+                anno,
+                can,
                 corrected_del_start,
                 corrected_del_end,
                 rt_ref_start,
                 rt_ref_end,
-                _rt_exons,
+                rt_exons_,
                 lt_ref_start,
                 lt_ref_end,
-                _lt_exons,
+                lt_exons_,
             ) = splicing_confirmation_and_correction(
                 lt_chrm,
                 del_start,
@@ -1220,32 +1220,32 @@ def same_chrom_same_strand_mode21_handler(
                 cvg,
                 motif_required=motif_required,
             )
-            _genes = gene_annotation(lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv)
+            genes = gene_annotation(lt_chrm, corrected_del_start, lt_chrm, corrected_del_end, gene_iv)
             # 1 => 2
             if is_reverse:
-                if _anno == 1:
-                    _anno = 2
-                elif _anno == 2:
-                    _anno = 1
-                _genes = _genes[::-1]
+                if anno == 1:
+                    anno = 2
+                elif anno == 2:
+                    anno = 1
+                genes = genes[::-1]
 
             is_read_reversed = not is_reverse
 
             return (
                 "DEL",
-                _anno,
-                _can,
+                anno,
+                can,
                 (
                     f"{lt_chrm}:{corrected_del_start}",
                     f"{lt_chrm}:{corrected_del_end}",
                     MappingMode.MS,
                     MappingMode.SM,
                 ),
-                (rt_ref_start, rt_ref_end, _rt_exons),
-                (lt_ref_start, lt_ref_end, _lt_exons),
+                (rt_ref_start, rt_ref_end, rt_exons_),
+                (lt_ref_start, lt_ref_end, lt_exons_),
                 (rt_bp_seq, lt_bp_seq),
                 (read_rt.strand, read_lt.strand),
-                [*_genes],
+                [*genes],
                 is_read_reversed,
             )
 
@@ -1256,17 +1256,17 @@ def same_chrom_same_strand_mode21_handler(
             chrm_end = lt_chrm
             junc_end = junc_start + evt_size
             (
-                _nls,
-                _anno,
-                _can,
+                nls,
+                anno,
+                can,
                 corrected_junc_start,
                 corrected_junc_end,
                 lt_ref_start,
                 lt_ref_end,
-                _lt_exons,
+                lt_exons_,
                 rt_ref_start,
                 rt_ref_end,
-                _rt_exons,
+                rt_exons_,
             ) = splicing_confirmation_and_correction(
                 chrm_start,
                 junc_start,
@@ -1288,7 +1288,7 @@ def same_chrom_same_strand_mode21_handler(
                 cvg,
                 motif_required=motif_required,
             )
-            _genes = gene_annotation(
+            genes = gene_annotation(
                 chrm_start,
                 corrected_junc_start,
                 chrm_end,
@@ -1296,45 +1296,45 @@ def same_chrom_same_strand_mode21_handler(
                 gene_iv,
             )
             if is_reverse:
-                if _anno == 1:
-                    _anno = 2
-                elif _anno == 2:
-                    _anno = 1
-                _genes = _genes[::-1]
-            if _nls:
+                if anno == 1:
+                    anno = 2
+                elif anno == 2:
+                    anno = 1
+                genes = genes[::-1]
+            if nls:
                 if not is_reverse:
                     return (
                         "TDUP",
-                        _anno,
-                        _can,
+                        anno,
+                        can,
                         (
                             f"{lt_chrm}:{corrected_junc_start}",
                             f"{lt_chrm}:{corrected_junc_end}",
                             MappingMode.SM,
                             MappingMode.MS,
                         ),
-                        (lt_ref_start, lt_ref_end, _lt_exons),
-                        (rt_ref_start, rt_ref_end, _rt_exons),
+                        (lt_ref_start, lt_ref_end, lt_exons_),
+                        (rt_ref_start, rt_ref_end, rt_exons_),
                         (lt_bp_seq, rt_bp_seq),
                         (read_lt.strand, read_rt.strand),
-                        [*_genes],
+                        [*genes],
                         False,
                     )
                 return (
                     "TDUP",
-                    _anno,
-                    _can,
+                    anno,
+                    can,
                     (
                         f"{lt_chrm}:{corrected_junc_end}",
                         f"{lt_chrm}:{corrected_junc_start}",
                         MappingMode.MS,
                         MappingMode.SM,
                     ),
-                    (rt_ref_start, rt_ref_end, _rt_exons),
-                    (lt_ref_start, lt_ref_end, _lt_exons),
+                    (rt_ref_start, rt_ref_end, rt_exons_),
+                    (lt_ref_start, lt_ref_end, lt_exons_),
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
-                    [*_genes],
+                    [*genes],
                     False,
                 )
             return noreturn
@@ -1358,17 +1358,17 @@ def same_chrom_same_strand_mode21_handler(
             chrm_end = lt_chrm
             junc_end = junc_start + evt_size
             (
-                _nls,
-                _anno,
-                _can,
+                nls,
+                anno,
+                can,
                 corrected_junc_start,
                 corrected_junc_end,
                 lt_ref_start,
                 lt_ref_end,
-                _lt_exons,
+                lt_exons_,
                 rt_ref_start,
                 rt_ref_end,
-                _rt_exons,
+                rt_exons_,
             ) = splicing_confirmation_and_correction(
                 chrm_start,
                 junc_start,
@@ -1390,7 +1390,7 @@ def same_chrom_same_strand_mode21_handler(
                 cvg,
                 motif_required=motif_required,
             )
-            _genes = gene_annotation(
+            genes = gene_annotation(
                 chrm_start,
                 corrected_junc_start,
                 chrm_end,
@@ -1398,46 +1398,46 @@ def same_chrom_same_strand_mode21_handler(
                 gene_iv,
             )
             if is_reverse:
-                if _anno == 1:
-                    _anno = 2
-                elif _anno == 2:
-                    _anno = 1
-                _genes = _genes[::-1]
+                if anno == 1:
+                    anno = 2
+                elif anno == 2:
+                    anno = 1
+                genes = genes[::-1]
             # 2 => 1
-            if _nls:
+            if nls:
                 if not is_reverse:
                     return (
                         "TDUP",
-                        _anno,
-                        _can,
+                        anno,
+                        can,
                         (
                             f"{lt_chrm}:{corrected_junc_start}",
                             f"{lt_chrm}:{corrected_junc_end}",
                             MappingMode.SM,
                             MappingMode.MS,
                         ),
-                        (lt_ref_start, lt_ref_end, _lt_exons),
-                        (rt_ref_start, rt_ref_end, _rt_exons),
+                        (lt_ref_start, lt_ref_end, lt_exons_),
+                        (rt_ref_start, rt_ref_end, rt_exons_),
                         (lt_bp_seq, rt_bp_seq),
                         (read_lt.strand, read_rt.strand),
-                        [*_genes],
+                        [*genes],
                         False,
                     )
                 return (
                     "TDUP",
-                    _anno,
-                    _can,
+                    anno,
+                    can,
                     (
                         f"{lt_chrm}:{corrected_junc_end}",
                         f"{lt_chrm}:{corrected_junc_start}",
                         MappingMode.MS,
                         MappingMode.SM,
                     ),
-                    (rt_ref_start, rt_ref_end, _rt_exons),
-                    (lt_ref_start, lt_ref_end, _lt_exons),
+                    (rt_ref_start, rt_ref_end, rt_exons_),
+                    (lt_ref_start, lt_ref_end, lt_exons_),
                     (rt_bp_seq, lt_bp_seq),
                     (read_rt.strand, read_lt.strand),
-                    [*_genes],
+                    [*genes],
                     False,
                 )
             return noreturn
@@ -1548,17 +1548,17 @@ def same_chrom_diff_strand_handler(
         chrm_end = lt_chrm
         junc_end = ra_bp
         (
-            _nls,
-            _anno,
-            _can,
+            nls,
+            anno,
+            can,
             corrected_junc_start,
             corrected_junc_end,
             lt_ref_start,
             lt_ref_end,
-            _lt_exons,
+            lt_exons_,
             rt_ref_start,
             rt_ref_end,
-            _rt_exons,
+            rt_exons_,
         ) = splicing_confirmation_and_correction(
             chrm_start,
             junc_start,
@@ -1594,10 +1594,10 @@ def same_chrom_diff_strand_handler(
             genome_fasta,
         )
 
-        lt_start_end_exons = (lt_ref_start, lt_ref_end, _lt_exons)
-        rt_start_end_exons = (rt_ref_start, rt_ref_end, _rt_exons)
-        if _nls:
-            _genes = gene_annotation(
+        lt_start_end_exons = (lt_ref_start, lt_ref_end, lt_exons_)
+        rt_start_end_exons = (rt_ref_start, rt_ref_end, rt_exons_)
+        if nls:
+            genes = gene_annotation(
                 chrm_start,
                 corrected_junc_start,
                 chrm_end,
@@ -1607,8 +1607,8 @@ def same_chrom_diff_strand_handler(
 
             return (
                 "IDUP",
-                _anno,
-                _can,
+                anno,
+                can,
                 (
                     f"{lt_chrm}:{corrected_junc_start}",
                     f"{lt_chrm}:{corrected_junc_end}",
@@ -1619,7 +1619,7 @@ def same_chrom_diff_strand_handler(
                 rt_start_end_exons,
                 (lt_bp_seq, rt_bp_seq),
                 (*strands,),
-                [*_genes],
+                [*genes],
                 False,
             )
         return noreturn
@@ -1675,17 +1675,17 @@ def same_chrom_diff_strand_handler(
         is_read_reversed = True
 
     (
-        _nls,
-        _anno,
-        _can,
+        nls,
+        anno,
+        can,
         corrected_junc_start,
         corrected_junc_end,
         lt_ref_start,
         lt_ref_end,
-        _lt_exons,
+        lt_exons_,
         rt_ref_start,
         rt_ref_end,
-        _rt_exons,
+        rt_exons_,
     ) = splicing_confirmation_and_correction(
         chrm_start,
         junc_start,
@@ -1707,23 +1707,23 @@ def same_chrom_diff_strand_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
-    if _nls:
+    genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    if nls:
         return (
             "INV",
-            _anno,
-            _can,
+            anno,
+            can,
             (
                 f"{lt_chrm}:{corrected_junc_start}",
                 f"{lt_chrm}:{corrected_junc_end}",
                 same_mode,
                 same_mode,
             ),
-            (lt_ref_start, lt_ref_end, _lt_exons),
-            (rt_ref_start, rt_ref_end, _rt_exons),
+            (lt_ref_start, lt_ref_end, lt_exons_),
+            (rt_ref_start, rt_ref_end, rt_exons_),
             (lt_bp_seq, rt_bp_seq),
             (*strands,),
-            [*_genes],
+            [*genes],
             is_read_reversed,
         )
     return noreturn
@@ -1764,17 +1764,17 @@ def diff_chrom_same_strand_mode21_handler(
     lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
     rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
     (
-        _nls,
-        _anno,
-        _can,
+        nls,
+        anno,
+        can,
         corrected_junc_start,
         corrected_junc_end,
         lt_ref_start,
         lt_ref_end,
-        _lt_exons,
+        lt_exons_,
         rt_ref_start,
         rt_ref_end,
-        _rt_exons,
+        rt_exons_,
     ) = splicing_confirmation_and_correction(
         chrm_start,
         junc_start,
@@ -1796,48 +1796,48 @@ def diff_chrom_same_strand_mode21_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
     if is_reverse:
-        if _anno == 1:
-            _anno = 2
-        elif _anno == 2:
-            _anno = 1
-        _genes = _genes[::-1]
+        if anno == 1:
+            anno = 2
+        elif anno == 2:
+            anno = 1
+        genes = genes[::-1]
 
-    if _nls:
+    if nls:
         if not is_reverse:
             return (
                 "TRA",
-                _anno,
-                _can,
+                anno,
+                can,
                 (
                     f"{chrm_start}:{corrected_junc_start}",
                     f"{chrm_end}:{corrected_junc_end}",
                     MappingMode.SM,
                     MappingMode.MS,
                 ),
-                (lt_ref_start, lt_ref_end, _lt_exons),
-                (rt_ref_start, rt_ref_end, _rt_exons),
+                (lt_ref_start, lt_ref_end, lt_exons_),
+                (rt_ref_start, rt_ref_end, rt_exons_),
                 (lt_bp_seq, rt_bp_seq),
                 (read_lt.strand, read_rt.strand),
-                [*_genes],
+                [*genes],
                 False,
             )
         return (
             "TRA",
-            _anno,
-            _can,
+            anno,
+            can,
             (
                 f"{chrm_end}:{corrected_junc_end}",
                 f"{chrm_start}:{corrected_junc_start}",
                 MappingMode.MS,
                 MappingMode.SM,
             ),
-            (rt_ref_start, rt_ref_end, _rt_exons),
-            (lt_ref_start, lt_ref_end, _lt_exons),
+            (rt_ref_start, rt_ref_end, rt_exons_),
+            (lt_ref_start, lt_ref_end, lt_exons_),
             (rt_bp_seq, lt_bp_seq),
             (read_rt.strand, read_lt.strand),
-            [*_genes],
+            [*genes],
             False,
         )
 
@@ -1940,17 +1940,17 @@ def diff_chrom_diff_strand_handler(
     lt_bp_seq = obtain_bp_region_seq(read_lt, lt_mode, bp_region_seq_len, genome_fasta)
     rt_bp_seq = obtain_bp_region_seq(read_rt, rt_mode, bp_region_seq_len, genome_fasta)
     (
-        _nls,
-        _anno,
-        _can,
+        nls,
+        anno,
+        can,
         corrected_junc_start,
         corrected_junc_end,
         lt_ref_start,
         lt_ref_end,
-        _lt_exons,
+        lt_exons_,
         rt_ref_start,
         rt_ref_end,
-        _rt_exons,
+        rt_exons_,
     ) = splicing_confirmation_and_correction(
         chrm_start,
         junc_start,
@@ -1972,23 +1972,23 @@ def diff_chrom_diff_strand_handler(
         cvg,
         motif_required=motif_required,
     )
-    _genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
-    if _nls:
+    genes = gene_annotation(chrm_start, corrected_junc_start, chrm_end, corrected_junc_end, gene_iv)
+    if nls:
         return (
             "TRA",
-            _anno,
-            _can,
+            anno,
+            can,
             (
                 f"{chrm_start}:{corrected_junc_start}",
                 f"{chrm_end}:{corrected_junc_end}",
                 same_mode,
                 same_mode,
             ),
-            (lt_ref_start, lt_ref_end, _lt_exons),
-            (rt_ref_start, rt_ref_end, _rt_exons),
+            (lt_ref_start, lt_ref_end, lt_exons_),
+            (rt_ref_start, rt_ref_end, rt_exons_),
             (lt_bp_seq, rt_bp_seq),
             (read_lt.strand, read_rt.strand),
-            [*_genes],
+            [*genes],
             False,
         )
     return noreturn

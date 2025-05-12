@@ -217,16 +217,16 @@ def get_longest_insertion_sequence(
     insertion_list = []
     for idx in range(0, len(cigartuples_without_soft), 2):
         op_code = cigartuples_without_soft[idx]
-        _len = cigartuples_without_soft[idx + 1]
+        len_ = cigartuples_without_soft[idx + 1]
 
         if op_code == 0:  # M
-            current_pos += _len
-            current_len += _len
+            current_pos += len_
+            current_len += len_
         elif op_code in {2, 3}:  # D or N
-            current_pos += _len
+            current_pos += len_
         elif op_code == 1:  # I
-            insertion_list.append((current_pos, current_len, _len))
-            current_len += _len
+            insertion_list.append((current_pos, current_len, len_))
+            current_len += len_
 
     if len(insertion_list) == 0:
         return 0, "", 0
@@ -258,11 +258,11 @@ def cigarstring2cigartuples(cigarstring: str) -> list[tuple[int, int]]:
     """
     cigar_dict = {"M": 0, "I": 1, "D": 2, "N": 3, "S": 4, "H": 5}
     cigartuples = []
-    _cigartuples = re.findall(r"(\d+)(\w)", cigarstring)
-    for _, (length, operation) in enumerate(_cigartuples):
+    cigartuples_ = re.findall(r"(\d+)(\w)", cigarstring)
+    for _, (length, operation) in enumerate(cigartuples_):
         op_code = cigar_dict[operation]
-        _len = int(length)
-        cigartuples.append((op_code, _len))
+        len_ = int(length)
+        cigartuples.append((op_code, len_))
     return cigartuples
 
 

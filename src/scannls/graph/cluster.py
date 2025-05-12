@@ -1,7 +1,7 @@
 """cluster NLpaths."""
 
-from itertools import combinations
 import json
+from itertools import combinations
 from pathlib import Path
 
 import networkx as nx

@@ -128,20 +128,20 @@ def _extract_annotated_exons(
                         trx_id,
                     )
                     if consider_strand:
-                        _iv = HTSeq.GenomicInterval(
+                        iv_ = HTSeq.GenomicInterval(
                             chrom,
                             intron_start - boundary_size,
                             intron_end + boundary_size,
                             strand,
                         )
                     else:
-                        _iv = HTSeq.GenomicInterval(
+                        iv_ = HTSeq.GenomicInterval(
                             chrom,
                             intron_start - boundary_size,
                             intron_end + boundary_size,
                             ".",
                         )
-                    introns_gas[_iv] += intron_id
+                    introns_gas[iv_] += intron_id
 
             if end - start >= minimum_exon_size:
                 exon_id = ExonInfo(chrom, Interval(start, end), strand, trx_id)
@@ -247,7 +247,7 @@ class CircRNAFilter:
             current_node, next_node = nodes
             current_edge = nlpath.next_edge(current_node, 0)
             # high-confidence circular RNA
-            _circular_condition1 = bool(
+            circular_condition1 = bool(
                 current_edge.variation_type.is_tdup()
                 and (
                     (
@@ -266,7 +266,7 @@ class CircRNAFilter:
             )
 
             # medium-confidence circular RNA
-            _circular_condition2 = bool(
+            circular_condition2 = bool(
                 current_edge.variation_type.is_tdup()
                 and self.is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
                     current_node,
@@ -274,7 +274,7 @@ class CircRNAFilter:
                 ),
             )
             # medium-confidence circular RNA
-            _circular_condition3 = bool(
+            circular_condition3 = bool(
                 current_edge.variation_type.is_tdup()
                 and (
                     abs(current_node.ref_start - next_node.ref_start) <= self.breakpoint_diff_threshold
@@ -284,7 +284,7 @@ class CircRNAFilter:
             )
 
             # low-confidence circular RNA
-            _circular_condition4 = bool(
+            circular_condition4 = bool(
                 current_edge.variation_type.is_tdup()
                 and self.is_two_megaexon_within_annotated_intron(
                     current_node,
@@ -292,7 +292,7 @@ class CircRNAFilter:
                 ),
             )
 
-            return _circular_condition1 or _circular_condition2 or _circular_condition3 or _circular_condition4
+            return circular_condition1 or circular_condition2 or circular_condition3 or circular_condition4
 
         # multi-hop event
         num_of_tdups = 0
@@ -476,10 +476,10 @@ class CircRNAFilter:
         chrom = node.chrom
         strand = str(node.strand)
         for _exon in node.exons:
-            _exon_start = _exon.start
-            _exon_end = _exon.end
-            exon_start = HTSeq.GenomicPosition(chrom, _exon_start, strand)
-            exon_end = HTSeq.GenomicPosition(chrom, _exon_end, strand)
+            exon_start_ = _exon.start
+            exon_end_ = _exon.end
+            exon_start = HTSeq.GenomicPosition(chrom, exon_start_, strand)
+            exon_end = HTSeq.GenomicPosition(chrom, exon_end_, strand)
             exon_set1 = self.exons_gas[exon_start]
             exon_set2 = self.exons_gas[exon_end]
             common_exons = exon_set1.intersection(exon_set2)
@@ -490,8 +490,8 @@ class CircRNAFilter:
             # overlapping annotated exon does not satisfy condition
             if not CircRNAFilter.is_largest_overlapping_exon(
                 common_exons,
-                _exon_start,
-                _exon_end,
+                exon_start_,
+                exon_end_,
                 threshold,
             ):
                 flag = False

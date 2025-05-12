@@ -182,13 +182,13 @@ class Insertion(Read):
         source_strand: str | Strand,
     ) -> None:
         """Update cigarstring and sms of Insertion object."""
-        _ls, _m, _rs = sms
+        ls_, m, rs_ = sms
         if source_s == "left":
-            ls = _ls - self.query_length
-            rs = _rs + _m
+            ls = ls_ - self.query_length
+            rs = rs_ + m
         else:
-            ls = _ls + _m
-            rs = _rs - self.query_length
+            ls = ls_ + m
+            rs = rs_ - self.query_length
 
         if source_strand != self.strand:
             rs, ls = ls, rs
@@ -277,7 +277,7 @@ class Event:
 
     def __init__(self, event) -> None:
         """Initialize the event."""
-        (sv_type, annot, canonical, _positions, read1_info, read2_info, insertion_info, strands, genes, is_read_reversed) = event
+        (sv_type, annot, canonical, positions, read1_info, read2_info, insertion_info, strands, genes, is_read_reversed) = event
 
         self.sv_type = sv_type
 
@@ -286,9 +286,9 @@ class Event:
         self.genes = genes
 
         self.insertion_info = insertion_info
-        self.positions = _positions
-        self.bp1, self.bp2 = _positions[:2]
-        self.mode1, self.mode2 = _positions[2:]
+        self.positions = positions
+        self.bp1, self.bp2 = positions[:2]
+        self.mode1, self.mode2 = positions[2:]
         self.strand1 = Strand.from_str(strands[0])
         self.strand2 = Strand.from_str(strands[1])
         self.read1_ref_start, self.read1_ref_end, self.read1_exons = read1_info

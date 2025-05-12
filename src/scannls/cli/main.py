@@ -176,7 +176,7 @@ class BamScanner:
                             blat_result = False
 
                         if blat_result:
-                            hit, top_hsp, mapq_aligner = self.aligner._query_insertion(
+                            hit, top_hsp, _mapq_aligner = self.aligner._query_insertion(
                                 blat_result,
                                 read_matched_seq,
                                 threshold_identity=0.9,
@@ -445,9 +445,9 @@ def detect_sv_from_cigar(
         # every chain may have a list of events
         for lt, rt in zip(read_chains[:], read_chains[1:]):
             if (lt, rt) in reads_pair_mode_dict:
-                lt_mode, rt_mode = reads_pair_mode_dict[(lt, rt)]
+                lt_mode, rt_mode = reads_pair_mode_dict[lt, rt]
             elif (rt, lt) in reads_pair_mode_dict:
-                rt_mode, lt_mode = reads_pair_mode_dict[(rt, lt)]
+                rt_mode, lt_mode = reads_pair_mode_dict[rt, lt]
             else:
                 logger.warning(f"{lt=}, {rt=} are not in {reads_pair_mode_dict}")
                 raise ValueError
@@ -584,13 +584,13 @@ def _scan_bam_helper(
                         chr_sa,
                         pos_sa,
                         strand_sa,
-                        __cigar_sa,
+                        cigar_sa,
                         mapq_sa,
                         nm_sa,
                     ) = _aln.split(",")
 
-                    left_mat = pat_left_s.search(__cigar_sa)
-                    right_mat = pat_right_s.search(__cigar_sa)
+                    left_mat = pat_left_s.search(cigar_sa)
+                    right_mat = pat_right_s.search(cigar_sa)
 
                     l_s_len = int(left_mat.group(1)) if left_mat else 0
                     r_s_len = int(right_mat.group(1)) if right_mat else 0
@@ -604,11 +604,11 @@ def _scan_bam_helper(
                     if tgt_key in representative_alignments_new_record and alt_tgt_key not in representative_alignments_new_record:
                         updated_record_realignment = representative_alignments_new_record[tgt_key]
                         (
-                            chrm_realign,
-                            pos_realign,
+                            _chrm_realign,
+                            _pos_realign,
                             strand_realign,
-                            cigar_realign,
-                            mapq_realign,
+                            _cigar_realign,
+                            _mapq_realign,
                             nm_realign,
                         ) = updated_record_realignment.split(",")
                         if int(nm_realign) <= max_allowed_nm:
@@ -617,11 +617,11 @@ def _scan_bam_helper(
                     elif alt_tgt_key in representative_alignments_new_record and tgt_key not in representative_alignments_new_record:
                         updated_record_realignment = representative_alignments_new_record[alt_tgt_key]
                         (
-                            chrm_realign,
-                            pos_realign,
+                            _chrm_realign,
+                            _pos_realign,
                             strand_realign,
-                            cigar_realign,
-                            mapq_realign,
+                            _cigar_realign,
+                            _mapq_realign,
                             nm_realign,
                         ) = updated_record_realignment.split(",")
                         if strand_sa != strand_realign and int(nm_realign) <= max_allowed_nm:
@@ -732,7 +732,7 @@ def _scan_bam_helper(
                 if read.cigarstring is None:
                     msg = f"{read}'s cigarstring is None"
                     raise ValueError(msg)
-                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
+                _num_of_subs, _subs_fraction, _ins_fraction, _del_fraction = obtain_variants_stats(
                     read.get_tag("cs"),
                     long_indel_length,
                 )
