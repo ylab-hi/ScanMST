@@ -88,7 +88,7 @@ def parse_nlgraph_for_cluster_seq(
     with writers.open():
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
-            graph_id = f"TSG{ind:10d}"
+            graph_id = f"TSG{ind:010d}"
             for nlpath in nlgraph(cluster, graph_id, is_plot=options.graph):
                 if len(nlpath) == 1:
                     logger.warning(
