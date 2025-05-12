@@ -93,6 +93,7 @@ def add_edge_to_nxgraph(
             weight=edge.sr,
             read_ids=edge.read_ids,
             breakpoints=breakpoints,
+            insertion_info=edge.insertion_info,
         )
 
 
