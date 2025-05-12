@@ -70,6 +70,8 @@ def add_edge_to_nxgraph(
     node2_label = get_label_from_node(node2)
     breakpoints = f"{edge.break_point1.chrom},{edge.break_point2.chrom},{edge.break_point1.pos},{edge.break_point2.pos},{edge.variation_type}"
 
+    insertion = "" if edge.insertion_info is None else f"{edge.insertion_info[1]}"
+
     if graph.has_edge(node1_label, node2_label):
         current_edge_label = [i["id"] for i in graph[node1_label][node2_label].values()]
         if edge_label not in current_edge_label:
@@ -83,7 +85,7 @@ def add_edge_to_nxgraph(
                 gene1=edge.gene1,
                 gene2=edge.gene2,
                 breakpoints=breakpoints,
-                insertion_info=edge.insertion_info,
+                insertion_info=insertion,
             )
     else:
         graph.add_edge(
@@ -93,7 +95,7 @@ def add_edge_to_nxgraph(
             weight=edge.sr,
             read_ids=edge.read_ids,
             breakpoints=breakpoints,
-            insertion_info=edge.insertion_info,
+            insertion_info=insertion,
         )
 
 
