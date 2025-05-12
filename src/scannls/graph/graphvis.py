@@ -83,6 +83,7 @@ def add_edge_to_nxgraph(
                 gene1=edge.gene1,
                 gene2=edge.gene2,
                 breakpoints=breakpoints,
+                insertion_info=edge.insertion_info,
             )
     else:
         graph.add_edge(
