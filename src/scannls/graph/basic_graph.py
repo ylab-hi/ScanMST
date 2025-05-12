@@ -794,7 +794,7 @@ class NLPath:
 
     @property
     def id(self) -> str:
-        return "TSP." + to_numeric_identifier("-".join([f"{node.id}" for node in self.nodes]))
+        return "TSP" + to_numeric_identifier("-".join([f"{node.id}" for node in self.nodes]))
 
     def __lt__(self, other) -> bool:
         """Implementation sorted function."""
