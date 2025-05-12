@@ -17,7 +17,7 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
-    to_hash_identifier,
+    to_numeric_identifier,
 )
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition

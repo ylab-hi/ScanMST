@@ -283,7 +283,7 @@ class Node(BasicNode):
         self.breakpoints = defaultdict(int)
 
         self.ptc, self.ptf = 0, 0.0
-        self.id = "TSN" + to_hash_identifier(self._unique_key)
+        self.id = "TSN" + to_numeric_identifier(self._unique_key)
 
     def set_up_breakpoints(self) -> None:
         logger.debug(f"Set up breakpoints for {self!r}")
@@ -567,7 +567,7 @@ class Edge:
         self.node1_key = node1_key
         self.node2_key = node2_key
         self.edge_data = edge_data
-        self.id = "E." + to_hash_identifier(f"{node1_key}-{node2_key}")
+        self.id = "TSE" + to_numeric_identifier(f"{node1_key}-{node2_key}")
 
     def __repr__(self) -> str:
         return f"Edge(data={self.edge_data})"
@@ -794,7 +794,7 @@ class NLPath:
 
     @property
     def id(self) -> str:
-        return "NLT." + to_hash_identifier("-".join([f"{node.id}" for node in self.nodes]))
+        return "TSP." + to_numeric_identifier("-".join([f"{node.id}" for node in self.nodes]))
 
     def __lt__(self, other) -> bool:
         """Implementation sorted function."""
@@ -1327,6 +1327,47 @@ class NLPath:
                 )
                 nodes.append(final_node)
         return cls.from_nodes_and_edges_data(nodes, edges_data)
+
+
+def to_numeric_identifier(input_string: str, length: int | None = 10) -> str:
+    """
+    Convert a string to a numeric identifier using SHA-256.
+
+    Args:
+        input_string: The string to convert
+        length: The desired length of the output identifier (default: 10)
+                If None, returns the full numeric representation
+
+    Returns:
+        A string of decimal numbers derived from the SHA-256 hash
+
+    Example:
+        >>> to_numeric_identifier("Hello World!", 10)
+        '0720321080'
+    """
+    if not isinstance(input_string, str):
+        msg = "Input must be a string"
+        raise TypeError(msg)
+
+    if length is not None and not isinstance(length, int):
+        msg = "Length must be an integer or None"
+        raise TypeError(msg)
+
+    if length is not None and length <= 0:
+        msg = "Length must be positive"
+        raise ValueError(msg)
+
+    # Create SHA-256 hash
+    hash_obj = hashlib.sha256(input_string.encode("utf-8"))
+    hash_bytes = hash_obj.digest()
+
+    # Convert bytes to decimal numbers
+    numeric_string = "".join(f"{byte:03}" for byte in hash_bytes)
+
+    # Take specified length of the numeric string
+    if length is not None and length < len(numeric_string):
+        return numeric_string[:length]
+    return numeric_string
 
 
 def to_hash_identifier(input_string: str, length: int | None = 16) -> str:
