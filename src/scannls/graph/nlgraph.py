@@ -17,7 +17,6 @@ from .basic_graph import (
     NLPath,
     Node,
     NodeIdentity,
-    to_numeric_identifier,
 )
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition
@@ -116,7 +115,7 @@ class NLGraph:
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
-            # current_path.polish_edges()
+            current_path.polish_edges()
             all_paths.append(current_path)
 
         if is_plot and not self.has_circle and node_list:
