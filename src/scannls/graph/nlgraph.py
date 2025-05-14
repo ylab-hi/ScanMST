@@ -1,4 +1,4 @@
-"""NLGraph operations."""
+"""NLGraph."""
 
 from __future__ import annotations
 
