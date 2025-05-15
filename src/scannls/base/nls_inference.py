@@ -98,7 +98,6 @@ def infer_nls_from_connected_reads(
                 microinsertion_cutoff,
             )
 
-        # else:  # lt_strand != rt_strand
         # IDUP and INV detection in this category
         return same_chrom_diff_strand_handler(
             read_lt,
