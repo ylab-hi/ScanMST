@@ -115,7 +115,6 @@ class NLGraph:
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
-            current_path.polish_edges()
             all_paths.append(current_path)
 
         if is_plot and not self.has_circle and node_list:
@@ -166,7 +165,7 @@ class NLGraph:
             output_dir,
             rescue_sr=rescue_sr,
             ignore_circle=ignore_circle,
-            refine=refine,
+            if_refine=refine,
         )
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
@@ -483,7 +482,7 @@ class NLGraph:
         """Helper function to trace through graph and find all paths.
 
         .. seealso::
-            :func:`SpliceGraph.trace`
+            :func:`NLGraph.trace`
         """
         if not start_node or self.has_circle:
             # successor be [] or None
@@ -730,21 +729,30 @@ class NLGraph:
                 logger.error(f"Error creating edge from {primary_node} to {successor}: {e}")
 
     def polish_edges(self) -> None:
-        """Polish edges in the graph."""
+        """Polish edges in the graph.
 
-        # iterate all nodes in the graph
-        # get every predecessor and successor of the node
-        # update the break point of the edge
+        For each node and its successors, update the breakpoints of the connecting edge(s).
+        If multiple edges exist between a node pair, log a warning and only update the first edge.
+        """
         for node in self:
             for successor in node.successors:
-                # update edge from node to successor
-                edges = self.find_edges(node, successor)
+                try:
+                    edges = self.find_edges(node, successor)
+                except (KeyError, IndexError) as e:
+                    logger.error(f"Cannot find edge(s) between {node} and {successor}: {e}")
+                    continue
+                if not edges:
+                    logger.warning(f"No edge found between {node} and {successor}")
+                    continue
                 if len(edges) > 1:
                     logger.error(f"Multiple edges {edges} found between {node} and {successor}")
-
-                for edge in edges:
+                # Only update the first edge if multiple exist
+                edge = edges[0]
+                try:
                     edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
                     edge.break_point2.pos = successor.ref_start if successor.strand.is_forward() else successor.ref_end
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error updating breakpoints for edge {edge} between {node} and {successor}: {e}")
 
 
 def compare_node_when_refine(node1: Node, node2: Node, threshold=0) -> bool:
