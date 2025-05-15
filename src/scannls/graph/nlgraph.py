@@ -105,8 +105,6 @@ class NLGraph:
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
 
-        self.polish_edges()
-
         node_list: list[Node | Edge] = []
 
         all_paths = []
@@ -115,6 +113,7 @@ class NLGraph:
             current_path = NLPath.create_path_from_node_edge_list(
                 node_list,
             )
+            current_path.polish_edges()
             all_paths.append(current_path)
 
         if is_plot and not self.has_circle and node_list:
@@ -734,6 +733,7 @@ class NLGraph:
         For each node and its successors, update the breakpoints of the connecting edge(s).
         If multiple edges exist between a node pair, log a warning and only update the first edge.
         """
+        logger.trace("Polish edges in the graph")
         for node in self:
             for successor in node.successors:
                 try:
