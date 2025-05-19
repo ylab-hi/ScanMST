@@ -87,7 +87,7 @@ class TSGWriter(Writer):
 
 
 def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
-    nxgraph = create_nxgraph(nlgraph, min_support_reads=min_support_reads)
+    nxgraph = create_nxgraph(nlgraph, min_support_reads=min_support_reads, possible_paths=nlgraph.possible_paths)
     result = []
 
     if gid:
@@ -102,6 +102,11 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
     for edge in nxgraph.edges(data=True):
         result.append(f"E\t{edge[2]['id']}\t{edge[0]}\t{edge[1]}\t{edge[2]['breakpoints']}")
 
+    # write possible paths
+    for path_id, path in nxgraph.graph["possible_paths"].items():
+        path_str = "\t".join([f"{ele_id}+" for ele_id in path])
+        result.append(f"P\t{path_id}\t{path_str}")
+
     # write node attributes sr
     for node in nxgraph.nodes(data=True):
         result.append(f"A\tN\t{node[0]}\tptc:i:{node[1]['ptc']}")
@@ -110,5 +115,18 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
     # write edge attributes sr
     for edge in nxgraph.edges(data=True):
         result.append(f"A\tE\t{edge[2]['id']}\tsr:i:{edge[2]['weight']}")
+
+        # write insertion info if exists
+        if "insertion_info" in edge[2]:
+            insertion_info = edge[2]["insertion_info"]
+
+            if insertion_info != "":
+                insertion_type, insertion_seq = insertion_info.split("(")
+                if insertion_type == "NovelInsertion":
+                    seq = insertion_seq.strip(")").split(":")[0]
+                    result.append(f"A\tE\t{edge[2]['id']}\tnovel_insertion:Z:{seq}")
+                elif insertion_type == "MicroHomology":
+                    seq = insertion_seq.strip(")")
+                    result.append(f"A\tE\t{edge[2]['id']}\tmicrohomology:Z:{seq}")
 
     return "\n".join(result)

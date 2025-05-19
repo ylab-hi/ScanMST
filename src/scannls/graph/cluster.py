@@ -379,9 +379,7 @@ class ClusterFinder:
         raise ValueError(msg)
 
     def merge_cluster(self):
-        for cluster_id, cluster_index in enumerate(self.find_cluster_index()):
-            export_connected_component_to_graph(self._graph, self.intact_nlpaths, component_id=cluster_id, component=cluster_index)
-
+        for _cluster_id, cluster_index in enumerate(self.find_cluster_index()):
             nlpaths = []
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]

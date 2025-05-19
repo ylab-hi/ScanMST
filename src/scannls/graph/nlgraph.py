@@ -59,6 +59,7 @@ class NLGraph:
         self.has_circle = False
         self.ignore_circle = ignore_circle
         self.if_refine = if_refine
+        self.possible_paths = None
 
     def __call__(
         self,
@@ -116,11 +117,13 @@ class NLGraph:
             current_path.polish_edges()
             all_paths.append(current_path)
 
+        self.possible_paths = gather_possible_paths(all_paths)
+
         if is_plot and not self.has_circle and node_list:
             plot_result = self.output_dir / Path(f"graph_{self.input_bam_path.stem}")
             plot_result.mkdir(exist_ok=True)
             cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
-            default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1).visualize()
+            default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1, possible_paths=self.possible_paths).visualize()
 
         update_node_ptf_in_path(all_paths, len(all_paths))
         return all_paths
@@ -799,3 +802,21 @@ def update_node_ptf_in_path(paths: list[NLPath], total_path: int) -> None:
         for node in path:
             if isinstance(node, Node):
                 node.ptf = node.ptc / total_path
+
+
+def gather_possible_paths(nlpaths: list[NLPath]) -> dict[str, list[str]]:
+    """Gather possible paths from NLPaths."""
+    possible_paths = defaultdict(list)
+
+    for path in nlpaths:
+        for idx, node in enumerate(path.nodes[:-1]):
+            possible_paths[path.id].append(node.id)
+
+            next_node = path.nodes[idx + 1]
+            edge = path.get_edge(node, next_node)
+
+            possible_paths[path.id].append(edge.id)
+
+        possible_paths[path.id].append(next_node.id)
+
+    return possible_paths

@@ -89,7 +89,9 @@ def parse_nlgraph_for_cluster_seq(
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
             graph_id = f"TSG{ind:010}"
-            for nlpath in nlgraph(cluster, graph_id, is_plot=options.graph):
+            all_paths = nlgraph(cluster, graph_id, is_plot=options.graph)
+
+            for nlpath in all_paths:
                 if len(nlpath) == 1:
                     logger.warning(
                         f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",

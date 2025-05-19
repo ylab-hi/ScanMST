@@ -182,7 +182,7 @@ def get_exon_sequence_from_node(node: Node, insertion_info, reference_io: Fasta)
 
     # positive strand sequence for novel insertion
     microhomology_sequence, novel_insertion_sequence = "", ""
-    if insertion_info and not insertion_info[0]:
+    if insertion_info is not None and not insertion_info[0]:
         insertion = insertion_info[1]
         if isinstance(insertion, NovelInsertion):
             novel_insertion_sequence += insertion.query_sequence

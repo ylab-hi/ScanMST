@@ -15,14 +15,14 @@ if TYPE_CHECKING:
     from . import Edge, NLGraph, Node
 
 
-def default_visitors(graph: NLGraph, figure_name: str, support_reads: int = 1) -> GraphVis:
+def default_visitors(graph: NLGraph, figure_name: str, support_reads: int = 1, possible_paths: dict[str, list[str]] | None = None) -> GraphVis:
     return GraphVis.from_visitors(
         graph,
         [
             GraphCytoscapeExporter(figure_name),
-            TSGraphExporter(figure_name),
         ],
         support_reads,
+        possible_paths,
     )
 
 
@@ -99,10 +99,10 @@ def add_edge_to_nxgraph(
         )
 
 
-def create_nxgraph(nlgraph, min_support_reads: int = 1) -> nx.DiGraph:
+def create_nxgraph(nlgraph, min_support_reads: int = 1, possible_paths: dict[str, list[str]] | None = None) -> nx.DiGraph:
     # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
 
-    g = nx.MultiDiGraph()
+    g = nx.MultiDiGraph() if possible_paths is None else nx.MultiDiGraph(possible_paths=possible_paths)
 
     try:
         for start_node in nlgraph.get_start_nodes():
@@ -151,15 +151,24 @@ class GraphVis:
         "target": "target",
     }
 
-    def __init__(self, nlgraph: NLGraph, visitors: list[GraphVisitor] | None = None, min_support_reads=1):
+    def __init__(
+        self,
+        nlgraph: NLGraph,
+        visitors: list[GraphVisitor],
+        min_support_reads: int = 1,
+        possible_paths: dict[str, list[str]] | None = None,
+    ):
         self.nlgraph = nlgraph
         self.visitors: list[GraphVisitor] = [] if visitors is None else visitors
         self.min_support_reads = min_support_reads
+        self.possible_paths = possible_paths
 
     @classmethod
-    def from_visitors(cls, nlgraph: NLGraph, visitors: list[GraphVisitor], min_support_reads) -> GraphVis:
+    def from_visitors(
+        cls, nlgraph: NLGraph, visitors: list[GraphVisitor], min_support_reads: int, possible_paths: dict[str, list[str]] | None = None
+    ) -> GraphVis:
         """Create GraphVis from visitors."""
-        return cls(nlgraph, visitors, min_support_reads)
+        return cls(nlgraph, visitors, min_support_reads, possible_paths)
 
     @staticmethod
     def load(file_name: str | Path):
@@ -191,7 +200,8 @@ class GraphVis:
 
     def visualize(self, *, visitors: list[GraphVisitor] | None = None) -> None:
         """Plot graph."""
-        g = create_nxgraph(self.nlgraph, self.min_support_reads)
+        g = create_nxgraph(self.nlgraph, self.min_support_reads, self.possible_paths)
+
         if visitors is None:
             visitors = []
 
@@ -249,7 +259,7 @@ class GraphCytoscapeExporter(GraphVisitor):
     def visit(self, graph: nx.DiGraph):
         data = nx.cytoscape_data(graph)
         with Path(f"{self.file_name}_cy.json").open("w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 class TSGraphExporter(GraphVisitor):
@@ -308,6 +318,19 @@ class TSGraphExporter(GraphVisitor):
             # write edge attributes sr
             for edge in graph.edges(data=True):
                 f.write(f"A\tE\t{edge[2]['id']}\tsr:i:{edge[2]['weight']}\n")
+
+                # write insertion info if exists
+                if "insertion_info" in edge[2]:
+                    insertion_info = edge[2]["insertion_info"]
+
+                    if insertion_info != "":
+                        insertion_type, insertion_seq = insertion_info.split("(")
+                        if insertion_type == "NovelInsertion":
+                            seq = insertion_seq.strip(")").split(":")[0]
+                            f.write(f"A\tE\t{edge[2]['id']}\tnovel_insertion:Z:{seq}\n")
+                        elif insertion_type == "MicroHomology":
+                            seq = insertion_seq.strip(")")
+                            f.write(f"A\tE\t{edge[2]['id']}\tmicrohomology:Z:{seq}\n")
 
 
 def _cal_figure_size(nodes_size: int):

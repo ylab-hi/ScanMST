@@ -42,7 +42,6 @@ class NovelInsertion:
         """Initialize NovelInsertion."""
         self.query_sequence = query_sequence
         self.hit_num = hit_num
-        self.insertion_info = None
         self.ao = 1
 
     def __repr__(self) -> str:
