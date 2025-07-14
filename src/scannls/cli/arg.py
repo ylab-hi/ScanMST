@@ -193,7 +193,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="thread",
         type=int,
         default=DefaultOptions.thread,
-        help="set working mode in processor (default: %(default)s)",
+        help="set the thread number (default: %(default)s)",
     )
     parser.add_argument(
         "--aligner",
