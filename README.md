@@ -11,6 +11,13 @@
 ScanNLS is a non-co-linear transcript caller for third-generation sequencing reads.
 It is able to detect and classify the non-co-linear transcripts with the following four forms of nonlinear splicing junctions: reversed junctions, inverted junctions, translocated junctions (same strand), and translocated junctions (different strand) (see the figure below).
 
+## Prerequisite
+`htslib` is required to run ScanNLS. Please install it in the environment.
+
+```bash
+   conda install -c bioconda htslib
+```
+
 ## 🚀 **Getting Started**
 
 The first step in starting your journey with `ScanNLS` is to install the tool.
