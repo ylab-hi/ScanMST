@@ -46,6 +46,7 @@ class ReadsConnector:
         rt_switching_filter_len: int,
         align_len_threshold: int = 20,
         threshold_identity: float = 0.99,
+        min_soft_seg_len: int = 200,
         top: int = 5,
     ) -> None:
         """Initialize the ReadsConnector class."""
@@ -64,6 +65,7 @@ class ReadsConnector:
 
         self.align_len_threshold: int = align_len_threshold
         self.threshold_identity: float = threshold_identity
+        self.min_soft_seg_len: int = min_soft_seg_len
         self.top: int = top
 
     def reset_index(self) -> None:
@@ -822,14 +824,16 @@ class ReadsConnector:
         self,
         read: Read,
         read_type: str,
-    ) -> None:
+    ) -> bool:
         """Double check for start and end read.
 
-        To see if there are True first read or True end read.
+        To see if there are alignable segment derived from the softclipped part of reads.
+        (first or last part of the reads)
+        :return: True if processing was successful, False if long softclipping part with no BLAT result
         """
 
         if self.aligner is None:
-            return
+            return True
 
         query_sequence = (
             read.query_sequence[: read.lt_soft_len]
@@ -849,8 +853,13 @@ class ReadsConnector:
 
         self.logger.trace(f"start/end read checking by BLAT: {ret=}")
 
+        # Check for long query sequence with no BLAT result
+        if len(query_sequence) >= self.min_soft_seg_len and (ret is None or ret == (0, "", 0)):
+            self.logger.debug(f"Long softclipping sequence ({len(query_sequence)} bp) with no BLAT result")
+            return False
+
         if ret is None or ret == (0, "", 0):
-            return
+            return True
 
         _, top_hsp, mapq = ret
 
@@ -858,8 +867,8 @@ class ReadsConnector:
         if mapq > 0:
             mapq = 60
 
-        if mapq < self.mapq_cutoff:
-            return
+        if mapq < self.mapq_cutoff and len(query_sequence) >= self.min_soft_seg_len:
+            return False
 
         self.num_added_reads += 1
 
@@ -898,6 +907,8 @@ class ReadsConnector:
                     read.mode,
                     new_read.mode,
                 )
+
+        return True
 
     @staticmethod
     def __sort_candidate_reads_key(read: Read, start_read: Read) -> int:
@@ -990,10 +1001,12 @@ class ReadsConnector:
             self.logger.debug("ReadsConnector: candidate_nodes is []")
             ReadsConnector.init_read_mode(start_read, end_read)
             _, _ = self.test_2case(start_read, end_read, is_compare_for_ms=False)
-            self._double_check_for_start_end_read(start_read, "start")
-            self._double_check_for_start_end_read(end_read, "end")
+            is_start_segment = self._double_check_for_start_end_read(start_read, "start")
+            is_end_segment = self._double_check_for_start_end_read(end_read, "end")
+            is_connected = is_connected and is_start_segment and is_end_segment
         else:
             candidate_read_len = len(self.candidate_nodes)
+            is_start_segment = True
             while self.candidate_nodes:
                 self.logger.trace(f"{self.reads_chain=} {self.read_pair_mode_dict=}")
                 if self.index == len(self.candidate_nodes):
@@ -1014,7 +1027,7 @@ class ReadsConnector:
                     self.increment_index()
 
                 if is_connected and len(self.candidate_nodes) + 1 == candidate_read_len:
-                    self._double_check_for_start_end_read(temp_list[0], "start")
+                    is_start_segment = self._double_check_for_start_end_read(temp_list[0], "start")
 
             ReadsConnector.init_read_mode(start_read, end_read)
             is_connected, start_read = self.test_2case(
@@ -1028,7 +1041,9 @@ class ReadsConnector:
                     f"{start_read.query_name}",
                 )
                 return is_connected
-            self._double_check_for_start_end_read(end_read, "end")
+
+            is_end_segment = self._double_check_for_start_end_read(end_read, "end")
+            is_connected = is_connected and is_start_segment and is_end_segment
 
         return is_connected
 
@@ -1041,6 +1056,7 @@ def detect_read_read_connections_from_cigar(
     blat_ident_pct_cutoff: float,
     genome_fasta: pyfaidx.Fasta,
     rt_switching_filter_len: int,
+    min_soft_seg_len: int,
     logger: LoggerType,
 ):
     """Detecting read-read connections with chimeric alignments CIGAR string.
@@ -1274,6 +1290,7 @@ def detect_read_read_connections_from_cigar(
         genome_fasta=genome_fasta,
         rt_switching_filter_len=rt_switching_filter_len,
         threshold_identity=blat_ident_pct_cutoff,
+        min_soft_seg_len=min_soft_seg_len,
         logger=logger,
     )
 

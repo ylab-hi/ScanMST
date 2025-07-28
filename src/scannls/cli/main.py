@@ -407,6 +407,7 @@ def detect_sv_from_cigar(
     motif_required: bool,
     blat_ident_pct_cutoff: float,
     rt_switching_filter_len: int,
+    min_soft_seg_len: int,
     aligner,
     logger: LoggerType,
 ):
@@ -436,6 +437,7 @@ def detect_sv_from_cigar(
         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
         genome_fasta=genome_fasta,
         rt_switching_filter_len=rt_switching_filter_len,
+        min_soft_seg_len=min_soft_seg_len,
         logger=logger,
     ):
         (read_chains, reads_pair_mode_dict, num_added_reads) = ret
@@ -750,6 +752,7 @@ def _scan_bam_helper(
                         aligner=aligner,
                         rt_switching_filter_len=rt_switching_filter_len,
                         blat_ident_pct_cutoff=blat_ident_pct_cutoff,
+                        min_soft_seg_len=min_soft_seg_len,
                         logger=logger,  # type: ignore
                     ):
                         event_lists, read_chains, num_added_reads = ret
