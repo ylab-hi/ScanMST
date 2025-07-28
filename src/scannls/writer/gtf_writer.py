@@ -220,7 +220,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'segment_id "{node_id}"; transcript_id "{nlpath_id}"; gene_id "{cluster_id}"; sequence "{insertion.query_sequence}";',
+        f'transcript_id "{nlpath_id}"; gene_id "{cluster_id}"; sequence "{insertion.query_sequence}";',
     ]
 
 
