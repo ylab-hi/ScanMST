@@ -68,8 +68,8 @@ class VCFWriter(Writer):
         "MODE2": "String",
         "GENE1": "String",
         "GENE2": "String",
-        "MEGAEXON1": "String",
-        "MEGAEXON2": "String",
+        "SEGMENT1": "String",
+        "SEGMENT2": "String",
         "HOMSEQ": "String",
         "INSSEQ": "String",
         "TRANSCRIPT_ID": "String",
@@ -101,8 +101,8 @@ class VCFWriter(Writer):
         "END": "A placeholder for END coordinate in case of a translocation",
         "GENE1": "Overlapped coding gene for breakpoint1",
         "GENE2": "Overlapped coding gene for breakpoint2",
-        "MEGAEXON1": "ID for source mega exon",  # Given multiple transcripts, there may be multiple megaexons
-        "MEGAEXON2": "ID for target mega exon",
+        "SEGMENT1": "ID for source transcript segment",  # Given multiple transcripts, there may be multiple megaexons
+        "SEGMENT2": "ID for target transcript segment",
         "TRANSCRIPT_ID": "Transcript ID",
         "GENE_ID": "Gene ID",
         "SR_ID": "Support read ID",
@@ -225,8 +225,8 @@ class VCFWriter(Writer):
             else:
                 # multiple transcripts go through the same one hop
                 out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f',{hop_feature[type_position_key]["TRANSCRIPT_ID"]}'
-                out_vcf_dict[type_position_key]["MEGAEXON1"] += f',{hop_feature[type_position_key]["MEGAEXON1"]}'
-                out_vcf_dict[type_position_key]["MEGAEXON2"] += f',{hop_feature[type_position_key]["MEGAEXON2"]}'
+                out_vcf_dict[type_position_key]["SEGMENT1"] += f',{hop_feature[type_position_key]["SEGMENT1"]}'
+                out_vcf_dict[type_position_key]["SEGMENT2"] += f',{hop_feature[type_position_key]["SEGMENT2"]}'
                 out_vcf_dict[type_position_key]["SR_ID"] += f',{hop_feature[type_position_key]["SR_ID"]}'
                 # deal with 'Y' shape NLS graph
                 if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
@@ -256,7 +256,7 @@ class VCFWriter(Writer):
 
         for _id in VCFWriter.reserved_info:
             _number: str | int = 0 if VCFWriter.reserved_info[_id] == "Flag" else 1
-            if _id in {"TRANSCRIPT_ID", "SR_ID", "MEGAEXON1", "MEGAEXON2"}:
+            if _id in {"TRANSCRIPT_ID", "SR_ID", "SEGMENT1", "SEGMENT2"}:
                 _number = "."
             header_lines.append(
                 f"##INFO=<ID={_id},Number={_number},Type={VCFWriter.reserved_info[_id]}," f'Description="{VCFWriter.description[_id]}">',
@@ -393,8 +393,8 @@ def get_vcf_features_from_nlpath(
                     "SVLEN": f"{sv_distance}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
-                    "MEGAEXON1": f"{current_node.trace_id}",
-                    "MEGAEXON2": f"{next_node.trace_id}",
+                    "SEGMENT1": f"{current_node.trace_id:0>4}",
+                    "SEGMENT2": f"{next_node.trace_id:0>4}",
                     "STRAND1": f"{current_node.strand}",
                     "STRAND2": f"{next_node.strand}",
                     "MODE1": f"{mode1}",
@@ -421,7 +421,7 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
         f'CHR2={feature_dict["CHR2"]};SVEND={feature_dict["SVEND"]};DP1={feature_dict["DP1"]};'
         f'DP2={feature_dict["DP2"]};PSI={feature_dict["PSI"]};SVLEN={feature_dict["SVLEN"]};'
         f'GENE1={feature_dict["GENE1"]};GENE2={feature_dict["GENE2"]};'
-        f'MEGAEXON1={feature_dict["MEGAEXON1"]};MEGAEXON2={feature_dict["MEGAEXON2"]};'
+        f'SEGMENT1={feature_dict["SEGMENT1"]};SEGMENT2={feature_dict["SEGMENT2"]};'
         f'STRAND1={feature_dict["STRAND1"]};STRAND2={feature_dict["STRAND2"]};'
         f'MODE1={feature_dict["MODE1"]};MODE2={feature_dict["MODE2"]};'
         f'HOMSEQ={feature_dict["HOMSEQ"]};INSSEQ={feature_dict["INSSEQ"]};'

@@ -227,7 +227,7 @@ def get_gtf_features_from_insertion(
         ".",
         "+",
         ".",
-        f'mega_exon_id "{node_id:0>3}"; transcript_id "{nlpath_id}"; sequence "{insertion.query_sequence}"; ',
+        f'transcript_id "{nlpath_id}"; sequence "{insertion.query_sequence}"; ',
     ]
 
 
@@ -293,7 +293,7 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; mega_exon_id "{node.trace_id:0>4}"; ptc "{node.ptc}"; ptf "{node.ptf}"; transcript_id "{nlpath_id}"; ',
+                f'exon_id "{index:0>3}"; segment_id "{node.trace_id:0>4}"; ptc "{node.ptc}"; ptf "{node.ptf}"; transcript_id "{nlpath_id}"; ',
             ],
         )
 
