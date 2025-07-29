@@ -83,7 +83,7 @@ class GraphVis:
     def get_label_from_node(node: Node) -> str:
         """Get label from node."""
         head_node = "H" if node.is_start_node() else "T"
-        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}_{node.trace_id}"
+        return f"{node.chrom}_{node.ref_start}_{node.ref_end}_{head_node}_{node.trace_id:0>4}"
 
     @staticmethod
     def add_node_to_graph(node: Node, graph: nx.Graph) -> None:
@@ -96,7 +96,7 @@ class GraphVis:
             ref_end=node.ref_end,
             strand=str(node.strand),
             is_head=node.is_start_node(),
-            node_id=node.trace_id,
+            node_id=f"{node.trace_id:0>4}",
             exons=str(node.exons),
             ptc=node.ptc,
             ptf=node.ptf,
