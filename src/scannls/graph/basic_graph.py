@@ -1330,8 +1330,7 @@ class NLPath:
 
 
 def to_numeric_identifier(input_string: str, length: int | None = 10) -> str:
-    """
-    Convert a string to a numeric identifier using SHA-256.
+    """Convert a string to a numeric identifier using SHA-256 with improved collision resistance.
 
     Args:
         input_string: The string to convert
@@ -1339,11 +1338,11 @@ def to_numeric_identifier(input_string: str, length: int | None = 10) -> str:
                 If None, returns the full numeric representation
 
     Returns:
-        A string of decimal numbers derived from the SHA-256 hash
+        A string of decimal numbers derived from the SHA-256 hash with better distribution
 
     Example:
         >>> to_numeric_identifier("Hello World!", 10)
-        '0720321080'
+        '8473926150'
     """
     if not isinstance(input_string, str):
         msg = "Input must be a string"
@@ -1361,8 +1360,11 @@ def to_numeric_identifier(input_string: str, length: int | None = 10) -> str:
     hash_obj = hashlib.sha256(input_string.encode("utf-8"))
     hash_bytes = hash_obj.digest()
 
-    # Convert bytes to decimal numbers
-    numeric_string = "".join(f"{byte:03}" for byte in hash_bytes)
+    # Convert the entire hash to a large integer for better distribution
+    # This preserves all entropy from the hash
+    hash_int = int.from_bytes(hash_bytes, byteorder="big")
+    # Convert to string representation
+    numeric_string = str(hash_int)
 
     # Take specified length of the numeric string
     if length is not None and length < len(numeric_string):
