@@ -24,7 +24,7 @@ psutil = "^6.0.0"
 loguru = "^0.7.0"
 rich = "^14.0.0"
 networkx = "^3.2"
-pybind11 = "^2.12.1"
+pybind11 = "^3.0.0"
 pyabpoa = "^1.5.3"
 alignparse = "^0.7.1"
 matplotlib = { version = "^3.9" }
