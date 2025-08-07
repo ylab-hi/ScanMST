@@ -447,7 +447,7 @@ def splicing_confirmation_and_correction(
         :param microhomology_length: length of microhomology
         """
         final_donor_shift = 0
-        final_accecptor_shift = microhomology_length
+        final_acceptor_shift = microhomology_length
 
         if strand_donor == "+":
             border_exon_donor = (
@@ -461,13 +461,13 @@ def splicing_confirmation_and_correction(
             )
         if strand_acceptor == "+":
             border_exon_acceptor = (
-                exons_acceptor.first.start + final_accecptor_shift,
+                exons_acceptor.first.start + final_acceptor_shift,
                 exons_acceptor.first.end,
             )
         elif strand_acceptor == "-":
             border_exon_acceptor = (
                 exons_acceptor.last.start,
-                exons_acceptor.last.end - final_accecptor_shift,
+                exons_acceptor.last.end - final_acceptor_shift,
             )
 
         return (
@@ -624,7 +624,7 @@ def splicing_confirmation_and_correction(
         canonical_motif_or_not = 0
 
         final_donor_shift = 0
-        final_accecptor_shift = microhomology_length - final_donor_shift
+        final_acceptor_shift = microhomology_length - final_donor_shift
         if (donor_bp, acceptor_bp) == (breakpoint1, breakpoint2):
             max_donor_shift, max_acceptor_shift = shift_maximum_length(
                 strand1, strand2, exons1_, exons2_
@@ -632,8 +632,8 @@ def splicing_confirmation_and_correction(
             if not default_shift_prechecker(
                 strand1, strand2, exons1_, exons2_, microhomology_length
             ):
-                final_accecptor_shift = 0
-                final_donor_shift = microhomology_length - final_accecptor_shift
+                final_acceptor_shift = 0
+                final_donor_shift = microhomology_length - final_acceptor_shift
 
             for donor_shift in range(microhomology_length + 1):
                 acceptor_shift = microhomology_length - donor_shift
@@ -659,7 +659,7 @@ def splicing_confirmation_and_correction(
                     and acceptor_shift < max_acceptor_shift
                 ):
                     final_donor_shift = donor_shift
-                    final_accecptor_shift = acceptor_shift
+                    final_acceptor_shift = acceptor_shift
                     canonical_motif_or_not = 1
                     break
             if strand1 == "+":
@@ -671,13 +671,13 @@ def splicing_confirmation_and_correction(
                 exons1_.first.start += final_donor_shift
                 corrected_pos1 = pos1 + final_donor_shift
             if strand2 == "+":
-                ref_start2 += final_accecptor_shift
-                exons2_.first.start += final_accecptor_shift
-                corrected_pos2 = pos2 + final_accecptor_shift
+                ref_start2 += final_acceptor_shift
+                exons2_.first.start += final_acceptor_shift
+                corrected_pos2 = pos2 + final_acceptor_shift
             elif strand2 == "-":
-                ref_end2 -= final_accecptor_shift
-                exons2_.last.end -= final_accecptor_shift
-                corrected_pos2 = pos2 - final_accecptor_shift
+                ref_end2 -= final_acceptor_shift
+                exons2_.last.end -= final_acceptor_shift
+                corrected_pos2 = pos2 - final_acceptor_shift
         else:
             max_donor_shift, max_acceptor_shift = shift_maximum_length(
                 strand2, strand1, exons2_, exons1_
@@ -686,8 +686,8 @@ def splicing_confirmation_and_correction(
             if not default_shift_prechecker(
                 strand2, strand1, exons2_, exons1_, microhomology_length
             ):
-                final_accecptor_shift = 0
-                final_donor_shift = microhomology_length - final_accecptor_shift
+                final_acceptor_shift = 0
+                final_donor_shift = microhomology_length - final_acceptor_shift
 
             for donor_shift in range(microhomology_length + 1):
                 acceptor_shift = microhomology_length - donor_shift
@@ -713,11 +713,10 @@ def splicing_confirmation_and_correction(
                     and acceptor_shift < max_acceptor_shift
                 ):
                     final_donor_shift = donor_shift
-                    final_accecptor_shift = acceptor_shift
+                    final_acceptor_shift = acceptor_shift
                     canonical_motif_or_not = 1
                     break
 
-            logger.warning(f"{final_donor_shift=}, {final_accecptor_shift=}")
             if strand2 == "+":
                 ref_end2 -= final_donor_shift
                 exons2_.last.end -= final_donor_shift
@@ -727,13 +726,13 @@ def splicing_confirmation_and_correction(
                 exons2_.first.start += final_donor_shift
                 corrected_pos2 = pos2 + final_donor_shift
             if strand1 == "+":
-                ref_start1 += final_accecptor_shift
-                exons1_.first.start += final_accecptor_shift
-                corrected_pos1 = pos1 + final_accecptor_shift
+                ref_start1 += final_acceptor_shift
+                exons1_.first.start += final_acceptor_shift
+                corrected_pos1 = pos1 + final_acceptor_shift
             elif strand1 == "-":
-                ref_end1 -= final_accecptor_shift
-                exons1_.last.end -= final_accecptor_shift
-                corrected_pos1 = pos1 - final_accecptor_shift
+                ref_end1 -= final_acceptor_shift
+                exons1_.last.end -= final_acceptor_shift
+                corrected_pos1 = pos1 - final_acceptor_shift
 
         if canonical_motif_or_not == 1:
             report_or_not, boundary_code, canonical_motif_or_not = True, 3, 1
