@@ -469,6 +469,31 @@ def splicing_confirmation_and_correction(
             and border_exon_acceptor[0] < border_exon_acceptor[1]
         )
 
+    def shift_maximum_length(
+        strand_donor, strand_acceptor, exons_donor, exons_acceptor
+    ) -> tuple[int, int]:
+        """Determine maximum shift length for donor and acceptor.
+
+        :param strand_donor: donor segment strand
+        :param strand_acceptor: acceptor segment strand
+        :param exons_donor: exons for donor segment
+        :param exons_acceptor: exons for acceptor segment
+        """
+
+        if strand_donor == "+":
+            shift_maximum_len_donor = exons_donor.last.end - exons_donor.last.start
+        elif strand_donor == "-":
+            shift_maximum_len_donor = exons_donor.first.end - exons_donor.first.start
+        if strand_acceptor == "+":
+            shift_maximum_len_acceptor = (
+                exons_acceptor.first.end - exons_acceptor.first.start
+            )
+        elif strand_acceptor == "-":
+            shift_maximum_len_acceptor = (
+                exons_acceptor.last.end - exons_acceptor.last.start
+            )
+        return shift_maximum_len_donor, shift_maximum_len_acceptor
+
     # key: strand of donor site, strand of accepter site
     # values: possible matched donor site and accepter site (>99% splice site using GT-AG)
     canonical_splice_dict = {
@@ -595,6 +620,7 @@ def splicing_confirmation_and_correction(
         final_donor_shift = 0
         final_accecptor_shift = microhomology_length - final_donor_shift
         if (donor_bp, acceptor_bp) == (_breakpoint1, _breakpoint2):
+            max_donor_shift, max_acceptor_shift = shift_maximum_length(strand1, strand2, _exons1, _exons2)
             if not default_shift_prechecker(
                 strand1, strand2, _exons1, _exons2, microhomology_length
             ):
@@ -621,6 +647,8 @@ def splicing_confirmation_and_correction(
                 if (
                     donor_seq == target_donor_seq
                     and acceptor_seq == target_acceptor_seq
+                    and donor_shift < max_donor_shift
+                    and acceptor_shift < max_acceptor_shift
                 ):
                     final_donor_shift = donor_shift
                     final_accecptor_shift = acceptor_shift
@@ -643,6 +671,7 @@ def splicing_confirmation_and_correction(
                 _exons2.last.end -= final_accecptor_shift
                 corrected_pos2 = pos2 - final_accecptor_shift
         else:
+            max_donor_shift, max_acceptor_shift = shift_maximum_length(strand2, strand1, _exons2, _exons1)
             if not default_shift_prechecker(
                 strand2, strand1, _exons2, _exons1, microhomology_length
             ):
@@ -669,6 +698,8 @@ def splicing_confirmation_and_correction(
                 if (
                     donor_seq == target_donor_seq
                     and acceptor_seq == target_acceptor_seq
+                    and donor_shift < max_donor_shift
+                    and acceptor_shift < max_acceptor_shift
                 ):
                     final_donor_shift = donor_shift
                     final_accecptor_shift = acceptor_shift
