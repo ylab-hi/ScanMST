@@ -595,7 +595,7 @@ class NLGraph:
 
         signature_to_nodes = defaultdict(list)
         for node in self:
-            signature_to_nodes[merge_signature(node, threshold=0)].append(node)
+            signature_to_nodes[merge_signature(node, threshold=1)].append(node)
 
         removed_nodes = set()  # Track nodes that have been merged/removed
 
@@ -758,7 +758,7 @@ class NLGraph:
                     logger.error(f"Error updating breakpoints for edge {edge} between {node} and {successor}: {e}")
 
 
-def compare_node_when_refine(node1: Node, node2: Node, threshold=0) -> bool:
+def compare_node_when_refine(node1: Node, node2: Node, threshold=1) -> bool:
     """Compare two nodes.
 
     :param node1: node1
