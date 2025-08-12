@@ -58,14 +58,14 @@ class DefaultOptions:
 
 
 COLOR = "bold magenta"
-BANNER = {
-    "   _____                  _   ____   _____": COLOR,
-    "  / ___/_________ _____  / | / / /  / ___/": COLOR,
-    "  \\__ \\/ ___/ __ `/ __ \\/  |/ / /   \\__ \\": COLOR,
-    " ___/ / /__/ /_/ / / / / /|  / /______/ /": COLOR,
-    "/____/\\___/\\__,_/_/ /_/_/ |_/_____/____/": COLOR,
-}
 
+BANNER = {
+    "   _____                 _   ___________   ______  ________": COLOR,
+    "  / ___/________ _____  / | / / ____/ /  /_  __/ / /_  __/": COLOR,
+    "  \\__ \\/ ___/ __ `/ __ \\/  |/ / /   / /    / /  / __/ /": COLOR,
+    " ___/ / /__/ /_/ / / / / /|  / /___/ /____/ /  / / / /": COLOR,
+    "/____/\\___/\\__,_/_/ /_/_/ |_/\\____/_____/_/  /_/ /_/": COLOR,
+}
 
 def print_banner() -> None:
     """Print banner."""
@@ -110,7 +110,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]scannls[/] :rocket: Non-colinear splicing (NLS) events identification using transcriptomic long reads data",
+        description="[red]scannls[/] :rocket: Non-co-linear transcripts (NCLT) identification using transcriptomic long reads data",
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
@@ -160,7 +160,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="support_reads",
         type=int,
-        help="minimum number of support reads for reporting NLS (default: %(default)s)",
+        help="minimum number of support reads for reporting NCLT (default: %(default)s)",
         default=DefaultOptions.support_reads,
     )
     parser.add_argument(
@@ -176,7 +176,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="mapq",
         type=int,
-        help="minimum MAPQ of reads for calling NLS (default: %(default)s)",
+        help="minimum MAPQ of reads for calling NCLT (default: %(default)s)",
         default=DefaultOptions.mapq,
     )
 
@@ -279,7 +279,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store_true",
         dest="noncanonical",
         default=DefaultOptions.noncanonical,
-        help="considering Non canonical spliced sites  (default: %(default)s)",
+        help="considering Non-canonical spliced sites  (default: %(default)s)",
     )
     parser.add_argument(
         "--graph",
