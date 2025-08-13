@@ -81,7 +81,7 @@ norecursedirs = ["cppext"]
 [tool.ruff]
 line-length = 150
 exclude = ["tests", "cppext", "blat.py"]
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 fixable = ["ALL"]
