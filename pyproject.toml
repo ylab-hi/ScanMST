@@ -35,7 +35,6 @@ dependencies = [
   "pyvis>=0.3.2",
   "intervaltree>=3.1.0",
   "pysam==0.23.3",
-  "numpy>=2.2.6",
 ]
 
 [project.urls]
