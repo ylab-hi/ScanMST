@@ -327,6 +327,7 @@ class ClusterFinder:
         :return:  every clique in graph as a iterator (List[int])
         """
         self._create_graph_for_nlpath()
+        logger.warning("Cluster Graph is created")
         yield from connected_components(self._graph)
 
     @staticmethod
