@@ -173,7 +173,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             logger.error(str(e))
             aligner.stop_server()
             tmp_dir.cleanup()
-            raise SystemExit
+            raise SystemExit from e
 
     # CIGAR string refinement
     motif_required = not options.noncanonical
@@ -220,7 +220,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
         cluster_finder = ClusterFinder(intact_nlpaths, options.prune_threshold)
         # cliques is generator
-        clusters = cluster_finder.merge_cluster()
+        clusters = cluster_finder.merge_cluster(use_precomputed=True, n_jobs=options.thread)
 
         writers = get_writers(
             str(output_file_path), options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
