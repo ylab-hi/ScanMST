@@ -305,10 +305,7 @@ class Intervals:
 
         if isinstance(other, Intervals):
             return Intervals(
-                [
-                    exon + other_exon
-                    for exon, other_exon in zip(self.exon_list, other.exon_list)
-                ],
+                [exon + other_exon for exon, other_exon in zip(self.exon_list, other.exon_list)],
             )
 
         message = f"{other} is not int or Intervals"
@@ -321,9 +318,7 @@ class Intervals:
         concatenating the exons of both Intervals objects.
         """
         if not isinstance(other, Intervals):
-            msg = (
-                f"Can only concatenate with another Intervals object, not {type(other)}"
-            )
+            msg = f"Can only concatenate with another Intervals object, not {type(other)}"
             raise TypeError(msg)
         return Intervals(self.exon_list + other.exon_list)
 
@@ -333,10 +328,7 @@ class Intervals:
 
         if isinstance(other, Intervals):
             return Intervals(
-                [
-                    exon - other_exon
-                    for exon, other_exon in zip(self.exon_list, other.exon_list)
-                ],
+                [exon - other_exon for exon, other_exon in zip(self.exon_list, other.exon_list)],
             )
 
         message = f"{other} is not int or Intervals"
@@ -385,7 +377,7 @@ class Intervals:
 
         return introns
 
-    def index(self, item: Interval, start: int = 0, stop: int = None) -> int:
+    def index(self, item: Interval, start: int = 0, stop: int | None = None) -> int:
         """Return the index of the first occurrence of item in the exon_list.
 
         Args:

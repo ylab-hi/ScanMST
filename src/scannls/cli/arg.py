@@ -67,6 +67,7 @@ BANNER = {
     "/____/\\___/\\__,_/_/ /_/_/ |_/\\____/_____/_/  /_/ /_/": COLOR,
 }
 
+
 def print_banner() -> None:
     """Print banner."""
     from rich.console import Console

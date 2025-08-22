@@ -1,3 +1,5 @@
+from functools import partial
+
 """cluster NLpaths."""
 
 import json
@@ -285,14 +287,16 @@ class ClusterFinder:
         """
         # Generate all pairs of indices
         pairs = list(combinations(range(self.intact_nlpaths_len), 2))
+
         # Define the function to calculate distance for a single pair
-        def calculate_pair_distance(pair):
+        def calculate_pair_distance(pair, intact_nlpaths, ruler):
             ind_x, ind_y = pair
-            return (ind_x, ind_y), self._calculate_distance(ind_x, ind_y)
+            return (ind_x, ind_y), self._calculate_distance(ind_x, ind_y, intact_nlpaths, ruler)
+
+        calcluate_func = partial(calculate_pair_distance, intact_nlpaths=self.intact_nlpaths, ruler=self.ruler)
+
         # Use joblib to compute distances in parallel
-        results = Parallel(n_jobs=n_jobs, verbose=0)(
-            delayed(calculate_pair_distance)(pair) for pair in pairs
-        )
+        results = Parallel(n_jobs=n_jobs, verbose=0)(delayed(calcluate_func)(pair) for pair in pairs)
         # Store results in the precomputed distance dictionary
         # Filter out any None results that might occur
         for result in results:
@@ -309,7 +313,7 @@ class ClusterFinder:
         msg = f"distance between {x} and {y} is not precomputed"
         raise ValueError(msg)
 
-    def _calculate_distance(self, x: int, y: int) -> float:
+    def _calculate_distance(self, x: int, y: int, intact_nlpaths: list[NLPath], ruler: Ruler) -> float:
         """Calculate distance between two series. If distance has been calculated before.
 
         return True and distance value. Otherwise, calculate distance and return False and
@@ -319,10 +323,10 @@ class ClusterFinder:
         :param y: nlpath y
         :return: is_calculated, distance value
         """
-        return self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
+        return ruler(intact_nlpaths[x], intact_nlpaths[y])
 
     def _add_edge_between_two_nlpath(self, x: int, y: int) -> None:
-        if self._calculate_distance(x, y) < self.threshold:
+        if self._calculate_distance(x, y, self.intact_nlpaths, self.ruler) < self.threshold:
             self._graph.add_edge(x, y)
             if not self.intact_nlpaths[x].is_in_graph:
                 self.intact_nlpaths[x].is_in_graph = True
@@ -331,7 +335,7 @@ class ClusterFinder:
 
     def _add_edge_between_two_nlpath_precomputed(self, x: int, y: int) -> None:
         """Add edge between two NLPaths using precomputed distance."""
-        if self.get_distance(x,y) < self.threshold:
+        if self.get_distance(x, y) < self.threshold:
             self._graph.add_edge(x, y)
             if not self.intact_nlpaths[x].is_in_graph:
                 self.intact_nlpaths[x].is_in_graph = True
@@ -382,7 +386,6 @@ class ClusterFinder:
         self._create_graph_for_nlpath(use_precomputed=use_precomputed)
         logger.warning("Cluster Graph is created")
         yield from connected_components(self._graph)
-
 
     @staticmethod
     def creat_merge_indexs(cluster) -> dict[int, list[str]]:

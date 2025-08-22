@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .basic_graph import Node
@@ -257,7 +257,7 @@ def __intron_lists_containment_checker(
     return full_list[-sub_length:] == sub_list[:] and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
 
 
-def find_shared_interval_indices(a: List[Tuple[int, int]], b: List[Tuple[int, int]]) -> Tuple[List[int], List[int]]:
+def find_shared_interval_indices(a: list[tuple[int, int]], b: list[tuple[int, int]]) -> tuple[list[int], list[int]]:
     """
     Finds the indices of shared intervals between two lists of intervals using set operations.
 
@@ -283,7 +283,7 @@ def find_shared_interval_indices(a: List[Tuple[int, int]], b: List[Tuple[int, in
     return shared_indices_a, shared_indices_b
 
 
-def is_consecutive_from_beginning(indices: List[int]) -> bool:
+def is_consecutive_from_beginning(indices: list[int]) -> bool:
     """
     Checks if the given indices are consecutive and start from the beginning of a list.
 
@@ -298,7 +298,7 @@ def is_consecutive_from_beginning(indices: List[int]) -> bool:
     return bool(indices) and indices[0] == 0 and all(indices[i] == indices[i - 1] + 1 for i in range(1, len(indices)))
 
 
-def is_consecutive_from_end(indices: List[int], list_length: int) -> bool:
+def is_consecutive_from_end(indices: list[int], list_length: int) -> bool:
     """
     Checks if the given indices are consecutive and end at the end of a list.
 
