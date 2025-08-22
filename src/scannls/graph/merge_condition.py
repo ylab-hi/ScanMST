@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
 if TYPE_CHECKING:
     from .basic_graph import Node
@@ -257,9 +257,9 @@ def __intron_lists_containment_checker(
     return full_list[-sub_length:] == sub_list[:] and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
 
 
-def find_shared_interval_indices(a, b):
+def find_shared_interval_indices(a: List[Tuple[int, int]], b: List[Tuple[int, int]]) -> Tuple[List[int], List[int]]:
     """
-    Finds the indices of shared intervals between two lists of intervals.
+    Finds the indices of shared intervals between two lists of intervals using set operations.
 
     Args:
       a: A list of tuples, where each tuple represents an interval (start, end).
@@ -270,19 +270,20 @@ def find_shared_interval_indices(a, b):
         - The indices of shared intervals in list 'a'.
         - The indices of shared intervals in list 'b'.
     """
-    shared_indices_a = []
-    shared_indices_b = []
+    # Convert to sets for faster lookup
+    a_set = set(a)
+    b_set = set(b)
 
-    for i, interval_a in enumerate(a):
-        for j, interval_b in enumerate(b):
-            if interval_a == interval_b:
-                shared_indices_a.append(i)
-                shared_indices_b.append(j)
+    # Find shared intervals
+    shared_intervals = a_set.intersection(b_set)
 
+    # Find indices of shared intervals
+    shared_indices_a = [a.index(interval) for interval in shared_intervals]
+    shared_indices_b = [b.index(interval) for interval in shared_intervals]
     return shared_indices_a, shared_indices_b
 
 
-def is_consecutive_from_beginning(indices):
+def is_consecutive_from_beginning(indices: List[int]) -> bool:
     """
     Checks if the given indices are consecutive and start from the beginning of a list.
 
@@ -293,18 +294,11 @@ def is_consecutive_from_beginning(indices):
       True if the indices are consecutive and start from 0, False otherwise.
     """
 
-    if not indices:
-        return False
-
-    # Check if the first index is 0
-    if indices[0] != 0:
-        return False
-
     # Check if the indices are consecutive
-    return all(indices[i] == indices[i - 1] + 1 for i in range(1, len(indices)))
+    return bool(indices) and indices[0] == 0 and all(indices[i] == indices[i - 1] + 1 for i in range(1, len(indices)))
 
 
-def is_consecutive_from_end(indices, list_length):
+def is_consecutive_from_end(indices: List[int], list_length: int) -> bool:
     """
     Checks if the given indices are consecutive and end at the end of a list.
 
@@ -316,16 +310,7 @@ def is_consecutive_from_end(indices, list_length):
       True if the indices are consecutive and end at the last index of the list,
       False otherwise.
     """
-
-    if not indices:
-        return False
-
-    # Check if the last index is the last index of the list
-    if indices[-1] != list_length - 1:
-        return False
-
-    # Check if the indices are consecutive
-    return all(indices[i] == indices[i + 1] - 1 for i in range(len(indices) - 1))
+    return bool(indices) and indices[-1] == list_length - 1 and all(indices[i] == indices[i + 1] - 1 for i in range(len(indices) - 1))
 
 
 def __intron_lists_sharing_checker(
