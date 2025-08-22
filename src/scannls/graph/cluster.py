@@ -5,6 +5,7 @@ from itertools import combinations
 from pathlib import Path
 
 import networkx as nx
+from joblib import Parallel, delayed
 from loguru import logger
 from networkx import connected_components
 
@@ -115,7 +116,7 @@ def obtain_edge_info_signature_for_nlpath(nlpath: NLPath):
     edge_info_signature = 0
     for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
         current_edge = nlpath.next_edge(current_node, event_id - 1)
-        if current_edge.insertion_info:
+        if current_edge is not None and current_edge.insertion_info:
             if isinstance(current_edge.insertion_info[1], NovelInsertion):
                 edge_info_signature += 0
             elif isinstance(current_edge.insertion_info[1], MicroHomology):
@@ -276,6 +277,37 @@ class ClusterFinder:
         self.threshold = threshold
         self.distance_dict: dict[tuple[int, int], float] = {}
         self._graph = nx.Graph()
+        self._precomputed_distance: dict[tuple[int, int], float] = {}
+
+    def _precompute_distance(self, n_jobs: int = -1):
+        """Precompute distance between all pairs of NLPaths using parallel processing.
+        :param n_jobs: Number of jobs to run in parallel. -1 means using all processors.
+        """
+        # Generate all pairs of indices
+        pairs = list(combinations(range(self.intact_nlpaths_len), 2))
+        # Define the function to calculate distance for a single pair
+        def calculate_pair_distance(pair):
+            ind_x, ind_y = pair
+            return (ind_x, ind_y), self._calculate_distance(ind_x, ind_y)
+        # Use joblib to compute distances in parallel
+        results = Parallel(n_jobs=n_jobs, verbose=0)(
+            delayed(calculate_pair_distance)(pair) for pair in pairs
+        )
+        # Store results in the precomputed distance dictionary
+        # Filter out any None results that might occur
+        for result in results:
+            if result is not None:
+                (ind_x, ind_y), distance = result
+                self._precomputed_distance[(ind_x, ind_y)] = distance
+
+    def get_distance(self, x: int, y: int) -> float:
+        """Get distance between two NLPaths."""
+        if self._precomputed_distance.get((x, y)) is not None:
+            return self._precomputed_distance[(x, y)]
+        if self._precomputed_distance.get((y, x)) is not None:
+            return self._precomputed_distance[(y, x)]
+        msg = f"distance between {x} and {y} is not precomputed"
+        raise ValueError(msg)
 
     def _calculate_distance(self, x: int, y: int) -> float:
         """Calculate distance between two series. If distance has been calculated before.
@@ -297,18 +329,33 @@ class ClusterFinder:
             if not self.intact_nlpaths[y].is_in_graph:
                 self.intact_nlpaths[y].is_in_graph = True
 
-    def _create_graph_for_nlpath(self) -> None:
+    def _add_edge_between_two_nlpath_precomputed(self, x: int, y: int) -> None:
+        """Add edge between two NLPaths using precomputed distance."""
+        if self.get_distance(x,y) < self.threshold:
+            self._graph.add_edge(x, y)
+            if not self.intact_nlpaths[x].is_in_graph:
+                self.intact_nlpaths[x].is_in_graph = True
+            if not self.intact_nlpaths[y].is_in_graph:
+                self.intact_nlpaths[y].is_in_graph = True
+
+    def _create_graph_for_nlpath(self, *, use_precomputed: bool = True) -> None:
         """Create graph for all series in intact_series_list.
 
         add edge between two series in terms of the distance value
 
+        :param use_precomputed: If True, use precomputed distances. If False, compute on-the-fly.
         :return: None
         """
         last_x = 0
         ind_x, ind_y = 0, 0
 
         for ind_x, ind_y in combinations(range(self.intact_nlpaths_len), 2):
-            self._add_edge_between_two_nlpath(ind_x, ind_y)
+            if use_precomputed:
+                # Use precomputed distance
+                self._add_edge_between_two_nlpath_precomputed(ind_x, ind_y)
+            else:
+                # Compute distance on-the-fly
+                self._add_edge_between_two_nlpath(ind_x, ind_y)
             if last_x != ind_x:
                 if not self.intact_nlpaths[last_x].is_in_graph:
                     self._graph.add_node(last_x)
@@ -321,14 +368,21 @@ class ClusterFinder:
         if not self.intact_nlpaths[ind_y].is_in_graph:
             self._graph.add_node(ind_y)
 
-    def find_cluster_index(self):
+    def find_cluster_index(self, *, use_precomputed: bool = True, n_jobs: int = -1):
         """Find cluster in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
+        :param use_precomputed: If True, use precomputed distances. If False, compute on-the-fly.
+        :param n_jobs: Number of jobs for parallel distance computation (only used if use_precomputed=True).
         :return:  every clique in graph as a iterator (List[int])
         """
-        self._create_graph_for_nlpath()
+        if use_precomputed and not self._precomputed_distance:
+            # Precompute distances if not already done
+            self._precompute_distance(n_jobs=n_jobs)
+            logger.info(f"Precomputed distances for {len(self._precomputed_distance)} pairs using {n_jobs} jobs")
+        self._create_graph_for_nlpath(use_precomputed=use_precomputed)
         logger.warning("Cluster Graph is created")
         yield from connected_components(self._graph)
+
 
     @staticmethod
     def creat_merge_indexs(cluster) -> dict[int, list[str]]:
@@ -379,8 +433,8 @@ class ClusterFinder:
         msg = "nlpath1 is shorter than nlpath2"
         raise ValueError(msg)
 
-    def merge_cluster(self):
-        for _cluster_id, cluster_index in enumerate(self.find_cluster_index()):
+    def merge_cluster(self, *, use_precomputed: bool = True, n_jobs: int = -1):
+        for _cluster_id, cluster_index in enumerate(self.find_cluster_index(use_precomputed=use_precomputed, n_jobs=n_jobs)):
             nlpaths = []
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]
