@@ -115,7 +115,7 @@ def obtain_edge_info_signature_for_nlpath(nlpath: NLPath):
     edge_info_signature = 0
     for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
         current_edge = nlpath.next_edge(current_node, event_id - 1)
-        if current_edge.insertion_info:
+        if current_edge is not None and current_edge.insertion_info:
             if isinstance(current_edge.insertion_info[1], NovelInsertion):
                 edge_info_signature += 0
             elif isinstance(current_edge.insertion_info[1], MicroHomology):
