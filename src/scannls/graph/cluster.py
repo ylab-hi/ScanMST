@@ -287,16 +287,14 @@ class ClusterFinder:
         """
         # Generate all pairs of indices
         pairs = list(combinations(range(self.intact_nlpaths_len), 2))
-
         # Define the function to calculate distance for a single pair
-        def calculate_pair_distance(pair, intact_nlpaths, ruler):
+        def calculate_pair_distance(pair, x_nlpath: NLPath, y_nlpath: NLPath, ruler: Ruler):
             ind_x, ind_y = pair
-            return (ind_x, ind_y), self._calculate_distance(ind_x, ind_y, intact_nlpaths, ruler)
+            return (ind_x, ind_y), ruler(x_nlpath, y_nlpath)
 
-        calcluate_func = partial(calculate_pair_distance, intact_nlpaths=self.intact_nlpaths, ruler=self.ruler)
-
+        calcluate_func = partial(calculate_pair_distance, ruler=self.ruler)
         # Use joblib to compute distances in parallel
-        results = Parallel(n_jobs=n_jobs, verbose=0)(delayed(calcluate_func)(pair) for pair in pairs)
+        results = Parallel(n_jobs=n_jobs, verbose=0)(delayed(calcluate_func)(pair, self.intact_nlpaths[pair[0]], self.intact_nlpaths[pair[1]]) for pair in pairs)
         # Store results in the precomputed distance dictionary
         # Filter out any None results that might occur
         for result in results:
