@@ -64,13 +64,17 @@ def extract_splice_sites(in_file: str, bin_size: int) -> Any:
     trx_to_exon = defaultdict(list)
 
     for feature in gtf_file:
+        # Skip non-standard chromosomes
+        if "_" in feature.iv.chrom or "." in feature.iv.chrom:
+            continue
+
         gene_name = feature.attr.get("gene_name") or feature.attr.get("gene")
 
-        if feature.type == "exon" and all(c not in feature.iv.chrom for c in ("_", ".")):
+        if feature.type == "exon":
             trx_id = feature.attr["transcript_id"]
             trx_to_exon[trx_id].append(feature.iv)
 
-        if feature.type == "gene" and all(c not in feature.iv.chrom for c in ("_", ".")):
+        if feature.type == "gene":
             gene_iv[
                 HTSeq.GenomicInterval(
                     feature.iv.chrom,
