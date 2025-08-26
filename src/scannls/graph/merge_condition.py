@@ -85,7 +85,7 @@ class MergeCondition:
         self.fasta = SINGLE_FASTA_INSTANCE
 
     def is_polya(self, node: Node, ratio: float = 0.7, length: int = 20) -> bool:
-        return is_polya(node, SINGLE_FASTA_INSTANCE, ratio, length)
+        return is_polya(node, self.fasta, ratio, length)
 
     def head2head(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
