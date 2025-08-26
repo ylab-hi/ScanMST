@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .basic_graph import Node
+
+
+SINGLE_FASTA_INSTANCE = None
 
 
 class MergeConditionMode(Enum):
@@ -51,10 +55,37 @@ class MergeConditionMode(Enum):
         raise ValueError(msg)
 
 
+def is_polya(node: Node, genome_fasta, ratio: float = 0.7, length: int = 20) -> bool:
+    """Check whether the tail node is bona fide polyA or internal priming event."""
+    if node.ref_end is None or node.ref_start is None:
+        msg = f"{node} has no start or end position"
+        raise SystemExit(msg)
+
+    if node.strand.is_forward():
+        seq = genome_fasta[node.chrom][node.ref_end : node.ref_end + length].seq
+    else:
+        seq = genome_fasta[node.chrom][node.ref_start - length : node.ref_start].reverse.complement.seq
+
+    counter: dict[str, int] = Counter(seq)
+    return counter["A"] <= ratio * len(seq)
+
+
 class MergeCondition:
-    def __init__(self, threshold: int) -> None:
+    def __init__(self, threshold: int, fasta) -> None:
         """Prune threshold."""
         self.threshold = threshold
+
+        global SINGLE_FASTA_INSTANCE
+        if fasta is not None:
+            SINGLE_FASTA_INSTANCE = fasta
+        elif SINGLE_FASTA_INSTANCE is None:
+            msg = "fasta is not provided"
+            raise ValueError(msg)
+
+        self.fasta = SINGLE_FASTA_INSTANCE
+
+    def is_polya(self, node: Node, ratio: float = 0.7, length: int = 20) -> bool:
+        return is_polya(node, SINGLE_FASTA_INSTANCE, ratio, length)
 
     def head2head(self, node1: Node, node2: Node) -> bool:
         return _compare_is_merged_helper_check_condition_for_two_heads_nodes_mode(
@@ -94,6 +125,7 @@ class MergeCondition:
         return _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
             node2,
             node1,
+            self.fasta,
             self.threshold,
         )
 
@@ -107,6 +139,7 @@ class MergeCondition:
         return _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
             node1,
             node2,
+            self.fasta,
             self.threshold,
         )
 
@@ -363,6 +396,7 @@ def __intron_lists_sharing_checker(
 def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     node1: Node,
     node2: Node,
+    fasta,
     threshold: int = 20,
 ) -> bool:
     """Check if node1 and node2 can be merged based on overlap info.
@@ -388,7 +422,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
         return False
 
     # tail node must have an internal polyA
-    if node2.is_polya:
+    if is_polya(node2, fasta):
         return False
 
     if node1.strand.is_forward():
@@ -421,7 +455,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
     return False
 
 
-def __obtain_the_node_with_longer_span(node1, node2) -> Node:
+def __obtain_the_node_with_longer_span(node1, node2) -> tuple[Node, Node]:
     """Obtain the node with longer span."""
     node1_ref_span = node1.ref_end - node1.ref_start
     node2_ref_span = node2.ref_end - node2.ref_start
@@ -433,6 +467,7 @@ def __obtain_the_node_with_longer_span(node1, node2) -> Node:
 def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
     node1: Node,
     node2: Node,
+    fasta,
     threshold: int,
 ) -> bool:
     """Check if two end nodes can be merged or not.
@@ -466,7 +501,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 
     # For nodes with polyA, a small difference in polyA positions is allowed.
     # introns must be the same
-    if node1.is_polya and node2.is_polya:
+    if is_polya(node1, fasta) and is_polya(node2, fasta):
         return (
             node1.introns == node2.introns
             and abs(node1.exons.first.start - node2.exons.first.start) <= threshold
@@ -475,7 +510,7 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
 
     long_node, short_node = __obtain_the_node_with_longer_span(node1, node2)
 
-    if long_node.is_polya and not short_node.is_polya:
+    if is_polya(long_node, fasta) and not is_polya(short_node, fasta):
         if long_node.strand.is_forward():
             if not long_node.introns and not short_node.introns:
                 return long_node.ref_end >= short_node.ref_end
@@ -506,10 +541,10 @@ def _compare_is_merged_helper_check_condition_for_two_tail_nodes_mode(
                 control_start_or_end_when_equal_length="start",
             )
 
-    if not long_node.is_polya and short_node.is_polya:
+    if not is_polya(long_node, fasta) and is_polya(short_node, fasta):
         return False
 
-    if not long_node.is_polya and not short_node.is_polya:
+    if not is_polya(long_node, fasta) and not is_polya(short_node, fasta):
         if long_node.strand.is_forward():
             if not long_node.introns and not short_node.introns:
                 return long_node.ref_end >= short_node.ref_end
@@ -618,6 +653,7 @@ def _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode(
 def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
     node1: Node,
     node2: Node,
+    fasta,
     threshold: int,
 ) -> bool:
     """Check if end node can be merged with a middle node or not.
@@ -641,7 +677,7 @@ def _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(
     if node1.strand != node2.strand:
         return False
 
-    if node1.is_polya:
+    if is_polya(node1, fasta):
         return False
 
     # checking if shared breakpoints satisfy the threshold

@@ -218,9 +218,9 @@ def cli(options: argparse.Namespace | DefaultOptions):
 
         logger.info(f"Total nlpaths: {intact_nlpaths_len}")
 
-        cluster_finder = ClusterFinder(intact_nlpaths, options.prune_threshold)
+        cluster_finder = ClusterFinder(intact_nlpaths, options.prune_threshold, options.ref)
         # cliques is generator
-        clusters = cluster_finder.merge_cluster(use_precomputed=True, n_jobs=options.thread)
+        clusters = cluster_finder.merge_cluster(use_precomputed=False, n_jobs=options.thread)
 
         writers = get_writers(
             str(output_file_path), options.ref, options.rescue_sr, options.output_sequence_choice, intact_read_query_name_to_sequence, in_bam_header
