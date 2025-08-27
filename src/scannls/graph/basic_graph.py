@@ -918,7 +918,7 @@ class NLPath:
             edge = new_edges[idx]
             self.edges[edge_key] = edge
 
-    def is_forming_circle(self, threshold: int = 20) -> bool:
+    def is_forming_circle(self, fasta, threshold: int) -> bool:
         """Check if this nlpath itself can form a circle."""
         nlpath_len = len(self.nodes)
         pair_indices = combinations(range(nlpath_len), 2)
@@ -939,10 +939,14 @@ class NLPath:
                 or (
                     _a > 0
                     and _b == nlpath_len - 1
-                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, threshold)
+                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, fasta, threshold)
                 )
                 # head vs. tail
-                or (_a == 0 and _b == nlpath_len - 1 and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b))
+                or (
+                    _a == 0
+                    and _b == nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b, fasta, threshold)
+                )
                 # middle vs middle
                 or (_a > 0 and _b < nlpath_len - 1 and node_a.ref_start == node_b.ref_start and node_a.ref_end == node_b.ref_end)
             ):

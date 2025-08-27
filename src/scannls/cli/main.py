@@ -813,7 +813,7 @@ def _scan_bam_helper(
 
                         if (
                             not nlpath.is_all_type_del()
-                            and not nlpath.is_forming_circle(prune_threshold)
+                            and not nlpath.is_forming_circle(genome_fasta, prune_threshold)
                             and nlpath.is_maximum_novel_insertion_length_valid(max_allowed_ins)
                             and nlpath.is_minimum_node_length_larger_than_threshold(boundary_size)
                         ):
@@ -833,7 +833,7 @@ def _scan_bam_helper(
                                 logger.trace(f"{nlpath=}")
 
                         # debug purposes only, remove it later
-                        elif nlpath.is_forming_circle(prune_threshold):
+                        elif nlpath.is_forming_circle(genome_fasta, prune_threshold):
                             logger.warning(
                                 f"{nlpath} is filtered out owing to forming circle",
                             )
