@@ -292,10 +292,10 @@ class ClusterFinder:
             ind_x, ind_y = pair
             return (ind_x, ind_y), ruler(x_nlpath, y_nlpath)
 
-        calcluate_func = partial(calculate_pair_distance, ruler=self.ruler)
+        calculate_func = partial(calculate_pair_distance, ruler=self.ruler)
         # Use joblib to compute distances in parallel
         results = Parallel(n_jobs=n_jobs, verbose=0)(
-            delayed(calcluate_func)(pair, self.intact_nlpaths[pair[0]], self.intact_nlpaths[pair[1]]) for pair in pairs
+            delayed(calculate_func)(pair, self.intact_nlpaths[pair[0]], self.intact_nlpaths[pair[1]]) for pair in pairs
         )
         # Store results in the precomputed distance dictionary
         # Filter out any None results that might occur

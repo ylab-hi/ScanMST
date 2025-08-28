@@ -310,9 +310,13 @@ def find_shared_interval_indices(a: list[tuple[int, int]], b: list[tuple[int, in
     # Find shared intervals
     shared_intervals = a_set.intersection(b_set)
 
-    # Find indices of shared intervals
-    shared_indices_a = [a.index(interval) for interval in shared_intervals]
-    shared_indices_b = [b.index(interval) for interval in shared_intervals]
+    # Build interval-to-index mappings for O(1) lookup
+    a_index_map = {interval: idx for idx, interval in enumerate(a)}
+    b_index_map = {interval: idx for idx, interval in enumerate(b)}
+
+    shared_indices_a = [a_index_map[interval] for interval in shared_intervals]
+    shared_indices_b = [b_index_map[interval] for interval in shared_intervals]
+
     return shared_indices_a, shared_indices_b
 
 
