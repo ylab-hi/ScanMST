@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from enum import Enum, auto
 from typing import TYPE_CHECKING
+import pyfaidx
 
 if TYPE_CHECKING:
     from .basic_graph import Node
@@ -55,7 +56,7 @@ class MergeConditionMode(Enum):
         raise ValueError(msg)
 
 
-def is_polya(node: Node, genome_fasta, ratio: float = 0.7, length: int = 20) -> bool:
+def is_polya(node: Node, genome_fasta: pyfaidx.Fasta, ratio: float = 0.7, length: int = 20) -> bool:
     """Check whether the tail node is bona fide polyA or internal priming event."""
     if node.ref_end is None or node.ref_start is None:
         msg = f"{node} has no start or end position"
@@ -71,7 +72,7 @@ def is_polya(node: Node, genome_fasta, ratio: float = 0.7, length: int = 20) -> 
 
 
 class MergeCondition:
-    def __init__(self, threshold: int, fasta) -> None:
+    def __init__(self, threshold: int, fasta: pyfaidx.Fasta) -> None:
         """Prune threshold."""
         self.threshold = threshold
 
@@ -98,6 +99,7 @@ class MergeCondition:
         return _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(
             node1,
             node2,
+            self.fasta,
             self.threshold,
         )
 
