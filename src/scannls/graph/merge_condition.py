@@ -284,7 +284,7 @@ def find_shared_interval_indices(a: list[tuple[int, int]], b: list[tuple[int, in
     shared_indices_a = [a_index_map[interval] for interval in shared_intervals]
     shared_indices_b = [b_index_map[interval] for interval in shared_intervals]
 
-    return shared_indices_a, shared_indices
+    return shared_indices_a, shared_indices_b
 
 
 def is_consecutive_from_beginning(indices: list[int]) -> bool:
