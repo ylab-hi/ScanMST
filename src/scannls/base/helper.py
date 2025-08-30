@@ -283,14 +283,14 @@ def gene_annotation(
     """
     gene1, gene2 = None, None
     try:
-        gene1 = "&".join(list(gene_iv[HTSeq.GenomicPosition(chrm1, pos1)]))
+        gene1 = "&".join(sorted(list(gene_iv[HTSeq.GenomicPosition(chrm1, pos1)])))
     except IndexError:
         gene1 = ""
     except TypeError:
         pass
 
     try:
-        gene2 = "&".join(list(gene_iv[HTSeq.GenomicPosition(chrm2, pos2)]))
+        gene2 = "&".join(sorted(list(gene_iv[HTSeq.GenomicPosition(chrm2, pos2)])))
     except IndexError:
         gene2 = ""
     except TypeError:
