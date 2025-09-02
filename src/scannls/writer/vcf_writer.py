@@ -50,7 +50,6 @@ class VCFWriter(Writer):
     reserved_info: ClassVar[dict[str, str]] = {
         "CANONICAL": "Flag",
         "NONCANONICAL": "Flag",
-        "BOUNDARY": "String",
         "DP1": "Integer",
         "DP2": "Integer",
         "SR": "Integer",
@@ -88,7 +87,6 @@ class VCFWriter(Writer):
     description: ClassVar[dict[str, str]] = {
         "CANONICAL": "Canonical splice site",
         "NONCANONICAL": "Noncanonical splice site",
-        "BOUNDARY": "The coding exon boundary type of event, BOTH, LEFT, RIGHT, NEITHER.",
         "DP1": "Total read depth at the breakpoint1",
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
@@ -318,13 +316,11 @@ def get_vcf_features_from_nlpath(
     path_hops_features = []
 
     can_field_dict = {0: "NONCANONICAL", 1: "CANONICAL"}
-    anno_field_dict = {0: "NEITHER", 1: "RIGHT", 2: "LEFT"}
     for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
         current_edge = nlpath.next_edge(current_node, event_id - 1)
         next_node = nlpath[event_id]
 
         can_field = can_field_dict[current_edge.splicing_code]
-        anno_field = anno_field_dict.get(current_edge.annotation_code, "BOTH")
         gene1, gene2 = current_edge.gene1, current_edge.gene2
 
         mode1_, mode2_ = current_edge.modes
@@ -376,7 +372,6 @@ def get_vcf_features_from_nlpath(
                     "SR": sr,
                     "OSR": osr,
                     "CAN": can_field,
-                    "BOUNDARY": anno_field,
                     "CHR2": chrom2,
                     "SVEND": f"{pos2 + 1}",
                     "DP1": f"{dp1}",
@@ -409,7 +404,7 @@ def get_vcf_features_from_nlpath(
 def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]:
     """VCF feature transformer."""
     info_field = (
-        f"{feature_dict['CAN']};BOUNDARY={feature_dict['BOUNDARY']};"
+        f"{feature_dict['CAN']};"
         f"SVTYPE={feature_dict['SVTYPE']};SR={feature_dict['SR']};OSR={feature_dict['OSR']};"
         f"CHR2={feature_dict['CHR2']};SVEND={feature_dict['SVEND']};DP1={feature_dict['DP1']};"
         f"DP2={feature_dict['DP2']};PSI={feature_dict['PSI']};SVLEN={feature_dict['SVLEN']};"
