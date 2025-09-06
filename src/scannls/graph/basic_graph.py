@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import combinations
 from typing import TYPE_CHECKING, Any, ClassVar
 
-import pyfaidx
 from loguru import logger
 
 from scannls.base import (
@@ -235,7 +234,6 @@ class Node(BasicNode):
         "_ref_start",
         "_ref_end",
         "exons",
-        "genome_fasta_file",
         "_introns",
         "gene_names",
         "query_name",
@@ -258,7 +256,6 @@ class Node(BasicNode):
         ref_end: int,
         identity: NodeIdentity,
         exons: Exons,
-        genome_fasta_file: str,
         cigartuples_without_soft: list[int] | None = None,
     ) -> None:
         """Initialize a Node object."""
@@ -274,7 +271,6 @@ class Node(BasicNode):
         self._introns = exons.introns()  # note we do not use this 2024-12-30
 
         self.gene_names: list[str] = []
-        self.genome_fasta_file = genome_fasta_file
 
         self.cigartuples_without_soft = cigartuples_without_soft
         self.identities: dict[str, NodeIdentity] = {self.query_name: identity}
@@ -440,28 +436,6 @@ class Node(BasicNode):
 
         msg = f"Cannot merge {self!r} and {other!r}"
         raise TypeError(msg)
-
-    @property
-    def is_polya(self):
-        if self.genome_fasta_file is None:
-            msg = f"{self} genome_fasta must be set before accessing is_polya feature."
-            raise ValueError(msg)
-        return self._calculate_is_polya()
-
-    def _calculate_is_polya(self, ratio: float = 0.7, length: int = 20) -> bool:
-        """Check whether the tail node is bona fide polyA or internal priming event."""
-        if self.ref_end is None or self.ref_start is None:
-            msg = f"{self} has no start or end position"
-            raise SystemExit(msg)
-
-        genome_fasta = pyfaidx.Fasta(self.genome_fasta_file, sequence_always_upper=True)
-        if self.strand.is_forward():
-            seq = genome_fasta[self.chrom][self.ref_end : self.ref_end + length].seq
-        else:
-            seq = genome_fasta[self.chrom][self.ref_start - length : self.ref_start].reverse.complement.seq
-
-        counter: dict[str, int] = Counter(seq)
-        return counter["A"] <= ratio * len(seq)
 
 
 class VariationType(Enum):
@@ -944,7 +918,7 @@ class NLPath:
             edge = new_edges[idx]
             self.edges[edge_key] = edge
 
-    def is_forming_circle(self, threshold: int = 20) -> bool:
+    def is_forming_circle(self, fasta, threshold: int) -> bool:
         """Check if this nlpath itself can form a circle."""
         nlpath_len = len(self.nodes)
         pair_indices = combinations(range(nlpath_len), 2)
@@ -965,10 +939,14 @@ class NLPath:
                 or (
                     _a > 0
                     and _b == nlpath_len - 1
-                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, threshold)
+                    and _compare_is_merged_helper_check_condition_for_tail_and_middle_nodes_mode(node_b, node_a, fasta, threshold)
                 )
                 # head vs. tail
-                or (_a == 0 and _b == nlpath_len - 1 and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b))
+                or (
+                    _a == 0
+                    and _b == nlpath_len - 1
+                    and _compare_is_merged_helper_check_condition_for_head_and_tail_nodes_mode(node_a, node_b, fasta, threshold)
+                )
                 # middle vs middle
                 or (_a > 0 and _b < nlpath_len - 1 and node_a.ref_start == node_b.ref_start and node_a.ref_end == node_b.ref_end)
             ):
@@ -1157,7 +1135,6 @@ class NLPath:
 
         max_shift_length_in_events = 0
         # pyfaidx.Fasta cannot be deepcopied, so we use filename instead
-        genome_fasta_file = genome_fasta.filename
 
         for index, event in enumerate(events):
             shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
@@ -1175,7 +1152,6 @@ class NLPath:
                 ref_end=event.read1_ref_end,
                 identity=NodeIdentity.HEAD if index == 0 else NodeIdentity.MID,
                 exons=Exons.from_list(event.read1_exons),
-                genome_fasta_file=genome_fasta_file,
                 cigartuples_without_soft=read1.cigartuples_without_soft,
             )
 
@@ -1272,7 +1248,6 @@ class NLPath:
                             ref_end=insertion.ref_end,
                             identity=NodeIdentity.MID,
                             exons=insertion.get_exons(),
-                            genome_fasta_file=genome_fasta_file,
                             cigartuples_without_soft=insertion.cigartuples_without_soft,
                         )
 
@@ -1322,7 +1297,6 @@ class NLPath:
                     ref_end=event.read2_ref_end,
                     identity=NodeIdentity.TAIL,
                     exons=Exons.from_list(event.read2_exons),
-                    genome_fasta_file=genome_fasta_file,
                     cigartuples_without_soft=read2.cigartuples_without_soft,
                 )
                 nodes.append(final_node)

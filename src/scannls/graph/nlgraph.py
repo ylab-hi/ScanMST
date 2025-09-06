@@ -388,7 +388,7 @@ class NLGraph:
         if node1.strand != node2.strand or node1.chrom != node2.chrom:
             return False
 
-        merge_condition = MergeCondition(threshold)
+        merge_condition = MergeCondition(threshold, None)
         return merge_condition.merged(node1, node2)
 
     def _check_if_current_node_is_merged_in_similar_nodes_in_graph(

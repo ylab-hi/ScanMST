@@ -377,6 +377,53 @@ class Intervals:
 
         return introns
 
+    def index(self, item: Interval, start: int = 0, stop: int | None = None) -> int:
+        """Return the index of the first occurrence of item in the exon_list.
+
+        Args:
+            item: The Interval to search for
+            start: Start searching from this index (optional, default 0)
+            stop: Stop searching at this index (optional, default None means end of list)
+
+        Returns:
+            int: The index of the first occurrence of item
+
+        Raises:
+            ValueError: If item is not found in the specified range
+            TypeError: If item is not an Interval
+
+        Example:
+            >>> intervals = Intervals([Interval(0, 10), Interval(20, 30), Interval(0, 10)])
+            >>> intervals.index(Interval(0, 10))
+            0
+            >>> intervals.index(Interval(20, 30))
+            1
+            >>> intervals.index(Interval(0, 10), 1)  # Start searching from index 1
+            2
+        """
+        if not isinstance(item, Interval):
+            msg = f"item: {item} is not an Interval"
+            raise TypeError(msg)
+
+        # Handle default stop value
+        if stop is None:
+            stop = len(self.exon_list)
+
+        # Validate start and stop indices
+        if start < 0:
+            start = max(0, len(self.exon_list) + start)
+        if stop < 0:
+            stop = max(0, len(self.exon_list) + stop)
+
+        # Search for the item in the specified range
+        for i in range(start, min(stop, len(self.exon_list))):
+            if self.exon_list[i] == item:
+                return i
+
+        # If not found, raise ValueError (similar to list.index behavior)
+        msg = f"{item} is not in exon_list"
+        raise ValueError(msg)
+
 
 Exon = Interval
 Exons = Intervals

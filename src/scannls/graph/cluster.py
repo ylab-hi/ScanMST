@@ -1,10 +1,13 @@
 """cluster NLpaths."""
 
 import json
+from functools import partial
 from itertools import combinations
 from pathlib import Path
 
 import networkx as nx
+import pyfaidx
+from joblib import Parallel, delayed
 from loguru import logger
 from networkx import connected_components
 
@@ -20,12 +23,13 @@ class Ruler:
     using longer one as the reference
     """
 
-    def __init__(self, prune_threshold: int) -> None:
+    def __init__(self, prune_threshold: int, fasta_file) -> None:
         """Initialize Ruler.
 
         :param logger: logger
         """
         self.prune_threshold = prune_threshold
+        self.merge_condition = MergeCondition(prune_threshold, pyfaidx.Fasta(fasta_file, sequence_always_upper=True))
 
     def __repr__(self) -> str:
         """Represent Ruler."""
@@ -55,13 +59,12 @@ class Ruler:
 
         middle_nodes_a: list[Node] = nlpath_a[1:-1]  # type: ignore
         middle_nodes_b: list[Node] = nlpath_b[1:-1]  # type: ignore
-        merge_condition: MergeCondition = MergeCondition(self.prune_threshold)
 
         if (
-            merge_condition.head2head(head_node_a, head_node_b)
-            or merge_condition.tail2tail(tail_node_a, tail_node_b)
-            or merge_condition.head2tail(head_node_a, tail_node_b)
-            or merge_condition.head2tail(head_node_b, tail_node_a)
+            self.merge_condition.head2head(head_node_a, head_node_b)
+            or self.merge_condition.tail2tail(tail_node_a, tail_node_b)
+            or self.merge_condition.head2tail(head_node_a, tail_node_b)
+            or self.merge_condition.head2tail(head_node_b, tail_node_a)
             or _compare_is_merged_helper_check_condition_for_two_middle_nodes_list(
                 middle_nodes_a,
                 middle_nodes_b,
@@ -70,17 +73,17 @@ class Ruler:
             return 0.0
 
         for middle_node_b in middle_nodes_b:
-            if merge_condition.head2mid(
+            if self.merge_condition.head2mid(
                 head_node_a,
                 middle_node_b,
-            ) or merge_condition.tail2mid(tail_node_a, middle_node_b):
+            ) or self.merge_condition.tail2mid(tail_node_a, middle_node_b):
                 return 0.0
 
         for middle_node_a in middle_nodes_a:
-            if merge_condition.head2mid(
+            if self.merge_condition.head2mid(
                 head_node_b,
                 middle_node_a,
-            ) or merge_condition.tail2mid(tail_node_b, middle_node_a):
+            ) or self.merge_condition.tail2mid(tail_node_b, middle_node_a):
                 return 0.0
 
         return 1.0
@@ -190,15 +193,13 @@ def merge_same_len_node_list(
     path1: NLPath,
     path2: NLPath,
     start_index: int,
-    threshold: int,
+    merge_condition,
 ) -> bool:
     """seires1 is equal than series2 and series1 merge series2.
 
     orignial s1: [ ] - [ ] - [ ] - [ ]
     s2:                [ ] - [ ] - [ ]
     """
-
-    merge_condition = MergeCondition(threshold)
 
     for idx, (node1, node2) in enumerate(
         zip(path1[start_index : start_index + len(path2)], path2),  # type: ignore
@@ -267,17 +268,52 @@ class ClusterFinder:
         self,
         intact_nlpaths: list[NLPath],
         prune_threshold: int,
+        fasta_file: str,
         threshold: float = 0.2,
     ) -> None:
         """Initialize CliqueFinder."""
-        self.ruler = Ruler(prune_threshold)
+        self.ruler = Ruler(prune_threshold, fasta_file)
         self.intact_nlpaths = intact_nlpaths
         self.intact_nlpaths_len = len(intact_nlpaths)
         self.threshold = threshold
         self.distance_dict: dict[tuple[int, int], float] = {}
         self._graph = nx.Graph()
+        self._precomputed_distance: dict[tuple[int, int], float] = {}
 
-    def _calculate_distance(self, x: int, y: int) -> float:
+    def _precompute_distance(self, n_jobs: int = -1):
+        """Precompute distance between all pairs of NLPaths using parallel processing.
+        :param n_jobs: Number of jobs to run in parallel. -1 means using all processors.
+        """
+        # Generate all pairs of indices
+        pairs = list(combinations(range(self.intact_nlpaths_len), 2))
+
+        # Define the function to calculate distance for a single pair
+        def calculate_pair_distance(pair, x_nlpath: NLPath, y_nlpath: NLPath, ruler: Ruler):
+            ind_x, ind_y = pair
+            return (ind_x, ind_y), ruler(x_nlpath, y_nlpath)
+
+        calculate_func = partial(calculate_pair_distance, ruler=self.ruler)
+        # Use joblib to compute distances in parallel
+        results = Parallel(n_jobs=n_jobs, verbose=0)(
+            delayed(calculate_func)(pair, self.intact_nlpaths[pair[0]], self.intact_nlpaths[pair[1]]) for pair in pairs
+        )
+        # Store results in the precomputed distance dictionary
+        # Filter out any None results that might occur
+        for result in results:
+            if result is not None:
+                (ind_x, ind_y), distance = result
+                self._precomputed_distance[(ind_x, ind_y)] = distance
+
+    def get_distance(self, x: int, y: int) -> float:
+        """Get distance between two NLPaths."""
+        if self._precomputed_distance.get((x, y)) is not None:
+            return self._precomputed_distance[(x, y)]
+        if self._precomputed_distance.get((y, x)) is not None:
+            return self._precomputed_distance[(y, x)]
+        msg = f"distance between {x} and {y} is not precomputed"
+        raise ValueError(msg)
+
+    def _calculate_distance(self, x: int, y: int, intact_nlpaths: list[NLPath], ruler: Ruler) -> float:
         """Calculate distance between two series. If distance has been calculated before.
 
         return True and distance value. Otherwise, calculate distance and return False and
@@ -287,28 +323,43 @@ class ClusterFinder:
         :param y: nlpath y
         :return: is_calculated, distance value
         """
-        return self.ruler(self.intact_nlpaths[x], self.intact_nlpaths[y])
+        return ruler(intact_nlpaths[x], intact_nlpaths[y])
 
     def _add_edge_between_two_nlpath(self, x: int, y: int) -> None:
-        if self._calculate_distance(x, y) < self.threshold:
+        if self._calculate_distance(x, y, self.intact_nlpaths, self.ruler) < self.threshold:
             self._graph.add_edge(x, y)
             if not self.intact_nlpaths[x].is_in_graph:
                 self.intact_nlpaths[x].is_in_graph = True
             if not self.intact_nlpaths[y].is_in_graph:
                 self.intact_nlpaths[y].is_in_graph = True
 
-    def _create_graph_for_nlpath(self) -> None:
+    def _add_edge_between_two_nlpath_precomputed(self, x: int, y: int) -> None:
+        """Add edge between two NLPaths using precomputed distance."""
+        if self.get_distance(x, y) < self.threshold:
+            self._graph.add_edge(x, y)
+            if not self.intact_nlpaths[x].is_in_graph:
+                self.intact_nlpaths[x].is_in_graph = True
+            if not self.intact_nlpaths[y].is_in_graph:
+                self.intact_nlpaths[y].is_in_graph = True
+
+    def _create_graph_for_nlpath(self, *, use_precomputed: bool = False) -> None:
         """Create graph for all series in intact_series_list.
 
         add edge between two series in terms of the distance value
 
+        :param use_precomputed: If True, use precomputed distances. If False, compute on-the-fly.
         :return: None
         """
         last_x = 0
         ind_x, ind_y = 0, 0
 
         for ind_x, ind_y in combinations(range(self.intact_nlpaths_len), 2):
-            self._add_edge_between_two_nlpath(ind_x, ind_y)
+            if use_precomputed:
+                # Use precomputed distance
+                self._add_edge_between_two_nlpath_precomputed(ind_x, ind_y)
+            else:
+                # Compute distance on-the-fly
+                self._add_edge_between_two_nlpath(ind_x, ind_y)
             if last_x != ind_x:
                 if not self.intact_nlpaths[last_x].is_in_graph:
                     self._graph.add_node(last_x)
@@ -321,12 +372,19 @@ class ClusterFinder:
         if not self.intact_nlpaths[ind_y].is_in_graph:
             self._graph.add_node(ind_y)
 
-    def find_cluster_index(self):
+    def find_cluster_index(self, *, use_precomputed: bool = False, n_jobs: int = -1):
         """Find cluster in graph with help of :func:`networkx.algorithms.components.connected.connected_components`.
 
+        :param use_precomputed: If True, use precomputed distances. If False, compute on-the-fly.
+        :param n_jobs: Number of jobs for parallel distance computation (only used if use_precomputed=True).
         :return:  every clique in graph as a iterator (List[int])
         """
-        self._create_graph_for_nlpath()
+        if use_precomputed and not self._precomputed_distance:
+            # Precompute distances if not already done
+            self._precompute_distance(n_jobs=n_jobs)
+            logger.info(f"Precomputed distances for {len(self._precomputed_distance)} pairs using {n_jobs} jobs")
+
+        self._create_graph_for_nlpath(use_precomputed=use_precomputed)
         logger.warning("Cluster Graph is created")
         yield from connected_components(self._graph)
 
@@ -343,12 +401,11 @@ class ClusterFinder:
 
         return result
 
-    @staticmethod
     def check_if_two_nlpath_merge(
+        self,
         path1: NLPath,
         path2: NLPath,
         merge_keys: dict[int, list[str]],
-        threadhold: int,
     ) -> bool:
         nlpath_2_nodes_key = "".join(merge_keys[path2.id])
 
@@ -361,7 +418,7 @@ class ClusterFinder:
                 path1,
                 path2,
                 start_index,
-                threadhold,
+                self.ruler.merge_condition,
             ):
                 merge_nlpath(path1, path2, start_index)  # type: ignore
                 path1.polish_edges()
@@ -370,17 +427,16 @@ class ClusterFinder:
 
         return False
 
-    @staticmethod
-    def check_merge(path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]], threshold: float):
+    def check_merge(self, path1: NLPath, path2: NLPath, merge_keys: dict[int, list[str]]):
         """Check if nlpath1 can merge nlpath2."""
         if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
-            return ClusterFinder.check_if_two_nlpath_merge(path1, path2, merge_keys, threshold)
+            return self.check_if_two_nlpath_merge(path1, path2, merge_keys)
 
         msg = "nlpath1 is shorter than nlpath2"
         raise ValueError(msg)
 
-    def merge_cluster(self):
-        for _cluster_id, cluster_index in enumerate(self.find_cluster_index()):
+    def merge_cluster(self, *, use_precomputed: bool = True, n_jobs: int = -1):
+        for _cluster_id, cluster_index in enumerate(self.find_cluster_index(use_precomputed=use_precomputed, n_jobs=n_jobs)):
             nlpaths = []
             for i in cluster_index:
                 current_nlpath = self.intact_nlpaths[i]
@@ -390,15 +446,14 @@ class ClusterFinder:
             logger.debug(f"{len(sorted_nlpaths)=} nlpaths for merge: {sorted_nlpaths}")
 
             merge_keys = self.creat_merge_indexs(sorted_nlpaths)
-            new_cluster = ClusterFinder._merge_cluster(sorted_nlpaths, merge_keys, self.ruler.prune_threshold)
+            new_cluster = self._merge_cluster(sorted_nlpaths, merge_keys)
             yield sort_cluster(
                 new_cluster,
                 key=create_sort_key_by_merge_factor,  # type: ignore
                 reverse=True,
             )
 
-    @staticmethod
-    def _merge_cluster(nlpaths, merge_keys, threshold: int):
+    def _merge_cluster(self, nlpaths, merge_keys):
         result = []
         removed_nlpaths = set()  # Use a set to keep track of removed paths for efficiency
 
@@ -410,7 +465,7 @@ class ClusterFinder:
                     continue  # Skip this one as it's already marked for removal
 
                 # Check if the selected and current nlpaths should be merged
-                if ClusterFinder.check_merge(selected_nlpath, current_nlpath, merge_keys, threshold):
+                if self.check_merge(selected_nlpath, current_nlpath, merge_keys):
                     removed_nlpaths.add(current_nlpath)
 
             # Remove all marked nlpaths from the main list after checking
