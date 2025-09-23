@@ -44,9 +44,8 @@ class DefaultOptions:
     mismatch: int = 3
     alignment_fraction: float = 0.8
     long_indel_length: int = 10
-    substitutions_num: int = 20
-    substitutions_fraction: float = 0.2
-    indel_fraction: float = 0.2
+    substitutions_fraction: float = 0.05
+    indel_fraction: float = 0.001
     circular_rna: str = "remove"
     circular_rna_choices: tuple[str, ...] = ("remove", "keep", "extract")
     # junctions within one annotated exon filter
@@ -338,14 +337,6 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         default=DefaultOptions.long_indel_length,
         help="the length cutoff of defining long indel in the reads (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--substitution-num",
-        action="store",
-        dest="substitutions_num",
-        type=int,
-        default=DefaultOptions.substitutions_num,
-        help="the allowed maximum substitution number in the reads (default: %(default)s)",
     )
     parser.add_argument(
         "--indel-fraction",

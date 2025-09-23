@@ -58,7 +58,6 @@ class BamScanner:
         max_allowed_nm,
         min_soft_seg_len,
         long_indel_length,
-        substitutions_num,
         substitutions_fraction,
         indels_fraction,
         aligner,
@@ -84,7 +83,6 @@ class BamScanner:
         self.total_length = 0
 
         self.long_indel_length = long_indel_length
-        self.substitutions_num = substitutions_num
         self.substitutions_fraction = substitutions_fraction
         self.indels_fraction = indels_fraction
 
@@ -151,13 +149,14 @@ class BamScanner:
                     self.logger.warning(f"{e}, cs tag is missing, please align with --cs.")
                     raise SystemExit
 
-                num_of_subs, subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
+                subs_fraction, ins_fraction, del_fraction = obtain_variants_stats(
                     cs_tag,
                     self.long_indel_length,
                 )
+                self.logger.trace(f"{subs_fraction=}, {ins_fraction=}, {del_fraction=}")
 
                 if (
-                    not (num_of_subs > self.substitutions_num and subs_fraction > self.substitutions_fraction)
+                    subs_fraction <= self.substitutions_fraction
                     and ins_fraction <= self.indels_fraction
                     and del_fraction <= self.indels_fraction
                 ):
@@ -194,13 +193,12 @@ class BamScanner:
                                     in_seq_len=len(read_matched_seq),
                                 )
                                 (
-                                    substitution_num_aligner,
                                     subs_fraction_aligner,
                                     ins_fraction_aligner,
                                     del_fraction_aligner,
                                 ) = self.aligner.obtain_variants_stats(top_hsp, in_seq_len=len(read_matched_seq))
                                 self.logger.trace(
-                                    f"{substitution_num_aligner=}, {subs_fraction_aligner=}, {ins_fraction_aligner=}, {del_fraction_aligner=}"
+                                    f"{subs_fraction_aligner=}, {ins_fraction_aligner=}, {del_fraction_aligner=}"
                                 )
 
                                 if strand_aligner == read_strand:
@@ -210,18 +208,15 @@ class BamScanner:
 
                                 self.logger.trace(f"{cigar_aligner=},{updated_cigar=}")
                                 if (
-                                    substitution_num_aligner < num_of_subs
-                                    and subs_fraction_aligner < subs_fraction
-                                    and ins_fraction_aligner <= ins_fraction
-                                    and del_fraction_aligner <= del_fraction
+                                    subs_fraction_aligner <= self.substitutions_fraction
+                                    and ins_fraction_aligner <= self.indels_fraction
+                                    and del_fraction_aligner <= self.indels_fraction
                                 ):
                                     # use original mapq as realignment mapq temporarily
                                     new_record = f"{chrom_aligner},{position_aligner + 1},{strand_aligner},{updated_cigar},{read_mapq},{nm_aligner}"
                                     self.representative_alignments_new_record[f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"] = new_record
                                     is_passed_qc = True
 
-                    if not is_passed_qc:
-                        self.representative_alignments_new_cigar[f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"] = read.cigarstring
 
 
 def _get_read_matched_sequence(read_query_seq, lt_soft_len, rt_soft_len, read_strand) -> str:
@@ -506,7 +501,6 @@ def _scan_bam_helper(
     splice_bin,
     motif_required,
     long_indel_length,
-    substitutions_num,
     substitutions_fraction,
     indels_fraction,
     circular_rna,
@@ -734,7 +728,7 @@ def _scan_bam_helper(
                 if read.cigarstring is None:
                     msg = f"{read}'s cigarstring is None"
                     raise ValueError(msg)
-                _num_of_subs, _subs_fraction, _ins_fraction, _del_fraction = obtain_variants_stats(
+                _subs_fraction, _ins_fraction, _del_fraction = obtain_variants_stats(
                     read.get_tag("cs"),
                     long_indel_length,
                 )
@@ -866,7 +860,6 @@ def scanbam_run(
     min_soft_seg_len,
     blat_ident_pct_cutoff,
     long_indel_length,
-    substitutions_num,
     substitutions_fraction,
     indels_fraction,
     species,
@@ -889,7 +882,6 @@ def scanbam_run(
         max_allowed_nm=max_allowed_nm,
         min_soft_seg_len=min_soft_seg_len,
         long_indel_length=long_indel_length,
-        substitutions_num=substitutions_num,
         substitutions_fraction=substitutions_fraction,
         indels_fraction=indels_fraction,
         aligner=aligner,

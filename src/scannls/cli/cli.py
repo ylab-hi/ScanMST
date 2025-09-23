@@ -196,7 +196,6 @@ def cli(options: argparse.Namespace | DefaultOptions):
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
             long_indel_length=options.long_indel_length,
-            substitutions_num=options.substitutions_num,
             substitutions_fraction=options.substitutions_fraction,
             indels_fraction=options.indel_fraction,
             species=options.species,
