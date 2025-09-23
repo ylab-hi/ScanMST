@@ -52,7 +52,7 @@ usage: scannclt [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTP
                [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
                [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine]
                [--nbound] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS] [--min-required-ins MIN_REQUIRED_INS] [--long-indel-length LONG_INDEL_LENGTH]
-               [--substitution-num SUBSTITUTIONS_NUM] [--indel-fraction INDEL_FRACTION] [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN]
+               [--indel-fraction INDEL_FRACTION] [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN]
                [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
                [--substitution-fraction SUBSTITUTIONS_FRACTION] [--ignore-circle] [--rescue-sr]
 
@@ -92,8 +92,7 @@ options:
   --max-allowed-ins MAX_ALLOWED_INS       maximum allowed micro-insertion length (default: 50)
   --min-required-ins MIN_REQUIRED_INS     minimum required insertion length in read (default: 100)
   --long-indel-length LONG_INDEL_LENGTH   the length cutoff of defining long indel in the reads (default: 10)
-  --substitution-num SUBSTITUTIONS_NUM    the allowed maximum substitution number in the reads (default: 20)
-  --indel-fraction INDEL_FRACTION         the allowed maximum long indel fraction in the reads (default: 0.2)
+  --indel-fraction INDEL_FRACTION         the allowed maximum long indel fraction in the reads (default: 0.001)
   --prune-threshold PRUNE_THRESHOLD       splice graph pruning length threshold (default: 10)
   --soft-len SOFT_LEN                     minimum softclipped segment length to be rescued (default: 5)
   --mismatch MISMATCH                     maximum allowed mismatch bases of rescued segment (default: 3)
@@ -101,7 +100,7 @@ options:
   --alignment-fraction ALIGNMENT_FRACTION
                                           minimal fraction of aligned part for Smith-Waterman local alignment (default: 0.8)
   --substitution-fraction SUBSTITUTIONS_FRACTION
-                                          the allowed maximum substitution fraction in the reads (default: 0.2)
+                                          the allowed maximum substitution fraction in the reads (default: 0.05)
   --ignore-circle                         if export result if the nlgraph has a circle (default: False)
   --rescue-sr                             if rescuing sr for edge (default: False)
 
