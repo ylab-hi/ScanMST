@@ -2077,9 +2077,9 @@ def obtain_variants_stats(
                 del_outlier_num += 1
             reference_length += deletion_length
 
-    ins_fraction = 0.0 if insertion_num == 0 else ins_outlier_num / reference_length
-    del_fraction = 0.0 if deletion_num == 0 else del_outlier_num / reference_length
-    subs_fraction = 0.0 if substitution_num == 0 else substitution_num / reference_length
+    ins_fraction = ins_outlier_num / reference_length
+    del_fraction = del_outlier_num / reference_length
+    subs_fraction = substitution_num / reference_length
 
     return subs_fraction, ins_fraction, del_fraction
 

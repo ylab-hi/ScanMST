@@ -455,13 +455,13 @@ class Blat:
                     cigar += str(lz - ly) + "N"
                 else:
                     cigar += str(lz - ly) + "D"
-                    num_of_mismatch += (lz - ly)
+                    num_of_mismatch += lz - ly
                 y0, z0 = y[i], z[i]
             elif lz < ly:
                 # ins: the query gap is longer
                 cigar += str(z[i] - z0) + "M"
                 cigar += str(ly - lz) + "I"
-                num_of_mismatch += (ly - lz)
+                num_of_mismatch += ly - lz
                 y0, z0 = y[i], z[i]
 
         cigar += str(query_end - y0) + "M"
@@ -497,7 +497,7 @@ class Blat:
         # calculate the reference alignment length
         reference_length = 0
         for start, end in hit_ranges:
-            reference_length += (end - start)
+            reference_length += end - start
 
         deletion_length_total = 0
         substitution_num = hsp.mismatch_num
@@ -528,14 +528,8 @@ class Blat:
         # Total reference length includes aligned blocks + deletions
         total_reference_length = reference_length + deletion_length_total
 
-        ins_fraction = (
-            0.0 if insertion_num == 0 else ins_outlier_num / total_reference_length
-        )
-        del_fraction = (
-            0.0 if deletion_num == 0 else del_outlier_num / total_reference_length
-        )
-        subs_fraction = (
-            0.0 if substitution_num == 0 else substitution_num / total_reference_length
-        )
+        ins_fraction = ins_outlier_num / total_reference_length
+        del_fraction = del_outlier_num / total_reference_length
+        subs_fraction = substitution_num / total_reference_length
 
         return subs_fraction, ins_fraction, del_fraction

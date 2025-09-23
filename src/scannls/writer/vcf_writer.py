@@ -15,6 +15,7 @@ from scannls.exception import (
     BreakpointNotFoundError,
 )
 from scannls.graph import NLPath, Node, Edge
+from scannls.utils import determine_nclt_link_type
 
 from .writer import Writer
 
@@ -441,22 +442,6 @@ def get_vcf_features_from_nlpath(
 
     return path_hops_features
 
-
-def determine_nclt_link_type(edge) -> str:
-    """Determine link type."""
-    link_type = "NA"
-    var_type = edge.variation_type
-    mode1, mode2 = edge.modes
-    if var_type.is_tdup():
-        link_type = "ICRL"
-    elif var_type.is_inv():
-        link_type = "ICTL"
-    elif var_type.is_tra():
-        if mode1 == mode2:
-            link_type = "ITTL"
-        else:
-            link_type = "ITPL"
-    return link_type
 
 def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]:
     """VCF feature transformer."""

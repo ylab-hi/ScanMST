@@ -1,4 +1,4 @@
-"""Useful functions for scannls."""
+"""Useful functions for scannclt."""
 
 from __future__ import annotations
 
@@ -317,3 +317,20 @@ def wait_for_aligner(aligner, max_timeout=5 * 60, check_interval=60) -> None:
         blat_info = aligner.log_file_path, aligner.is_start_server
         logger.trace(f"{blat_info=}, {is_there_log_file=}, {aligner.is_running()=}")
         time.sleep(check_interval)
+
+
+def determine_nclt_link_type(edge) -> str:
+    """Determine link type."""
+    link_type = "NA"
+    var_type = edge.variation_type
+    mode1, mode2 = edge.modes
+    if var_type.is_tdup():
+        link_type = "ICRL"
+    elif var_type.is_inv():
+        link_type = "ICTL"
+    elif var_type.is_tra():
+        if mode1 == mode2:
+            link_type = "ITTL"
+        else:
+            link_type = "ITPL"
+    return link_type

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from scannls.utils import determine_nclt_link_type
+
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -61,23 +63,6 @@ def add_node_to_nxgraph(node: Node, graph: nx.Graph) -> None:
         ptc=node.ptc,
         ptf=node.ptf,
     )
-
-
-def determine_nclt_link_type(edge: Edge) -> str:
-    """Determine link type."""
-    link_type = "NA"
-    var_type = edge.variation_type
-    mode1, mode2 = edge.modes
-    if var_type.is_tdup():
-        link_type = "ICRL"
-    elif var_type.is_inv():
-        link_type = "ICTL"
-    elif var_type.is_tra():
-        if mode1 == mode2:
-            link_type = "ITTL"
-        else:
-            link_type = "ITPL"
-    return link_type
 
 
 def add_edge_to_nxgraph(
