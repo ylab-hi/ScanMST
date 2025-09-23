@@ -2033,7 +2033,7 @@ def diff_chrom_diff_strand_handler(
 def obtain_variants_stats(
     cs_tag_string: str,
     large_indel_len_threshold: int = 4,
-) -> tuple[int, float, float, float]:
+) -> tuple[float, float, float]:
     """Obtain variants stats from read matched part using cs tag.
 
     :param cs_tag_string: cs tag (compact string for differences)
@@ -2052,11 +2052,17 @@ def obtain_variants_stats(
     substitution_num = 0
     insertion_num = 0
     deletion_num = 0
+    reference_length = 0
     # ignore perfect matches(:) and intron(~)
     for _cs in cs_tuples:
+        # perfect match (":120")
+        if _cs.startswith(":"):
+            match_length = int(_cs[1:])
+            reference_length += match_length
         # 1 mismatch
-        if _cs.startswith("*"):
+        elif _cs.startswith("*"):
             substitution_num += 1
+            reference_length += 1
         # insertion
         elif _cs.startswith("+"):
             insertion_num += 1
@@ -2069,14 +2075,13 @@ def obtain_variants_stats(
             deletion_length = len(_cs[1:])
             if deletion_length >= large_indel_len_threshold:
                 del_outlier_num += 1
+            reference_length += deletion_length
 
-    total_num_of_mutations = substitution_num + insertion_num + deletion_num
+    ins_fraction = ins_outlier_num / reference_length
+    del_fraction = del_outlier_num / reference_length
+    subs_fraction = substitution_num / reference_length
 
-    ins_fraction = 0.0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
-    del_fraction = 0.0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
-    subs_fraction = 0.0 if substitution_num == 0 else substitution_num / total_num_of_mutations
-
-    return substitution_num, subs_fraction, ins_fraction, del_fraction
+    return subs_fraction, ins_fraction, del_fraction
 
 
 def get_transcriptome_length(species: str) -> int:

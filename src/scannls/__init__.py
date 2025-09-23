@@ -1,6 +1,6 @@
 """Init file for scannls package."""
 
-__version__ = "0.1.0"
+__version__ = "0.1.6"
 __PACKAGE_NAME__ = "scannls"
 
 import sys

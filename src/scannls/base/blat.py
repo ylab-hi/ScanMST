@@ -455,13 +455,13 @@ class Blat:
                     cigar += str(lz - ly) + "N"
                 else:
                     cigar += str(lz - ly) + "D"
-                    num_of_mismatch += (lz - ly)
+                    num_of_mismatch += lz - ly
                 y0, z0 = y[i], z[i]
             elif lz < ly:
                 # ins: the query gap is longer
                 cigar += str(z[i] - z0) + "M"
                 cigar += str(ly - lz) + "I"
-                num_of_mismatch += (ly - lz)
+                num_of_mismatch += ly - lz
                 y0, z0 = y[i], z[i]
 
         cigar += str(query_end - y0) + "M"
@@ -479,7 +479,7 @@ class Blat:
         hsp: Any,
         in_seq_len: int,
         large_indel_len_threshold: int = 4,
-    ) -> tuple[int, float, float, float]:
+    ) -> tuple[float, float, float]:
         """Obtain variants stats from HSP."""
 
         _strand = hsp.query_strand_all[0]
@@ -494,6 +494,12 @@ class Blat:
         # reference ranges
         hit_ranges = hsp.hit_range_all
 
+        # calculate the reference alignment length
+        reference_length = 0
+        for start, end in hit_ranges:
+            reference_length += end - start
+
+        deletion_length_total = 0
         substitution_num = hsp.mismatch_num
         del_outlier_num, ins_outlier_num = 0, 0
         insertion_num = 0
@@ -514,20 +520,16 @@ class Blat:
                 deletion_length = hit_gap - query_gap
                 # treat it as intron when deletion_length >= 10
                 if deletion_length < 10:
+                    deletion_length_total += deletion_length
                     deletion_num += 1
                     if deletion_length >= large_indel_len_threshold:
                         del_outlier_num += 1
 
-        total_num_of_mutations = substitution_num + insertion_num + deletion_num
+        # Total reference length includes aligned blocks + deletions
+        total_reference_length = reference_length + deletion_length_total
 
-        ins_fraction = (
-            0.0 if insertion_num == 0 else ins_outlier_num / total_num_of_mutations
-        )
-        del_fraction = (
-            0.0 if deletion_num == 0 else del_outlier_num / total_num_of_mutations
-        )
-        subs_fraction = (
-            0.0 if substitution_num == 0 else substitution_num / total_num_of_mutations
-        )
+        ins_fraction = ins_outlier_num / total_reference_length
+        del_fraction = del_outlier_num / total_reference_length
+        subs_fraction = substitution_num / total_reference_length
 
-        return substitution_num, subs_fraction, ins_fraction, del_fraction
+        return subs_fraction, ins_fraction, del_fraction

@@ -14,7 +14,8 @@ from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (
     BreakpointNotFoundError,
 )
-from scannls.graph import NLPath, Node
+from scannls.graph import NLPath, Node, Edge
+from scannls.utils import determine_nclt_link_type
 
 from .writer import Writer
 
@@ -57,6 +58,7 @@ class VCFWriter(Writer):
         "PSI": "Float",
         "SVMETHOD": "String",
         "SVTYPE": "String",
+        "NCLTTYPE": "String",
         "SVLEN": "Integer",
         "CHR2": "String",
         "SVEND": "Integer",
@@ -77,11 +79,10 @@ class VCFWriter(Writer):
     }
     reserved_format: ClassVar[dict[str, str]] = {"GT": "String"}
     reserved_alt: ClassVar[list[str]] = [
-        "DEL",
-        "TDUP",
-        "IDUP",
-        "INV",
-        "TRA",
+        "ICRL",
+        "ICTL",
+        "ITPL",
+        "ITTL",
     ]
 
     description: ClassVar[dict[str, str]] = {
@@ -92,7 +93,8 @@ class VCFWriter(Writer):
         "SR": "The number of support reads for the breakpoints",
         "OSR": "The number of support reads for the breakpoints before rescuer",
         "PSI": "Estimated Percent splice-in in the range (0,1], representing the percentage of NLS transcripts",
-        "SVTYPE": "The type of event, DEL, TDUP, IDUP, INV, TRA.",
+        "SVTYPE": "The type of event, DEL, TDUP, INV, TRA.",
+        "NCLTTYPE": "The type of link, ICRL, ICTL, ITPL, ITTL.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for END coordinate in case of a translocation",
         "SVEND": "2nd position of the structural variant",  # change to SVEND in order to meet vcf standard
@@ -112,11 +114,10 @@ class VCFWriter(Writer):
         "GT": "Genotype",
         "INSSEQ": "MicroInsertion sequence",
         "HOMSEQ": "MicroHomology sequence",
-        "DEL": "Deletion",
-        "TDUP": "Tandem duplication",
-        "IDUP": "Inverted duplication",
-        "INV": "Inversion",
-        "TRA": "Translocation",
+        "ICRL": "Intra-Chromosomal Reverse Link",
+        "ICTL": "Intra-Chromosomal Trans-strand Link",
+        "ITPL": "InTer-chromosomal Parallel Link",
+        "ITTL": "InTer-chromosomal Trans-strand Link",
     }
 
     def __init__(
@@ -206,7 +207,9 @@ class VCFWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {cluster_id} Series.",
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
-        for _hop_vcf_feature in get_vcf_features_from_nlpath(data_object, self.rescue_sr, cluster_id=cluster_id):
+        for _hop_vcf_feature in get_vcf_features_from_nlpath(
+            data_object, self.rescue_sr, cluster_id=cluster_id
+        ):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
     def write_data_helper(self) -> None:
@@ -218,15 +221,31 @@ class VCFWriter(Writer):
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
                 # multiple transcripts go through the same one hop
-                out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
-                out_vcf_dict[type_position_key]["SEGMENT1"] += f",{hop_feature[type_position_key]['SEGMENT1']}"
-                out_vcf_dict[type_position_key]["SEGMENT2"] += f",{hop_feature[type_position_key]['SEGMENT2']}"
-                out_vcf_dict[type_position_key]["SR_ID"] += f",{hop_feature[type_position_key]['SR_ID']}"
+                out_vcf_dict[type_position_key][
+                    "TRANSCRIPT_ID"
+                ] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
+                out_vcf_dict[type_position_key][
+                    "SEGMENT1"
+                ] += f",{hop_feature[type_position_key]['SEGMENT1']}"
+                out_vcf_dict[type_position_key][
+                    "SEGMENT2"
+                ] += f",{hop_feature[type_position_key]['SEGMENT2']}"
+                out_vcf_dict[type_position_key][
+                    "SR_ID"
+                ] += f",{hop_feature[type_position_key]['SR_ID']}"
                 # deal with 'Y' shape NLS graph
-                if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
-                    out_vcf_dict[type_position_key]["READS"].update(hop_feature[type_position_key]["READS"])
-                    out_vcf_dict[type_position_key]["SR"] += hop_feature[type_position_key]["SR"]
-                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[type_position_key]["OSR"]
+                if not out_vcf_dict[type_position_key]["READS"].issuperset(
+                    hop_feature[type_position_key]["READS"]
+                ):
+                    out_vcf_dict[type_position_key]["READS"].update(
+                        hop_feature[type_position_key]["READS"]
+                    )
+                    out_vcf_dict[type_position_key]["SR"] += hop_feature[
+                        type_position_key
+                    ]["SR"]
+                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[
+                        type_position_key
+                    ]["OSR"]
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -237,7 +256,7 @@ class VCFWriter(Writer):
         """VCF header provides metadata describing the body of the file."""
 
         date = datetime.datetime.today().strftime("%Y%m%d")
-        source = "ScanNLS"
+        source = "ScanNCLT"
         reference = f'<CMD={obtain_reference_from_bam_header(self.bam_header)},Description="Alignment parameters">'
 
         header_lines = [
@@ -273,7 +292,10 @@ class VCFWriter(Writer):
 
     def get_contigs(self) -> list[str]:
         """Get contigs from BAM file header."""
-        return [f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>" for contig_dict in self.bam_header["SQ"]]
+        return [
+            f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>"
+            for contig_dict in self.bam_header["SQ"]
+        ]
 
 
 def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
@@ -349,10 +371,24 @@ def get_vcf_features_from_nlpath(
                     current_node,
                 )
 
-        sv_distance = abs(pos1 - pos2) if not current_edge.variation_type.is_tra() else 0
-        dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
-        dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
-        pso = 0 if dp1 == 0 or dp2 == 0 else current_edge.sr / (current_edge.sr + (dp1 + dp2) / 2)
+        sv_distance = (
+            abs(pos1 - pos2) if not current_edge.variation_type.is_tra() else 0
+        )
+        dp1 = (
+            0
+            if current_edge.break_point1.depth is None
+            else current_edge.break_point1.depth
+        )
+        dp2 = (
+            0
+            if current_edge.break_point2.depth is None
+            else current_edge.break_point2.depth
+        )
+        pso = (
+            0
+            if dp1 == 0 or dp2 == 0
+            else current_edge.sr / (current_edge.sr + (dp1 + dp2) / 2)
+        )
 
         if rescue_sr:
             sr = current_edge.sr
@@ -361,14 +397,18 @@ def get_vcf_features_from_nlpath(
             sr = current_edge.sr
             osr = current_edge.sr
 
+        nclt_link_type = determine_nclt_link_type(
+            current_edge
+        )
         path_hops_features.append(
             {
                 f"{current_edge.variation_type}_{chrom1}|{pos1 + 1}_{chrom2}|{pos2 + 1}": {
                     "CHROM": chrom1,
                     "POS": f"{pos1 + 1}",
                     "REF": ".",
-                    "ALT": f"<{current_edge.variation_type}>",
+                    "ALT": f"<{nclt_link_type}>",
                     "SVTYPE": current_edge.variation_type,
+                    "NCLTTYPE": nclt_link_type,
                     "SR": sr,
                     "OSR": osr,
                     "CAN": can_field,
@@ -390,9 +430,11 @@ def get_vcf_features_from_nlpath(
                     "GENE_ID": f"{cluster_id}",
                     "SR_ID": f"{'|'.join(current_edge.read_ids)}",
                     "READS": set(current_edge.read_ids),
-                    "SVMETHOD": "ScanNLS",
+                    "SVMETHOD": "ScanNCLT",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
-                    "INSSEQ": microinsertion_sequence if microinsertion_sequence else ".",
+                    "INSSEQ": (
+                        microinsertion_sequence if microinsertion_sequence else "."
+                    ),
                     "ID": current_edge.id,
                 },
             },
@@ -405,10 +447,10 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
     """VCF feature transformer."""
     info_field = (
         f"{feature_dict['CAN']};"
-        f"SVTYPE={feature_dict['SVTYPE']};SR={feature_dict['SR']};OSR={feature_dict['OSR']};"
+        f"NCLTTYPE={feature_dict['NCLTTYPE']};SR={feature_dict['SR']};OSR={feature_dict['OSR']};"
         f"CHR2={feature_dict['CHR2']};SVEND={feature_dict['SVEND']};DP1={feature_dict['DP1']};"
         f"DP2={feature_dict['DP2']};PSI={feature_dict['PSI']};SVLEN={feature_dict['SVLEN']};"
-        f"GENE1={feature_dict['GENE1']};GENE2={feature_dict['GENE2']};"
+        f"GENE1={feature_dict['GENE1']};GENE2={feature_dict['GENE2']};SVTYPE={feature_dict['SVTYPE']};"
         f"SEGMENT1={feature_dict['SEGMENT1']};SEGMENT2={feature_dict['SEGMENT2']};"
         f"STRAND1={feature_dict['STRAND1']};STRAND2={feature_dict['STRAND2']};"
         f"MODE1={feature_dict['MODE1']};MODE2={feature_dict['MODE2']};"
@@ -447,4 +489,8 @@ def obtain_sequence_from_insertion(
     if not novel_insertion_sequence:
         return ""
 
-    return novel_insertion_sequence if node.strand.is_forward() else reverse_complement(novel_insertion_sequence)
+    return (
+        novel_insertion_sequence
+        if node.strand.is_forward()
+        else reverse_complement(novel_insertion_sequence)
+    )

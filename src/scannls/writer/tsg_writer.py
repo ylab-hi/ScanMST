@@ -15,7 +15,7 @@ from .writer import Writer
 
 
 class TSGWriter(Writer):
-    """Writer for GTF files.
+    """Writer for TSG files.
 
     .. note::
     """
