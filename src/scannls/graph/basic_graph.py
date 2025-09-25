@@ -865,9 +865,9 @@ class NLPath:
     @staticmethod
     def merge_exons(prev_exons: Exons, next_exons: Exons) -> Exons:
         """Merge two lists of exons, combining adjacent/overlapping ones."""
-        if not prev_exons or len(prev_exons) == 0:
+        if not prev_exons:
             return next_exons
-        if not next_exons or len(next_exons) == 0:
+        if not next_exons:
             return prev_exons
 
         # Combine all exons and sort by start position
