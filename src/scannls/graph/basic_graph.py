@@ -861,6 +861,36 @@ class NLPath:
         for node in self.nodes:
             node.set_up_breakpoints()
 
+
+    @staticmethod
+    def merge_exons(prev_exons: Exons, next_exons: Exons) -> Exons:
+        """Merge two lists of exons, combining adjacent/overlapping ones."""
+        if not prev_exons or len(prev_exons) == 0:
+            return next_exons
+        if not next_exons or len(next_exons) == 0:
+            return prev_exons
+
+        # Combine all exons and sort by start position
+        all_exons = prev_exons.__concat__(next_exons)
+        all_exons.sort()
+
+        merged_exons = []
+        for _exon in all_exons:
+            if not merged_exons:
+                merged_exons.append(_exon)
+            else:
+                last_exon = merged_exons[-1]
+                # Check if current interval is adjacent to or overlaps with the last one
+                if _exon.start <= last_exon.end + 1:  # +1 for adjacent intervals
+                    # Merge by extending the end position
+                    merged_exons[-1] = Interval(last_exon.start, max(last_exon.end, _exon.end))
+                else:
+                    # No overlap/adjacency, add as separate interval
+                    merged_exons.append(_exon)
+
+        return Exons(merged_exons)
+
+
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""
         logger.trace(f"Squeeze {self!r}")
@@ -887,11 +917,13 @@ class NLPath:
 
             if edge.variation_type.is_del():
                 if prev_node.strand.is_forward() and next_node.strand.is_forward():
-                    prev_node.exons.extend(next_node.exons)
+                    merged_exons = NLPath.merge_exons(prev_node.exons, next_node.exons)
+                    prev_node.exons = merged_exons
                     prev_node.ref_end = next_node.ref_end
                     prev_node._introns = None
                 else:
-                    next_node.exons.extend(prev_node.exons)
+                    merged_exons = NLPath.merge_exons(prev_node.exons, next_node.exons)
+                    next_node.exons = merged_exons
                     next_node.ref_end = prev_node.ref_end
                     next_node._introns = None
                     new_nodes[-1] = next_node
