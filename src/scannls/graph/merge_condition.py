@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections import Counter
 from enum import Enum, auto
 from typing import TYPE_CHECKING
-import pyfaidx
 
 if TYPE_CHECKING:
+    import pyfaidx
+
     from .basic_graph import Node
 
 

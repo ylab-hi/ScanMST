@@ -26,6 +26,7 @@ from scannls.base import (
     infer_nls_from_connected_reads,
     reverse_complement,
 )
+from scannls.utils import determine_nclt_link_type, get_link_attributes_from_edge
 
 from .merge_condition import (
     _compare_is_merged_helper_check_condition_for_head_and_middle_nodes_mode,
@@ -546,7 +547,12 @@ class Edge:
     def __repr__(self) -> str:
         return f"Edge(data={self.edge_data})"
 
+    def link_attributes(self, *, rescue_sr: bool) -> svlen:
+        return get_link_attributes_from_edge(self, rescue_sr=rescue_sr)
+
     # fmt: off
+    @property
+    def nclt_link_type(self) -> str: return determine_nclt_link_type(self)
     @property
     def key(self): return f"{self.node1_key}-{self.node2_key}"
     @property
@@ -861,7 +867,6 @@ class NLPath:
         for node in self.nodes:
             node.set_up_breakpoints()
 
-
     @staticmethod
     def merge_exons(prev_exons: Exons, next_exons: Exons) -> Exons:
         """Merge two lists of exons, combining adjacent/overlapping ones."""
@@ -889,7 +894,6 @@ class NLPath:
                     merged_exons.append(_exon)
 
         return Exons(merged_exons)
-
 
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""

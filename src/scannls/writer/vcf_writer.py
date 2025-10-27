@@ -14,8 +14,7 @@ from scannls.base import MicroHomology, NovelInsertion, reverse_complement
 from scannls.exception import (
     BreakpointNotFoundError,
 )
-from scannls.graph import NLPath, Node, Edge
-from scannls.utils import determine_nclt_link_type
+from scannls.graph import NLPath, Node
 
 from .writer import Writer
 
@@ -207,9 +206,7 @@ class VCFWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {cluster_id} Series.",
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
-        for _hop_vcf_feature in get_vcf_features_from_nlpath(
-            data_object, self.rescue_sr, cluster_id=cluster_id
-        ):
+        for _hop_vcf_feature in get_vcf_features_from_nlpath(data_object, self.rescue_sr, cluster_id=cluster_id):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
     def write_data_helper(self) -> None:
@@ -221,31 +218,15 @@ class VCFWriter(Writer):
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
                 # multiple transcripts go through the same one hop
-                out_vcf_dict[type_position_key][
-                    "TRANSCRIPT_ID"
-                ] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
-                out_vcf_dict[type_position_key][
-                    "SEGMENT1"
-                ] += f",{hop_feature[type_position_key]['SEGMENT1']}"
-                out_vcf_dict[type_position_key][
-                    "SEGMENT2"
-                ] += f",{hop_feature[type_position_key]['SEGMENT2']}"
-                out_vcf_dict[type_position_key][
-                    "SR_ID"
-                ] += f",{hop_feature[type_position_key]['SR_ID']}"
+                out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
+                out_vcf_dict[type_position_key]["SEGMENT1"] += f",{hop_feature[type_position_key]['SEGMENT1']}"
+                out_vcf_dict[type_position_key]["SEGMENT2"] += f",{hop_feature[type_position_key]['SEGMENT2']}"
+                out_vcf_dict[type_position_key]["SR_ID"] += f",{hop_feature[type_position_key]['SR_ID']}"
                 # deal with 'Y' shape NLS graph
-                if not out_vcf_dict[type_position_key]["READS"].issuperset(
-                    hop_feature[type_position_key]["READS"]
-                ):
-                    out_vcf_dict[type_position_key]["READS"].update(
-                        hop_feature[type_position_key]["READS"]
-                    )
-                    out_vcf_dict[type_position_key]["SR"] += hop_feature[
-                        type_position_key
-                    ]["SR"]
-                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[
-                        type_position_key
-                    ]["OSR"]
+                if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
+                    out_vcf_dict[type_position_key]["READS"].update(hop_feature[type_position_key]["READS"])
+                    out_vcf_dict[type_position_key]["SR"] += hop_feature[type_position_key]["SR"]
+                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[type_position_key]["OSR"]
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -292,10 +273,7 @@ class VCFWriter(Writer):
 
     def get_contigs(self) -> list[str]:
         """Get contigs from BAM file header."""
-        return [
-            f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>"
-            for contig_dict in self.bam_header["SQ"]
-        ]
+        return [f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>" for contig_dict in self.bam_header["SQ"]]
 
 
 def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
@@ -342,18 +320,14 @@ def get_vcf_features_from_nlpath(
         current_edge = nlpath.next_edge(current_node, event_id - 1)
         next_node = nlpath[event_id]
 
-        can_field = can_field_dict[current_edge.splicing_code]
-        gene1, gene2 = current_edge.gene1, current_edge.gene2
-
-        mode1_, mode2_ = current_edge.modes
-        mode1 = mode1_.to_str()
-        mode2 = mode2_.to_str()
-
         if current_edge is None:
             raise BreakpointNotFoundError(current_node.query_name)
 
-        chrom1, pos1 = current_edge.break_point1.to_tuple()
-        chrom2, pos2 = current_edge.break_point2.to_tuple()
+        can_field = can_field_dict[current_edge.splicing_code]
+        gene1, gene2 = current_edge.gene1, current_edge.gene2
+
+        mode1 = current_edge.mode1.to_str()
+        mode2 = current_edge.mode2.to_str()
 
         microhomology_sequence = ""
         microinsertion_sequence = ""
@@ -371,53 +345,27 @@ def get_vcf_features_from_nlpath(
                     current_node,
                 )
 
-        sv_distance = (
-            abs(pos1 - pos2) if not current_edge.variation_type.is_tra() else 0
-        )
-        dp1 = (
-            0
-            if current_edge.break_point1.depth is None
-            else current_edge.break_point1.depth
-        )
-        dp2 = (
-            0
-            if current_edge.break_point2.depth is None
-            else current_edge.break_point2.depth
-        )
-        pso = (
-            0
-            if dp1 == 0 or dp2 == 0
-            else current_edge.sr / (current_edge.sr + (dp1 + dp2) / 2)
-        )
+        link_attributes = current_edge.link_attributes(rescue_sr=rescue_sr)
+        nclt_link_type = current_edge.nclt_link_type
 
-        if rescue_sr:
-            sr = current_edge.sr
-            osr = current_edge.original_sr
-        else:
-            sr = current_edge.sr
-            osr = current_edge.sr
-
-        nclt_link_type = determine_nclt_link_type(
-            current_edge
-        )
         path_hops_features.append(
             {
-                f"{current_edge.variation_type}_{chrom1}|{pos1 + 1}_{chrom2}|{pos2 + 1}": {
-                    "CHROM": chrom1,
-                    "POS": f"{pos1 + 1}",
+                f"{current_edge.variation_type}_{link_attributes.chrom1}|{link_attributes.pos1 + 1}_{link_attributes.chrom2}|{link_attributes.pos2 + 1}": {  # noqa: E501
+                    "CHROM": link_attributes.chrom1,
+                    "POS": f"{link_attributes.pos1 + 1}",
                     "REF": ".",
                     "ALT": f"<{nclt_link_type}>",
                     "SVTYPE": current_edge.variation_type,
                     "NCLTTYPE": nclt_link_type,
-                    "SR": sr,
-                    "OSR": osr,
+                    "SR": link_attributes.sr,
+                    "OSR": link_attributes.osr,
                     "CAN": can_field,
-                    "CHR2": chrom2,
-                    "SVEND": f"{pos2 + 1}",
-                    "DP1": f"{dp1}",
-                    "DP2": f"{dp2}",
-                    "PSI": f"{pso:.3g}",
-                    "SVLEN": f"{sv_distance}",
+                    "CHR2": link_attributes.chrom2,
+                    "SVEND": f"{link_attributes.pos2 + 1}",
+                    "DP1": f"{link_attributes.dp1}",
+                    "DP2": f"{link_attributes.dp2}",
+                    "PSI": f"{link_attributes.pso:.3g}",
+                    "SVLEN": f"{link_attributes.svlen}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
                     "SEGMENT1": current_node.id,
@@ -432,9 +380,7 @@ def get_vcf_features_from_nlpath(
                     "READS": set(current_edge.read_ids),
                     "SVMETHOD": "ScanNCLT",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
-                    "INSSEQ": (
-                        microinsertion_sequence if microinsertion_sequence else "."
-                    ),
+                    "INSSEQ": (microinsertion_sequence if microinsertion_sequence else "."),
                     "ID": current_edge.id,
                 },
             },
@@ -489,8 +435,4 @@ def obtain_sequence_from_insertion(
     if not novel_insertion_sequence:
         return ""
 
-    return (
-        novel_insertion_sequence
-        if node.strand.is_forward()
-        else reverse_complement(novel_insertion_sequence)
-    )
+    return novel_insertion_sequence if node.strand.is_forward() else reverse_complement(novel_insertion_sequence)

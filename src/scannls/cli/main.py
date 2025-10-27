@@ -155,68 +155,58 @@ class BamScanner:
                 )
                 self.logger.trace(f"{subs_fraction=}, {ins_fraction=}, {del_fraction=}")
 
-                if (
-                    subs_fraction <= self.substitutions_fraction
-                    and ins_fraction <= self.indels_fraction
-                    and del_fraction <= self.indels_fraction
-                ):
+                if subs_fraction <= self.substitutions_fraction and ins_fraction <= self.indels_fraction and del_fraction <= self.indels_fraction:
                     self.representative_alignments_new_cigar[f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"] = read.cigarstring
-                else:
-                    # realignment using BLAT
-                    is_passed_qc = False
-                    if self.aligner:
-                        read_matched_seq = _get_read_matched_sequence(read_query_seq, lt_soft_len, rt_soft_len, read_strand)
-                        out_blat = self.aligner.query(in_seq=read_matched_seq)
-                        blat_result = None
-                        try:
-                            blat_result = SearchIO.read(out_blat, "blat-psl", pslx=True)
-                        except ValueError as e:
-                            self.logger.warning(f"Error reading BLAT result: {e}, read_name: {read.query_name}")
-                            blat_result = False
+                # realignment using BLAT
+                elif self.aligner:
+                    read_matched_seq = _get_read_matched_sequence(read_query_seq, lt_soft_len, rt_soft_len, read_strand)
+                    out_blat = self.aligner.query(in_seq=read_matched_seq)
+                    blat_result = None
+                    try:
+                        blat_result = SearchIO.read(out_blat, "blat-psl", pslx=True)
+                    except ValueError as e:
+                        self.logger.warning(f"Error reading BLAT result: {e}, read_name: {read.query_name}")
+                        blat_result = False
 
-                        if blat_result:
-                            hit, top_hsp, _mapq_aligner = self.aligner._query_insertion(
-                                blat_result,
-                                read_matched_seq,
-                                threshold_identity=0.9,
-                                top=1,
+                    if blat_result:
+                        hit, top_hsp, _mapq_aligner = self.aligner._query_insertion(
+                            blat_result,
+                            read_matched_seq,
+                            threshold_identity=0.9,
+                            top=1,
+                        )
+                        if hit == 1:
+                            (
+                                chrom_aligner,
+                                position_aligner,
+                                strand_aligner,
+                                cigar_aligner,
+                                nm_aligner,
+                            ) = self.aligner.psl2sam(
+                                top_hsp,
+                                in_seq_len=len(read_matched_seq),
                             )
-                            if hit == 1:
-                                (
-                                    chrom_aligner,
-                                    position_aligner,
-                                    strand_aligner,
-                                    cigar_aligner,
-                                    nm_aligner,
-                                ) = self.aligner.psl2sam(
-                                    top_hsp,
-                                    in_seq_len=len(read_matched_seq),
-                                )
-                                (
-                                    subs_fraction_aligner,
-                                    ins_fraction_aligner,
-                                    del_fraction_aligner,
-                                ) = self.aligner.obtain_variants_stats(top_hsp, in_seq_len=len(read_matched_seq))
-                                self.logger.trace(
-                                    f"{subs_fraction_aligner=}, {ins_fraction_aligner=}, {del_fraction_aligner=}"
-                                )
+                            (
+                                subs_fraction_aligner,
+                                ins_fraction_aligner,
+                                del_fraction_aligner,
+                            ) = self.aligner.obtain_variants_stats(top_hsp, in_seq_len=len(read_matched_seq))
+                            self.logger.trace(f"{subs_fraction_aligner=}, {ins_fraction_aligner=}, {del_fraction_aligner=}")
 
-                                if strand_aligner == read_strand:
-                                    updated_cigar = cigar_validity(f"{lt_soft_len}S{cigar_aligner}{rt_soft_len}S")
-                                else:
-                                    updated_cigar = cigar_validity(f"{rt_soft_len}S{cigar_aligner}{lt_soft_len}S")
+                            if strand_aligner == read_strand:
+                                updated_cigar = cigar_validity(f"{lt_soft_len}S{cigar_aligner}{rt_soft_len}S")
+                            else:
+                                updated_cigar = cigar_validity(f"{rt_soft_len}S{cigar_aligner}{lt_soft_len}S")
 
-                                self.logger.trace(f"{cigar_aligner=},{updated_cigar=}")
-                                if (
-                                    subs_fraction_aligner <= self.substitutions_fraction
-                                    and ins_fraction_aligner <= self.indels_fraction
-                                    and del_fraction_aligner <= self.indels_fraction
-                                ):
-                                    # use original mapq as realignment mapq temporarily
-                                    new_record = f"{chrom_aligner},{position_aligner + 1},{strand_aligner},{updated_cigar},{read_mapq},{nm_aligner}"
-                                    self.representative_alignments_new_record[f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"] = new_record
-                                    is_passed_qc = True
-
+                            self.logger.trace(f"{cigar_aligner=},{updated_cigar=}")
+                            if (
+                                subs_fraction_aligner <= self.substitutions_fraction
+                                and ins_fraction_aligner <= self.indels_fraction
+                                and del_fraction_aligner <= self.indels_fraction
+                            ):
+                                # use original mapq as realignment mapq temporarily
+                                new_record = f"{chrom_aligner},{position_aligner + 1},{strand_aligner},{updated_cigar},{read_mapq},{nm_aligner}"
+                                self.representative_alignments_new_record[f"{read.query_name}\t{lt_soft_len}\t{rt_soft_len}"] = new_record
 
 
 def _get_read_matched_sequence(read_query_seq, lt_soft_len, rt_soft_len, read_strand) -> str:

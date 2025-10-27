@@ -11,6 +11,7 @@ import time
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -329,8 +330,36 @@ def determine_nclt_link_type(edge) -> str:
     elif var_type.is_inv():
         link_type = "ICTL"
     elif var_type.is_tra():
-        if mode1 == mode2:
-            link_type = "ITTL"
-        else:
-            link_type = "ITPL"
+        link_type = "ITTL" if mode1 == mode2 else "ITPL"
     return link_type
+
+
+def get_link_attributes_from_edge(edge, *, rescue_sr: bool):
+    chrom1, pos1 = edge.break_point1.to_tuple()
+    chrom2, pos2 = edge.break_point2.to_tuple()
+
+    sv_distance = abs(pos1 - pos2) if not edge.variation_type.is_tra() else 0
+
+    dp1 = 0 if edge.break_point1.depth is None else edge.break_point1.depth
+    dp2 = 0 if edge.break_point2.depth is None else edge.break_point2.depth
+    pso = 0 if dp1 == 0 or dp2 == 0 else edge.sr / (edge.sr + (dp1 + dp2) / 2)
+
+    if rescue_sr:
+        sr = edge.sr
+        osr = edge.original_sr
+    else:
+        sr = edge.sr
+        osr = edge.sr
+
+    return SimpleNamespace(
+        chrom1=chrom1,
+        pos1=pos1,
+        chrom2=chrom2,
+        pos2=pos2,
+        svlen=sv_distance,
+        dp1=dp1,
+        dp2=dp2,
+        pso=pso,
+        sr=sr,
+        osr=osr,
+    )

@@ -68,16 +68,7 @@ class NLGraph:
         *,
         is_plot: bool,
     ) -> Iterable[NLPath]:
-        """Find a specific path based on splice graph.
-
-        :param series_list: series list
-
-        .. example:
-
-        >>> from loguru import logger
-        >>> splice_graph = SpliceGraph(logger)
-        >>> splice_graph(series_list)
-        """
+        """Find a specific path based on splice graph."""
         if isinstance(nlpath_list, types.GeneratorType):
             nlpath_list = list(nlpath_list)
 
@@ -92,7 +83,7 @@ class NLGraph:
         self.construct()
 
         # sr rescuer
-        self.logger.trace(f"NLGraph Node: {len(self)}")
+        self.logger.trace(f"TSGraph Node: {len(self)}")
 
         # caluclate the depth on breakpoints only
         self.rescuer.init(self)

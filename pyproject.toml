@@ -114,8 +114,6 @@ target-version = "py39"
 fixable = ["ALL"]
 
 select = [
-    # "ANN",
-    # "D",
     "A",
     "F",
     "E",
@@ -162,7 +160,6 @@ select = [
     "ISC",
     "FA",
     "EXE",
-    # "CPY",
     "COM",
 ]
 
@@ -201,7 +198,6 @@ indent-style = "space"
 # magic-trailing-comma = "respect"
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
-
 
 [tool.ruff.lint.per-file-ignores]
 "src/scannls/cli/main.py" = ["ARG001"]

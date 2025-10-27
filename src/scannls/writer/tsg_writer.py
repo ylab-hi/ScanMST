@@ -15,15 +15,12 @@ from .writer import Writer
 
 
 class TSGWriter(Writer):
-    """Writer for TSG files.
-
-    .. note::
-    """
+    """Writer for TSG files."""
 
     HEADER: typing.ClassVar = {
         "TSG": 1.0,
         "reference": "GRCh38",
-        "PG": "scannls",
+        "PG": "ScanNCLT",
     }
 
     def __init__(self, file_path: str) -> None:
@@ -112,21 +109,26 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
         result.append(f"A\tN\t{node[0]}\tptc:i:{node[1]['ptc']}")
         result.append(f"A\tN\t{node[0]}\tptf:f:{node[1]['ptf']}")
 
+    possible_attributes = ["weight", "gene1", "gene2", "mode1", "mode2", "svlen", "dp1", "dp2", "pso", "sr", "osr"]
     # write edge attributes sr
     for edge in nxgraph.edges(data=True):
-        result.append(f"A\tE\t{edge[2]['id']}\tsr:i:{edge[2]['weight']}")
+        edge_dict_data = edge[2]
+
+        for attribute in possible_attributes:
+            if attribute in edge_dict_data:
+                result.append(f"A\tE\t{edge_dict_data['id']}\t{attribute}:{edge_dict_data[attribute]}")
 
         # write insertion info if exists
-        if "insertion_info" in edge[2]:
-            insertion_info = edge[2]["insertion_info"]
+        if "insertion_info" in edge_dict_data:
+            insertion_info = edge_dict_data["insertion_info"]
 
             if insertion_info != "":
                 insertion_type, insertion_seq = insertion_info.split("(")
                 if insertion_type == "NovelInsertion":
                     seq = insertion_seq.strip(")").split(":")[0]
-                    result.append(f"A\tE\t{edge[2]['id']}\tnovel_insertion:Z:{seq}")
+                    result.append(f"A\tE\t{edge_dict_data['id']}\tnovel_insertion:Z:{seq}")
                 elif insertion_type == "MicroHomology":
                     seq = insertion_seq.strip(")")
-                    result.append(f"A\tE\t{edge[2]['id']}\tmicrohomology:Z:{seq}")
+                    result.append(f"A\tE\t{edge_dict_data['id']}\tmicrohomology:Z:{seq}")
 
     return "\n".join(result)
