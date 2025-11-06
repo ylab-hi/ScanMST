@@ -98,7 +98,7 @@ def add_edge_to_nxgraph(
                 insertion_info=insertion,
                 mode1=mode1,
                 mode2=mode2,
-                **link_attributes._asdict(),
+                **link_attributes.__dict__,
             )
     else:
         graph.add_edge(
@@ -113,7 +113,7 @@ def add_edge_to_nxgraph(
             insertion_info=insertion,
             mode1=mode1,
             mode2=mode2,
-            **link_attributes._asdict(),
+            **link_attributes.__dict__,
         )
 
 
