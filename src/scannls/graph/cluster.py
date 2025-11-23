@@ -302,14 +302,14 @@ class ClusterFinder:
         for result in results:
             if result is not None:
                 (ind_x, ind_y), distance = result
-                self._precomputed_distance[(ind_x, ind_y)] = distance
+                self._precomputed_distance[ind_x, ind_y] = distance
 
     def get_distance(self, x: int, y: int) -> float:
         """Get distance between two NLPaths."""
         if self._precomputed_distance.get((x, y)) is not None:
-            return self._precomputed_distance[(x, y)]
+            return self._precomputed_distance[x, y]
         if self._precomputed_distance.get((y, x)) is not None:
-            return self._precomputed_distance[(y, x)]
+            return self._precomputed_distance[y, x]
         msg = f"distance between {x} and {y} is not precomputed"
         raise ValueError(msg)
 

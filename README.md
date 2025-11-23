@@ -2,6 +2,7 @@
 
 [![pypi](https://img.shields.io/pypi/v/scannclt.svg?style=for-the-badge)][pypi]
 ![conda](https://img.shields.io/conda/vn/bioconda/scannclt?style=for-the-badge)
+
 <!-- [![publication](https://img.shields.io/badge/published%20in-Nature-green.svg?style=for-the-badge)][paper]
 [paper]: https://www.nature.com/articles/d41586-023-03067-6
 -->
@@ -16,6 +17,7 @@ It is able to detect and classify the non-co-linear transcripts with the followi
 </div>
 
 ## Prerequisite
+
 `htslib` is required to run ScanNCLT. Please install it in the environment.
 
 ```bash

@@ -18,7 +18,7 @@ Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
 python = "^3.9"
 biopython = "^1.81"
 pysam = "0.19.0"
-HTSeq = "2.0.5"                                 # In recent versions of HTSeq, a bug affecting the GenomicArrayOfSets
+HTSeq = "2.0.9"                                 # In recent versions of HTSeq, a bug affecting the GenomicArrayOfSets
 pyfaidx = "^0.8.1"
 psutil = "^7.0.0"
 loguru = "^0.7.0"
@@ -113,55 +113,7 @@ target-version = "py39"
 [tool.ruff.lint]
 fixable = ["ALL"]
 
-select = [
-    "A",
-    "F",
-    "E",
-    "W",
-    "C90",
-    "I",
-    "UP",
-    "N",
-    "YTT",
-    "TID",
-    "S",
-    "BLE",
-    "FBT",
-    "PLR",
-    "B",
-    "B9",
-    "A",
-    "C4",
-    "T10",
-    "EM",
-    "ICN",
-    "T20",
-    "Q",
-    "RET",
-    "SIM",
-    "ARG",
-    "DTZ",
-    "ERA",
-    "PD",
-    "PGH",
-    "PLC",
-    "PLE",
-    "PLW",
-    "RUF",
-    "PL",
-    "TD",
-    "FIX",
-    "PTH",
-    "TCH",
-    "SLOT",
-    "PT",
-    "PYI",
-    "PIE",
-    "ISC",
-    "FA",
-    "EXE",
-    "COM",
-]
+select = ["A", "F", "E", "W", "C90", "I", "UP", "N", "YTT", "TID", "S", "BLE", "FBT", "PLR", "B", "B9", "A", "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLW", "RUF", "PL", "TD", "FIX", "PTH", "TCH", "SLOT", "PT", "PYI", "PIE", "ISC", "FA", "EXE", "COM"]
 
 ignore = [
     "ANN001",

@@ -13,6 +13,8 @@ from loguru import logger
 
 from scannls.base import Blat
 from scannls.graph import ClusterFinder, NLGraph
+from scannls.graph.nlgraph import update_junction_support
+from scannls.graph.sr_rescuer import SRRescuer
 from scannls.utils import find_2bit_file, sleep, wait_for_aligner
 from scannls.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 from scannls.writer.tsg_writer import TSGWriter
@@ -68,39 +70,54 @@ def parse_nlgraph_for_cluster_seq(
     average_read_depth: int | None = None,
 ) -> None:
     """Parse splice graph for cliques."""
-    nlgraph = NLGraph.create_graph(
+    rescuer = SRRescuer(
         options.input,
         options.mapq,
         options.soft_len,
         options.mismatch,
         options.alignment_fraction,
-        logger,
-        options.prune_threshold,
-        options.support_reads,
         node_rescued_sr_maximum,
         average_read_depth,
-        output_dir,
-        ignore_circle=options.ignore_circle,
-        rescue_sr=options.rescue_sr,
-        refine=options.refine,
     )
 
+    graphs = []
     with writers.open():
         for ind, cluster in enumerate(clusters, 1):
             logger.debug(f"Read guided: Processing Cluster {ind=}")
             graph_id = f"TSG{ind:010}"
-            all_paths = nlgraph(cluster, graph_id, is_plot=options.graph)
+            nlgraph = NLGraph.create_graph(
+                rescuer,
+                options.input,
+                logger,
+                options.prune_threshold,
+                options.support_reads,
+                options.junction_support_reads,
+                output_dir,
+                ignore_circle=options.ignore_circle,
+                rescue_sr=options.rescue_sr,
+                refine=options.refine,
+                cluster_ind=graph_id,
+                is_plot=options.graph,
+            )
 
+            # construct nlgraph
+            nlgraph(cluster)
+            graphs.append(nlgraph)
+
+        logger.info("Updating junction support for edges...")
+        update_junction_support(graphs, threshold=options.prune_threshold)
+
+        for graph in graphs:
+            all_paths = graph.generate_paths()
+            writers.write_graph(graph, graph.cluster_ind)
             for nlpath in all_paths:
                 if len(nlpath) == 1:
                     logger.warning(
-                        f"Single nlpath {ind=}: {nlpath}{nlpath[0].query_name}",
+                        f"Single nlpath {graph.cluster_ind=}: {nlpath}{nlpath[0].query_name}",
                     )
 
-                logger.debug(f"cluster {graph_id=} output {nlpath=} ")
-                writers.write_path(nlpath, graph_id)
-
-            writers.write_graph(nlgraph, graph_id)
+                logger.debug(f"cluster {graph.cluster_ind=} output {nlpath=} ")
+                writers.write_path(nlpath, graph.cluster_ind)
 
 
 def cli(options: argparse.Namespace | DefaultOptions):

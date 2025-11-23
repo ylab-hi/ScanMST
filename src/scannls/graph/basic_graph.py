@@ -490,6 +490,7 @@ class EdgeData:
 
     insertion_info: Any | None = None
     original_sr: int = 1
+    junction_sr: int = 0
 
     @classmethod
     def from_event(cls, event: Event, read_id: str) -> EdgeData:
@@ -547,7 +548,7 @@ class Edge:
     def __repr__(self) -> str:
         return f"Edge(data={self.edge_data})"
 
-    def link_attributes(self, *, rescue_sr: bool) -> svlen:
+    def link_attributes(self, *, rescue_sr: bool):
         return get_link_attributes_from_edge(self, rescue_sr=rescue_sr)
 
     # fmt: off
@@ -573,6 +574,10 @@ class Edge:
     def sr(self): return self.edge_data.sr
     @sr.setter
     def sr(self, value): self.edge_data.sr = value
+    @property
+    def junction_sr(self): return self.edge_data.junction_sr
+    @junction_sr.setter
+    def junction_sr(self, value): self.edge_data.junction_sr = value
     @property
     def original_sr(self): return self.edge_data.original_sr
     @original_sr.setter

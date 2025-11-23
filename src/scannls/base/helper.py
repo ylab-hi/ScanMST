@@ -422,7 +422,7 @@ def splicing_confirmation_and_correction(
             "-+11": (breakpoint2, breakpoint1),
         }
 
-        ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1.value}{mode2.value}", None)
+        ret = donor_accepter_dict.get(f"{strand1}{strand2}{mode1.value}{mode2.value}")
         if ret is None:
             msg = f"Unexpected breakpoint combination: {strand1}{strand2}{mode1.value}{mode2.value}"
             raise ValueError(msg)

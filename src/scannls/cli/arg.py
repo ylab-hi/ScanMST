@@ -25,6 +25,7 @@ class DefaultOptions:
     blat_port: int = 88888
     aligner: tuple[str, str] = ("blat", "")
     support_reads: int = 1
+    junction_support_reads: int = 0
     splice_bin: int = 5
     mapq: int = 20
     noncanonical: bool = False
@@ -163,6 +164,15 @@ def parse_args() -> argparse.ArgumentParser:
         help="minimum number of support reads for reporting NCLT (default: %(default)s)",
         default=DefaultOptions.support_reads,
     )
+    parser.add_argument(
+        "--jsr",
+        action="store",
+        dest="junction_support_reads",
+        type=int,
+        help="minimum number of juntion support reads for reporting NCLT (default: %(default)s)",
+        default=DefaultOptions.junction_support_reads,
+    )
+
     parser.add_argument(
         "--splice-bin",
         action="store",

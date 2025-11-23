@@ -19,7 +19,6 @@ from .basic_graph import (
 )
 from .graphvis import default_visitors
 from .merge_condition import MergeCondition
-from .sr_rescuer import SRRescuer
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -39,35 +38,66 @@ class NLGraph:
         rescuer: Any,
         merge_threshold,
         support_reads,
+        junction_support_reads,
         input_bam_path: Path,
         output_dir: Path,
         *,
         rescue_sr: bool,
         ignore_circle: bool = False,
         if_refine: bool = False,
+        cluster_ind: int | str | None = None,
+        is_plot: bool = False,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.merge_threshold = merge_threshold  # 10 is tolerance compared cluster phase
+
         self.support_reads = support_reads
+        self.junction_support_reads = junction_support_reads
+
+        self.use_junction_support = self.junction_support_reads > 0
+        self.edge_support_threshold = self.junction_support_reads if self.use_junction_support else self.support_reads
+
         self.dict_factory = NLGraph.dict_factory  # type: ignore
         self.list_factory = NLGraph.list_factory  # type: ignore
         self.rescuer = rescuer
         self.rescue_sr = rescue_sr
-        self.input_bam_path = input_bam_path
         self.output_dir = output_dir
         self.has_circle = False
         self.ignore_circle = ignore_circle
         self.if_refine = if_refine
         self.possible_paths = None
 
+        self.input_bam_path = input_bam_path
+        self.cluster_ind: int | str | None = cluster_ind
+        self.is_plot = is_plot
+
+    def generate_paths(self) -> Iterable[NLPath]:
+        """Generate paths from the nlgraph."""
+        node_list: list[Node | Edge] = []
+        all_paths = []
+        # trace path
+        for _idx, node_list in enumerate(self.trace(), 1):
+            current_path = NLPath.create_path_from_node_edge_list(
+                node_list,
+            )
+            all_paths.append(current_path)
+
+        self.possible_paths = gather_possible_paths(all_paths)
+
+        if self.is_plot and not self.has_circle and node_list:
+            plot_result = self.output_dir / Path(f"graph_{self.input_bam_path.stem}")
+            plot_result.mkdir(exist_ok=True)
+            cluster_name = f"{self.input_bam_path.stem}_{self.cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
+            default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1, possible_paths=self.possible_paths).visualize()
+
+        update_node_ptf_in_path(all_paths, len(all_paths))
+        return all_paths
+
     def __call__(
         self,
         nlpath_list: Iterable[NLPath],
-        cluster_ind: int | str,
-        *,
-        is_plot: bool,
-    ) -> Iterable[NLPath]:
+    ):
         """Find a specific path based on splice graph."""
         if isinstance(nlpath_list, types.GeneratorType):
             nlpath_list = list(nlpath_list)
@@ -76,15 +106,12 @@ class NLGraph:
 
         del nlpath_list  # remove reference to series_list
         self.nodes: dict[str, list[Node]] = self.dict_factory()
-
         self.edges: dict[str, list[Edge]] = defaultdict(list)
 
         # construct splice graph
         self.construct()
-
         # sr rescuer
         self.logger.trace(f"TSGraph Node: {len(self)}")
-
         # caluclate the depth on breakpoints only
         self.rescuer.init(self)
 
@@ -97,68 +124,39 @@ class NLGraph:
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
 
-        node_list: list[Node | Edge] = []
-
-        all_paths = []
-        # trace path
-        for _idx, node_list in enumerate(self.trace(), 1):
-            current_path = NLPath.create_path_from_node_edge_list(
-                node_list,
-            )
-            current_path.polish_edges()
-            all_paths.append(current_path)
-
-        self.possible_paths = gather_possible_paths(all_paths)
-
-        if is_plot and not self.has_circle and node_list:
-            plot_result = self.output_dir / Path(f"graph_{self.input_bam_path.stem}")
-            plot_result.mkdir(exist_ok=True)
-            cluster_name = f"{self.input_bam_path.stem}_{cluster_ind}" if self.input_bam_path is not None else f"{cluster_ind}"
-            default_visitors(self, (plot_result / cluster_name).as_posix(), support_reads=1, possible_paths=self.possible_paths).visualize()
-
-        update_node_ptf_in_path(all_paths, len(all_paths))
-        return all_paths
+        self.polish_edges()
 
     @classmethod
     def create_graph(
         cls,
+        rescuer: Any,
         input_bam: str,
-        mapq: int,
-        soft_len: int,
-        mismatch: int,
-        alignment_fraction: float,
         logger: LoggerType,
         prune_threshold: int,
         support_reads: int,
-        node_rescued_sr_maximum: int,
-        average_read_depth: int | None,
+        junction_support_reads: int,
         output_dir: Path,
         *,
         ignore_circle: bool,
         rescue_sr: bool,
         refine: bool = False,
+        cluster_ind: int | str | None = None,
+        is_plot: bool = False,
     ) -> NLGraph:
-        """Create splice graph."""
-        rescuer = SRRescuer(
-            input_bam,
-            mapq,
-            soft_len,
-            mismatch,
-            alignment_fraction,
-            node_rescued_sr_maximum,
-            average_read_depth,
-        )
-
+        """Create  nlgraph."""
         return cls(
             logger,
             rescuer,
             prune_threshold,
             support_reads,
+            junction_support_reads,
             Path(input_bam),
             output_dir,
             rescue_sr=rescue_sr,
             ignore_circle=ignore_circle,
             if_refine=refine,
+            cluster_ind=cluster_ind,
+            is_plot=is_plot,
         )
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
@@ -232,7 +230,6 @@ class NLGraph:
         current_path: list[Node | Edge],
         current_node: Node,
         successor: Node,
-        support_reads: int,
         *,
         filter_edges: bool = True,
     ) -> Iterable[Edge]:
@@ -255,7 +252,9 @@ class NLGraph:
                 edges.append(edge)
                 continue
 
-            if edge.sr >= support_reads:
+            edge_sr = edge.junction_sr if self.use_junction_support else edge.sr
+
+            if edge_sr >= self.edge_support_threshold:
                 edge_node_identity = self.get_node_identity_base_edge(
                     current_node,
                     edge,
@@ -496,7 +495,6 @@ class NLGraph:
                         path,
                         start_node,
                         successor,
-                        self.support_reads,
                     )
                 ):
                     if edge_ind > 0:
@@ -811,3 +809,35 @@ def gather_possible_paths(nlpaths: list[NLPath]) -> dict[str, list[str]]:
         possible_paths[path.id].append(next_node.id)
 
     return possible_paths
+
+
+def update_junction_support(graphs: Iterable[NLGraph], threshold: int = 10) -> None:
+    """Update junction support for all graphs.
+
+    Args:
+        graphs: Iterable of NLGraph objects
+        threshold: Position threshold for binning breakpoints (default: 10).
+                   Positions within this distance will be grouped together.
+    """
+    edge_dict: dict[str, int] = defaultdict(int)
+
+    def bin_position(pos: int) -> int:
+        """Bin position to nearest multiple of threshold."""
+        return (pos // threshold) * threshold
+
+    # summary junction support
+    for graph in graphs:
+        for edge_list in graph.edges.values():
+            for edge in edge_list:
+                binned_pos1 = bin_position(edge.break_point1.pos)
+                binned_pos2 = bin_position(edge.break_point2.pos)
+                edge_key = f"{edge.break_point1.chrom}-{binned_pos1}-{edge.break_point2.chrom}-{binned_pos2}"
+                edge_dict[edge_key] += edge.sr
+
+    # update junction support
+    for graph in graphs:
+        for edge_list in graph.edges.values():
+            for edge in edge_list:
+                binned_pos1 = bin_position(edge.break_point1.pos)
+                binned_pos2 = bin_position(edge.break_point2.pos)
+                edge.edge_data.junction_sr = edge_dict[f"{edge.break_point1.chrom}-{binned_pos1}-{edge.break_point2.chrom}-{binned_pos2}"]

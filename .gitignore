@@ -45,3 +45,8 @@ neovide*
 compile_commands.json
 .cache
 issues
+.claude
+claudedocs
+.serena
+node_modules
+.vscode
