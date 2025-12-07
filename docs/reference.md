@@ -1,8 +1,8 @@
 # Reference
 
-## scannls
+## scanmst
 
 ```{eval-rst}
-.. automodule:: scannls
+.. automodule:: scanmst
    :members:
 ```

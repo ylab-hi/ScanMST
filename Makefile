@@ -15,7 +15,7 @@ compile-database: ## Compile database
 
 stubs: clean-stubs ## Generate pybind11 stubs
 	echo "Generating pybind11 stubs"
-	pybind11-stubgen scannls._cppext
+	pybind11-stubgen scanmst._cppext
 	rm -rf stubs
 
 metric:

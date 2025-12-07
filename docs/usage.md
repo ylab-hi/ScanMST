@@ -2,7 +2,7 @@
 
 ```{eval-rst}
 .. argparse::
-    :module: scannls
-    :prog: scannls
+    :module: scanmst
+    :prog: scanmst
 
 ```

@@ -1,27 +1,22 @@
 [tool.poetry]
-name = "scannls"
-version = "0.1.6"
-description = "A non-colinear transcript caller for long-read transcriptome sequencing data"
-authors = [
-  "Yangyang Li <yangyang.li@northwestern.edu>",
-  "Ting-You Wang <tywang@northwestern.edu>",
-]
+name = "scanmst"
+version = "0.1.7"
+description = "A multi-segment transcript caller for long-read transcriptome sequencing data"
+authors = ["Yangyang Li <yangyang.li@northwestern.edu>", "Ting-You Wang <tywang@northwestern.edu>"]
 license = "GPL"
 readme = "README.md"
-homepage = "https://github.com/ylab-hi/ScanNLS"
-repository = "https://github.com/ylab-hi/ScanNLS"
-documentation = "https://scannls.readthedocs.io"
-classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-]
-exclude = ["src/scannls/cppext/cmake-*"]
+homepage = "https://github.com/ylab-hi/ScanMST"
+repository = "https://github.com/ylab-hi/ScanMST"
+documentation = "https://scanmst.readthedocs.io"
+classifiers = ["Development Status :: 5 - Production/Stable",
+               "Programming Language :: Python :: 3.9",
+               "Programming Language :: Python :: 3.10",
+               "Programming Language :: Python :: 3.11",
+               "Programming Language :: Python :: 3.12"]
+exclude = ["src/scanmst/cppext/cmake-*"]
 
 [tool.poetry.urls]
-Changelog = "https://github.com/ylab-hi/ScanNLS/releases"
+Changelog = "https://github.com/ylab-hi/ScanMST/releases"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -50,7 +45,7 @@ script = "build.py"
 generate-setup-file = true
 
 [tool.poetry.scripts]
-scannls = "scannls.__main__:main"
+scanmst = "scanmst.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.1"
@@ -209,15 +204,15 @@ indent-style = "space"
 line-ending = "auto"
 
 [tool.ruff.lint.per-file-ignores]
-"src/scannls/cli/main.py" = ["ARG001"]
-"src/scannls/cli/helper.py" = ["PLR2004", "RET505"]
-"src/scannls/writer/writer.py" = ["A003"]
-"src/scannls/writer/fasta_writer.py" = ["A003"]
-"src/scannls/writer/vcf_writer.py" = ["A003", "DTZ002"]
-"src/scannls/writer/gtf_writer.py" = ["A003"]
-"src/scannls/base/parallel.py" = ["A003"]
-"src/scannls/base/basic.py" = ["A003"]
-"src/scannls/utils.py" = ["S603"]
+"src/scanmst/cli/main.py" = ["ARG001"]
+"src/scanmst/cli/helper.py" = ["PLR2004", "RET505"]
+"src/scanmst/writer/writer.py" = ["A003"]
+"src/scanmst/writer/fasta_writer.py" = ["A003"]
+"src/scanmst/writer/vcf_writer.py" = ["A003", "DTZ002"]
+"src/scanmst/writer/gtf_writer.py" = ["A003"]
+"src/scanmst/base/parallel.py" = ["A003"]
+"src/scanmst/base/basic.py" = ["A003"]
+"src/scanmst/utils.py" = ["S603"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"

@@ -1,15 +1,9 @@
 # !/usr/bin/env python
 """Test the splice graph module.
-
-@Filename:    __init__.py.py
-@Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        1/20/22 6:58 PM
 """
 from collections.abc import Sequence
 
-from scannls import Node
+from scanmst import Node
 
 
 def add_edge_according_order(

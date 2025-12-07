@@ -1,16 +1,11 @@
 # !/usr/bin/env python
 """End-to-end tests for the CLI.
-
-@Author:      YangyangLi
-@Filename:    test_cli.py
-@license:     MIT Licence
-@Time:        2/6/22 11:43 AM
 """
 import os
 from pathlib import Path
 
 import pytest
-from scannls import DefaultOptions, ToolNotFoundError, cli
+from scanmst import DefaultOptions, ToolNotFoundError, cli
 
 
 @pytest.mark.parametrize(
