@@ -45,7 +45,7 @@ conda install scanmst
 ```
 
 Congratulations! You've successfully installed `ScanMST` on your local machine.
-If you have some issues, please check the [document](https://scanmst.readthedocs.io/en/latest/installation.html) first before opening an issue.
+If you have some issues, please check the [document](https://ylab-hi.github.io/ScanMST/) first before opening an issue.
 
 ### 🤖 **Using ScanMST**
 
@@ -111,7 +111,7 @@ options:
 
 ```
 
-Please refer to the [document](https://scanmst.readthedocs.io/en/latest/) for details and more examples.
+Please refer to the [document](https://ylab-hi.github.io/ScanMST/) for details and more examples.
 
 ## 📎 **Citation**
 
@@ -147,4 +147,4 @@ If you experience any problems or have suggestions, please create an issue or a 
 [file an issue]: https://github.com/ylab-hi/ScanMST/issues
 [pip]: https://pip.pypa.io/
 [contributor guide]: CONTRIBUTING.md
-[command-line reference]: https://scanmst.readthedocs.io/en/latest/usage.html
+[command-line reference]: https://ylab-hi.github.io/ScanMST/
