@@ -55,7 +55,6 @@ class VCFWriter(Writer):
         "DP2": "Integer",
         "SR": "Integer",
         "OSR": "Integer",
-        "PSI": "Float",
         "SVMETHOD": "String",
         "SVTYPE": "String",
         "LINKTYPE": "String",
@@ -91,8 +90,7 @@ class VCFWriter(Writer):
         "DP1": "Total read depth at the breakpoint1",
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the link",
-        "OSR": "The number of support reads for the link before rescuer",
-        "PSI": "Estimated Percent splice-in in the range (0,1], representing the percentage of MSTs",
+        "OSR": "The number of support reads for the link prior to rescue processing",
         "LINKTYPE": "The type of link, ICRL, ICTL, ITPL, ITTL.",
         "SVLEN": "Difference in length between REF and ALT alleles",
         "CHR2": "Chromosome for end coordinate of the link",
@@ -416,7 +414,6 @@ def get_vcf_features_from_nlpath(
                     "SVEND": f"{pos2 + 1}",
                     "DP1": f"{dp1}",
                     "DP2": f"{dp2}",
-                    "PSI": f"{pso:.3g}",
                     "SVLEN": f"{sv_distance}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
@@ -449,7 +446,7 @@ def vcf_feature_transformer(feature_dict: dict[str, str], idx: int) -> list[str]
         f"{feature_dict['CAN']};"
         f"LINKTYPE={feature_dict['LINKTYPE']};SR={feature_dict['SR']};OSR={feature_dict['OSR']};"
         f"CHR2={feature_dict['CHR2']};SVEND={feature_dict['SVEND']};DP1={feature_dict['DP1']};"
-        f"DP2={feature_dict['DP2']};PSI={feature_dict['PSI']};SVLEN={feature_dict['SVLEN']};"
+        f"DP2={feature_dict['DP2']};SVLEN={feature_dict['SVLEN']};"
         f"GENE1={feature_dict['GENE1']};GENE2={feature_dict['GENE2']};SVTYPE={feature_dict['SVTYPE']};"
         f"SEGMENT1={feature_dict['SEGMENT1']};SEGMENT2={feature_dict['SEGMENT2']};"
         f"STRAND1={feature_dict['STRAND1']};STRAND2={feature_dict['STRAND2']};"
