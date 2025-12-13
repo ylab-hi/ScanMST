@@ -24,7 +24,7 @@ Robust detection of multi-segment transcripts at base resolution.
 
 <div class="feature-item" markdown>
 ### :material-console-line: Easy to Use
-A streamlined CLI with sensible defaults—start running analyses within minutes.
+A streamlined CLI with sensible defaults—start running analyses.
 </div>
 
 <div class="feature-item" markdown>

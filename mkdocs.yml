@@ -118,11 +118,6 @@ plugins:
       htmlmin_opts:
         remove_comments: true
       cache_safe: true
-  - social:
-      cards: true
-      cards_layout_options:
-        background_color: "#FFB6C1" #  Light pink
-        color: "#ffffff"
   - git-revision-date-localized:
       type: date
       enable_creation_date: true
