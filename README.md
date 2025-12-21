@@ -66,7 +66,6 @@ scanmst 🚀 Multi-segment transcript (MST) identification using transcriptomic 
 options:
   -h, --help                              show this help message and exit
   --version                               show program's version number and exit
-
   --input INPUT                           Input alignment BAM file, which must contain both cs and SA tags.
   --ref REF                               Reference genome in FASTA format (with fai index)
   --gtf GTF                               Gene annotations in GTF format
@@ -93,22 +92,22 @@ options:
   --ncan                                  Considering non-canonical splice sites (default: False)
   --graph                                 Whether to output transcript segment graph. (default: False)
   --refine                                Whether to refine the transcript segment graph after construction. (default: False)
-  --nbound                                Whether to add maximum increment limit using average reads depth when rescuing SR (default: True)
+  --prune-threshold PRUNE_THRESHOLD       Length threshold for pruning the transcript segment graph (default: 10)
   --max-allowed-nm MAX_ALLOWED_NM         Maximum allowed edit distance (NM tag). (default: 100)
   --max-allowed-ins MAX_ALLOWED_INS       Maximum allowed micro-insertion length (default: 50)
   --min-required-ins MIN_REQUIRED_INS     Minimum required insertion length in read to infer chimeric alignment (default: 100)
+  --min-soft-seg-len MIN_SOFT_SEG_LEN     Minimum length of soft-clipped portion required to trigger BLAT alignment. (default: 200)
   --long-indel-length LONG_INDEL_LENGTH   Length cutoff for defining long indels in reads. (default: 10)
   --indel-fraction INDEL_FRACTION         Maximum allowed fraction of long indels in the reads. (default: 0.001)
-  --prune-threshold PRUNE_THRESHOLD       Length threshold for pruning the transcript segment graph (default: 10)
-  --soft-len SOFT_LEN                     Minimum length of soft-clipped portion to be rescued (default: 5)
-  --mismatch MISMATCH                     Maximum number of mismatched bases allowed in a rescued segment (default: 3)
-  --min-soft-seg-len MIN_SOFT_SEG_LEN     Minimum length of soft-clipped portion required to trigger BLAT alignment. (default: 200)
-  --alignment-fraction ALIGNMENT_FRACTION
-                                          Minimum fraction of the sequence that must align in Smith-Waterman local alignment. (default: 0.8)
   --substitution-fraction SUBSTITUTIONS_FRACTION
                                           Maximum allowed fraction of substitutions in the reads (default: 0.05)
-  --ignore-circle                         Whether to export result when the transcript segment graph contains a circle (default: False)
   --rescue-sr                             Whether to rescue SR for segment links (default: False)
+  --soft-len SOFT_LEN                     Minimum length of soft-clipped portion to be rescued (default: 5)
+  --mismatch MISMATCH                     Maximum number of mismatched bases allowed in a rescued segment (default: 3)
+  --alignment-fraction ALIGNMENT_FRACTION
+                                          Minimum fraction of the sequence that must align in Smith-Waterman local alignment. (default: 0.8)
+  --nbound                                Whether to add maximum increment limit using average reads depth when rescuing SR (default: True)
+  --ignore-circle                         Whether to export result when the transcript segment graph contains a circle (default: False)
 ```
 
 Please refer to the [document](https://ylab-hi.github.io/ScanMST/) for details and more examples.
