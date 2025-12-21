@@ -110,7 +110,7 @@ class RichHelpFormatter(argparse.HelpFormatter):
 def parse_args() -> argparse.ArgumentParser:
     """Parse command line arguments."""
     parser = RichArgParser(
-        description="[red]scanmst[/] :rocket: Multi-segment transcripts (MST) identification using transcriptomic long reads data",
+        description="[red]scanmst[/] :rocket: Multi-segment transcript (MST) identification using transcriptomic long reads data",
         formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
@@ -123,28 +123,28 @@ def parse_args() -> argparse.ArgumentParser:
         "--input",
         action="store",
         dest="input",
-        help="input BAM file",
+        help="Input alignment BAM file, which must contain both cs and SA tags.",
         required=True,
     )
     parser.add_argument(
         "--ref",
         action="store",
         dest="ref",
-        help="reference genome in FASTA format (with fai index)",
+        help="Reference genome in FASTA format (with fai index)",
         required=True,
     )
     parser.add_argument(
         "--gtf",
         action="store",
         dest="gtf",
-        help="gene annotations in GTF format",
+        help="Gene annotations in GTF format",
         required=True,
     )
     parser.add_argument(
         "--output",
         action="store",
         dest="output",
-        help="output prefix",
+        help="Output file prefix",
         required=True,
     )
     parser.add_argument(
@@ -160,7 +160,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="support_reads",
         type=int,
-        help="minimum number of support reads for reporting NCLT (default: %(default)s)",
+        help="The minimum number of supporting reads required for calling MST. (default: %(default)s)",
         default=DefaultOptions.support_reads,
     )
     parser.add_argument(
@@ -168,7 +168,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="splice_bin",
         type=int,
-        help="splice site bin size (default: %(default)s)",
+        help="Bin size for searching canonical splice sites. (default: %(default)s)",
         default=DefaultOptions.splice_bin,
     )
     parser.add_argument(
@@ -176,7 +176,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="mapq",
         type=int,
-        help="minimum MAPQ of reads for calling NCLT (default: %(default)s)",
+        help="Minimum MAPQ of reads required for calling MST. (default: %(default)s)",
         default=DefaultOptions.mapq,
     )
 
@@ -186,7 +186,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="log",
         choices=["info", "debug", "trace", "warning"],  # "warning", "error", "critical"
         default=DefaultOptions.log,
-        help="set log level (default: %(default)s)",
+        help="Set log level (default: %(default)s)",
     )
     parser.add_argument(
         "--thread",
@@ -194,14 +194,14 @@ def parse_args() -> argparse.ArgumentParser:
         dest="thread",
         type=int,
         default=DefaultOptions.thread,
-        help="set the thread number (default: %(default)s)",
+        help="Set the thread number (default: %(default)s)",
     )
     parser.add_argument(
         "--aligner",
         dest="aligner",
         type=str,
         choices=DefaultOptions.aligner,
-        help="aligner to use for mapping reads (default: %(default)s)",
+        help="Aligner used for additional realignment to recover missing chimeric alignments. (default: %(default)s)",
         required=False,
     )
     parser.add_argument(
@@ -216,7 +216,7 @@ def parse_args() -> argparse.ArgumentParser:
         "--blat-2bit",
         action="store",
         dest="blat_two_bit",
-        help="reference genome in 2bit format for blat aligner",
+        help="Reference genome in 2bit format for BLAT aligner",
         required=False,
     )
     parser.add_argument(
@@ -224,14 +224,14 @@ def parse_args() -> argparse.ArgumentParser:
         action="store_false",
         dest="blat_closed",
         default=DefaultOptions.blat_closed,
-        help="close BLAT server when job has done (default: %(default)s)",
+        help="Close BLAT server when the job is complete (default: %(default)s)",
     )
     parser.add_argument(
         "--blat-nsleep",
         action="store_false",
         dest="blat_sleep",
         default=DefaultOptions.blat_sleep,
-        help="if sleep randomly before starting BLAT server (default: %(default)s)",
+        help="Whether to sleep randomly before starting BLAT server (default: %(default)s)",
     )
 
     parser.add_argument(
@@ -239,14 +239,14 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="blat_port",
         type=int,
-        help="port for BLAT server (default: %(default)s)",
+        help="Port for BLAT server (default: %(default)s)",
         default=DefaultOptions.blat_port,
     )
     parser.add_argument(
         "--species",
         action="store",
         dest="species",
-        help="species name for reference genome (default: %(default)s)",
+        help="Name of the species for the reference genome (default: %(default)s)",
         choices=DefaultOptions.species_choices,
         default=DefaultOptions.species,
     )
@@ -254,7 +254,7 @@ def parse_args() -> argparse.ArgumentParser:
         "--circular-rna-filter",
         action="store",
         dest="circular_rna",
-        help="The way of dealing with circular RNAs (default: %(default)s)",
+        help="The way of dealing with putative circular RNAs (default: %(default)s)",
         choices=DefaultOptions.circular_rna_choices,
         default=DefaultOptions.circular_rna,
     )
@@ -272,42 +272,42 @@ def parse_args() -> argparse.ArgumentParser:
         dest="rt_switching_filter_len",
         type=int,
         default=DefaultOptions.rt_switching_filter_len,
-        help="Set RT switching filter (default length: %(default)s)",
+        help="Set the length threshold for RT switching filter. (default length: %(default)s)",
     )
     parser.add_argument(
         "--ncan",
         action="store_true",
         dest="noncanonical",
         default=DefaultOptions.noncanonical,
-        help="considering Non-canonical spliced sites  (default: %(default)s)",
+        help="Considering non-canonical splice sites (default: %(default)s)",
     )
     parser.add_argument(
         "--graph",
         action="store_true",
         dest="graph",
         default=DefaultOptions.graph,
-        help="if output graph (default: %(default)s)",
+        help="Whether to output graph (default: %(default)s)",
     )
     parser.add_argument(
         "--refine",
         action="store_true",
         dest="refine",
         default=DefaultOptions.refine,
-        help="if refine the graph (default: %(default)s)",
+        help="Whether to refine the graph (default: %(default)s)",
     )
     parser.add_argument(
         "--nbound",
         action="store_false",
         dest="bound",
         default=DefaultOptions.bound,
-        help="if add maximum increment limit using average reads depth when rescuing sr (default: %(default)s)",
+        help="Whether to add maximum increment limit using average reads depth when rescuing SR (default: %(default)s)",
     )
     parser.add_argument(
         "--max-allowed-nm",
         action="store",
         dest="max_allowed_nm",
         type=int,
-        help="maximum allowed NM to keep AS tag (default: %(default)s)",
+        help="Maximum allowed edit distance (NM tag). (default: %(default)s)",
         default=DefaultOptions.max_allowed_nm,
     )
 
@@ -316,7 +316,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="max_allowed_ins",
         type=int,
-        help="maximum allowed micro-insertion length (default: %(default)s)",
+        help="Maximum allowed micro-insertion length (default: %(default)s)",
         default=DefaultOptions.max_allowed_micro_insertion,
     )
 
@@ -325,7 +325,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="min_required_ins",
         type=int,
-        help="minimum required insertion length in read (default: %(default)s)",
+        help="Minimum required insertion length in read to infer chimeric alignment (default: %(default)s)",
         default=DefaultOptions.min_required_insertion_length,
     )
 
@@ -336,7 +336,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="long_indel_length",
         type=int,
         default=DefaultOptions.long_indel_length,
-        help="the length cutoff of defining long indel in the reads (default: %(default)s)",
+        help="Length cutoff for defining long indels in reads. (default: %(default)s)",
     )
     parser.add_argument(
         "--indel-fraction",
@@ -344,7 +344,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="indel_fraction",
         type=float,
         default=DefaultOptions.indel_fraction,
-        help="the allowed maximum long indel fraction in the reads (default: %(default)s)",
+        help="Maximum allowed fraction of long indels in the reads. (default: %(default)s)",
     )
     parser.add_argument(
         "--prune-threshold",
@@ -352,7 +352,7 @@ def parse_args() -> argparse.ArgumentParser:
         dest="prune_threshold",
         type=int,
         default=DefaultOptions.prune_threshold,
-        help="splice graph pruning length threshold (default: %(default)s)",
+        help="Length threshold for pruning the transcript segment graph (default: %(default)s)",
     )
 
     # SR Rescuer parameters
@@ -361,7 +361,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="soft_len",
         type=int,
-        help="minimum softclipped segment length to be rescued (default: %(default)s)",
+        help="Minimum length of soft-clipped portion to be rescued (default: %(default)s)",
         default=DefaultOptions.soft_len,
     )
     parser.add_argument(
@@ -369,7 +369,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="mismatch",
         type=int,
-        help="maximum allowed mismatch bases of rescued segment (default: %(default)s)",
+        help="Maximum number of mismatched bases allowed in a rescued segment (default: %(default)s)",
         default=DefaultOptions.mismatch,
     )
     parser.add_argument(
@@ -377,7 +377,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="min_soft_seg_len",
         type=int,
-        help="minimum softclipped segment length to trigger BLAT alignment (default: %(default)s)",
+        help="Minimum length of soft-clipped portion required to trigger BLAT alignment. (default: %(default)s)",
         default=DefaultOptions.min_soft_seg_len,
     )
     parser.add_argument(
@@ -385,7 +385,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="alignment_fraction",
         type=float,
-        help="minimal fraction of aligned part for smith waterman local alignment (default: %(default)s)",
+        help="Minimum fraction of the sequence that must align in Smith-Waterman local alignment. (default: %(default)s)",
         default=DefaultOptions.alignment_fraction,
     )
     parser.add_argument(
@@ -394,21 +394,21 @@ def parse_args() -> argparse.ArgumentParser:
         dest="substitutions_fraction",
         type=float,
         default=DefaultOptions.substitutions_fraction,
-        help="the allowed maximum substitution fraction in the reads (default: %(default)s)",
+        help="Maximum allowed fraction of substitutions in the reads (default: %(default)s)",
     )
     parser.add_argument(
         "--ignore-circle",
         action="store_true",
         dest="ignore_circle",
         default=DefaultOptions.ignore_circle,
-        help="if export result if the nlgraph has a circle  (default: %(default)s)",
+        help="Whether to export result when the transcript segment graph contains a circle (default: %(default)s)",
     )
     parser.add_argument(
         "--rescue-sr",
         action="store_true",
         dest="rescue_sr",
         default=DefaultOptions.rescue_sr,
-        help="if rescuing sr for edge  (default: %(default)s)",
+        help="Whether to rescue SR for segment links (default: %(default)s)",
     )
 
     return parser

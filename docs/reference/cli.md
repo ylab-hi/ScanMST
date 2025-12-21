@@ -67,6 +67,79 @@ options:
   --rescue-sr                             if rescuing sr for edge (default: False)
 
 ```
+
+### `--version`
+
+Display ScanMST version information.
+
+```bash
+scanmst --version
+```
+
+**Output:**
+
+```text
+scanmst 0.1.7
+```
+
+### `--help`, `-h`
+
+Display help information for all commands.
+
+```bash
+scanmst --help
+```
+
+## Essential Arguments
+
+### `--input`
+
+Input the alignment BAM file, which must have cs and SA tags in it.
+
+### `--ref`
+
+Reference genome FASTA file.
+
+### `--gtf`
+
+Gene annotation GTF file
+
+### `--output`
+
+Output file prefix
+
+## Optional Arguments
+
+### `--output-seq`
+
+Output sequence type
+
+**Default:** `consensus`
+
+ -  `consensus`: consensus sequences derived from reads
+ -  `reference`: sequences based on the reference genome
+ -  `both`: consensus and reference sequences
+
+### `--sr`
+
+**Default:** `1`
+
+The minimum number of supporting reads (SRs) required to report an MST.
+
+It is defined at the transcript level as the minimum SR across all its segment links, each segment link has a corresponding SR and must meet this minimum threshold.
+
+### `--splice-bin`
+
+**Default:** `5`
+
+Bin size for searching canonical splice sites.
+
+### `--aligner`
+
+**Default:** `None`
+
+Aligner used for additional realignment to recover missing chimeric alignments.
+
 ______________________________________________________________________
 
 ## See Also
