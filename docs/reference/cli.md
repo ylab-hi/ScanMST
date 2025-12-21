@@ -18,53 +18,53 @@ usage: scanmst [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPU
                [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
                [--substitution-fraction SUBSTITUTIONS_FRACTION] [--ignore-circle] [--rescue-sr]
 
-scanmst 🚀 Multi-segment transcript identification using transcriptomic long reads data
+scanmst 🚀 Multi-segment transcript (MST) identification using transcriptomic long reads data
 
 options:
   -h, --help                              show this help message and exit
   --version                               show program's version number and exit
-  --input INPUT                           input BAM file
-  --ref REF                               reference genome in FASTA format (with fai index)
-  --gtf GTF                               gene annotations in GTF format
-  --output OUTPUT                         output prefix
+  --input INPUT                           Input alignment BAM file, which must contain both cs and SA tags.
+  --ref REF                               Reference genome in FASTA format (with fai index)
+  --gtf GTF                               Gene annotations in GTF format
+  --output OUTPUT                         Output file prefix
   --output-seq {consensus,reference,both}
-                                          output sequence type (default: consensus)
-  --sr SUPPORT_READS                      minimum number of support reads for reporting MST (default: 1)
-  --splice-bin SPLICE_BIN                 splice site bin size (default: 5)
-  --mapq MAPQ                             minimum MAPQ of reads for calling MST (default: 20)
-  --log-level {info,debug,trace,warning}  set log level (default: warning)
-  --thread THREAD                         set the thread number (default: 1)
-  --aligner {blat,}                       aligner to use for mapping reads (default: None)
+                                          Output sequence type (default: consensus)
+  --sr SUPPORT_READS                      The minimum number of supporting reads required for calling MST. (default: 1)
+  --splice-bin SPLICE_BIN                 Bin size for searching canonical splice sites. (default: 5)
+  --mapq MAPQ                             Minimum MAPQ of reads required for calling MST. (default: 20)
+  --log-level {info,debug,trace,warning}  Set log level (default: warning)
+  --thread THREAD                         Set the thread number (default: 1)
+  --aligner {blat,}                       Aligner used for additional realignment to recover missing chimeric alignments. (default: None)
   --blat-identity IDENT_CUTOFF            BLAT identity cutoff (default: 0.9)
-  --blat-2bit BLAT_TWO_BIT                reference genome in 2bit format for blat aligner
-  --blat-nclosed                          close BLAT server when job has done (default: True)
-  --blat-nsleep                           if sleep randomly before starting BLAT server (default: True)
-  --blat-port BLAT_PORT                   port for BLAT server (default: 88888)
-  --species {human,mouse}                 species name for reference genome (default: human)
+  --blat-2bit BLAT_TWO_BIT                Reference genome in 2bit format for BLAT aligner
+  --blat-nclosed                          Close BLAT server when the job is complete (default: True)
+  --blat-nsleep                           Whether to sleep randomly before starting BLAT server (default: True)
+  --blat-port BLAT_PORT                   Port for BLAT server (default: 88888)
+  --species {human,mouse}                 Name of the species for the reference genome (default: human)
   --circular-rna-filter {remove,keep,extract}
-                                          the way of dealing with circular RNAs (default: remove)
-  --off-exon-filter                       turn on exon filter (default: True)
+                                          The way of dealing with putative circular RNAs (default: remove)
+  --off-exon-filter                       Turn on exon filter (default: True)
   --rt-switching-filter RT_SWITCHING_FILTER_LEN
-                                          set RT switching filter (default length: 10)
-  --ncan                                  considering Non-canonical spliced sites (default: False)
-  --graph                                 if output graph (default: False)
-  --refine                                if refine the graph (default: False)
-  --nbound                                if add maximum increment limit using average reads depth when rescuing sr (default: True)
-  --max-allowed-nm MAX_ALLOWED_NM         maximum allowed NM to keep AS tag (default: 50)
-  --max-allowed-ins MAX_ALLOWED_INS       maximum allowed micro-insertion length (default: 50)
-  --min-required-ins MIN_REQUIRED_INS     minimum required insertion length in read (default: 100)
-  --long-indel-length LONG_INDEL_LENGTH   the length cutoff of defining long indel in the reads (default: 10)
-  --indel-fraction INDEL_FRACTION         the allowed maximum long indel fraction in the reads (default: 0.001)
-  --prune-threshold PRUNE_THRESHOLD       splice graph pruning length threshold (default: 10)
-  --soft-len SOFT_LEN                     minimum softclipped segment length to be rescued (default: 5)
-  --mismatch MISMATCH                     maximum allowed mismatch bases of rescued segment (default: 3)
-  --min-soft-seg-len MIN_SOFT_SEG_LEN     minimum softclipped segment length to trigger BLAT alignment (default: 200)
+                                          Set the length threshold for RT switching filter. (default length: 10)
+  --ncan                                  Considering non-canonical splice sites (default: False)
+  --graph                                 Whether to output graph (default: False)
+  --refine                                Whether to refine the graph (default: False)
+  --nbound                                Whether to add maximum increment limit using average reads depth when rescuing SR (default: True)
+  --max-allowed-nm MAX_ALLOWED_NM         Maximum allowed edit distance (NM tag). (default: 100)
+  --max-allowed-ins MAX_ALLOWED_INS       Maximum allowed micro-insertion length (default: 50)
+  --min-required-ins MIN_REQUIRED_INS     Minimum required insertion length in read to infer chimeric alignment (default: 100)
+  --long-indel-length LONG_INDEL_LENGTH   Length cutoff for defining long indels in reads. (default: 10)
+  --indel-fraction INDEL_FRACTION         Maximum allowed fraction of long indels in the reads. (default: 0.001)
+  --prune-threshold PRUNE_THRESHOLD       Length threshold for pruning the transcript segment graph (default: 10)
+  --soft-len SOFT_LEN                     Minimum length of soft-clipped portion to be rescued (default: 5)
+  --mismatch MISMATCH                     Maximum number of mismatched bases allowed in a rescued segment (default: 3)
+  --min-soft-seg-len MIN_SOFT_SEG_LEN     Minimum length of soft-clipped portion required to trigger BLAT alignment. (default: 200)
   --alignment-fraction ALIGNMENT_FRACTION
-                                          minimal fraction of aligned part for Smith-Waterman local alignment (default: 0.8)
+                                          Minimum fraction of the sequence that must align in Smith-Waterman local alignment. (default: 0.8)
   --substitution-fraction SUBSTITUTIONS_FRACTION
-                                          the allowed maximum substitution fraction in the reads (default: 0.05)
-  --ignore-circle                         if export result if the nlgraph has a circle (default: False)
-  --rescue-sr                             if rescuing sr for edge (default: False)
+                                          Maximum allowed fraction of substitutions in the reads (default: 0.05)
+  --ignore-circle                         Whether to export result when the transcript segment graph contains a circle (default: False)
+  --rescue-sr                             Whether to rescue SR for segment links (default: False)
 
 ```
 
