@@ -286,22 +286,24 @@ def parse_args() -> argparse.ArgumentParser:
         action="store_true",
         dest="graph",
         default=DefaultOptions.graph,
-        help="Whether to output graph (default: %(default)s)",
+        help="Whether to output transcript segment graph. (default: %(default)s)",
     )
     parser.add_argument(
         "--refine",
         action="store_true",
         dest="refine",
         default=DefaultOptions.refine,
-        help="Whether to refine the graph (default: %(default)s)",
+        help="Whether to refine the transcript segment graph after construction. (default: %(default)s)",
     )
     parser.add_argument(
-        "--nbound",
-        action="store_false",
-        dest="bound",
-        default=DefaultOptions.bound,
-        help="Whether to add maximum increment limit using average reads depth when rescuing SR (default: %(default)s)",
+        "--prune-threshold",
+        action="store",
+        dest="prune_threshold",
+        type=int,
+        default=DefaultOptions.prune_threshold,
+        help="Length threshold for pruning the transcript segment graph (default: %(default)s)",
     )
+
     parser.add_argument(
         "--max-allowed-nm",
         action="store",
@@ -319,7 +321,6 @@ def parse_args() -> argparse.ArgumentParser:
         help="Maximum allowed micro-insertion length (default: %(default)s)",
         default=DefaultOptions.max_allowed_micro_insertion,
     )
-
     parser.add_argument(
         "--min-required-ins",
         action="store",
@@ -328,7 +329,14 @@ def parse_args() -> argparse.ArgumentParser:
         help="Minimum required insertion length in read to infer chimeric alignment (default: %(default)s)",
         default=DefaultOptions.min_required_insertion_length,
     )
-
+    parser.add_argument(
+        "--min-soft-seg-len",
+        action="store",
+        dest="min_soft_seg_len",
+        type=int,
+        help="Minimum length of soft-clipped portion required to trigger BLAT alignment. (default: %(default)s)",
+        default=DefaultOptions.min_soft_seg_len,
+    )
     # Reads filter parameters
     parser.add_argument(
         "--long-indel-length",
@@ -347,15 +355,21 @@ def parse_args() -> argparse.ArgumentParser:
         help="Maximum allowed fraction of long indels in the reads. (default: %(default)s)",
     )
     parser.add_argument(
-        "--prune-threshold",
+        "--substitution-fraction",
         action="store",
-        dest="prune_threshold",
-        type=int,
-        default=DefaultOptions.prune_threshold,
-        help="Length threshold for pruning the transcript segment graph (default: %(default)s)",
+        dest="substitutions_fraction",
+        type=float,
+        default=DefaultOptions.substitutions_fraction,
+        help="Maximum allowed fraction of substitutions in the reads (default: %(default)s)",
     )
-
     # SR Rescuer parameters
+    parser.add_argument(
+        "--rescue-sr",
+        action="store_true",
+        dest="rescue_sr",
+        default=DefaultOptions.rescue_sr,
+        help="Whether to rescue SR for segment links (default: %(default)s)",
+    )
     parser.add_argument(
         "--soft-len",
         action="store",
@@ -364,6 +378,7 @@ def parse_args() -> argparse.ArgumentParser:
         help="Minimum length of soft-clipped portion to be rescued (default: %(default)s)",
         default=DefaultOptions.soft_len,
     )
+
     parser.add_argument(
         "--mismatch",
         action="store",
@@ -371,14 +386,6 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         help="Maximum number of mismatched bases allowed in a rescued segment (default: %(default)s)",
         default=DefaultOptions.mismatch,
-    )
-    parser.add_argument(
-        "--min-soft-seg-len",
-        action="store",
-        dest="min_soft_seg_len",
-        type=int,
-        help="Minimum length of soft-clipped portion required to trigger BLAT alignment. (default: %(default)s)",
-        default=DefaultOptions.min_soft_seg_len,
     )
     parser.add_argument(
         "--alignment-fraction",
@@ -389,26 +396,19 @@ def parse_args() -> argparse.ArgumentParser:
         default=DefaultOptions.alignment_fraction,
     )
     parser.add_argument(
-        "--substitution-fraction",
-        action="store",
-        dest="substitutions_fraction",
-        type=float,
-        default=DefaultOptions.substitutions_fraction,
-        help="Maximum allowed fraction of substitutions in the reads (default: %(default)s)",
+        "--nbound",
+        action="store_false",
+        dest="bound",
+        default=DefaultOptions.bound,
+        help="Whether to add maximum increment limit using average reads depth when rescuing SR (default: %(default)s)",
     )
+
     parser.add_argument(
         "--ignore-circle",
         action="store_true",
         dest="ignore_circle",
         default=DefaultOptions.ignore_circle,
         help="Whether to export result when the transcript segment graph contains a circle (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--rescue-sr",
-        action="store_true",
-        dest="rescue_sr",
-        default=DefaultOptions.rescue_sr,
-        help="Whether to rescue SR for segment links (default: %(default)s)",
     )
 
     return parser

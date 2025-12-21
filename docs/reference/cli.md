@@ -47,8 +47,8 @@ options:
   --rt-switching-filter RT_SWITCHING_FILTER_LEN
                                           Set the length threshold for RT switching filter. (default length: 10)
   --ncan                                  Considering non-canonical splice sites (default: False)
-  --graph                                 Whether to output graph (default: False)
-  --refine                                Whether to refine the graph (default: False)
+  --graph                                 Whether to output transcript segment graph (default: False)
+  --refine                                Whether to refine the transcript segment graph after construction (default: False)
   --nbound                                Whether to add maximum increment limit using average reads depth when rescuing SR (default: True)
   --max-allowed-nm MAX_ALLOWED_NM         Maximum allowed edit distance (NM tag). (default: 100)
   --max-allowed-ins MAX_ALLOWED_INS       Maximum allowed micro-insertion length (default: 50)
@@ -138,7 +138,147 @@ Bin size for searching canonical splice sites.
 
 **Default:** `None`
 
+**Option:** `blat`
+
 Aligner used for additional realignment to recover missing chimeric alignments.
+
+### `--blat-2bit`
+
+The reference genome in 2BIT format is required only when the `--aligner` option is set to `blat`
+
+### `--blat-port`
+
+**Default:** `88888`
+
+Port for BLAT server.
+
+
+### `--circular-rna-filter`
+
+**Default:** `remove`
+
+The way of dealing with putative circular RNAs.
+
+ -  `remove`: remove putative circular RNAs.
+ -  `keep`: keep putative circular RNAs.
+ -  `extract`: extract putative circular RNAs only.
+
+### `--off-exon-filter`
+
+**Default:** `True`
+
+Disable exon filter. When enabled by default, this filter removes segment links whose both ends fall within the same exon. Setting `--off-exon-filter` turns this filtering off.
+
+### `--rt-switching-filter`
+
+**Default:** `10`
+
+Set the length threshold for RT switching filter.
+
+### `--ncan`
+
+**Default:** `False`
+
+When enabled, segment links involving non-canonical splice sites are included.
+
+### `--graph`
+
+**Default:** `False`
+
+Whether to output the graph. When enabled, transcript segment graphs are exported in JSON format.
+
+
+### `--refine`
+
+**Default:** `False`
+
+Whether to refine the transcript segment graph after construction. When enabled, transcript segment graph will be refined.
+
+### `--max-allowed-nm`
+
+**Default:** `100`
+
+Maximum allowed edit distance (NM tag) in the alignment.
+
+### `--max-allowed-ins`
+
+**Default:** `50`
+
+Maximum allowed micro-insertion length.
+
+### `--min-required-ins`
+
+**Default:** `100`
+
+Minimum required insertion length in read to infer chimeric alignment.
+
+### `--min-soft-seg-len`
+
+**Default:** `200`
+
+Minimum length of soft-clipped portion required to trigger BLAT alignment to infer chimeric alignment.
+
+
+### `--long-indel-length`
+
+**Default:** `10`
+
+Length cutoff for defining long indels in reads.
+
+### `--indel-fraction`
+
+**Default:** `0.001`
+
+Maximum allowed fraction of long indels in the reads
+
+### `--substitution-fraction`
+
+**Default:** `0.05`
+Maximum allowed fraction of substitutions in the reads.
+
+### `--prune-threshold`
+
+**Default:** `10`
+
+Length threshold for pruning the transcript segment graph.
+
+### `--ignore-circle`
+
+**Default:** `False`
+
+Whether to export result when the transcript segment graph contains a circle.
+
+## Options for rescing SR for segment links
+
+### `--rescue-sr`
+
+**Default:** `False`
+
+Whether to rescue SR for segment links. Disabled by default. When disabled, soft-clipped portions of non-chimeric alignments are not used to increase the SR count.
+
+### `--soft-len`
+
+**Default:** `5`
+
+Minimum length of soft-clipped portion to be rescued.
+
+### `--mismatch`
+
+**Default:** `5`
+
+Maximum number of mismatched bases allowed in a rescued segment
+
+### `--alignment-fraction`
+
+**Default:** `0.8`
+
+Minimum fraction of the sequence that must align in Smith-Waterman local alignment.
+
+### `--nbound`
+
+**Default:** `True`
+
+Whether to add maximum increment limit using average reads depth when rescuing SR. Enabled by default.
 
 ______________________________________________________________________
 

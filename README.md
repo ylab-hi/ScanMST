@@ -91,8 +91,8 @@ options:
   --rt-switching-filter RT_SWITCHING_FILTER_LEN
                                           Set the length threshold for RT switching filter. (default length: 10)
   --ncan                                  Considering non-canonical splice sites (default: False)
-  --graph                                 Whether to output graph (default: False)
-  --refine                                Whether to refine the graph (default: False)
+  --graph                                 Whether to output transcript segment graph. (default: False)
+  --refine                                Whether to refine the transcript segment graph after construction. (default: False)
   --nbound                                Whether to add maximum increment limit using average reads depth when rescuing SR (default: True)
   --max-allowed-nm MAX_ALLOWED_NM         Maximum allowed edit distance (NM tag). (default: 100)
   --max-allowed-ins MAX_ALLOWED_INS       Maximum allowed micro-insertion length (default: 50)
