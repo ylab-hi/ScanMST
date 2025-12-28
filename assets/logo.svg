@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 47.68 47.68">
+  <!-- Generator: Adobe Illustrator 30.1.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 136)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient);
+      }
+
+      .st0, .st1, .st2, .st3, .st4, .st5, .st6 {
+        stroke: #fff;
+      }
+
+      .st0, .st1, .st3, .st4, .st5, .st6 {
+        stroke-miterlimit: 10;
+      }
+
+      .st1, .st2, .st6 {
+        fill: none;
+      }
+
+      .st2 {
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .st2, .st6 {
+        stroke-width: 1.93px;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st4 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st5 {
+        fill: url(#linear-gradient2);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="32.05" y1="594.2" x2="9.98" y2="572.12" gradientTransform="translate(0 -562)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#5793f0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="27.22" y1="599.03" x2="5.15" y2="576.96" gradientTransform="translate(0 -562)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#5793f0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="38.54" y1="571.74" x2="16.54" y2="593.73" gradientTransform="translate(0 -562)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#73ad56"/>
+      <stop offset="1" stop-color="#fff"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="43.87" y1="577.07" x2="21.88" y2="599.06" gradientTransform="translate(0 -562)" gradientUnits="userSpaceOnUse">
+      <stop offset=".96" stop-color="#eaa636"/>
+      <stop offset="1" stop-color="#fff"/>
+    </linearGradient>
+  </defs>
+  <circle class="st6" cx="23.84" cy="23.84" r="22.87"/>
+  <g>
+    <line class="st6" x1="12.55" y1="12.62" x2="24.65" y2="34.53"/>
+    <path class="st0" d="M9.46,14.53c-.97-1.75-.33-3.96,1.42-4.93s3.96-.33,4.93,1.42.33,3.96-1.42,4.93c-1.75.97-3.96.33-4.93-1.42Z"/>
+    <path class="st4" d="M21.39,36.13c.97,1.75,3.17,2.39,4.93,1.42s2.39-3.17,1.42-4.93c-.97-1.75-3.17-2.39-4.93-1.42s-2.39,3.17-1.42,4.93Z"/>
+  </g>
+  <g>
+    <line class="st1" x1="37.55" y1="9.16" x2="22.87" y2="37.64"/>
+    <g>
+      <line class="st6" x1="35.97" y1="12.22" x2="24.44" y2="34.58"/>
+      <path class="st5" d="M32.66,10.72c.92-1.78,3.11-2.48,4.89-1.56s2.48,3.11,1.56,4.89-3.11,2.48-4.89,1.56-2.48-3.11-1.56-4.89Z"/>
+      <path class="st3" d="M21.3,32.75c-.92,1.78-.22,3.97,1.56,4.89s3.97.22,4.89-1.56c.92-1.78.22-3.97-1.56-4.89-1.78-.92-3.97-.22-4.89,1.56Z"/>
+    </g>
+  </g>
+  <line class="st2" x1="16.6" y1="40.1" x2="32.48" y2="40.1"/>
+</svg>
