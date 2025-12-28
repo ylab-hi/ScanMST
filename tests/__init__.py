@@ -1,4 +1,4 @@
-"""Test suite for the ScanNLS package."""
+"""Test suite for the ScanMST package."""
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any

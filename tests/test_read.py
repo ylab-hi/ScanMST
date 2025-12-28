@@ -1,8 +1,6 @@
 """Test the read module.
 
 @Filename:    test_read.py
-@license:     MIT Licence
-@Time:        2/4/22 10:32 AM
 """
 import pytest
 from scanmst import Read, ReadsConnector, cppext

@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "scanmst"
-version = "0.1.7"
+version = "0.1.8"
 description = "A multi-segment transcript caller for long-read transcriptome sequencing data"
 authors = ["Yangyang Li <yangyang.li@northwestern.edu>", "Ting-You Wang <tywang@northwestern.edu>"]
 license = "GPL"
 readme = "README.md"
 homepage = "https://github.com/ylab-hi/ScanMST"
 repository = "https://github.com/ylab-hi/ScanMST"
-documentation = "https://scanmst.readthedocs.io"
+documentation = "https://ylab-hi.github.io/ScanMST/"
 classifiers = ["Development Status :: 5 - Production/Stable",
                "Programming Language :: Python :: 3.9",
                "Programming Language :: Python :: 3.10",

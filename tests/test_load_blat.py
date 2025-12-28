@@ -2,10 +2,6 @@
 """Test for blat executables.
 
 @Filename:    test_load_blat.py
-@Author:      YangyangLi
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        5/23/22 11:34 AM
 """
 import subprocess
 

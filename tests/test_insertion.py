@@ -1,10 +1,5 @@
 # !/usr/bin/env python
 """Test Insertion.
-
-@Filename:    test_basicClass_novelinsertion.py
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        2/1/22 9:45 PM
 """
 import pytest
 

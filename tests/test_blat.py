@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Test classes.
 
-@version: 0.0.1
-@license: MIT Licence
 @file: test_classes.py
 @time: 16/11/2021 16:03
 """

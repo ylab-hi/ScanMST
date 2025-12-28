@@ -1,6 +1,6 @@
 """Init file for scanmst package."""
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __PACKAGE_NAME__ = "scanmst"
 
 import sys
