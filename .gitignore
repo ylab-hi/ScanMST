@@ -49,3 +49,4 @@ neovide*
 compile_commands.json
 .cache
 issues
+site/
