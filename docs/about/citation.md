@@ -12,21 +12,20 @@ If you use ScanMST in your research, please cite:
   author={Wang, Ting-You and Yang, Rendong},
   year={2026},
   url={https://github.com/ylab-hi/ScanMST},
-  version={0.1.7}
 }
 ```
 
 ## APA Style
 
-Wang, T.-Y., & Yang, R. (2026). *Mapping the origins, architecture, and function of multi-segment transcripts* (Version 0.1.7) [Computer software]. https://github.com/ylab-hi/ScanMST
+Wang, T.-Y., & Yang, R. (2026). *Mapping the origins, architecture, and function of multi-segment transcripts* [Computer software]. https://github.com/ylab-hi/ScanMST
 
 ## MLA Style
 
-Wang, Ting-You, and Rendong Yang. *Mapping the origins, architecture, and function of multi-segment transcripts*. Version 0.1.7, 2026, https://github.com/ylab-hi/ScanMST.
+Wang, Ting-You, and Rendong Yang. *Mapping the origins, architecture, and function of multi-segment transcripts*., 2026, https://github.com/ylab-hi/ScanMST.
 
 ## Chicago Style
 
-Wang, Ting-You, and Rendong Yang. 2026. "Mapping the origins, architecture, and function of multi-segment transcripts." Version 0.1.7. https://github.com/ylab-hi/ScanMST.
+Wang, Ting-You, and Rendong Yang. 2026. "Mapping the origins, architecture, and function of multi-segment transcripts." https://github.com/ylab-hi/ScanMST.
 
 ## Plain Text
 
@@ -44,10 +43,9 @@ To cite a specific version of ScanMST:
 ```bibtex
 @software{scanmst2025,
   title={Mapping the origins, architecture, and function of multi-segment transcripts},
-  author={Wang, Ting-You and Yang, Rendong},
+  author={Wang, Ting-You, Li, Yangyang, Liu, Qi and Yang, Rendong},
   year={2026},
   url={https://github.com/ylab-hi/ScanMST},
-  version={0.1.7},
   doi={XX.XXXX/zenodo.XXXXXXX}  # Replace with actual DOI when available
 }
 ```

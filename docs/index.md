@@ -67,8 +67,8 @@ If you use ScanMST in your research, please cite:
 
 ```bibtex
 @software{scanmst2026,
-  title={ScanMST: A genomic language model to identify chimera artifacts},
-  author={Wang, Ting-You and Yang, Rendong},
+  title={Mapping the origins, architecture, and function of multi-segment transcripts},
+  author={Wang, Ting-You, Li, Yangyang, Liu, Qi and Yang, Rendong},
   year={2026},
   url={https://github.com/ylab-hi/ScanMST}
 }
@@ -78,4 +78,4 @@ ______________________________________________________________________
 
 ## License
 
-ScanMST is licensed under the GNU General Public License 2.0. See [License](about/license.md) for details.
+ScanMST is licensed under the GNU General Public License 3.0. See [License](about/license.md) for details.
