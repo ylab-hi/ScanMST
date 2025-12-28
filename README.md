@@ -1,4 +1,4 @@
-# <img src="./images/logo.png" alt="logo" height="100"/>  **ScanMST** [![social](https://img.shields.io/github/stars/ylab-hi/ScanMST?style=social)](https://github.com/ylab-hi/ScanMST/stargazers)
+# <img src="./images/logo.png" alt="ScanMST logo" height="100"/> [![social](https://img.shields.io/github/stars/ylab-hi/ScanMST?style=social)](https://github.com/ylab-hi/ScanMST/stargazers)
 
 [![pypi](https://img.shields.io/pypi/v/scanmst.svg?style=for-the-badge)][pypi]
 ![conda](https://img.shields.io/conda/vn/bioconda/scanmst?style=for-the-badge)
