@@ -6,6 +6,7 @@ repo_name: ylab-hi/ScanMST
 site_description: Documentation for the ScanMST project
 site_author: Ting-You Wang
 copyright: Copyright &copy; 2025 Ting-You Wang
+use_directory_urls: true
 
 theme:
   name: material
