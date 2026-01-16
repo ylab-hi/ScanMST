@@ -389,15 +389,15 @@ class ClusterFinder:
         yield from connected_components(self._graph)
 
     @staticmethod
-    def creat_merge_indexs(cluster) -> dict[int, list[str]]:
+    def creat_merge_indexs(cluster: list[NLPath]) -> dict[int, list[str]]:
         result = {}
 
-        for series in cluster:
+        for path in cluster:
             nodes_key = []
-            for node in series:
+            for node in path:
                 nodes_key.append(create_merge_key_for_node(node))
 
-            result[series.id] = nodes_key
+            result[path.id] = nodes_key
 
         return result
 
@@ -432,10 +432,10 @@ class ClusterFinder:
         if len(merge_keys[path1.id]) >= len(merge_keys[path2.id]):
             return self.check_if_two_nlpath_merge(path1, path2, merge_keys)
 
-        msg = "nlpath1 is shorter than nlpath2"
+        msg = f"nlpath1 is shorter than nlpath2; {merge_keys[path1.id]=} {merge_keys[path2.id]=}"
         raise ValueError(msg)
 
-    def merge_cluster(self, *, use_precomputed: bool = True, n_jobs: int = -1):
+    def merge_cluster(self, *, use_precomputed: bool = False, n_jobs: int = -1):
         for _cluster_id, cluster_index in enumerate(self.find_cluster_index(use_precomputed=use_precomputed, n_jobs=n_jobs)):
             nlpaths = []
             for i in cluster_index:

@@ -105,7 +105,7 @@ def parse_nlgraph_for_cluster_seq(
             graphs.append(nlgraph)
 
         logger.info("Updating junction support for edges...")
-        update_junction_support(graphs, threshold=options.prune_threshold)
+        update_junction_support(graphs)
 
         for graph in graphs:
             all_paths = graph.generate_paths()

@@ -811,7 +811,7 @@ def gather_possible_paths(nlpaths: list[NLPath]) -> dict[str, list[str]]:
     return possible_paths
 
 
-def update_junction_support(graphs: Iterable[NLGraph], threshold: int = 10) -> None:
+def update_junction_support(graphs: Iterable[NLGraph]) -> None:
     """Update junction support for all graphs.
 
     Args:
@@ -821,23 +821,17 @@ def update_junction_support(graphs: Iterable[NLGraph], threshold: int = 10) -> N
     """
     edge_dict: dict[str, int] = defaultdict(int)
 
-    def bin_position(pos: int) -> int:
-        """Bin position to nearest multiple of threshold."""
-        return (pos // threshold) * threshold
-
     # summary junction support
     for graph in graphs:
         for edge_list in graph.edges.values():
             for edge in edge_list:
-                binned_pos1 = bin_position(edge.break_point1.pos)
-                binned_pos2 = bin_position(edge.break_point2.pos)
-                edge_key = f"{edge.break_point1.chrom}-{binned_pos1}-{edge.break_point2.chrom}-{binned_pos2}"
+                edge_key = f"{edge.break_point1.chrom}-{edge.break_point1.pos}-{edge.break_point2.chrom}-{edge.break_point2.pos}"
                 edge_dict[edge_key] += edge.sr
 
     # update junction support
     for graph in graphs:
         for edge_list in graph.edges.values():
             for edge in edge_list:
-                binned_pos1 = bin_position(edge.break_point1.pos)
-                binned_pos2 = bin_position(edge.break_point2.pos)
-                edge.edge_data.junction_sr = edge_dict[f"{edge.break_point1.chrom}-{binned_pos1}-{edge.break_point2.chrom}-{binned_pos2}"]
+                edge.edge_data.junction_sr = edge_dict[
+                    f"{edge.break_point1.chrom}-{edge.break_point1.pos}-{edge.break_point2.chrom}-{edge.break_point2.pos}"
+                ]
