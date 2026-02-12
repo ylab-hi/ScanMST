@@ -892,7 +892,11 @@ def scanbam_run(
     )
     # get the chromosome name we want to scan
 
-    contigs = [contig for contig in sorted(bam_scanner.bam_chrom_info) if "_" not in contig and "M" not in contig]
+    # whitelist for human and mouse reference primary contigs
+    valid_contigs = {f"chr{i}" for i in range(1, 23)} | {"chrX", "chrY"}
+    valid_contigs |= {f"{i}" for i in range(1, 23)} | {"X", "Y"}
+
+    contigs = [contig for contig in sorted(bam_scanner.bam_chrom_info) if contig in valid_contigs]
 
     logger.info(f" Processing {contigs=}")
     running_mode = "normal" if parallel == 1 else "parallel"
