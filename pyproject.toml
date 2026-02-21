@@ -2,13 +2,22 @@
 name = "scannls"
 version = "0.1.6"
 description = "A non-colinear transcript caller for long-read transcriptome sequencing data"
-authors = ["Yangyang Li <yangyang.li@northwestern.edu>", "Ting-You Wang <tywang@northwestern.edu>"]
+authors = [
+  "Yangyang Li <yangyang.li@northwestern.edu>",
+  "Ting-You Wang <tywang@northwestern.edu>",
+]
 license = "GPL"
 readme = "README.md"
 homepage = "https://github.com/ylab-hi/ScanNLS"
 repository = "https://github.com/ylab-hi/ScanNLS"
 documentation = "https://scannls.readthedocs.io"
-classifiers = ["Development Status :: 5 - Production/Stable", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
 exclude = ["src/scannls/cppext/cmake-*"]
 
 [tool.poetry.urls]
@@ -113,31 +122,79 @@ target-version = "py39"
 [tool.ruff.lint]
 fixable = ["ALL"]
 
-select = ["A", "F", "E", "W", "C90", "I", "UP", "N", "YTT", "TID", "S", "BLE", "FBT", "PLR", "B", "B9", "A", "C4", "T10", "EM", "ICN", "T20", "Q", "RET", "SIM", "ARG", "DTZ", "ERA", "PD", "PGH", "PLC", "PLE", "PLW", "RUF", "PL", "TD", "FIX", "PTH", "TCH", "SLOT", "PT", "PYI", "PIE", "ISC", "FA", "EXE", "COM"]
+select = [
+  "A",
+  "F",
+  "E",
+  "W",
+  "C90",
+  "I",
+  "UP",
+  "N",
+  "YTT",
+  "TID",
+  "S",
+  "BLE",
+  "FBT",
+  "PLR",
+  "B",
+  "B9",
+  "A",
+  "C4",
+  "T10",
+  "EM",
+  "ICN",
+  "T20",
+  "Q",
+  "RET",
+  "SIM",
+  "ARG",
+  "DTZ",
+  "ERA",
+  "PD",
+  "PGH",
+  "PLC",
+  "PLE",
+  "PLW",
+  "RUF",
+  "PL",
+  "TD",
+  "FIX",
+  "PTH",
+  "TCH",
+  "SLOT",
+  "PT",
+  "PYI",
+  "PIE",
+  "ISC",
+  "FA",
+  "EXE",
+  "COM",
+]
 
 ignore = [
-    "ANN001",
-    "D203",
-    "D213",
-    "PGH003",
-    "PLR0911", # Too many return statements
-    "PLR0913", # Too many arguments to function call
-    "PLR0912", # Too many branches
-    "PLR0915", # Too many statements
-    "DTZ005",  # Without `tz` argument
-    "C901",    # Too complex
-    'PLC0415',
-    # formater conflict
-    'COM812',
-    'COM819',
-    'D206',
-    'ISC001',
-    'Q000',
-    'Q001',
-    'Q002',
-    'Q003',
-    'W191',
-    "PLR0904",
+  "ANN001",
+  "D203",
+  "D213",
+  "PGH003",
+  "PLR0911", # Too many return statements
+  "PLR0913", # Too many arguments to function call
+  "PLR0912", # Too many branches
+  "PLR0915", # Too many statements
+  "DTZ005",  # Without `tz` argument
+  "C901",    # Too complex
+  'PLC0415',
+  # formater conflict
+  'COM812',
+  'COM819',
+  'D206',
+  'ISC001',
+  'Q000',
+  'Q001',
+  'Q002',
+  'Q003',
+  'W191',
+  "PLR0904",
 ]
 
 

@@ -54,6 +54,7 @@ class VCFWriter(Writer):
         "DP2": "Integer",
         "SR": "Integer",
         "OSR": "Integer",
+        "JSR": "Integer",
         "PSI": "Float",
         "SVMETHOD": "String",
         "SVTYPE": "String",
@@ -91,6 +92,7 @@ class VCFWriter(Writer):
         "DP2": "Total read depth at the breakpoint2",
         "SR": "The number of support reads for the breakpoints",
         "OSR": "The number of support reads for the breakpoints before rescuer",
+        "JSR": "The number of support reads for the breakpoints across graphs",
         "PSI": "Estimated Percent splice-in in the range (0,1], representing the percentage of NLS transcripts",
         "SVTYPE": "The type of event, DEL, TDUP, INV, TRA.",
         "NCLTTYPE": "The type of link, ICRL, ICTL, ITPL, ITTL.",
@@ -210,7 +212,7 @@ class VCFWriter(Writer):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
     def write_data_helper(self) -> None:
-        """Write series data for every clique."""
+        """Write path data for every cluster."""
         out_vcf_dict = {}
         for hop_feature in self.hops_feature_in_series_list:
             type_position_key = next(iter(hop_feature))
@@ -359,6 +361,7 @@ def get_vcf_features_from_nlpath(
                     "NCLTTYPE": nclt_link_type,
                     "SR": link_attributes.sr,
                     "OSR": link_attributes.osr,
+                    "JSR": link_attributes.jsr,
                     "CAN": can_field,
                     "CHR2": link_attributes.chrom2,
                     "SVEND": f"{link_attributes.pos2 + 1}",

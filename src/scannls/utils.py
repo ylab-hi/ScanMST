@@ -344,12 +344,9 @@ def get_link_attributes_from_edge(edge, *, rescue_sr: bool):
     dp2 = 0 if edge.break_point2.depth is None else edge.break_point2.depth
     pso = 0 if dp1 == 0 or dp2 == 0 else edge.sr / (edge.sr + (dp1 + dp2) / 2)
 
-    if rescue_sr:
-        sr = edge.sr
-        osr = edge.original_sr
-    else:
-        sr = edge.sr
-        osr = edge.sr
+    sr = edge.sr
+    jsr = edge.junction_sr
+    osr = edge.original_sr if rescue_sr else edge.sr
 
     return SimpleNamespace(
         chrom1=chrom1,
@@ -362,4 +359,5 @@ def get_link_attributes_from_edge(edge, *, rescue_sr: bool):
         pso=pso,
         sr=sr,
         osr=osr,
+        jsr=jsr,
     )

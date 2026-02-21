@@ -826,7 +826,7 @@ def _scan_bam_helper(
                     logger.trace(
                         f"{read.query_name=} does not pass the num of mismatches(edit distance) cutoff.{nm=}",
                     )
-    logger.debug(f"Total nlpaths: {nls_src_forms_list}")
+    logger.debug(f"Total nlpaths: {len(nls_src_forms_list)}")
     logger.complete()
     in_bam_io_object.close()
     return nls_src_forms_list, read_name_to_seq_dict

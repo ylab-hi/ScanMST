@@ -109,14 +109,34 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
         result.append(f"A\tN\t{node[0]}\tptc:i:{node[1]['ptc']}")
         result.append(f"A\tN\t{node[0]}\tptf:f:{node[1]['ptf']}")
 
-    possible_attributes = ["weight", "gene1", "gene2", "mode1", "mode2", "svlen", "dp1", "dp2", "pso", "sr", "osr"]
+    # `attribute_type` - Single character identifying the data type:
+    #  - 'i': Integer
+    #  - 'f': Float
+    #  - 'Z': String (default)
+    #  - 'J': JSON
+    #  - 'H': Hexadecimal
+    #  - 'B': Binary bytes
+    possible_attributes = {
+        "weight": "i",
+        "gene1": "Z",
+        "gene2": "Z",
+        "mode1": "Z",
+        "mode2": "Z",
+        "svlen": "i",
+        "dp1": "i",
+        "dp2": "i",
+        "pso": "i",
+        "sr": "i",
+        "osr": "i",
+    }
+
     # write edge attributes sr
     for edge in nxgraph.edges(data=True):
         edge_dict_data = edge[2]
 
-        for attribute in possible_attributes:
+        for attribute, attribute_type in possible_attributes.items():
             if attribute in edge_dict_data:
-                result.append(f"A\tE\t{edge_dict_data['id']}\t{attribute}:{edge_dict_data[attribute]}")
+                result.append(f"A\tE\t{edge_dict_data['id']}\t{attribute}:{attribute_type}:{edge_dict_data[attribute]}")
 
         # write insertion info if exists
         if "insertion_info" in edge_dict_data:

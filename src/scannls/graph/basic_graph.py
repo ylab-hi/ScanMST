@@ -490,7 +490,7 @@ class EdgeData:
 
     insertion_info: Any | None = None
     original_sr: int = 1
-    junction_sr: int = 0
+    junction_sr: int = 0  # NOTE: 0 is the default value
 
     @classmethod
     def from_event(cls, event: Event, read_id: str) -> EdgeData:
