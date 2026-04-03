@@ -308,8 +308,8 @@ def parse_args() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--refine-threshold",
-        action="store_true",
         dest="refine",
+        type=int,
         default=DefaultOptions.refine_theshold,
         help="threshold used to refine the graph (default: %(default)s)",
     )
