@@ -747,7 +747,7 @@ class NLGraph:
                     logger.error(f"Error updating breakpoints for edge {edge} between {node} and {successor}: {e}")
 
 
-def compare_node_when_refine(node1: Node, node2: Node, threshold=3) -> bool:
+def compare_node_when_refine(node1: Node, node2: Node, threshold: int = 3) -> bool:
     """Compare two nodes.
 
     :param node1: node1

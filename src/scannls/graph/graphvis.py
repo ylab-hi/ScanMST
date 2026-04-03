@@ -154,7 +154,6 @@ def _create_nxgraph(
                     path,
                     start_node,
                     successor,
-                    min_support_reads,  # minimal support_reads,
                     filter_edges=False,
                 )
             ):
