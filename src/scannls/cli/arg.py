@@ -55,6 +55,7 @@ class DefaultOptions:
     ignore_circle: bool = False
     rescue_sr: bool = False
     refine: bool = False
+    refine_theshold: int = 3
 
 
 COLOR = "bold magenta"
@@ -304,6 +305,13 @@ def parse_args() -> argparse.ArgumentParser:
         dest="refine",
         default=DefaultOptions.refine,
         help="if refine the graph (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--refine-threshold",
+        action="store_true",
+        dest="refine",
+        default=DefaultOptions.refine_theshold,
+        help="threshold used to refine the graph (default: %(default)s)",
     )
     parser.add_argument(
         "--nbound",

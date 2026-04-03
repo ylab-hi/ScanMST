@@ -554,7 +554,7 @@ class NLGraph:
 
         return result_paths_list
 
-    def refine(self):
+    def refine(self, threshold: int = 3):
         """Refine the graph by merging nodes and edges.
 
         1. Group nodes by merge signature (chrom, strand, introns, start/end within threshold)
@@ -569,7 +569,7 @@ class NLGraph:
         logger.trace(f"Refine graph: number of nodes before refine: {len(self)}")
 
         # Helper: create a signature for grouping nodes that could be merged
-        def merge_signature(node, threshold=0):
+        def merge_signature(node, threshold):
             return (
                 node.chrom,
                 node.strand,
@@ -584,7 +584,7 @@ class NLGraph:
 
         signature_to_nodes = defaultdict(list)
         for node in self:
-            signature_to_nodes[merge_signature(node, threshold=3)].append(node)
+            signature_to_nodes[merge_signature(node, threshold=threshold)].append(node)
 
         removed_nodes = set()  # Track nodes that have been merged/removed
 
@@ -599,7 +599,7 @@ class NLGraph:
                     node2 = group[j]
                     if node2 in removed_nodes:
                         continue
-                    if compare_node_when_refine(node1, node2):
+                    if compare_node_when_refine(node1, node2, threshold):
                         # Select the node with more read IDs as the primary node
                         if len(node1.read_ids) >= len(node2.read_ids):
                             primary, secondary = node1, node2
@@ -747,7 +747,7 @@ class NLGraph:
                     logger.error(f"Error updating breakpoints for edge {edge} between {node} and {successor}: {e}")
 
 
-def compare_node_when_refine(node1: Node, node2: Node, threshold: int = 3) -> bool:
+def compare_node_when_refine(node1: Node, node2: Node, threshold) -> bool:
     """Compare two nodes.
 
     :param node1: node1
