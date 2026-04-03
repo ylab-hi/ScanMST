@@ -96,6 +96,7 @@ def parse_nlgraph_for_cluster_seq(
                 ignore_circle=options.ignore_circle,
                 rescue_sr=options.rescue_sr,
                 refine=options.refine,
+                refine_threshold=options.refine_threshold,
                 cluster_ind=graph_id,
                 is_plot=options.graph,
             )

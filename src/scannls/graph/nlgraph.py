@@ -43,6 +43,7 @@ class NLGraph:
         output_dir: Path,
         *,
         rescue_sr: bool,
+        refine_threshold: int,
         ignore_circle: bool = False,
         if_refine: bool = False,
         cluster_ind: int | str | None = None,
@@ -51,6 +52,7 @@ class NLGraph:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.merge_threshold = merge_threshold  # 10 is tolerance compared cluster phase
+        self.refine_threshold = refine_threshold
 
         self.support_reads = support_reads
         self.junction_support_reads = junction_support_reads
@@ -119,7 +121,7 @@ class NLGraph:
             self.rescuer(self)
 
         if self.if_refine:
-            self.refine()
+            self.refine(self.refine_threshold)
 
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
@@ -133,6 +135,7 @@ class NLGraph:
         input_bam: str,
         logger: LoggerType,
         prune_threshold: int,
+        refine_threshold: int,
         support_reads: int,
         junction_support_reads: int,
         output_dir: Path,
@@ -155,6 +158,7 @@ class NLGraph:
             rescue_sr=rescue_sr,
             ignore_circle=ignore_circle,
             if_refine=refine,
+            refine_threshold=refine_threshold,
             cluster_ind=cluster_ind,
             is_plot=is_plot,
         )
@@ -554,7 +558,7 @@ class NLGraph:
 
         return result_paths_list
 
-    def refine(self, threshold: int = 3):
+    def refine(self, threshold):
         """Refine the graph by merging nodes and edges.
 
         1. Group nodes by merge signature (chrom, strand, introns, start/end within threshold)
@@ -566,7 +570,7 @@ class NLGraph:
         4. Avoid duplicate predecessors/successors
         5. Add robust error handling and logging
         """
-        logger.trace(f"Refine graph: number of nodes before refine: {len(self)}")
+        logger.trace(f"Refine graph: number of nodes before refine: {len(self)} with {threshold=}")
 
         # Helper: create a signature for grouping nodes that could be merged
         def merge_signature(node, threshold):
