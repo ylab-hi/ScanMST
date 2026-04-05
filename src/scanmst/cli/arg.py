@@ -54,6 +54,7 @@ class DefaultOptions:
     ignore_circle: bool = False
     rescue_sr: bool = False
     refine: bool = False
+    refine_threshold: int = 3
 
 
 COLOR = "bold magenta"
@@ -294,6 +295,14 @@ def parse_args() -> argparse.ArgumentParser:
         dest="refine",
         default=DefaultOptions.refine,
         help="Whether to refine the transcript segment graph after construction. (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--refine-threshold",
+        action="store",
+        dest="refine_threshold",
+        type=int,
+        default=DefaultOptions.refine_threshold,
+        help="Threshold for merging nodes during refinement (default: %(default)s)",
     )
     parser.add_argument(
         "--prune-threshold",

@@ -50,3 +50,7 @@ compile_commands.json
 .cache
 issues
 site/
+
+.omc/
+.claude/
+CLAUDE.md

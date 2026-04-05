@@ -45,6 +45,7 @@ class NLGraph:
         rescue_sr: bool,
         ignore_circle: bool = False,
         if_refine: bool = False,
+        refine_threshold: int = 3,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -59,6 +60,7 @@ class NLGraph:
         self.has_circle = False
         self.ignore_circle = ignore_circle
         self.if_refine = if_refine
+        self.refine_threshold = refine_threshold
         self.possible_paths = None
 
     def __call__(
@@ -146,6 +148,7 @@ class NLGraph:
         ignore_circle: bool,
         rescue_sr: bool,
         refine: bool = False,
+        refine_threshold: int = 3,
     ) -> NLGraph:
         """Create splice graph."""
         rescuer = SRRescuer(
@@ -168,6 +171,7 @@ class NLGraph:
             rescue_sr=rescue_sr,
             ignore_circle=ignore_circle,
             if_refine=refine,
+            refine_threshold=refine_threshold,
         )
 
     def add_edge(self, node1: Node, node2: Node, edge_data):
@@ -568,63 +572,87 @@ class NLGraph:
     def refine(self):
         """Refine the graph by merging nodes and edges.
 
-        1. Group nodes by merge signature (chrom, strand, introns, start/end within threshold)
-        2. For each group, compare pairs and merge as needed, skipping already merged/removed nodes
+        1. Group nodes by base signature (chrom, strand, introns)
+        2. Within each group, use position binning with adjacent bin checking
+           to handle bin boundary cases (nodes within threshold but in different bins)
         3. For each merge:
             - Merge common predecessors/successors and their edges
             - For unique predecessors/successors, rewire edges
             - Remove the merged node from the graph
-        4. Avoid duplicate predecessors/successors
+        4. Avoid duplicate predecessors/successors and duplicate comparisons
         5. Add robust error handling and logging
         """
         logger.trace(f"Refine graph: number of nodes before refine: {len(self)}")
 
-        # Helper: create a signature for grouping nodes that could be merged
-        def merge_signature(node, threshold=0):
-            return (
-                node.chrom,
-                node.strand,
-                tuple(node.introns),
-                # Use binned start/end to allow for threshold
-                int(node.ref_start // (threshold + 1)),
-                int(node.ref_end // (threshold + 1)),
-            )
-
-        # Group nodes by signature
         from collections import defaultdict
 
-        signature_to_nodes = defaultdict(list)
+        threshold = self.refine_threshold
+        bin_size = threshold + 1
+
+        # Group by base signature (chrom, strand, introns) - no position binning here
+        def base_signature(node):
+            return (node.chrom, node.strand, tuple(node.introns))
+
+        # Bin position helper
+        def pos_bin(pos):
+            return int(pos // bin_size)
+
+        base_groups = defaultdict(list)
         for node in self:
-            signature_to_nodes[merge_signature(node, threshold=3)].append(node)
+            base_groups[base_signature(node)].append(node)
 
         removed_nodes = set()  # Track nodes that have been merged/removed
+        compared_pairs = set()  # Track compared pairs to avoid duplicate comparisons
 
-        # For each group, compare pairs
-        for group in signature_to_nodes.values():
-            n = len(group)
-            for i in range(n):
-                node1 = group[i]
+        for group in base_groups.values():
+            # Build bin index for this group based on (start_bin, end_bin)
+            bin_index = defaultdict(list)
+            for node in group:
+                key = (pos_bin(node.ref_start), pos_bin(node.ref_end))
+                bin_index[key].append(node)
+
+            # For each node, check its bin and adjacent bins (3x3 = 9 combinations)
+            for node1 in group:
                 if node1 in removed_nodes:
                     continue
-                for j in range(i + 1, n):
-                    node2 = group[j]
-                    if node2 in removed_nodes:
-                        continue
-                    if compare_node_when_refine(node1, node2):
-                        # Select the node with more read IDs as the primary node
-                        if len(node1.read_ids) >= len(node2.read_ids):
-                            primary, secondary = node1, node2
-                        else:
-                            primary, secondary = node2, node1
-                        logger.trace(f"Refine graph: merging {primary} and {secondary}")
-                        try:
-                            self._merge_node_predecessors(primary, secondary, removed_nodes)
-                            self._merge_node_successors(primary, secondary, removed_nodes)
-                            primary.merge(secondary)
-                            self.remove_node(secondary)
-                            removed_nodes.add(secondary)
-                        except (IndexError, KeyError, ValueError) as e:
-                            logger.error(f"Error merging nodes {primary} and {secondary}: {e}")
+
+                start_bin = pos_bin(node1.ref_start)
+                end_bin = pos_bin(node1.ref_end)
+
+                # Check adjacent bin combinations to handle boundary cases
+                for ds in (-1, 0, 1):
+                    for de in (-1, 0, 1):
+                        adj_key = (start_bin + ds, end_bin + de)
+                        for node2 in bin_index.get(adj_key, []):
+                            if node2 in removed_nodes:
+                                continue
+                            if node1 is node2:
+                                continue
+
+                            # Avoid comparing the same pair twice
+                            pair_key = (
+                                id(min(node1, node2, key=id)),
+                                id(max(node1, node2, key=id)),
+                            )
+                            if pair_key in compared_pairs:
+                                continue
+                            compared_pairs.add(pair_key)
+
+                            if compare_node_when_refine(node1, node2, threshold):
+                                # Select the node with more read IDs as the primary node
+                                if len(node1.read_ids) >= len(node2.read_ids):
+                                    primary, secondary = node1, node2
+                                else:
+                                    primary, secondary = node2, node1
+                                logger.trace(f"Refine graph: merging {primary} and {secondary}")
+                                try:
+                                    self._merge_node_predecessors(primary, secondary, removed_nodes)
+                                    self._merge_node_successors(primary, secondary, removed_nodes)
+                                    primary.merge(secondary)
+                                    self.remove_node(secondary)
+                                    removed_nodes.add(secondary)
+                                except (IndexError, KeyError, ValueError) as e:
+                                    logger.error(f"Error merging nodes {primary} and {secondary}: {e}")
 
         self.logger.info(f"Refinement process completed: number of nodes after refine: {len(self)}")
 
