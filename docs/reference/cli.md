@@ -12,7 +12,7 @@ ______________________________________________________________________
 usage: scanmst [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
                [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--parallel PARALLEL] [--aligner {blat,}]
                [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
-               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine]
+               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine] [--refine-threshold REFINE_THRESHOLD]
                [--nbound] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS] [--min-required-ins MIN_REQUIRED_INS] [--long-indel-length LONG_INDEL_LENGTH]
                [--indel-fraction INDEL_FRACTION] [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN]
                [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
@@ -49,6 +49,7 @@ options:
   --ncan                                  Considering non-canonical splice sites (default: False)
   --graph                                 Whether to output transcript segment graph. (default: False)
   --refine                                Whether to refine the transcript segment graph after construction. (default: False)
+  --refine-threshold REFINE_THRESHOLD     Threshold for merging nodes during refinement (default: 3)
   --prune-threshold PRUNE_THRESHOLD       Length threshold for pruning the transcript segment graph (default: 10)
   --max-allowed-nm MAX_ALLOWED_NM         Maximum allowed edit distance (NM tag). (default: 100)
   --max-allowed-ins MAX_ALLOWED_INS       Maximum allowed micro-insertion length (default: 50)
@@ -192,6 +193,12 @@ Whether to output the graph. When enabled, transcript segment graphs are exporte
 **Default:** `False`
 
 Whether to refine the transcript segment graph after construction. When enabled, transcript segment graph will be refined.
+
+### `--refine-threshold`
+
+**Default:** `3`
+
+Threshold (in base pairs) for merging nodes during graph refinement. Nodes with the same chromosome, strand, and intron structure whose start and end positions differ by at most this threshold will be merged. Only applies when `--refine` is enabled.
 
 ### `--max-allowed-nm`
 
