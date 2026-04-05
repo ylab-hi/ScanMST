@@ -53,3 +53,7 @@ claudedocs
 node_modules
 .vscode
 AGENTS.md
+site/
+.omc/
+.claude/
+CLAUDE.md

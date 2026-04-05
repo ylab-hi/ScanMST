@@ -77,7 +77,12 @@ def parse_nlgraph_for_cluster_seq(
         options.alignment_fraction,
         node_rescued_sr_maximum,
         average_read_depth,
-    )
+        output_dir,
+        ignore_circle=options.ignore_circle,
+        rescue_sr=options.rescue_sr,
+        refine=options.refine,
+        refine_threshold=options.refine_threshold,
+)
 
     graphs = []
     with writers.open():
