@@ -104,6 +104,14 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
         path_str = "\t".join([f"{ele_id}+" for ele_id in path])
         result.append(f"P\t{path_id}\t{path_str}")
 
+    # write path attributes tsr (transcript supporting read: minimum sr among all edges in the path)
+    edge_sr_map = {edge_data["id"]: edge_data["weight"] for _, _, edge_data in nxgraph.edges(data=True)}
+    for path_id, path in nxgraph.graph["possible_paths"].items():
+        edge_srs = [edge_sr_map[ele_id] for ele_id in path if ele_id.startswith("TSE")]
+        if edge_srs:
+            tsr = min(edge_srs)
+            result.append(f"A\tP\t{path_id}\ttsr:i:{tsr}")
+
     # write node attributes sr
     for node in nxgraph.nodes(data=True):
         result.append(f"A\tN\t{node[0]}\tptc:i:{node[1]['ptc']}")
