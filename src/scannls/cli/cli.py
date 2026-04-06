@@ -90,6 +90,7 @@ def parse_nlgraph_for_cluster_seq(
                 options.input,
                 logger,
                 options.prune_threshold,
+                options.refine_threshold,
                 options.support_reads,
                 options.junction_support_reads,
                 output_dir,

@@ -43,6 +43,7 @@ class NLGraph:
         output_dir: Path,
         *,
         rescue_sr: bool,
+        refine_threshold: int,
         ignore_circle: bool = False,
         if_refine: bool = False,
         cluster_ind: int | str | None = None,
@@ -51,6 +52,7 @@ class NLGraph:
         """Initialize SpliceGraph."""
         self.logger = logger
         self.merge_threshold = merge_threshold  # 10 is tolerance compared cluster phase
+        self.refine_threshold = refine_threshold
 
         self.support_reads = support_reads
         self.junction_support_reads = junction_support_reads
@@ -119,7 +121,7 @@ class NLGraph:
             self.rescuer(self)
 
         if self.if_refine:
-            self.refine()
+            self.refine(self.refine_threshold)
 
         if not is_weakly_connected(self):
             logger.warning(f"Graph {self.nodes=} is not weakly connected")
@@ -133,6 +135,7 @@ class NLGraph:
         input_bam: str,
         logger: LoggerType,
         prune_threshold: int,
+        refine_threshold: int,
         support_reads: int,
         junction_support_reads: int,
         output_dir: Path,
@@ -155,6 +158,7 @@ class NLGraph:
             rescue_sr=rescue_sr,
             ignore_circle=ignore_circle,
             if_refine=refine,
+            refine_threshold=refine_threshold,
             cluster_ind=cluster_ind,
             is_plot=is_plot,
         )
@@ -554,7 +558,7 @@ class NLGraph:
 
         return result_paths_list
 
-    def refine(self):
+    def refine(self, threshold):
         """Refine the graph by merging nodes and edges.
 
         1. Group nodes by merge signature (chrom, strand, introns, start/end within threshold)
@@ -566,27 +570,42 @@ class NLGraph:
         4. Avoid duplicate predecessors/successors
         5. Add robust error handling and logging
         """
-        logger.trace(f"Refine graph: number of nodes before refine: {len(self)}")
+        logger.trace(f"Refine graph: number of nodes before refine: {len(self)} with {threshold=}")
 
-        # Helper: create a signature for grouping nodes that could be merged
-        def merge_signature(node, threshold=0):
-            return (
+        # Helper: create two signatures for grouping nodes that could be merged.
+        # Using two overlapping bin offsets avoids boundary issues where nodes
+        # within threshold distance land in different bins due to integer division.
+        def merge_signatures(node, threshold):
+            bin_size = threshold + 1
+            offset = bin_size // 2
+            sig1 = (
                 node.chrom,
                 node.strand,
                 tuple(node.introns),
-                # Use binned start/end to allow for threshold
-                int(node.ref_start // (threshold + 1)),
-                int(node.ref_end // (threshold + 1)),
+                int(node.ref_start // bin_size),
+                int(node.ref_end // bin_size),
             )
+            sig2 = (
+                node.chrom,
+                node.strand,
+                tuple(node.introns),
+                int((node.ref_start + offset) // bin_size),
+                int((node.ref_end + offset) // bin_size),
+            )
+            return sig1, sig2
 
-        # Group nodes by signature
+        # Group nodes by signature (each node may appear in up to two groups)
         from collections import defaultdict
 
         signature_to_nodes = defaultdict(list)
         for node in self:
-            signature_to_nodes[merge_signature(node, threshold=3)].append(node)
+            sig1, sig2 = merge_signatures(node, threshold=threshold)
+            signature_to_nodes[sig1].append(node)
+            if sig2 != sig1:
+                signature_to_nodes[sig2].append(node)
 
         removed_nodes = set()  # Track nodes that have been merged/removed
+        seen_pairs = set()  # Track compared pairs to avoid duplicates across overlapping bins
 
         # For each group, compare pairs
         for group in signature_to_nodes.values():
@@ -599,7 +618,11 @@ class NLGraph:
                     node2 = group[j]
                     if node2 in removed_nodes:
                         continue
-                    if compare_node_when_refine(node1, node2):
+                    pair_key = (id(node1), id(node2)) if id(node1) < id(node2) else (id(node2), id(node1))
+                    if pair_key in seen_pairs:
+                        continue
+                    seen_pairs.add(pair_key)
+                    if compare_node_when_refine(node1, node2, threshold):
                         # Select the node with more read IDs as the primary node
                         if len(node1.read_ids) >= len(node2.read_ids):
                             primary, secondary = node1, node2
@@ -747,7 +770,7 @@ class NLGraph:
                     logger.error(f"Error updating breakpoints for edge {edge} between {node} and {successor}: {e}")
 
 
-def compare_node_when_refine(node1: Node, node2: Node, threshold=3) -> bool:
+def compare_node_when_refine(node1: Node, node2: Node, threshold) -> bool:
     """Compare two nodes.
 
     :param node1: node1
