@@ -572,25 +572,40 @@ class NLGraph:
         """
         logger.trace(f"Refine graph: number of nodes before refine: {len(self)} with {threshold=}")
 
-        # Helper: create a signature for grouping nodes that could be merged
-        def merge_signature(node, threshold):
-            return (
+        # Helper: create two signatures for grouping nodes that could be merged.
+        # Using two overlapping bin offsets avoids boundary issues where nodes
+        # within threshold distance land in different bins due to integer division.
+        def merge_signatures(node, threshold):
+            bin_size = threshold + 1
+            offset = bin_size // 2
+            sig1 = (
                 node.chrom,
                 node.strand,
                 tuple(node.introns),
-                # Use binned start/end to allow for threshold
-                int(node.ref_start // (threshold + 1)),
-                int(node.ref_end // (threshold + 1)),
+                int(node.ref_start // bin_size),
+                int(node.ref_end // bin_size),
             )
+            sig2 = (
+                node.chrom,
+                node.strand,
+                tuple(node.introns),
+                int((node.ref_start + offset) // bin_size),
+                int((node.ref_end + offset) // bin_size),
+            )
+            return sig1, sig2
 
-        # Group nodes by signature
+        # Group nodes by signature (each node may appear in up to two groups)
         from collections import defaultdict
 
         signature_to_nodes = defaultdict(list)
         for node in self:
-            signature_to_nodes[merge_signature(node, threshold=threshold)].append(node)
+            sig1, sig2 = merge_signatures(node, threshold=threshold)
+            signature_to_nodes[sig1].append(node)
+            if sig2 != sig1:
+                signature_to_nodes[sig2].append(node)
 
         removed_nodes = set()  # Track nodes that have been merged/removed
+        seen_pairs = set()  # Track compared pairs to avoid duplicates across overlapping bins
 
         # For each group, compare pairs
         for group in signature_to_nodes.values():
@@ -603,6 +618,10 @@ class NLGraph:
                     node2 = group[j]
                     if node2 in removed_nodes:
                         continue
+                    pair_key = (id(node1), id(node2)) if id(node1) < id(node2) else (id(node2), id(node1))
+                    if pair_key in seen_pairs:
+                        continue
+                    seen_pairs.add(pair_key)
                     if compare_node_when_refine(node1, node2, threshold):
                         # Select the node with more read IDs as the primary node
                         if len(node1.read_ids) >= len(node2.read_ids):
