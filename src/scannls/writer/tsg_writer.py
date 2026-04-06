@@ -101,7 +101,7 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
 
     # write possible paths
     for path_id, path in nxgraph.graph["possible_paths"].items():
-        path_str = "\t".join([f"{ele_id}+" for ele_id in path])
+        path_str = "\t".join([f"{ele_id}" for ele_id in path])
         result.append(f"P\t{path_id}\t{path_str}")
 
     # write path attributes tsr (transcript supporting read: minimum sr among all edges in the path)
@@ -133,7 +133,7 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
         "svlen": "i",
         "dp1": "i",
         "dp2": "i",
-        "pso": "i",
+        "pso": "f",
         "sr": "i",
         "osr": "i",
     }
