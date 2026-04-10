@@ -8,29 +8,25 @@ If you use ScanMST in your research, please cite:
 
 ```bibtex
 @software{scanmst2026,
-  title={Mapping the origins, architecture, and function of multi-segment transcripts},
+  title={Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts},
   author={Wang, Ting-You and Yang, Rendong},
   year={2026},
   url={https://github.com/ylab-hi/ScanMST},
 }
 ```
 
-## APA Style
-
-Wang, T.-Y., & Yang, R. (2026). *Mapping the origins, architecture, and function of multi-segment transcripts* [Computer software]. https://github.com/ylab-hi/ScanMST
-
 ## MLA Style
 
-Wang, Ting-You, and Rendong Yang. *Mapping the origins, architecture, and function of multi-segment transcripts*., 2026, https://github.com/ylab-hi/ScanMST.
+Wang, Ting-You, and Rendong Yang. *Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts*, 2026, https://github.com/ylab-hi/ScanMST.
 
 ## Chicago Style
 
-Wang, Ting-You, and Rendong Yang. 2026. "Mapping the origins, architecture, and function of multi-segment transcripts." https://github.com/ylab-hi/ScanMST.
+Wang, Ting-You, and Rendong Yang. 2026. "Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts" https://github.com/ylab-hi/ScanMST.
 
 ## Plain Text
 
 ```
-Mapping the origins, architecture, and function of multi-segment transcripts
+Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts
 Ting-You Wang, Rendong Yang
 2026
 https://github.com/ylab-hi/ScanMST
@@ -41,8 +37,8 @@ https://github.com/ylab-hi/ScanMST
 To cite a specific version of ScanMST:
 
 ```bibtex
-@software{scanmst2025,
-  title={Mapping the origins, architecture, and function of multi-segment transcripts},
+@software{scanmst2026,
+  title={Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts},
   author={Wang, Ting-You, Li, Yangyang, Liu, Qi and Yang, Rendong},
   year={2026},
   url={https://github.com/ylab-hi/ScanMST},

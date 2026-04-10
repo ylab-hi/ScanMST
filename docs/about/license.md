@@ -5,7 +5,7 @@ ScanMST released under the GNU General Public License Version 3.
 ## GNU General Public License v3
 
 ```
-Copyright 2025 Ting-You Wang
+Copyright 2026 Ting-You Wang
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

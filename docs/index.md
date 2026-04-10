@@ -67,7 +67,7 @@ If you use ScanMST in your research, please cite:
 
 ```bibtex
 @software{scanmst2026,
-  title={Mapping the origins, architecture, and function of multi-segment transcripts},
+  title={Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts},
   author={Wang, Ting-You, Li, Yangyang, Liu, Qi and Yang, Rendong},
   year={2026},
   url={https://github.com/ylab-hi/ScanMST}
