@@ -132,15 +132,15 @@ def build(setup_kwargs):
     """Build cpp extension."""
     ext_modules = [
         Pybind11Extension(
-            "scannls._cppext",
+            "scanmst._cppext",
             sources=[
-                "src/scannls/cppext/src/bam.cpp",
-                "src/scannls/cppext/src/rescuer.cpp",
-                "src/scannls/cppext/src/ssw.c",
-                "src/scannls/cppext/src/ssw_cpp.cpp",
-                *list(get_files(Path("src/scannls/cppext/bindings"), [".cpp", ".c"])),
+                "src/scanmst/cppext/src/bam.cpp",
+                "src/scanmst/cppext/src/rescuer.cpp",
+                "src/scanmst/cppext/src/ssw.c",
+                "src/scanmst/cppext/src/ssw_cpp.cpp",
+                *list(get_files(Path("src/scanmst/cppext/bindings"), [".cpp", ".c"])),
             ],
-            include_dirs=[*htslib_include_dirs, "src/scannls/cppext/include"],
+            include_dirs=[*htslib_include_dirs, "src/scanmst/cppext/include"],
             library_dirs=htslib_library_dirs,
             libraries=external_htslib_libraries,
             extra_compile_args=["-DNSCDEBUG"],
