@@ -1,6 +1,6 @@
 """Conftest for pytest."""
 import pytest
-from scannls import Event, Insertion, MicroHomology, Node, NovelInsertion, Read
+from scanmst import Event, Insertion, MicroHomology, Node, NovelInsertion, Read
 
 from tests import FakeBlat, FakeLogger, assign_value_for_instance
 

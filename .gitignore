@@ -14,6 +14,8 @@
 /dependency/
 /docs/_build/
 /src/*.egg-info/
+blat/linux/
+blat/darwin/
 __pycache__/
 poetry.lock
 *.lock
@@ -51,3 +53,7 @@ claudedocs
 node_modules
 .vscode
 AGENTS.md
+site/
+.omc/
+.claude/
+CLAUDE.md

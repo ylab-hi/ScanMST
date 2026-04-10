@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from scannls import Node
+from scanmst import Node
 
 __all__ = [
     "assign_value_for_instance",

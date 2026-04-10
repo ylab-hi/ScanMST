@@ -9,7 +9,7 @@
 from pathlib import Path
 
 import pytest
-from scannls import Blat
+from scanmst import Blat
 
 
 @pytest.fixture(scope="module")

@@ -1,55 +1,58 @@
-# ScanNCLT: A powerful tool for detecting non-co-linear transcripts (NCLTs) with long reads and transcript segment graphs
+# ScanMST: A powerful tool for detecting Multi-segment transcripts (MSTs) with long reads and transcript segment graphs
 
-[![pypi](https://img.shields.io/pypi/v/scannclt.svg?style=for-the-badge)][pypi]
-![conda](https://img.shields.io/conda/vn/bioconda/scannclt?style=for-the-badge)
-
+[![pypi](https://img.shields.io/pypi/v/scanmst.svg?style=for-the-badge)][pypi]
+![conda](https://img.shields.io/conda/vn/bioconda/scanmst?style=for-the-badge)
 <!-- [![publication](https://img.shields.io/badge/published%20in-Nature-green.svg?style=for-the-badge)][paper]
 [paper]: https://www.nature.com/articles/d41586-023-03067-6
 -->
 
-## What is ScanNCLT?
+## What is ScanMST?
 
-ScanNCLT is a non-co-linear transcript caller for third-generation sequencing reads.
-It is able to detect and classify the non-co-linear transcripts with the following four forms of non-co-linear segment links: ICRL, ICTL, ITPL, and ITTL (see the figure below).
+ScanMST is a multi-segment transcript caller for third-generation sequencing reads.
+It is able to detect and classify the multi-segment transcripts with the following four forms of transcript segment links: ICRL, ICTL, ITPL, and ITTL (see the figure below).
 
 <div align="center">
 <img src="./images/segment_links.png" alt="Modeling segment connectivity" width="60%">
 </div>
 
 ## Prerequisite
-
-`htslib` is required to run ScanNCLT. Please install it in the environment.
+`htslib` is required to run ScanMST. Please install it in the environment.
 
 ```bash
    conda install -c bioconda htslib
 ```
 
+## 🧬 BLAT Aligner (Automatic Setup)
+ScanMST utilizes BLAT (BLAST-like alignment tool) for auxiliary alignments.
+
+**You do not need to install BLAT manually.** When you run ScanMST with the `--aligner blat` option, the tool will automatically detect your operating system (Linux or macOS/Darwin) and chip architecture (Intel or Apple Silicon). It will then download the appropriate executables (gfServer, gfClient, and faToTwoBit) from the UCSC Genome Browser servers into the installation directory.
+
 ## 🚀 **Getting Started**
 
-The first step in starting your journey with `ScanNCLT` is to install the tool.
+The first step in starting your journey with `ScanMST` is to install the tool.
 To do this, there are two options shown below:
 
 - **PyPI**
 
 ```bash
-pip install scannclt
+pip install scanmst
 ```
 
 - **CONDA** via [Bioconda](https://bioconda.github.io/)
 
 ```bash
-conda install scannclt
+conda install scanmst
 ```
 
-Congratulations! You've successfully installed `ScanNCLT` on your local machine.
-If you have some issues, please check the [document](https://scannclt.readthedocs.io/en/latest/installation.html) first before opening an issue.
+Congratulations! You've successfully installed `ScanMST` on your local machine.
+If you have some issues, please check the [document](https://scanmst.readthedocs.io/en/latest/installation.html) first before opening an issue.
 
-### 🤖 **Using ScanNLS**
+### 🤖 **Using ScanMST**
 
 ```console
-❯ scannclt -h
+❯ scanmst -h
 
-usage: scannclt [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
+usage: scanmst [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
                [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--parallel PARALLEL] [--aligner {blat,}]
                [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
                [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine]
@@ -58,7 +61,7 @@ usage: scannclt [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTP
                [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
                [--substitution-fraction SUBSTITUTIONS_FRACTION] [--ignore-circle] [--rescue-sr]
 
-scannclt 🚀 Non-co-linear transcript identification using transcriptomic long reads data
+scanmst 🚀 Multi-segment transcript identification using transcriptomic long reads data
 
 options:
   -h, --help                              show this help message and exit
@@ -69,9 +72,9 @@ options:
   --output OUTPUT                         output prefix
   --output-seq {consensus,reference,both}
                                           output sequence type (default: consensus)
-  --sr SUPPORT_READS                      minimum number of support reads for reporting NCLT (default: 1)
+  --sr SUPPORT_READS                      minimum number of support reads for reporting MST (default: 1)
   --splice-bin SPLICE_BIN                 splice site bin size (default: 5)
-  --mapq MAPQ                             minimum MAPQ of reads for calling NCLT (default: 20)
+  --mapq MAPQ                             minimum MAPQ of reads for calling MST (default: 20)
   --log-level {info,debug,trace,warning}  set log level (default: warning)
   --thread THREAD                         set the thread number (default: 1)
   --aligner {blat,}                       aligner to use for mapping reads (default: None)
@@ -108,7 +111,7 @@ options:
 
 ```
 
-Please refer to the [document](https://scannclt.readthedocs.io/en/latest/) for details and more examples.
+Please refer to the [document](https://scanmst.readthedocs.io/en/latest/) for details and more examples.
 
 ## 📎 **Citation**
 
@@ -120,7 +123,18 @@ Contributions are very welcome. To learn more, see the [Contributor Guide].
 
 ## 🪪 **License**
 
-The project is licensed under the GNU General Public License.
+ScanMST is free software available under the GNU General Public License v3.0 (GPLv3). You are free to modify and redistribute this software under the terms of this license.
+
+### ⚠️ External Dependency Licensing (BLAT)
+While ScanMST itself is GPL-licensed, it utilizes the **BLAT** aligner for specific functionality. BLAT is **not** distributed with ScanMST; it is downloaded automatically from the University of California, Santa Cruz (UCSC) servers upon first use.
+
+### BLAT License Terms:
+
+- Academic/Non-Profit: Free for use.
+
+- Commercial: A license is required from [Kent Informatics](https://kentinformatics.com/).
+
+By using this software with the `--aligner blat` option, you acknowledge that you are responsible for adhering to the [UCSC](https://genome.ucsc.edu/license/) and [Kent Informatics](https://kentinformatics.com/) license terms regarding the use of BLAT executables.
 
 ## 🤝 **Contact**
 
@@ -128,10 +142,9 @@ If you experience any problems or have suggestions, please create an issue or a 
 
 ## Credits
 
-[mit license]: https://opensource.org/licenses/mit
 [pypi]: https://pypi.org/
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
-[file an issue]: https://github.com/ylab-hi/ScanNCLT/issues
+[file an issue]: https://github.com/ylab-hi/ScanMST/issues
 [pip]: https://pip.pypa.io/
 [contributor guide]: CONTRIBUTING.md
-[command-line reference]: https://scannclt.readthedocs.io/en/latest/usage.html
+[command-line reference]: https://scanmst.readthedocs.io/en/latest/usage.html

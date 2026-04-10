@@ -1,15 +1,10 @@
 # !/usr/bin/env python
 """Test for Event class.
-
-@Filename:    test_event.py
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        2/2/22 6:43 PM
 """
 import copy
 
 import pytest
-from scannls import ReadNotFoundError
+from scanmst import ReadNotFoundError
 
 
 class TestEvent:

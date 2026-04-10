@@ -7,7 +7,7 @@
 """
 import pytest
 from loguru import logger
-from scannls import NLGraph, Node, SpliceType
+from scanmst import NLGraph, Node, SpliceType
 
 from tests import assign_value_for_instance
 

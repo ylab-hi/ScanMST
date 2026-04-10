@@ -9,7 +9,7 @@
 """
 import subprocess
 
-from scannls import blat
+from scanmst import blat
 
 
 def test_load_blat():

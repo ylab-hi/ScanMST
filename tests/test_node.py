@@ -1,14 +1,8 @@
 # !/usr/bin/env python
 """Test Node class.
-
-@Filename:    test_node.py
-@Author:      Yangyang Li
-@contact:     li002252@umn.edu
-@license:     MIT Licence
-@Time:        2/1/22 9:50 PM
 """
 import pytest
-from scannls import Node
+from scanmst import Node
 
 
 class FakePysamAlignmentFile:

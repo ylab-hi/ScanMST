@@ -1,5 +1,5 @@
 # !/usr/bin/env python
-"""Test for scannls/core/helper.py."""
+"""Test for scanmst/core/helper.py."""
 import contextlib
 import os
 from dataclasses import dataclass
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import HTSeq  # type: ignore
 import pytest
 from pyfaidx import Fasta  # type: ignore
-from scannls.core.helper import (
+from scanmst.core.helper import (
     cigar_validity,
     diff_chrom_diff_strand_handler,
     diff_chrom_same_strand_mode21_handler,

@@ -9,7 +9,7 @@
 import os
 
 import pytest
-from scannls import cppext as cpp
+from scanmst import cppext as cpp
 
 
 @pytest.mark.skip(reason="TODO")
