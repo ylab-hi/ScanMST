@@ -8,6 +8,8 @@
 /dist/
 /tmp/
 /data/src/
+/src/scanmst/blat/linux/
+/src/scanmst/blat/darwin/
 /data/
 /dependency/
 /build/
