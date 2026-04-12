@@ -162,7 +162,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="support_reads",
         type=int,
-        help="minimum number of support reads for reporting NCLT (default: %(default)s)",
+        help="minimum number of support reads for reporting MST (default: %(default)s)",
         default=DefaultOptions.support_reads,
     )
     parser.add_argument(
@@ -170,7 +170,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="junction_support_reads",
         type=int,
-        help="minimum number of juntion support reads for reporting NCLT (default: %(default)s)",
+        help="minimum number of juntion support reads for reporting MST (default: %(default)s)",
         default=DefaultOptions.junction_support_reads,
     )
 
@@ -187,7 +187,7 @@ def parse_args() -> argparse.ArgumentParser:
         action="store",
         dest="mapq",
         type=int,
-        help="minimum MAPQ of reads for calling NCLT (default: %(default)s)",
+        help="minimum MAPQ of reads for calling MST (default: %(default)s)",
         default=DefaultOptions.mapq,
     )
 
