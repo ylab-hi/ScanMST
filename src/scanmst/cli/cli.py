@@ -13,7 +13,8 @@ from loguru import logger
 
 from scanmst.base import Blat
 from scanmst.blat import download_blat_tools
-from scanmst.graph import ClusterFinder, NLGraph
+from scanmst.graph import ClusterFinder, NLGraph, SRRescuer
+from scanmst.graph.nlgraph import update_junction_support
 from scanmst.utils import find_2bit_file, sleep, wait_for_aligner
 from scanmst.writer import FastaWriter, GTFWriter, VCFWriter, Writers
 from scanmst.writer.tsg_writer import TSGWriter
@@ -77,12 +78,7 @@ def parse_nlgraph_for_cluster_seq(
         options.alignment_fraction,
         node_rescued_sr_maximum,
         average_read_depth,
-        output_dir,
-        ignore_circle=options.ignore_circle,
-        rescue_sr=options.rescue_sr,
-        refine=options.refine,
-        refine_threshold=options.refine_threshold,
-)
+    )
 
     graphs = []
     with writers.open():
