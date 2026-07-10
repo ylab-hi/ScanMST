@@ -19,8 +19,8 @@
 // Public License instead of this License.  But first, please read
 // <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
-#ifndef SCANNLSEXT_RESCUER_H
-#define SCANNLSEXT_RESCUER_H
+#ifndef SCANMSTEXT_RESCUER_H
+#define SCANMSTEXT_RESCUER_H
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -268,4 +268,4 @@ struct Seqs {
 
 } // namespace cppext
 
-#endif // SCANNLSEXT_RESCUER_H
+#endif // SCANMSTEXT_RESCUER_H

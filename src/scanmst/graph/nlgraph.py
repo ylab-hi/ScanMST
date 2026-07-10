@@ -43,12 +43,11 @@ class NLGraph:
         output_dir: Path,
         *,
         rescue_sr: bool,
-        refine_threshold: int,
+        refine_threshold: int = 3,
         ignore_circle: bool = False,
         if_refine: bool = False,
         cluster_ind: int | str | None = None,
         is_plot: bool = False,
-        refine_threshold: int = 3,
     ) -> None:
         """Initialize SpliceGraph."""
         self.logger = logger
@@ -69,7 +68,6 @@ class NLGraph:
         self.has_circle = False
         self.ignore_circle = ignore_circle
         self.if_refine = if_refine
-        self.refine_threshold = refine_threshold
         self.possible_paths = None
 
         self.input_bam_path = input_bam_path
@@ -147,7 +145,6 @@ class NLGraph:
         refine: bool = False,
         cluster_ind: int | str | None = None,
         is_plot: bool = False,
-        refine_threshold: int = 3,
     ) -> NLGraph:
         """Create  nlgraph."""
         return cls(

@@ -19,8 +19,8 @@
 // Public License instead of this License.  But first, please read
 // <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
-#ifndef SCANNLSEXT_BAM_H
-#define SCANNLSEXT_BAM_H
+#ifndef SCANMSTEXT_BAM_H
+#define SCANMSTEXT_BAM_H
 #include <iostream>
 #include <memory>
 #include <string>
@@ -182,4 +182,4 @@ namespace cppext {
   };
 
 }  // namespace cppext
-#endif  // SCANNLSEXT_BAM_H
+#endif  // SCANMSTEXT_BAM_H
