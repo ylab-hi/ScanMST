@@ -315,14 +315,6 @@ def parse_args() -> argparse.ArgumentParser:
         help="Threshold for merging nodes during refinement (default: %(default)s)",
     )
     parser.add_argument(
-        "--prune-threshold",
-        action="store",
-        dest="refine_threshold",
-        type=int,
-        default=DefaultOptions.refine_threshold,
-        help="threshold used to refine the graph (default: %(default)s)",
-    )
-    parser.add_argument(
         "--nbound",
         action="store_false",
         dest="bound",
