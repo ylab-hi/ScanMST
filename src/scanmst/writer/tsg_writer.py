@@ -135,6 +135,7 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
         "dp2": "i",
         "pso": "f",
         "sr": "i",
+        "jsr": "i",
         "osr": "i",
     }
 

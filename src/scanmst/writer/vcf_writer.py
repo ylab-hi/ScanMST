@@ -15,7 +15,6 @@ from scanmst.exception import (
     BreakpointNotFoundError,
 )
 from scanmst.graph import NLPath, Node, Edge
-from scanmst.utils import determine_mst_link_type
 
 from .writer import Writer
 
@@ -361,7 +360,7 @@ def get_vcf_features_from_nlpath(
                 )
 
         link_attributes = current_edge.link_attributes(rescue_sr=rescue_sr)
-        mst_link_type = current_edge.nclt_link_type
+        mst_link_type = current_edge.mst_link_type
 
         if rescue_sr:
             sr = current_edge.sr
@@ -369,10 +368,6 @@ def get_vcf_features_from_nlpath(
         else:
             sr = current_edge.sr
             osr = current_edge.sr
-
-        mst_link_type = determine_mst_link_type(
-            current_edge
-        )
 
         path_hops_features.append(
             {
@@ -386,11 +381,11 @@ def get_vcf_features_from_nlpath(
                     "SR": sr,
                     "OSR": osr,
                     "CAN": can_field,
-                    "CHR2": chrom2,
-                    "SVEND": f"{pos2 + 1}",
-                    "DP1": f"{dp1}",
-                    "DP2": f"{dp2}",
-                    "SVLEN": f"{sv_distance}",
+                    "CHR2": link_attributes.chrom2,
+                    "SVEND": f"{link_attributes.pos2 + 1}",
+                    "DP1": f"{link_attributes.dp1}",
+                    "DP2": f"{link_attributes.dp2}",
+                    "SVLEN": f"{link_attributes.svlen}",
                     "GENE1": f"{gene1}",
                     "GENE2": f"{gene2}",
                     "SEGMENT1": current_node.id,

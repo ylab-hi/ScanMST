@@ -19,8 +19,8 @@
 // Public License instead of this License.  But first, please read
 // <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
-#ifndef SCANNLSEXT_INCLUDE_UTILS_HPP_
-#define SCANNLSEXT_INCLUDE_UTILS_HPP_
+#ifndef SCANMSTEXT_INCLUDE_UTILS_HPP_
+#define SCANMSTEXT_INCLUDE_UTILS_HPP_
 #include <iostream>
 #include <vector>
 
@@ -46,4 +46,4 @@ namespace cppext {
   }
 
 }  // namespace cppext
-#endif  // SCANNLSEXT_INCLUDE_UTILS_HPP_
+#endif  // SCANMSTEXT_INCLUDE_UTILS_HPP_

@@ -59,7 +59,7 @@ def download_blat_tools(logger) -> None:
         logger.error(str(e))
         sys.exit(1)
 
-    # Target directory: src/scannls/blat/{linux|darwin}/
+    # Target directory: src/scanmst/blat/{linux|darwin}/
     target_dir = Path(__file__).parent / system_name
     target_dir.mkdir(parents=True, exist_ok=True)
 
