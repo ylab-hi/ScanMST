@@ -37,29 +37,36 @@ Request features on the [Issue Tracker].
 
 # How to set up your development environment
 
-You need Python 3.7+ and the following tools:
+You need Python 3.9 or 3.10 and the following tools:
 
-- [Poetry]
+- [uv]
 - [Nox]
-- [nox-poetry]
+
+You also need **htslib** and **zlib**, which the `scanmst._cppext` extension
+links against. Either activate a conda environment that provides them, or
+point the build at a prefix explicitly:
+
+```console
+$ conda install -c bioconda htslib     # or:
+$ export HTSLIB_ROOT=/path/to/prefix   # must contain include/htslib and lib/libhts.*
+```
 
 Install the package with development requirements:
 
 ```console
-$ poetry install
+$ uv sync --group dev
 ```
 
 You can now run an interactive Python session,
 or the command-line interface:
 
 ```console
-$ poetry run python
-$ poetry run {{cookiecutter.project_name}}
+$ uv run python
+$ uv run scanmst --help
 ```
 
-[poetry]: https://python-poetry.org/
+[uv]: https://docs.astral.sh/uv/
 [nox]: https://nox.thea.codes/
-[nox-poetry]: https://nox-poetry.readthedocs.io/
 
 # How to test the project
 

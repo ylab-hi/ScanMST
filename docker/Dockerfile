@@ -1,25 +1,39 @@
-FROM python:3.8-slim-buster
+FROM python:3.10-slim-bookworm
 
 ENV LANG=C.UTF-8 \
   LC_ALL=C.UTF-8 \
-  PATH="${PATH}:/root/.poetry/bin"
+  UV_COMPILE_BYTECODE=1 \
+  UV_LINK_MODE=copy
 
+# Build toolchain plus htslib/zlib, which the _cppext extension links against.
+# HTSLIB_ROOT tells CMakeLists where to find them outside a conda environment.
 RUN apt-get update && \
   apt-get install -y --no-install-recommends \
-  curl \
+  build-essential \
+  cmake \
+  ninja-build \
+  libhts-dev \
+  zlib1g-dev \
   && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml ./
+ENV HTSLIB_ROOT=/usr
 
-# Install Poetry
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | POETRY_HOME=/opt/poetry python && \
-    cd /usr/local/bin && \
-    ln -s /opt/poetry/bin/poetry && \
-    poetry config virtualenvs.create false
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# Allow installing dev dependencies to run tests
+WORKDIR /src
+COPY . /src
+
+# Allow installing dev dependencies to run tests.
+# The previous form lost the ARG interpolation ("if [ == 'true' ]") and used
+# --no-dev, which Poetry 2.x removed, so this stage had been failing.
 ARG INSTALL_DEV=false
-RUN bash -c "if [  == 'true' ] ; then poetry install --no-root ; else poetry install --no-root --no-dev ; fi"
+RUN if [ "$INSTALL_DEV" = "true" ]; then \
+      uv sync --frozen --group dev ; \
+    else \
+      uv sync --frozen --no-dev ; \
+    fi
 
-CMD mkdir -p /workspace
+ENV PATH="/src/.venv/bin:${PATH}"
+
+RUN mkdir -p /workspace
 WORKDIR /workspace

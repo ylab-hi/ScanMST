@@ -1,7 +1,14 @@
 """Init file for scanmst package."""
 
-__version__ = "0.1.8"
+from importlib.metadata import PackageNotFoundError, version
+
 __PACKAGE_NAME__ = "scanmst"
+
+try:
+    # Single source of truth is [project].version in pyproject.toml.
+    __version__ = version(__PACKAGE_NAME__)
+except PackageNotFoundError:  # pragma: no cover - running from a source tree
+    __version__ = "0.0.0.dev0"
 
 import sys
 

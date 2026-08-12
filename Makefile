@@ -11,7 +11,7 @@ clean: clean-stubs ## Clean up
 	rm -rf build
 
 compile-database: ## Compile database
-	bear -- poetry build
+	bear -- uv build
 
 stubs: clean-stubs ## Generate pybind11 stubs
 	echo "Generating pybind11 stubs"

@@ -1,78 +1,56 @@
 name: Release
 
+# DISARMED pending Step 3 of the PyPI/bioconda migration.
+#
+# This previously ran on every push to a release* branch and drove
+# `poetry build` + pypa/gh-action-pypi-publish. Poetry is no longer the build
+# backend, and no PyPI credentials or Trusted Publishing are configured yet,
+# so an automatic trigger could only fail -- or, worse, publish an unverified
+# artifact. PyPI uploads are permanent and a filename can never be reused.
+#
+# Step 3 restores automatic release by adding PyPI Trusted Publishing (OIDC)
+# and `uv publish`, and by building manylinux/macOS wheels via cibuildwheel
+# (Step 2). Until then this is manual-only and builds artifacts without
+# uploading them anywhere.
 on:
-  push:
-    branches:
-      - release*
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  release:
-    name: Release
+  build:
+    name: Build distributions (no publish)
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+
+      - name: Install htslib
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libhts-dev zlib1g-dev
+          echo "HTSLIB_ROOT=/usr" >> "$GITHUB_ENV"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5.6.0
+        run: uv python install 3.10
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      # NOTE: this wheel is tagged linux_x86_64 and links the system libhts.
+      # PyPI rejects such wheels, and they are not portable. Step 2 replaces
+      # this with cibuildwheel + auditwheel to produce manylinux wheels with
+      # htslib bundled.
+      - name: Upload distributions as build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          python-version: "3.9"
-
-      - name: Upgrade pip
-        run: |
-          pip install --constraint=.github/workflows/constraints.txt pip
-          pip --version
-
-      - name: Install Poetry
-        run: |
-          pip install --constraint=.github/workflows/constraints.txt poetry
-          poetry --version
-
-      - name: Check if there is a parent commit
-        id: check-parent-commit
-        run: |
-          echo "::set-output name=sha::$(git rev-parse --verify --quiet HEAD^)"
-
-      - name: Detect and tag new version
-        id: check-version
-        if: steps.check-parent-commit.outputs.sha
-        uses: salsify/action-detect-and-tag-new-version@v2.0.3
-        with:
-          version-command: |
-            bash -o pipefail -c "poetry version | awk '{ print \$2 }'"
-
-      - name: Bump version for developmental release
-        if: "! steps.check-version.outputs.tag"
-        run: |
-          poetry version patch &&
-          version=$(poetry version | awk '{ print $2 }') &&
-          poetry version $version.dev.$(date +%s)
-
-      - name: Build package
-        run: |
-          poetry build --ansi
-
-      - name: Publish package on PyPI
-        if: steps.check-version.outputs.tag
-        uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-
-      - name: Publish package on TestPyPI
-        if: "! steps.check-version.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
-
-      - name: Publish the release notes
-        uses: release-drafter/release-drafter@v6.1.0
-        with:
-          publish: ${{ steps.check-version.outputs.tag != '' }}
-          tag: ${{ steps.check-version.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: distributions
+          path: dist/
