@@ -14,6 +14,11 @@ on:
   push:
     tags:
       - "v*"
+    # TEMPORARY: workflow_dispatch only works once this file is on the default
+    # branch, so this is the only way to prove the wheel build before it lands.
+    # Remove this branches: block before merging.
+    branches:
+      - build/scikit-build-core-uv
 
 permissions:
   contents: read
