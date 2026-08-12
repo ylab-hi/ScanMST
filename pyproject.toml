@@ -236,6 +236,8 @@ line-ending = "auto"
 "src/scanmst/base/parallel.py" = ["A003"]
 "src/scanmst/base/basic.py" = ["A003"]
 "src/scanmst/utils.py" = ["S603"]
+# Build/CI helper scripts are console tools; printing is their output.
+"scripts/*.py" = ["T201"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -301,3 +303,26 @@ version = ">=3.18"
 # treats the empty string as unset, producing the intended FATAL_ERROR.
 CONDA_PREFIX = { env = "CONDA_PREFIX", default = "" }
 HTSLIB_ROOT = { env = "HTSLIB_ROOT", default = "" }
+# cibuildwheel sets this to OFF so auditwheel owns the RPATH: an embedded
+# RPATH pointing at the build container's /usr/local/lib is meaningless on a
+# user's machine.
+SCANMST_EMBED_RPATH = { env = "SCANMST_EMBED_RPATH", default = "ON" }
+
+[tool.cibuildwheel]
+# Linux x86_64 only. macOS is excluded because pysam==0.19.0 ships no arm64
+# wheel, so Apple Silicon could never resolve the dependency chain, and
+# macos-latest runners are arm64.
+build = ["cp39-manylinux_x86_64", "cp310-manylinux_x86_64"]
+# glibc 2.28 (RHEL 8 / Ubuntu 20.04+). manylinux2014 would reach further back
+# but its CentOS 7 base is EOL and its package repos are unreliable.
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "bash scripts/build-htslib.sh"
+# Exercise the compiled extension, not just the import shim.
+test-command = 'python -c "from scanmst import cppext; r = cppext.parseCigar(\"10M5I20M\"); assert r.ref_match == 30, r.ref_match; print(\"cppext OK\")" && scanmst --version'
+
+[tool.cibuildwheel.environment]
+HTSLIB_ROOT = "/usr/local"
+SCANMST_EMBED_RPATH = "OFF"
+# auditwheel needs to locate libhts.so.3 to bundle it; with the RPATH off
+# there is nothing else pointing at the install prefix.
+LD_LIBRARY_PATH = "/usr/local/lib:/usr/local/lib64"

@@ -1,0 +1,74 @@
+name: Wheels
+
+# Builds the distributions that will eventually be published to PyPI.
+#
+# Nothing is uploaded anywhere here -- artifacts only. Publishing is added in
+# Step 3, once PyPI Trusted Publishing is configured. PyPI uploads are
+# permanent and a filename can never be reused, so wheels are proven first.
+#
+# Kept off push/pull_request deliberately: cibuildwheel rebuilds htslib from
+# source for every interpreter, which is far too slow for ordinary CI. tests.yml
+# already covers the plain build on every commit.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    name: manylinux wheels (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # htslib is built inside the manylinux container by
+      # scripts/build-htslib.sh via cibuildwheel's before-all; the runner
+      # itself needs nothing. See [tool.cibuildwheel] in pyproject.toml.
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.2.0
+
+      - name: Check wheel shape and bundled libraries
+        run: python scripts/check_wheel.py wheelhouse/*.whl
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-manylinux-x86_64
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  sdist:
+    name: sdist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Install htslib
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libhts-dev zlib1g-dev
+          echo "HTSLIB_ROOT=/usr" >> "$GITHUB_ENV"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.10
+
+      - name: Build sdist
+        run: uv build --sdist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
