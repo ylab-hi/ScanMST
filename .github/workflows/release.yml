@@ -12,9 +12,18 @@ name: Release
 #   Workflow name       : release.yml
 #   Environment name    : pypi
 #
+# workflow_dispatch takes a required confirm_version input rather than
+# relying on the ref: dispatch always runs against a branch (there is no tag
+# to read a version from), and the first real release is exactly this case --
+# tag v0.1.9 is the immutable manuscript-provenance anchor and predates this
+# workflow file entirely (it was pushed against the old poetry-based
+# release.yml, which has no workflow_dispatch trigger), so it can never be the
+# dispatch target. The first PyPI upload of 0.1.9 is therefore built from
+# main at its current state, not from that tag's commit.
+#
 # PyPI uploads are permanent and a filename can never be reused, so:
-#   * check-version gates the whole run on the tag matching pyproject.toml,
-#     before any build or publish step runs.
+#   * check-version gates the whole run on the confirmed version matching
+#     pyproject.toml, before any build or publish step runs.
 #   * the publish job has no checkout and does nothing but download the
 #     already-checked build artifacts and hand them to `uv publish` -- it is
 #     the only job with `id-token: write`, so its surface is kept minimal.
@@ -23,27 +32,38 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      confirm_version:
+        description: "Version to publish (must match pyproject.toml) -- there is no tag to check on a manual dispatch, so this is the confirmation"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   check-version:
-    name: Verify tag matches pyproject.toml version
+    name: Verify version matches pyproject.toml
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      - name: Compare tag to pyproject.toml
+      - name: Compare expected version to pyproject.toml
+        env:
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            EXPECTED_VERSION="${CONFIRM_VERSION}"
+          else
+            EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+          fi
           PROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
-          if [ "$TAG_VERSION" != "$PROJECT_VERSION" ]; then
-            echo "::error::tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match pyproject.toml version $PROJECT_VERSION"
+          if [ "$EXPECTED_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "::error::expected version $EXPECTED_VERSION does not match pyproject.toml version $PROJECT_VERSION"
             exit 1
           fi
-          echo "tag $GITHUB_REF_NAME matches pyproject.toml version $PROJECT_VERSION"
+          echo "confirmed: publishing version $PROJECT_VERSION"
 
   build:
     name: Build distributions
