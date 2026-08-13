@@ -1,19 +1,22 @@
 name: Wheels
 
-# Builds the distributions that will eventually be published to PyPI.
+# Builds the distributions that get published to PyPI.
 #
-# Nothing is uploaded anywhere here -- artifacts only. Publishing is added in
-# Step 3, once PyPI Trusted Publishing is configured. PyPI uploads are
-# permanent and a filename can never be reused, so wheels are proven first.
+# Nothing is uploaded to an index here -- artifacts only. release.yml calls
+# this workflow via `workflow_call` on `v*` tags and owns the publish step,
+# so the build has no access to the OIDC token (`id-token: write` lives only
+# on the publish job in release.yml).
+#
+# No longer triggers on tag push itself: release.yml does, and calls this
+# workflow, so a separate tag trigger here would build everything twice.
+# workflow_dispatch stays for ad-hoc manual builds (artifacts only, no publish).
 #
 # Kept off push/pull_request deliberately: cibuildwheel rebuilds htslib from
 # source for every interpreter, which is far too slow for ordinary CI. tests.yml
 # already covers the plain build on every commit.
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
+  workflow_call:
 
 permissions:
   contents: read
@@ -38,7 +41,7 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-manylinux-x86_64
+          name: dist-wheels-manylinux-x86_64
           path: wheelhouse/*.whl
           if-no-files-found: error
 
@@ -63,12 +66,22 @@ jobs:
       - name: Set up Python
         run: uv python install 3.10
 
-      - name: Build sdist
-        run: uv build --sdist
+      # `uv build` (not `--sdist`) also builds a wheel *from* the sdist, so a
+      # green run here proves the sdist is self-contained -- i.e. that
+      # sdist.include covers every CMake/C++ input. That is what bioconda
+      # (Step 4) will consume. Only the sdist is uploaded below: this wheel is
+      # tagged linux_x86_64 and links the runner's system libhts, so PyPI
+      # would reject it and it is not portable -- the publishable wheels come
+      # from the job above.
+      - name: Build sdist and verify it builds a wheel
+        run: uv build
+
+      - name: Check the sdist-derived wheel
+        run: python scripts/check_wheel.py --no-bundled-libs dist/*.whl
 
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
-          name: sdist
+          name: dist-sdist
           path: dist/*.tar.gz
           if-no-files-found: error

@@ -1,56 +1,74 @@
 name: Release
 
-# DISARMED pending Step 3 of the PyPI/bioconda migration.
+# Step 3 of the PyPI/bioconda migration: publishes to PyPI via Trusted
+# Publishing (OIDC) -- no stored token, no username/password. Triggers on
+# `v*` tags, same as wheels.yml used to.
 #
-# This previously ran on every push to a release* branch and drove
-# `poetry build` + pypa/gh-action-pypi-publish. Poetry is no longer the build
-# backend, and no PyPI credentials or Trusted Publishing are configured yet,
-# so an automatic trigger could only fail -- or, worse, publish an unverified
-# artifact. PyPI uploads are permanent and a filename can never be reused.
+# Requires a one-time manual action on PyPI (only the maintainer can do this):
+# add a pending publisher at https://pypi.org/manage/account/publishing/
+#   PyPI project name : scanmst
+#   Owner              : ylab-hi
+#   Repository name    : ScanMST
+#   Workflow name       : release.yml
+#   Environment name    : pypi
 #
-# Step 3 restores automatic release by adding PyPI Trusted Publishing (OIDC)
-# and `uv publish`, and by building manylinux/macOS wheels via cibuildwheel
-# (Step 2). Until then this is manual-only and builds artifacts without
-# uploading them anywhere.
+# PyPI uploads are permanent and a filename can never be reused, so:
+#   * check-version gates the whole run on the tag matching pyproject.toml,
+#     before any build or publish step runs.
+#   * the publish job has no checkout and does nothing but download the
+#     already-checked build artifacts and hand them to `uv publish` -- it is
+#     the only job with `id-token: write`, so its surface is kept minimal.
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build distributions (no publish)
+  check-version:
+    name: Verify tag matches pyproject.toml version
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Install htslib
+      - name: Compare tag to pyproject.toml
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libhts-dev zlib1g-dev
-          echo "HTSLIB_ROOT=/usr" >> "$GITHUB_ENV"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          if [ "$TAG_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match pyproject.toml version $PROJECT_VERSION"
+            exit 1
+          fi
+          echo "tag $GITHUB_REF_NAME matches pyproject.toml version $PROJECT_VERSION"
+
+  build:
+    name: Build distributions
+    needs: check-version
+    uses: ./.github/workflows/wheels.yml
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/scanmst/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download built distributions
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
 
-      - name: Set up Python
-        run: uv python install 3.10
-
-      - name: Build sdist and wheel
-        run: uv build
-
-      # NOTE: this wheel is tagged linux_x86_64 and links the system libhts.
-      # PyPI rejects such wheels, and they are not portable. Step 2 replaces
-      # this with cibuildwheel + auditwheel to produce manylinux wheels with
-      # htslib bundled.
-      - name: Upload distributions as build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: distributions
-          path: dist/
+      - name: Publish to PyPI
+        run: uv publish dist/*
