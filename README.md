@@ -1,4 +1,4 @@
-# <img src="./images/logo.png" alt="ScanMST logo" height="100"/> [![social](https://img.shields.io/github/stars/ylab-hi/ScanMST?style=social)](https://github.com/ylab-hi/ScanMST/stargazers)
+# <img src="https://raw.githubusercontent.com/ylab-hi/ScanMST/main/images/logo.png" alt="ScanMST logo" height="100"/> [![social](https://img.shields.io/github/stars/ylab-hi/ScanMST?style=social)](https://github.com/ylab-hi/ScanMST/stargazers)
 
 [![pypi](https://img.shields.io/pypi/v/scanmst.svg?style=for-the-badge)][pypi]
 ![conda](https://img.shields.io/conda/vn/bioconda/scanmst?style=for-the-badge)
@@ -12,7 +12,7 @@ ScanMST is a powerful tool for detecting Multi-segment transcripts (MSTs) with l
 It is able to detect and classify the multi-segment transcripts with the following four forms of transcript segment links: ICRL, ICTL, ITPL, and ITTL (see the figure below).
 
 <div align="center">
-<img src="./images/segment_links.png" alt="Modeling segment connectivity" width="60%">
+<img src="https://raw.githubusercontent.com/ylab-hi/ScanMST/main/images/segment_links.png" alt="Modeling segment connectivity" width="60%">
 </div>
 
 ## Prerequisite
