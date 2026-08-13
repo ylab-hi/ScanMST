@@ -1,78 +1,74 @@
 name: Release
 
+# Step 3 of the PyPI/bioconda migration: publishes to PyPI via Trusted
+# Publishing (OIDC) -- no stored token, no username/password. Triggers on
+# `v*` tags, same as wheels.yml used to.
+#
+# Requires a one-time manual action on PyPI (only the maintainer can do this):
+# add a pending publisher at https://pypi.org/manage/account/publishing/
+#   PyPI project name : scanmst
+#   Owner              : ylab-hi
+#   Repository name    : ScanMST
+#   Workflow name       : release.yml
+#   Environment name    : pypi
+#
+# PyPI uploads are permanent and a filename can never be reused, so:
+#   * check-version gates the whole run on the tag matching pyproject.toml,
+#     before any build or publish step runs.
+#   * the publish job has no checkout and does nothing but download the
+#     already-checked build artifacts and hand them to `uv publish` -- it is
+#     the only job with `id-token: write`, so its surface is kept minimal.
 on:
   push:
-    branches:
-      - release*
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  release:
-    name: Release
+  check-version:
+    name: Verify tag matches pyproject.toml version
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Set up Python
-        uses: actions/setup-python@v5.6.0
-        with:
-          python-version: "3.9"
-
-      - name: Upgrade pip
+      - name: Compare tag to pyproject.toml
         run: |
-          pip install --constraint=.github/workflows/constraints.txt pip
-          pip --version
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PROJECT_VERSION=$(grep -m1 '^version = ' pyproject.toml | sed -E 's/version = "(.*)"/\1/')
+          if [ "$TAG_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match pyproject.toml version $PROJECT_VERSION"
+            exit 1
+          fi
+          echo "tag $GITHUB_REF_NAME matches pyproject.toml version $PROJECT_VERSION"
 
-      - name: Install Poetry
-        run: |
-          pip install --constraint=.github/workflows/constraints.txt poetry
-          poetry --version
+  build:
+    name: Build distributions
+    needs: check-version
+    uses: ./.github/workflows/wheels.yml
 
-      - name: Check if there is a parent commit
-        id: check-parent-commit
-        run: |
-          echo "::set-output name=sha::$(git rev-parse --verify --quiet HEAD^)"
-
-      - name: Detect and tag new version
-        id: check-version
-        if: steps.check-parent-commit.outputs.sha
-        uses: salsify/action-detect-and-tag-new-version@v2.0.3
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/scanmst/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download built distributions
+        uses: actions/download-artifact@v4
         with:
-          version-command: |
-            bash -o pipefail -c "poetry version | awk '{ print \$2 }'"
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
 
-      - name: Bump version for developmental release
-        if: "! steps.check-version.outputs.tag"
-        run: |
-          poetry version patch &&
-          version=$(poetry version | awk '{ print $2 }') &&
-          poetry version $version.dev.$(date +%s)
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
-      - name: Build package
-        run: |
-          poetry build --ansi
-
-      - name: Publish package on PyPI
-        if: steps.check-version.outputs.tag
-        uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
-
-      - name: Publish package on TestPyPI
-        if: "! steps.check-version.outputs.tag"
-        uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_TOKEN }}
-          repository_url: https://test.pypi.org/legacy/
-
-      - name: Publish the release notes
-        uses: release-drafter/release-drafter@v6.1.0
-        with:
-          publish: ${{ steps.check-version.outputs.tag != '' }}
-          tag: ${{ steps.check-version.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to PyPI
+        run: uv publish dist/*

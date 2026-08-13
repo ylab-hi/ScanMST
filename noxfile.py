@@ -6,30 +6,21 @@ from pathlib import Path
 from textwrap import dedent
 
 import nox
-
-try:
-    from nox_poetry import Session, session
-except ImportError:
-    message = f"""\
-    Nox failed to import the 'nox-poetry' package.
-
-    Please install it using the following command:
-
-    {sys.executable} -m pip install nox-poetry"""
-    raise SystemExit(dedent(message)) from ImportError
+from nox import Session
 
 package = "scanmst"
-python_versions = ["3.9", "3.10", "3.11", "3.12"]
-nox.needs_version = ">= 2021.6.6"
+# Capped at 3.10 by the pysam==0.19.0 pin (no cp311/cp312 wheels), matching
+# requires-python in pyproject.toml.
+python_versions = ["3.9", "3.10"]
+nox.needs_version = ">= 2024.3.2"
+# uv provides the virtualenvs; fall back to virtualenv where uv is unavailable.
+nox.options.default_venv_backend = "uv|virtualenv"
 nox.options.sessions = (
     "pre-commit",
     "safety",
     "mypy",
     "tests",
     "typeguard",
-    "refurb",
-    # "xdoctest",
-    # "docs-build",
 )
 
 
@@ -83,40 +74,44 @@ def activate_virtualenv_in_precommit_hooks(session: Session) -> None:
         hook.write_text("\n".join(lines))
 
 
-@session(name="pre-commit", python=python_versions)
+@nox.session(name="pre-commit", python=python_versions)
 def precommit(session: Session) -> None:
     """Lint using pre-commit."""
     args = session.posargs or ["run", "--all-files", "--show-diff-on-failure"]
-    session.install(
-        "black",
-        "darglint",
-        "flake8",
-        "flake8-bugbear",
-        "flake8-docstrings",
-        "flake8-rst-docstrings",
-        "pep8-naming",
-        "pre-commit",
-        "pre-commit-hooks",
-        "reorder-python-imports",
-    )
+    # .pre-commit-config.yaml pins its own hook environments, so only
+    # pre-commit itself is needed here.
+    session.install("pre-commit", "pre-commit-hooks")
     session.run("pre-commit", *args)
     if args and args[0] == "install":
         activate_virtualenv_in_precommit_hooks(session)
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def safety(session: Session) -> None:
     """Scan dependencies for insecure packages."""
-    requirements = session.poetry.export_requirements()
+    requirements = Path(session.create_tmp()) / "requirements.txt"
+    # Replaces nox-poetry's session.poetry.export_requirements().
+    session.run(
+        "uv",
+        "export",
+        "--format",
+        "requirements-txt",
+        "--no-emit-project",
+        "--no-hashes",
+        "-o",
+        str(requirements),
+        external=True,
+    )
     session.install("safety")
     session.run("safety", "check", "--full-report", f"--file={requirements}")
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def mypy(session: Session) -> None:
     """Type-check using mypy."""
-    args = session.posargs or ["src", "tests", "docs/conf.py"]
-    session.install("pybind11")
+    # docs/conf.py was removed from this list: the docs are mkdocs, not sphinx,
+    # and that file has never existed in this repo.
+    args = session.posargs or ["src", "tests"]
     session.install(".")
     session.install("mypy", "pytest")
     session.run("mypy", *args)
@@ -124,10 +119,9 @@ def mypy(session: Session) -> None:
         session.run("mypy", f"--python-executable={sys.executable}", "noxfile.py")
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def tests(session: Session) -> None:
     """Run the test suite."""
-    session.install("pybind11")
     session.install(".")
     session.install("coverage[toml]", "pytest", "pygments", "pytest-mock")
     try:
@@ -137,7 +131,7 @@ def tests(session: Session) -> None:
             session.notify("coverage", posargs=[])
 
 
-@session
+@nox.session
 def coverage(session: Session) -> None:
     """Produce the coverage report."""
     args = session.posargs or ["report", "-i"]
@@ -150,59 +144,67 @@ def coverage(session: Session) -> None:
     session.run("coverage", *args)
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def typeguard(session: Session) -> None:
     """Runtime type checking using Typeguard."""
-    session.install("pybind11")
     session.install(".")
     session.install("pytest", "typeguard", "pygments", "pytest-mock")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 
 
-@session(python="3.10")
+@nox.session(python="3.10")
 def refurb(session: Session) -> None:
-    """Runtime type checking using Typeguard."""
-    args = session.posargs or ["src", "tests", "docs/conf.py"]
-    session.install("pybind11", "setuptools")
+    """Refactoring suggestions using refurb."""
+    # Previously this passed `args` to session.install instead of session.run,
+    # so refurb never actually ran.
+    args = session.posargs or ["src", "tests"]
     session.install(".")
-    session.install("refurb", *args)
+    session.install("refurb")
+    session.run("refurb", *args)
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def xdoctest(session: Session) -> None:
     """Run examples with xdoctest."""
     args = session.posargs or ["all"]
-    session.install("pybind11")
     session.install(".")
     session.install("xdoctest[colors]")
     session.run("python", "-m", "xdoctest", package, *args)
 
 
-@session(name="docs-build", python=python_versions)
+@nox.session(name="docs-build", python=python_versions)
 def docs_build(session: Session) -> None:
     """Build the documentation."""
-    args = session.posargs or ["docs", "docs/_build"]
-    session.install("pybind11")
+    args = session.posargs or ["build", "--strict"]
     session.install(".")
-    session.install("sphinx", "sphinx-click", "sphinx-rtd-theme")
+    session.install(
+        "mkdocs",
+        "mkdocs-material",
+        "mkdocs-minify-plugin",
+        "mkdocs-git-revision-date-localized-plugin",
+        "mkdocstrings[python]",
+        "pymdown-extensions",
+    )
 
-    build_dir = Path("docs", "_build")
+    build_dir = Path("site")
     if build_dir.exists():
         shutil.rmtree(build_dir)
 
-    session.run("sphinx-build", *args)
+    session.run("mkdocs", *args)
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
-    args = session.posargs or ["--open-browser", "docs", "docs/_build"]
-    session.install("pybind11")
+    args = session.posargs or ["serve"]
     session.install(".")
-    session.install("sphinx", "sphinx-autobuild", "sphinx-click", "sphinx-rtd-theme")
+    session.install(
+        "mkdocs",
+        "mkdocs-material",
+        "mkdocs-minify-plugin",
+        "mkdocs-git-revision-date-localized-plugin",
+        "mkdocstrings[python]",
+        "pymdown-extensions",
+    )
 
-    build_dir = Path("docs", "_build")
-    if build_dir.exists():
-        shutil.rmtree(build_dir)
-
-    session.run("sphinx-autobuild", *args)
+    session.run("mkdocs", *args)

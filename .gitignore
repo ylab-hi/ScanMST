@@ -20,7 +20,9 @@ blat/linux/
 blat/darwin/
 __pycache__/
 poetry.lock
-*.lock
+# NOTE: no `*.lock` catch-all -- uv.lock is committed on purpose.
+.venv/
+venv/
 
 # editor
 profile/
@@ -53,4 +55,5 @@ site/
 
 .omc/
 .claude/
+.serena/
 CLAUDE.md

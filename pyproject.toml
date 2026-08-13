@@ -1,91 +1,110 @@
-[tool.poetry]
+[project]
 name = "scanmst"
 version = "0.1.9"
 description = "A multi-segment transcript caller for long-read transcriptome sequencing data"
-authors = ["Ting-You Wang <tywang@northwestern.edu>", "Yangyang Li <yangyang.li@northwestern.edu>"]
-license = "GPL"
 readme = "README.md"
-homepage = "https://github.com/ylab-hi/ScanMST"
-repository = "https://github.com/ylab-hi/ScanMST"
-documentation = "https://ylab-hi.github.io/ScanMST/"
-classifiers = ["Development Status :: 5 - Production/Stable",
-               "Programming Language :: Python :: 3.9",
-               "Programming Language :: Python :: 3.10",
-               "Programming Language :: Python :: 3.11",
-               "Programming Language :: Python :: 3.12"]
-exclude = ["src/scanmst/cppext/cmake-*"]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Ting-You Wang", email = "tywang@northwestern.edu" },
+    { name = "Yangyang Li", email = "yangyang.li@northwestern.edu" },
+]
+# Upper bound is set by pysam==0.19.0, which ships no wheels above cp310.
+# Raising it requires bumping the pysam pin -- see the dependency note below.
+requires-python = ">=3.9,<3.11"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    # No "License ::" classifier: PEP 639 SPDX expression is used instead,
+    # and the two are mutually exclusive.
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+    "biopython>=1.81,<2",
+    # pysam and HTSeq are pinned exactly: these are the versions the published
+    # v0.1.9 results were produced with. pysam==0.19.0 also caps requires-python
+    # at <3.11 (no cp311/cp312 wheels).
+    "pysam==0.19.0",
+    # In recent versions of HTSeq, a bug affecting the GenomicArrayOfSets
+    "HTSeq==2.0.5",
+    "pyfaidx>=0.8.1,<0.9",
+    "psutil>=7.0.0,<8",
+    "loguru>=0.7.0,<0.8",
+    "rich>=14.0.0,<15",
+    "networkx>=3.2,<4",
+    "pyabpoa>=1.5.3,<2",
+    "alignparse>=0.7.1,<0.8",
+    "matplotlib>=3.9,<4",
+    "intervaltree>=3.1.0,<4",
+    "numpy==1.26.4",
+    "joblib>=1.5.0,<2",
+    # Both were previously undeclared and arrived only transitively:
+    #   src/scanmst/base/helper.py imports yaml
+    #   src/scanmst/blat/__init__.py imports requests
+    "pyyaml>=6,<7",
+    "requests>=2.31,<3",
+]
 
-[tool.poetry.urls]
-Changelog = "https://github.com/ylab-hi/ScanMST/releases"
+[project.optional-dependencies]
+# matplotlib is a mandatory dependency, so it is not repeated here.
+vis = ["pyvis>=0.3.2,<0.4"]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-biopython = "^1.81"
-pysam = "0.19.0"
-HTSeq = "2.0.5"                                 # In recent versions of HTSeq, a bug affecting the GenomicArrayOfSets
-pyfaidx = "^0.8.1"
-psutil = "^7.0.0"
-loguru = "^0.7.0"
-rich = "^14.0.0"
-networkx = "^3.2"
-pybind11 = "^3.0.0"
-pyabpoa = "^1.5.3"
-alignparse = "^0.7.1"
-matplotlib = { version = "^3.9" }
-pyvis = { version = "^0.3.2", optional = true }
-intervaltree = "^3.1.0"
-numpy = "1.26.4"
-joblib = "^1.5.0"
-
-[tool.poetry.extras]
-vis = ["matplotlib", "pyvis"]
-
-[tool.poetry.build]
-script = "build.py"
-generate-setup-file = true
-
-[tool.poetry.scripts]
+[project.scripts]
 scanmst = "scanmst.__main__:main"
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.12.1"
-codespell = "^2.2.2"
-ipdb = "^0.13.11"
-isort = "^6.0.0"
-pytest = "^8.2.2"
-coverage = { extras = ["toml"], version = "^7.6" }
-safety = "^3.2.10"
-mypy = "^1.10"
-typeguard = "^4.3.0"
-xdoctest = { extras = ["colors"], version = "^1.1.3" }
-sphinx = "^7.4.7"
-sphinx-autobuild = "^2024.10.3"
-pre-commit = "^4.0.1"
-flake8 = "^7.2.0"
-black = "^25.1"
-bandit = "^1.7.3"
-flake8-bandit = ">=4.1"
-flake8-bugbear = "^24.2.6"
-flake8-docstrings = "^1.6.0"
-flake8-rst-docstrings = "^0.3.0"
-pep8-naming = "^0.15.0"
-reorder-python-imports = "^3.13.0"
-pre-commit-hooks = "^5.0.0"
-sphinx-rtd-theme = "^3.0.2"
-sphinx-click = "^6.0.0"
-Pygments = "^2.17.2"
-pytest-mock = "^3.14.0"
-nox = "^2025.2.9"
-flake8-broken-line = "^1.0.0"
-flake8-comprehensions = "^3.13.0"
-flake8-eradicate = "^1.5.0"
-flake8-simplify = "^0.22.0"
-pynvim = "^0.5.0"
-flake8-2020 = "^1.8.1"
-flake8-alfred = "^1.1.1"
-cohesion = "^1.0.0"
-tqdm = "^4.67.1"
-wily = "^1.24.2"
+[project.urls]
+Homepage = "https://github.com/ylab-hi/ScanMST"
+Repository = "https://github.com/ylab-hi/ScanMST"
+Documentation = "https://ylab-hi.github.io/ScanMST/"
+Changelog = "https://github.com/ylab-hi/ScanMST/releases"
+Issues = "https://github.com/ylab-hi/ScanMST/issues"
+
+[dependency-groups]
+test = [
+    "pytest>=8.2.2",
+    "pytest-mock>=3.14.0",
+    "coverage[toml]>=7.6",
+    "pygments>=2.17.2",
+    "typeguard>=4.3.0",
+    "xdoctest[colors]>=1.1.3",
+]
+lint = [
+    "ruff>=0.12.1",
+    "codespell>=2.2.2",
+    "bandit>=1.7.3",
+    "pre-commit>=4.0.1",
+    "pre-commit-hooks>=5.0.0",
+]
+typing = ["mypy>=1.10"]
+security = ["safety>=3.2.10"]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-minify-plugin>=0.8",
+    "mkdocs-git-revision-date-localized-plugin>=1.2",
+    "mkdocstrings[python]>=0.26",
+    "pymdown-extensions>=10",
+]
+build = [
+    "scikit-build-core>=0.10",
+    "pybind11>=2.12,<4",
+    "cmake>=3.18",
+    "ninja>=1.11",
+    "pybind11-stubgen>=2.5",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+    { include-group = "typing" },
+    { include-group = "build" },
+    "nox>=2025.2.9",
+    "commitizen>=4.2",
+    "ipdb>=0.13.11",
+    "pynvim>=0.5.0",
+    "tqdm>=4.67.1",
+]
 
 
 [tool.mypy]
@@ -217,14 +236,93 @@ line-ending = "auto"
 "src/scanmst/base/parallel.py" = ["A003"]
 "src/scanmst/base/basic.py" = ["A003"]
 "src/scanmst/utils.py" = ["S603"]
+# Build/CI helper scripts are console tools; printing is their output.
+"scripts/*.py" = ["T201"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-tag_format = "$version"
+# Every real tag is v0.1.0 .. v0.1.9, so the previous "$version" never matched.
+tag_format = "v$version"
 version_scheme = "pep440"
-version_provider = "poetry"
+version_provider = "pep621"
 major_version_zero = true
 
 [build-system]
-requires = ["pybind11>2.9.1", "poetry-core>=1.6.0", "setuptools>=68.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12,<4"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/scanmst"]
+
+# Defence in depth. These all live inside src/scanmst/ and are .gitignore'd,
+# but do not rely on scikit-build-core's gitignore-awareness alone: the old
+# poetry build shipped scanmst/blat/{linux,darwin}/* (12 UCSC BLAT binaries,
+# downloaded at runtime) into the wheel for exactly this reason.
+wheel.exclude = [
+    "scanmst/blat/linux/**",
+    "scanmst/blat/darwin/**",
+    "**/__pycache__/**",
+    "**/.omc/**",
+    "scanmst/cppext/src/main.cpp",
+]
+
+# Scoped to source extensions rather than `**`: a bare `**` force-includes
+# everything under the directory, overriding sdist.exclude and sweeping in
+# untracked scratch dirs.
+sdist.include = [
+    "CMakeLists.txt",
+    "src/scanmst/cppext/src/*.c",
+    "src/scanmst/cppext/src/*.cpp",
+    "src/scanmst/cppext/include/*.h",
+    "src/scanmst/cppext/include/*.hpp",
+    "src/scanmst/cppext/bindings/*.c",
+    "src/scanmst/cppext/bindings/*.cpp",
+]
+sdist.exclude = [
+    "build/",
+    "site/",
+    "data/",
+    "dependency/",
+    "tmp/",
+    ".serena/",
+    ".ruff_cache/",
+    # Must be depth-agnostic: sdist.include force-includes everything under
+    # src/scanmst/cppext/**, which otherwise sweeps in nested scratch dirs.
+    "**/.omc/**",
+    "**/__pycache__/**",
+]
+
+[tool.scikit-build.cmake]
+version = ">=3.18"
+
+[tool.scikit-build.cmake.define]
+# `default = ""` is required: without it scikit-build-core errors out when the
+# variable is unset. With it, CMake receives -DCONDA_PREFIX="" and CMakeLists
+# treats the empty string as unset, producing the intended FATAL_ERROR.
+CONDA_PREFIX = { env = "CONDA_PREFIX", default = "" }
+HTSLIB_ROOT = { env = "HTSLIB_ROOT", default = "" }
+# cibuildwheel sets this to OFF so auditwheel owns the RPATH: an embedded
+# RPATH pointing at the build container's /usr/local/lib is meaningless on a
+# user's machine.
+SCANMST_EMBED_RPATH = { env = "SCANMST_EMBED_RPATH", default = "ON" }
+
+[tool.cibuildwheel]
+# Linux x86_64 only. macOS is excluded because pysam==0.19.0 ships no arm64
+# wheel, so Apple Silicon could never resolve the dependency chain, and
+# macos-latest runners are arm64.
+build = ["cp39-manylinux_x86_64", "cp310-manylinux_x86_64"]
+# glibc 2.28 (RHEL 8 / Ubuntu 20.04+). manylinux2014 would reach further back
+# but its CentOS 7 base is EOL and its package repos are unreliable.
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "bash scripts/build-htslib.sh"
+# Exercise the compiled extension, not just the import shim.
+test-command = 'python -c "from scanmst import cppext; r = cppext.parseCigar(\"10M5I20M\"); assert r.ref_match == 30, r.ref_match; print(\"cppext OK\")" && scanmst --version'
+
+[tool.cibuildwheel.environment]
+HTSLIB_ROOT = "/usr/local"
+SCANMST_EMBED_RPATH = "OFF"
+# auditwheel needs to locate libhts.so.3 to bundle it; with the RPATH off
+# there is nothing else pointing at the install prefix.
+LD_LIBRARY_PATH = "/usr/local/lib:/usr/local/lib64"
