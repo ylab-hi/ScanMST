@@ -1,6 +1,6 @@
 # <img src="https://raw.githubusercontent.com/ylab-hi/ScanMST/main/images/logo.png" alt="ScanMST logo" height="100"/> [![social](https://img.shields.io/github/stars/ylab-hi/ScanMST?style=social)](https://github.com/ylab-hi/ScanMST/stargazers)
 
-[![pypi](https://img.shields.io/pypi/v/scanmst.svg?style=for-the-badge)][pypi]
+[![pypi](https://img.shields.io/pypi/v/scanmst.svg?style=for-the-badge)](https://pypi.org/project/scanmst/)
 ![conda](https://img.shields.io/conda/vn/bioconda/scanmst?style=for-the-badge)
 <!-- [![publication](https://img.shields.io/badge/published%20in-Nature-green.svg?style=for-the-badge)][paper]
 [paper]: https://www.nature.com/articles/d41586-023-03067-6
@@ -139,7 +139,7 @@ If you experience any problems or have suggestions, please create an issue or a 
 
 ## Credits
 
-[pypi]: https://pypi.org/
+
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
 [file an issue]: https://github.com/ylab-hi/ScanMST/issues
 [pip]: https://pip.pypa.io/
