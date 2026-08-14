@@ -44,6 +44,8 @@ pip install scanmst
 conda install scanmst
 ```
 
+> **Note:** The Bioconda package is not yet available and is currently under review ([bioconda-recipes](https://github.com/bioconda/bioconda-recipes)). Please use the PyPI installation method until it is merged.
+
 Congratulations! You've successfully installed `ScanMST` on your local machine.
 If you have some issues, please check the [document](https://ylab-hi.github.io/ScanMST/) first before opening an issue.
 
@@ -111,10 +113,6 @@ options:
 ```
 
 Please refer to the [document](https://ylab-hi.github.io/ScanMST/) for details and more examples.
-
-## 📎 **Citation**
-
-Feel free to read and cite our paper in [BioRvix](https://www.biorxiv.org/).
 
 ## Contributing
 
