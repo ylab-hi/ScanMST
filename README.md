@@ -1,7 +1,7 @@
 # <img src="https://raw.githubusercontent.com/ylab-hi/ScanMST/main/images/logo.png" alt="ScanMST logo" height="100"/> [![social](https://img.shields.io/github/stars/ylab-hi/ScanMST?style=social)](https://github.com/ylab-hi/ScanMST/stargazers)
 
 [![pypi](https://img.shields.io/pypi/v/scanmst.svg?style=for-the-badge)](https://pypi.org/project/scanmst/)
-![conda](https://img.shields.io/conda/vn/bioconda/scanmst?style=for-the-badge)
+[![conda](https://img.shields.io/conda/vn/bioconda/scanmst?style=for-the-badge)](https://anaconda.org/channels/bioconda/packages/scanmst/overview)
 <!-- [![publication](https://img.shields.io/badge/published%20in-Nature-green.svg?style=for-the-badge)][paper]
 [paper]: https://www.nature.com/articles/d41586-023-03067-6
 -->
@@ -15,12 +15,6 @@ It is able to detect and classify the multi-segment transcripts with the followi
 <img src="https://raw.githubusercontent.com/ylab-hi/ScanMST/main/images/segment_links.png" alt="Modeling segment connectivity" width="60%">
 </div>
 
-## Prerequisite
-`htslib` is required to run ScanMST. Please install it in the environment.
-
-```bash
-   conda install -c bioconda htslib
-```
 
 ## 🧬 BLAT Aligner (Automatic Setup)
 ScanMST utilizes BLAT (BLAST-like alignment tool) for auxiliary alignments.
@@ -43,8 +37,6 @@ pip install scanmst
 ```bash
 conda install scanmst
 ```
-
-> **Note:** The Bioconda package is not yet available and is currently under review ([bioconda-recipes](https://github.com/bioconda/bioconda-recipes)). Please use the PyPI installation method until it is merged.
 
 Congratulations! You've successfully installed `ScanMST` on your local machine.
 If you have some issues, please check the [document](https://ylab-hi.github.io/ScanMST/) first before opening an issue.
