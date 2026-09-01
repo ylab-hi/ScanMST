@@ -39,7 +39,7 @@ jobs:
         run: python scripts/check_wheel.py wheelhouse/*.whl
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-wheels-manylinux-x86_64
           path: wheelhouse/*.whl
@@ -80,7 +80,7 @@ jobs:
         run: python scripts/check_wheel.py --no-bundled-libs dist/*.whl
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-sdist
           path: dist/*.tar.gz
