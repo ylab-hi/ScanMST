@@ -9,7 +9,7 @@ authors = [
     { name = "Ting-You Wang", email = "tywang@northwestern.edu" },
     { name = "Yangyang Li", email = "yangyang.li@northwestern.edu" },
 ]
-# Upper bound is set by pysam==0.19.0, which ships no wheels above cp310.
+# Upper bound is set by pysam==0.24.0, which ships no wheels above cp310.
 # Raising it requires bumping the pysam pin -- see the dependency note below.
 requires-python = ">=3.9,<3.11"
 classifiers = [
@@ -24,9 +24,9 @@ classifiers = [
 dependencies = [
     "biopython>=1.81,<2",
     # pysam and HTSeq are pinned exactly: these are the versions the published
-    # v0.1.9 results were produced with. pysam==0.19.0 also caps requires-python
+    # v0.1.9 results were produced with. pysam==0.24.0 also caps requires-python
     # at <3.11 (no cp311/cp312 wheels).
-    "pysam==0.19.0",
+    "pysam==0.24.0",
     # In recent versions of HTSeq, a bug affecting the GenomicArrayOfSets
     "HTSeq==2.0.5",
     "pyfaidx>=0.8.1,<0.9",
@@ -309,7 +309,7 @@ HTSLIB_ROOT = { env = "HTSLIB_ROOT", default = "" }
 SCANMST_EMBED_RPATH = { env = "SCANMST_EMBED_RPATH", default = "ON" }
 
 [tool.cibuildwheel]
-# Linux x86_64 only. macOS is excluded because pysam==0.19.0 ships no arm64
+# Linux x86_64 only. macOS is excluded because pysam==0.24.0 ships no arm64
 # wheel, so Apple Silicon could never resolve the dependency chain, and
 # macos-latest runners are arm64.
 build = ["cp39-manylinux_x86_64", "cp310-manylinux_x86_64"]
