@@ -88,7 +88,7 @@ def precommit(session: Session) -> None:
 
 @nox.session(python=python_versions)
 def safety(session: Session) -> None:
-    """Scan dependencies for insecure packages."""
+    """Scan dependencies for known vulnerabilities."""
     requirements = Path(session.create_tmp()) / "requirements.txt"
     # Replaces nox-poetry's session.poetry.export_requirements().
     session.run(
@@ -102,8 +102,21 @@ def safety(session: Session) -> None:
         str(requirements),
         external=True,
     )
-    session.install("safety")
-    session.run("safety", "check", "--full-report", f"--file={requirements}")
+    # `safety check` was deprecated in June 2024 and now exits 64 regardless of
+    # findings; `safety scan` requires an account and a SAFETY_API_KEY secret.
+    # pip-audit needs neither and reads the same requirements file.
+    session.install("pip-audit")
+    # --no-deps/--disable-pip: `uv export` already emits a fully pinned, resolved
+    # set, so there is nothing to re-resolve. Without them pip-audit shells out to
+    # pip and tries to build every sdist (pysam among them) just to rediscover
+    # dependencies it already has.
+    session.run(
+        "pip-audit",
+        "--no-deps",
+        "--disable-pip",
+        "--requirement",
+        str(requirements),
+    )
 
 
 @nox.session(python=python_versions)

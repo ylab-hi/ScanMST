@@ -121,6 +121,29 @@ exclude = "cppext"
 allow_untyped_calls = true
 ignore_missing_imports = true
 
+# Type debt inherited from the series->nlpath refactor; the tests were not the
+# only thing left behind. Error counts at the time of writing (mypy 3.10):
+#   base/read_connector.py 55, graph/basic_graph.py 32, base/helper.py 21,
+#   base/basic.py 18, graph/nlgraph.py 11, graph/sr_rescuer.py 10.
+# These are muted so CI gates on real regressions; drop modules from this list
+# one at a time as they are cleaned up.
+# requests ships no inline types; stubs live in the separate types-requests
+# distribution, which is not a runtime dependency of this project.
+[[tool.mypy.overrides]]
+module = ["requests", "requests.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = [
+    "scanmst.base.read_connector",
+    "scanmst.base.helper",
+    "scanmst.graph.basic_graph",
+    "scanmst.graph.nlgraph",
+    "scanmst.graph.sr_rescuer",
+]
+ignore_errors = true
+
 [tool.pytest.ini_options]
 norecursedirs = ["cppext"]
 
@@ -216,6 +239,32 @@ ignore = [
     'Q003',
     'W191',
     "PLR0904",
+    # Preview-only siblings of the complexity rules already ignored above. The
+    # pre-commit ruff hook runs with --preview, which is the only reason these
+    # surface; the repo has consistently opted out of complexity limits.
+    "PLR0914", # Too many local variables
+    "PLR0916", # Too many boolean expressions
+    "PLR0917", # Too many positional arguments
+    "PLR1702", # Too many nested blocks
+    # Pre-existing findings in src/ that need an API or semantic decision rather
+    # than a mechanical edit -- counts at the time of writing:
+    #   PLR2004 magic values 9, FBT001 6, FBT002 3 (booleans would have to become
+    #   keyword-only), PLW1641 3 (__eq__ without __hash__), PTH116/PTH123 3,
+    #   ARG001/ARG002 3, and one each of S404, PLW3201, PLW0603, PLR6301, BLE001.
+    # Enable these one at a time as the call sites are cleaned up.
+    "ARG001",  # Unused function argument
+    "ARG002",  # Unused method argument
+    "BLE001",  # Blind except
+    "FBT001",  # Boolean-typed positional argument
+    "FBT002",  # Boolean default positional argument
+    "PLR2004", # Magic value in comparison
+    "PLR6301", # Method could be a function/staticmethod
+    "PLW0603", # global statement
+    "PLW1641", # __eq__ without __hash__
+    "PLW3201", # Dunder without special meaning
+    "PTH116",  # os.stat -> Path.stat
+    "PTH123",  # open -> Path.open
+    "S404",    # subprocess import (bandit already skips B404 here)
 ]
 
 

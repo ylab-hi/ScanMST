@@ -10,6 +10,10 @@ repos:
       - id: check-toml
         types: [toml]
       - id: check-yaml
+        # mkdocs.yml uses Material's !!python/ tags (pymdownx.slugs.slugify,
+        # superfences fence_code_format). --unsafe checks syntax without trying
+        # to resolve custom constructors.
+        args: ["--unsafe"]
       - id: end-of-file-fixer
       - id: trailing-whitespace
 
