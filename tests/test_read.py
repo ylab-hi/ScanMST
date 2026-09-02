@@ -79,9 +79,18 @@ class TestRead:
 def reads_connector(reads, fake_blat, fake_logger):
     """Create a ReadsConnector object.
 
-    reads from conftest.py
+    reads from conftest.py. mapq_cutoff, genome_fasta and
+    rt_switching_filter_len became required arguments; none of the paths
+    exercised here touch the reference, so it is left unset.
     """
-    return ReadsConnector(reads, fake_blat, fake_logger)
+    return ReadsConnector(
+        reads,
+        fake_blat,
+        fake_logger,
+        mapq_cutoff=0,
+        genome_fasta=None,
+        rt_switching_filter_len=10,
+    )
 
 
 class TestReadsConnector:
@@ -104,13 +113,13 @@ class TestReadsConnector:
         assert reads_connector._get_mode((1, 2, 1)) == 1
         assert reads_connector._get_mode((3, 1, 1)) == 2
 
-    def test_init_mode_judge(self, reads_connector):
-        """Test the init_mode_judge function."""
+    def test_init_read_mode(self, reads_connector):
+        """Test the init_read_mode function."""
         read1, read2 = reads_connector.aln_list
         read1.mode = read2.mode = -1
         read1.adhocsms = read1.sms
         read2.adhocsms = read2.sms
-        reads_connector.init_mode_judge(read1, read2)
+        reads_connector.init_read_mode(read1, read2)
         assert read1.mode == 2
         assert read2.mode == 1
 
@@ -203,7 +212,7 @@ class TestReadsConnector:
         read1, read2 = reads_connector.aln_list
         read1.adhocsms = read1.sms
         read2.adhocsms = read2.sms
-        reads_connector.init_mode_judge(read1, read2)
+        reads_connector.init_read_mode(read1, read2)
         assert read1.mode == 2
         assert read2.mode == 1
         read1.mode = 1
@@ -218,7 +227,7 @@ class TestReadsConnector:
         read1, _ = reads_connector.aln_list
         read1.mode = 2
         fake_hsp = FakeHsp(query_start=1, query_end=3, query_seq="ATC")
-        reads_connector.blat.psl2sam_return = ("chr1", 1, "+", "2S1M1S", 2)
+        reads_connector.aligner.psl2sam_return = ("chr1", 1, "+", "2S1M1S", 2)
 
         new_read = reads_connector._double_check_create_new_read_calculate_sms(
             fake_hsp,
@@ -248,7 +257,7 @@ class TestReadsConnector:
         read1, read2 = reads_connector.aln_list
         read1.mode = 2
         fake_hsp = FakeHsp(query_start=1, query_end=3, query_seq="ATC")
-        reads_connector.blat.query_insertion_return = (1, [fake_hsp])
+        reads_connector.aligner.query_insertion_return = (1, [fake_hsp])
         reads_connector.align_len_threshold = align_len_threshold
         reads_connector.threshold_identity = threshold_identity
         reads_connector.top = top

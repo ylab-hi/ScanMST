@@ -1,87 +1,78 @@
 # !/usr/bin/env python
-"""Test for series.
+"""Test the NLPath class.
+
+NLPath replaced the old ``Path``/``Series`` class: it is constructed from a
+list of nodes rather than a blat/logger pair, and support-read counts now live
+on the edges instead of the nodes.
 """
 import copy
 
 import pytest
-from scanmst import Path
+from scanmst.graph import NLPath, VariationType
 
 
-@pytest.fixture()
-def empty_series(fake_logger, fake_blat):
-    """Empty Series fixture."""
-    return Path(blat=fake_blat, logger=fake_logger)
+class TestNLPath:
+    """Test NLPath."""
 
+    def test_len_and_iteration(self, nlpath, nodes):
+        """A path is a sequence of its nodes."""
+        assert len(nlpath) == len(nodes)
+        assert list(nlpath) == list(nodes)
+        assert nlpath[0] is nodes[0]
 
-@pytest.fixture()
-def series(nodes, fake_logger, fake_blat):
-    """Series fixture."""
-    series = Path(blat=fake_blat, logger=fake_logger)
-    for node in nodes:
-        series.add_node(node)
-    return series
+    def test_unique_key(self, nlpath, nodes):
+        """Unique key concatenates the node keys in order."""
+        assert nlpath.unique_key == "".join(node.unique_key for node in nodes)
 
+    def test_id_is_stable(self, nlpath):
+        """The generated id is deterministic and namespaced."""
+        assert nlpath.id.startswith("TSP")
+        assert nlpath.id == NLPath(list(nlpath.nodes)).id
 
-class TestSeries:
-    """Test Series."""
+    def test_sum_sr(self, nlpath, edge):
+        """Support reads are summed across edges, not nodes."""
+        assert nlpath.sum_sr() == edge.sr
 
-    def test_add_node(self, empty_series, nodes):
-        """Test Add node."""
-        assert empty_series.nodes == []
-        for node in nodes:
-            empty_series.add_node(node)
-        assert len(empty_series) == len(nodes)
+    def test_is_all_type_del(self, nlpath, edge):
+        """The fixture edge is a TDUP, so the path is not all-DEL."""
+        assert nlpath.is_all_type_del() is False
+        # Edge.variation_type is read-only; the value lives on the EdgeData.
+        edge.edge_data.variantion_type = VariationType.DEL
+        assert nlpath.is_all_type_del() is True
 
-    def test_is_all_type_del(self, series):
-        """Test is all type del."""
-        assert not series.is_all_type_del()
+    def test_is_minimum_node_length_larger_than_threshold(self, nlpath):
+        """Shortest node in the fixture spans 142 bases."""
+        assert nlpath.is_minimum_node_length_larger_than_threshold(threshold=10) is True
+        assert nlpath.is_minimum_node_length_larger_than_threshold(threshold=100_000) is False
 
-    def test_is_all_node_sr_higher_than_threshold(self, series):
-        """Test is all node sr higher than threshold."""
-        assert not series.is_all_node_sr_higher_than_threshold(threshold=5)
-        assert series.is_all_node_sr_higher_than_threshold(threshold=2)
+    def test_create_node_signature(self, nodes):
+        """Node signature covers chromosome, exons and strand."""
+        signature = NLPath.create_node_signature(nodes[1])
+        assert signature.startswith("chr17:")
+        assert signature.endswith(";+")
 
-    def test_get_sr_sum_for_all_node(self, series, nodes):
-        """Test get sr sum for all node."""
-        node1, node2 = nodes
-        assert series.get_sr_sum_for_all_node() == node1.sr + node2.sr
+    def test_setup_breakpoints(self, nlpath, nodes):
+        """Breakpoints are derived from identity and strand."""
+        nlpath.setup_breakpoints()
+        # node1 is a forward-strand HEAD, so its breakpoint is its ref_end.
+        assert nodes[0].breakpoints[nodes[0].ref_end] == 1
+        # node2 is a forward-strand TAIL, so its breakpoint is its ref_start.
+        assert nodes[1].breakpoints[nodes[1].ref_start] == 1
 
-    def test_create_series_from_node_list(self, nodes, fake_logger):
-        """Test create series from node list."""
-        series_instance = Path.create_series_from_node_list(
-            nodes,
-            fake_logger,
-            set(),
-            False,
-        )
-        assert len(series_instance) == len(nodes)
-
-    def test_disable_blat_logger(self, series):
-        """Test disable blat logger."""
-        assert series.logger is not None
-        series.disable_blat_logger()
-        assert series.logger is None
-
-    def test_unique_key(self, series):
-        """Test unique key."""
-        assert series.unique_key is not None
+    def test_getitem_out_of_range(self, nlpath):
+        """Indexing past the end raises, as for any sequence."""
+        with pytest.raises(IndexError):
+            nlpath[len(nlpath)]
 
     def test_reorder_event(self, event):
-        """Test reorder event."""
+        """Reordering swaps the two breakpoint modes."""
         original_event = copy.deepcopy(event)
-        Path.reorder_event(event)
+        NLPath.reorder_event(event)
         assert event.mode1 == original_event.mode2
 
     def test_order_events_by_trancription_direction(self, event):
-        """Test order events by trancription direction."""
+        """Ordering a single event applies the same swap."""
         original_event = copy.deepcopy(event)
-        result = Path.order_events_by_trancription_direction([event])
+        result = NLPath.order_events_by_trancription_direction([event])
         assert len(result) == 1
         assert result[0].mode1 == original_event.mode2
-
-    @pytest.mark.skip(reason="Not implemented")
-    def test_init(self):
-        """Test init.
-
-        .. todo:: Add test for init.
-        """

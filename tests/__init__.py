@@ -3,7 +3,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from scanmst import Node
+from scanmst.graph import Node
 
 __all__ = [
     "assign_value_for_instance",
@@ -14,10 +14,17 @@ __all__ = [
 
 
 def assign_value_for_instance(node: Node, **kwargs: Mapping[str, object]):
-    """Assign value to node."""
+    """Override already-initialised attributes on a constructed Node.
+
+    Nodes are built through ``Node(...)`` and only tweaked here; the keys must
+    exist in ``__slots__`` or the assignment is silently dropped, so anything
+    unknown is rejected loudly instead.
+    """
     for key, value in kwargs.items():
-        if key in node.__slots__:
-            setattr(node, key, value)
+        if key not in node.__slots__:
+            msg = f"Node has no slot {key!r}; it cannot be set on a Node instance"
+            raise AttributeError(msg)
+        setattr(node, key, value)
 
 
 class FakeLogger:

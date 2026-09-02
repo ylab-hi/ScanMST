@@ -60,20 +60,31 @@ class TestEvent:
         with pytest.raises(ReadNotFoundError):
             event.read1([])
 
-    def test_update_node_info(self, event, nodes, microhomology):
-        """Test Update node info."""
-        node1, _ = nodes
-        event.update_node_info(flag=False, new_node=node1, insertion=microhomology)
-        assert node1.sv_type == event.sv_type
-        assert node1.annotation_code == event.annotation_code
-        assert node1.splicing_code == event.splicing_code
-        assert node1.modes == event.modes
-        assert node1.genes == event.genes
-        assert node1.insertion_info == (False, microhomology)
+    def test_update_specific_info_within_event(self, event):
+        """Selected event attributes are copied onto the target by name.
 
-    def test_update_insertion_node_info(self, event, nodes):
-        """Test update insertion node info."""
-        node1, _ = nodes
-        event.update_insertion_node_info(node1)
-        assert node1.prev_breakpoint == "chr2:190659106"
-        assert node1.annotation_code == event.annotation_code
+        This replaces the old update_node_info/update_insertion_node_info
+        pair. Node uses __slots__ and none of the event's info keys are Node
+        slots, so the copy is exercised against a plain target object -- which
+        is all the method itself promises.
+        """
+
+        class Target:
+            """Minimal stand-in for the object being annotated."""
+
+        target = Target()
+        keys = ["sv_type", "annotation_code", "splicing_code", "genes"]
+        result = event.update_specific_info_within_event(target, keys)
+
+        assert result is target
+        for key in keys:
+            assert getattr(target, key) == getattr(event, key)
+
+    def test_update_specific_info_within_event_rejects_unknown_key(self, event):
+        """An attribute the event does not carry is an error, not a silent skip."""
+
+        class Target:
+            """Minimal stand-in for the object being annotated."""
+
+        with pytest.raises(AttributeError):
+            event.update_specific_info_within_event(Target(), ["not_an_event_field"])

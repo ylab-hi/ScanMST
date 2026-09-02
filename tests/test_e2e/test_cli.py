@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 
 import pytest
-from scanmst import DefaultOptions, ToolNotFoundError, cli
+from scanmst import ToolNotFoundError
+from scanmst.cli import DefaultOptions, cli
 
 
 @pytest.mark.parametrize(
@@ -29,31 +30,31 @@ def test_cli(tmpdir, data_name, parallel):
         log="WARNING",
         parallel=parallel,
     )
-    # Test data do not use blat
+    # The bundled test data never reaches blat, so the run is expected to stop
+    # with ToolNotFoundError. The comparisons below used to sit *inside* this
+    # block after the raising call, which made them unreachable -- the test
+    # asserted nothing. They now run against the output the CLI produced
+    # before it bailed out.
     with pytest.raises(ToolNotFoundError):
         cli.cli(op)
-        with open(f"{out_dir}/{data_name}.fasta") as of, open(
-            f"{out_dir}/{data_name}.gtf",
-        ) as og, open(f"{data_dir}/{data_name}.fasta") as ef, open(
-            f"{data_dir}/{data_name}.gtf",
-        ) as eg:
-            out_fasta = of.readlines()
-            out_gtf = og.readlines()
-            expect_fasta = ef.readlines()
-            expect_gtf = eg.readlines()
 
-        assert expect_fasta[1].strip() == out_fasta[1].strip()
-        assert len(expect_gtf) == len(out_gtf)
-        assert (
-            expect_gtf[0].split()[0].strip() == out_gtf[0].split()[0].strip()
-        )  # check chrom
-        assert (
-            expect_gtf[0].split()[3].strip() == out_gtf[0].split()[3].strip()
-        )  # check start for first exon
-        assert (
-            expect_gtf[0].split()[4].strip() == out_gtf[0].split()[4].strip()
-        )  # check end for first exon
-        assert (
-            expect_gtf[-1].split()[3].strip() == out_gtf[-1].split()[3].strip()
-        )  # check start for random exon
-        raise ToolNotFoundError("This is a test")
+    with open(f"{out_dir}/{data_name}.fasta") as of, open(
+        f"{out_dir}/{data_name}.gtf",
+    ) as og, open(f"{data_dir}/{data_name}.fasta") as ef, open(
+        f"{data_dir}/{data_name}.gtf",
+    ) as eg:
+        out_fasta = of.readlines()
+        out_gtf = og.readlines()
+        expect_fasta = ef.readlines()
+        expect_gtf = eg.readlines()
+
+    assert expect_fasta[1].strip() == out_fasta[1].strip()
+    assert len(expect_gtf) == len(out_gtf)
+    # chrom
+    assert expect_gtf[0].split()[0].strip() == out_gtf[0].split()[0].strip()
+    # start of the first exon
+    assert expect_gtf[0].split()[3].strip() == out_gtf[0].split()[3].strip()
+    # end of the first exon
+    assert expect_gtf[0].split()[4].strip() == out_gtf[0].split()[4].strip()
+    # start of the last exon
+    assert expect_gtf[-1].split()[3].strip() == out_gtf[-1].split()[3].strip()

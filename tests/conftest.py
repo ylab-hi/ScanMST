@@ -1,8 +1,10 @@
 """Conftest for pytest."""
 import pytest
-from scanmst import Event, Insertion, MicroHomology, Node, NovelInsertion, Read
+from scanmst import Event, Insertion, MicroHomology, NovelInsertion, Read
+from scanmst.base import Intervals, MappingMode
+from scanmst.graph import Edge, EdgeData, NLPath, Node, NodeIdentity
 
-from tests import FakeBlat, FakeLogger, assign_value_for_instance
+from tests import FakeBlat, FakeLogger
 
 
 @pytest.fixture(scope="session")
@@ -46,52 +48,59 @@ def insertion():
 
 @pytest.fixture()
 def nodes() -> list[Node]:
-    """Return a list of nodes."""
+    """Return a two-node chain: chr2 (HEAD) -> chr17 (TAIL).
+
+    The coordinates are the TRA/TDUP scenario the suite has always used; only
+    the construction changed. ``sv_type``/``modes``/``sr`` used to live on the
+    Node and are now edge properties -- see the ``edges`` fixture.
+    """
     param_dict = [
-        # n1
+        # n1: two exons, so it has exactly one intron (190659995, 190670325)
         {
+            "query_name": "one,two",
             "chrom": "chr2",
+            "strand": "+",
             "ref_start": 190659106,
             "ref_end": 190670461,
-            "strand": "+",
-            "exons": [[190659106, 190659995], [190670325, 190670461]],
-            "sv_type": "TRA",
-            "prev_sv_type": None,
-            "modes": [1, 2],
-            "query_name": "one,two",
-            "sr": 2,
-            "successors": [],
-            "predecessors": [],
-            "trace_id": -1,
-            "is_traced": False,
-            "prev_breakpoint": None,
-            "next_breakpoint": "chr2:190670461",
+            "identity": NodeIdentity.HEAD,
+            "exons": Intervals.from_list([[190659106, 190659995], [190670325, 190670461]]),
         },
-        # n2
+        # n2: single exon, so it has no introns
         {
+            "query_name": "one,three,two",
             "chrom": "chr17",
+            "strand": "+",
             "ref_start": 49502062,
             "ref_end": 49502204,
-            "strand": "+",
-            "exons": [[49502062, 49502204]],
-            "sv_type": "TDUP",
-            "prev_sv_type": "TRA",
-            "modes": [1, 2],
-            "query_name": "one,three,two",
-            "sr": 3,
-            "successors": [],
-            "predecessors": [],
-            "trace_id": -1,
-            "is_traced": False,
-            "prev_breakpoint": "chr2:190670461",
-            "next_breakpoint": "chr17:49502204",
+            "identity": NodeIdentity.TAIL,
+            "exons": Intervals.from_list([[49502062, 49502204]]),
         },
     ]
-    node_list = [Node() for _ in range(len(param_dict))]
-    for ind, node in enumerate(node_list):
-        assign_value_for_instance(node, **param_dict[ind])  # type: ignore
-        node.get_unique_key()
-    return node_list
+    return [Node(**params) for params in param_dict]
+
+
+@pytest.fixture()
+def edge_data(event) -> EdgeData:
+    """Edge payload derived from the shared TDUP event fixture."""
+    return EdgeData.from_event(event, read_id="one")
+
+
+@pytest.fixture()
+def edge(nodes, edge_data) -> Edge:
+    """The single edge joining the two nodes of the `nodes` fixture."""
+    return Edge.from_nodes(nodes[0], nodes[1], edge_data)
+
+
+@pytest.fixture()
+def nlpath(nodes, edge) -> NLPath:
+    """An NLPath over `nodes`, wired with the edge between them.
+
+    Neighbour bookkeeping (`update_next_and_previous_node_in_nlpath`) reads
+    `nlpath.edges`, so the edge has to be registered for the path to be usable.
+    """
+    path = NLPath(list(nodes))
+    path.add_edge(nodes[0], nodes[1], edge)
+    return path
 
 
 @pytest.fixture()
@@ -209,7 +218,7 @@ def reads(read_param_dict):
 
     read_instances = []
     for read_param in read_param_dict:
-        temp = Read.new(**{param: read_param[param] for param in read_init_params})  # type: ignore
+        temp = Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None)  # type: ignore
         read_instances.append(temp)
     return read_instances
 
@@ -221,13 +230,16 @@ def event():
         "TDUP",  # svtype
         0,  # annotation_code
         1,  # splicing code
-        ("chr17:7701655", "chr17:7708249", 2, 1),  # bp1, bp2, mode1, mode2
+        # bp1, bp2, mode1, mode2. The modes are MappingMode members, not bare
+        # ints: reorder_event() keys its lookup table off `mode.value`.
+        ("chr17:7701655", "chr17:7708249", MappingMode.SM, MappingMode.MS),
         (7701655, 7702389, [[7701655, 7702389]]),  # r1 start, r1 end, r1 exons
         (7705301, 7708251, [[7705301, 7705720], [7707957, 7708251]]),  # r2
         ("-GG", "-GG"),  # insertions info
         ("+", "+"),  # strand1, strand2
-        ["INTERGENIC", "INTERGENIC"],
-    )  # gene1, gene2
+        ["INTERGENIC", "INTERGENIC"],  # gene1, gene2
+        False,  # is_read_reversed
+    )
 
     return Event(event_tuple)  # type: ignore
 
@@ -381,7 +393,7 @@ def inv_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
         )
     return read_instances
 
@@ -524,7 +536,7 @@ def trans_same_strand_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
         )
     return read_instances
 
@@ -743,7 +755,7 @@ def trans_diff_strand_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
         )
     return read_instances
 
@@ -840,6 +852,6 @@ def tdup_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
         )
     return read_instances

@@ -1,5 +1,5 @@
 # !/usr/bin/env python
-"""Test for scanmst/core/helper.py."""
+"""Test for scanmst/base/helper.py."""
 import contextlib
 import os
 from dataclasses import dataclass
@@ -7,16 +7,16 @@ from dataclasses import dataclass
 import HTSeq  # type: ignore
 import pytest
 from pyfaidx import Fasta  # type: ignore
-from scanmst.core.helper import (
-    cigar_validity,
+from scanmst.base.helper import (
     diff_chrom_diff_strand_handler,
     diff_chrom_same_strand_mode21_handler,
     extract_splice_sites,
     gene_annotation,
     same_chrom_diff_strand_handler,
     same_chrom_same_strand_mode21_handler,
-    splicing_confirmation,
 )
+from scanmst.base import MappingMode
+from scanmst.utils import cigar_validity
 
 path = os.path.dirname(__file__)
 os.chdir(path)
@@ -41,6 +41,58 @@ def gtf_setup():
 def cigar_data():
     """Return a cigarstring."""
     return "1S2S5M3S2S"
+
+
+def assert_event(
+    result,
+    *,
+    sv_type,
+    anno,
+    can,
+    bp1,
+    bp2,
+    mode1,
+    mode2,
+    read1,
+    read2,
+    insertions,
+    strands,
+    genes,
+):
+    """Compare a handler's event tuple field by field.
+
+    Handlers return a 10-element tuple whose members are typed: the modes are
+    MappingMode, the strands are Strand and the exons are Intervals. Comparing
+    against a flat literal tuple silently fails, so each field is checked
+    explicitly here and exons are normalised to (start, end) pairs.
+    """
+    assert result is not None, "handler returned noreturn"
+    (
+        got_sv_type,
+        got_anno,
+        got_can,
+        positions,
+        read1_info,
+        read2_info,
+        insertion_info,
+        got_strands,
+        got_genes,
+        is_read_reversed,
+    ) = result
+
+    assert got_sv_type == sv_type
+    assert (got_anno, got_can) == (anno, can)
+    assert positions == (bp1, bp2, mode1, mode2)
+
+    for got_info, (exp_start, exp_end, exp_exons) in zip((read1_info, read2_info), (read1, read2)):
+        got_start, got_end, got_exons = got_info
+        assert (got_start, got_end) == (exp_start, exp_end)
+        assert [(exon.start, exon.end) for exon in got_exons] == exp_exons
+
+    assert insertion_info == insertions
+    assert tuple(str(strand) for strand in got_strands) == strands
+    assert got_genes == genes
+    assert isinstance(is_read_reversed, bool)
 
 
 def test_cigar_validity(cigar_data):
@@ -84,53 +136,11 @@ def prepare_fasta_and_gtf(fasta_setup, gtf_setup):
     return _fasta, _cvg, _gene_iv
 
 
-@dataclass
-class Breakpoints:
-    """Class to store the information of one pair of breakpoints."""
-
-    chrm1: str
-    pos1: int
-    chrm2: str
-    pos2: int
-
-
-breakpoints = [
-    (Breakpoints("chr20", 391287, "chr20", 391580), (True, 3, 1)),
-    (Breakpoints("chr17", 172536, "chr17", 247286), (True, 3, 1)),
-]
-
-
-def bp_id_func(fixture_value):
-    """A func for generating ids."""
-    break_point = fixture_value[0]
-    return (
-        f"{break_point.chrm1}:{break_point.pos1}-{break_point.chrm2}:{break_point.pos2}"
-    )
-
-
-@pytest.fixture(params=breakpoints, ids=bp_id_func)
-def one_pair_pbs(request):
-    """Use bp_id_func to generate ids."""
-    return request.param
-
-
-def test_splicing_confirmation(prepare_fasta_and_gtf, one_pair_pbs):
-    """Test splicing_confirmation func."""
-    _fasta, _cvg, _gene_iv = prepare_fasta_and_gtf
-    bps, _expect = one_pair_pbs
-    _result = splicing_confirmation(
-        bps.chrm1,
-        bps.pos1,
-        bps.chrm2,
-        bps.pos2,
-        5,
-        _fasta,
-        _cvg,
-        False,
-        True,
-    )
-
-    assert _result == _expect
+# splicing_confirmation_and_correction (formerly splicing_confirmation) is no
+# longer callable from breakpoints alone: it now takes the full read context
+# (strand, mode, ref span and exons for both sides, 18 arguments) and returns an
+# 11-tuple of corrected coordinates rather than a verdict triple. The four
+# handler tests below call it through their handlers, so it stays covered.
 
 
 @pytest.mark.parametrize(
@@ -154,7 +164,7 @@ def test_same_chrom_same_strand_mode21_handler(
     """Test same_chrom_same_strand_mode21_handler func."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = tdup_reads
-    lt_mode, rt_mode = 2, 1
+    lt_mode, rt_mode = MappingMode.SM, MappingMode.MS
     splice_bin = 5
     motif_required = True
     result = same_chrom_same_strand_mode21_handler(
@@ -169,18 +179,21 @@ def test_same_chrom_same_strand_mode21_handler(
         motif_required,
         fake_logger,
     )
-    expect = (
-        "TDUP",
-        3,
-        1,
-        ("chr17:1364856", "chr17:1423648", 2, 1),
-        (1364856, 1400222, [[1364856, 1365058], [1400046, 1400222]]),
-        (1423349, 1423651, [[1423349, 1423651]]),
-        ("-ACC", "-ACC"),
-        ("-", "-"),
-        ["YWHAE", "CRK"],
+    assert_event(
+        result,
+        sv_type="TDUP",
+        anno=3,
+        can=1,
+        bp1="chr17:1364856",
+        bp2="chr17:1423648",
+        mode1=MappingMode.SM,
+        mode2=MappingMode.MS,
+        read1=(1364856, 1400222, [(1364856, 1365058), (1400046, 1400222)]),
+        read2=(1423349, 1423651, [(1423349, 1423651)]),
+        insertions=("-ACC", "-ACC"),
+        strands=("-", "-"),
+        genes=["YWHAE", "CRK"],
     )
-    assert result == expect
 
 
 def test_diff_chrom_same_strand_mode21_handler(
@@ -191,7 +204,7 @@ def test_diff_chrom_same_strand_mode21_handler(
     """Test diff_chrom_same_strand_mode21_handler func (TRA)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = trans_same_strand_reads
-    lt_mode, rt_mode = 1, 2
+    lt_mode, rt_mode = MappingMode.MS, MappingMode.SM
     splice_bin = 5
     motif_required = True
     result = diff_chrom_same_strand_mode21_handler(
@@ -206,22 +219,25 @@ def test_diff_chrom_same_strand_mode21_handler(
         motif_required,
         fake_logger,
     )
-    expect = (
-        "TRA",
-        3,
-        1,
-        ("chr20:391283", "chr17:1745408", 2, 1),
-        (391283, 397559, [[391283, 391579], [396197, 397559]]),
-        (
+    assert_event(
+        result,
+        sv_type="TRA",
+        anno=3,
+        can=1,
+        bp1="chr20:391283",
+        bp2="chr17:1745408",
+        mode1=MappingMode.SM,
+        mode2=MappingMode.MS,
+        read1=(391283, 397559, [(391283, 391579), (396197, 397559)]),
+        read2=(
             1744991,
             1745408,
-            [[1744991, 1745058], [1745174, 1745213], [1745332, 1745408]],
+            [(1744991, 1745058), (1745174, 1745213), (1745332, 1745408)],
         ),
-        ("-CAGGTG", "-CAGGTG"),
-        ("+", "+"),
-        ["TRIB3", "SERPINF2"],
+        insertions=("-CAGGTG", "-CAGGTG"),
+        strands=("+", "+"),
+        genes=["TRIB3", "SERPINF2"],
     )
-    assert result == expect
 
 
 def test_diff_chrom_diff_strand_handler(
@@ -232,7 +248,7 @@ def test_diff_chrom_diff_strand_handler(
     """Test diff_chrom_diff_strand_handler func (TRA)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = trans_diff_strand_reads
-    lt_mode, rt_mode = 1, 1
+    lt_mode, rt_mode = MappingMode.MS, MappingMode.MS
     splice_bin = 5
     motif_required = True
     result = diff_chrom_diff_strand_handler(
@@ -247,29 +263,32 @@ def test_diff_chrom_diff_strand_handler(
         motif_required,
         fake_logger,
     )
-    expect = (
-        "TRA",
-        3,
-        1,
-        ("chr17:1745405", "chr20:439298", 1, 1),
-        (
+    assert_event(
+        result,
+        sv_type="TRA",
+        anno=3,
+        can=1,
+        bp1="chr17:1745405",
+        bp2="chr20:439298",
+        mode1=MappingMode.MS,
+        mode2=MappingMode.MS,
+        read1=(
             1744991,
             1745405,
-            [[1744991, 1745058], [1745174, 1745213], [1745332, 1745405]],
+            [(1744991, 1745058), (1745174, 1745213), (1745332, 1745405)],
         ),
-        (435479, 439298, [[435479, 438841], [439107, 439298]]),
-        ("-CAG", "-CTG"),
-        ("+", "-"),
-        ["SERPINF2", "TBC1D20"],
+        read2=(435479, 439298, [(435479, 438841), (439107, 439298)]),
+        insertions=("-CAG", "-CTG"),
+        strands=("+", "-"),
+        genes=["SERPINF2", "TBC1D20"],
     )
-    assert result == expect
 
 
 def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads, fake_logger):
     """Test same_chrom_diff_strand_handler func (INV)."""
     genome_fasta, cvg, gene_iv = prepare_fasta_and_gtf
     read_lt, read_rt = inv_reads
-    lt_mode, rt_mode = 1, 1
+    lt_mode, rt_mode = MappingMode.MS, MappingMode.MS
     splice_bin = 5
     motif_required = True
     result = same_chrom_diff_strand_handler(
@@ -284,23 +303,26 @@ def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads, fake_l
         motif_required,
         fake_logger,
     )
-    expect = (
-        "INV",
-        3,
-        1,
-        ("chr17:1651554", "chr17:1730946", 1, 1),
-        (
+    assert_event(
+        result,
+        sv_type="INV",
+        anno=3,
+        can=1,
+        bp1="chr17:1651554",
+        bp2="chr17:1730946",
+        mode1=MappingMode.MS,
+        mode2=MappingMode.MS,
+        read1=(
             1650628,
             1651554,
-            [[1650628, 1650956], [1651107, 1651310], [1651413, 1651554]],
+            [(1650628, 1650956), (1651107, 1651310), (1651413, 1651554)],
         ),
-        (
+        read2=(
             1727989,
             1730946,
-            [[1727989, 1728626], [1730379, 1730487], [1730754, 1730946]],
+            [(1727989, 1728626), (1730379, 1730487), (1730754, 1730946)],
         ),
-        ("-CC", "-GG"),
-        ("-", "+"),
-        ["PRPF8", "WDR81"],
+        insertions=("-CC", "-GG"),
+        strands=("-", "+"),
+        genes=["PRPF8", "WDR81"],
     )
-    assert result == expect

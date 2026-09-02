@@ -1,9 +1,8 @@
 # !/usr/bin/env python
-"""Test the splice graph module.
-"""
+"""Test the splice graph module."""
 from collections.abc import Sequence
 
-from scanmst import Node
+from scanmst.graph import Node
 
 
 def add_edge_according_order(
@@ -11,10 +10,11 @@ def add_edge_according_order(
     parent_order: int,
     child_order: int,
 ):
-    """Add edge according order.
+    """Link two nodes by their 1-based position in `nodes`.
 
-    .. note::
-        order is 1-based.
+    This wires the predecessor/successor lists directly rather than going
+    through NLGraph.add_edge, so a topology can be described without also
+    inventing EdgeData for every connection.
     """
     nodes[parent_order - 1].successors.append(nodes[child_order - 1])
     nodes[child_order - 1].predecessors.append(nodes[parent_order - 1])

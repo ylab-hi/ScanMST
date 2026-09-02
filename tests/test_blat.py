@@ -11,9 +11,12 @@ from scanmst import Blat
 
 
 @pytest.fixture(scope="module")
-def blat(fake_logger) -> Blat:
-    """Create Blat instance."""
-    return Blat(ref_2bit=".", logger=fake_logger, port=88888, output_dir=".")
+def blat() -> Blat:
+    """Create Blat instance.
+
+    Blat no longer takes a logger: it uses the module-level loguru logger.
+    """
+    return Blat(ref_2bit=".", port=88888, output_dir=".")
 
 
 @pytest.fixture()
