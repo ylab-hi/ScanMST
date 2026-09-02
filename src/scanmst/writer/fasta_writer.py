@@ -121,7 +121,7 @@ def get_consensus_sequence_from_path(
     :return: Sequence of nodes.
     """
     node_length_str = ""
-    read_names_for_nlpath = set()
+    read_names_for_nlpath: set[str] = set()
     for idx, node in enumerate(nlpath):
         edge = nlpath.next_edge(node, idx)
 

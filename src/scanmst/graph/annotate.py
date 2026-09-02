@@ -43,7 +43,7 @@ def build_interval_tree(
     Build interval tree for all genes in terms of chromosome from a gff file.
     """
 
-    interval_trees = defaultdict(intervaltree.IntervalTree)
+    interval_trees: defaultdict[str, intervaltree.IntervalTree] = defaultdict(intervaltree.IntervalTree)
 
     for feature in HTSeq.GFF_Reader(annotation_source):
         if feature.type == "gene":
@@ -85,9 +85,9 @@ def annotate_graph(graph, node, annotation_source: Path):
 
     interval_trees = build_interval_tree(annotation_source)
 
-    for node in graph:
-        annotate_node(node, interval_trees)
+    for graph_node in graph:
+        annotate_node(graph_node, interval_trees)
 
-    gene_names = Counter(gene for node in graph for gene in node.gene_names)
+    gene_names = Counter(gene for graph_node in graph for gene in graph_node.gene_names)
 
     return gene_names.most_common(1)[0][0]

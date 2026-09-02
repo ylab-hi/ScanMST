@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from enum import Enum, IntEnum
+from typing import TYPE_CHECKING, overload
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class MappingMode(IntEnum):
@@ -31,7 +35,7 @@ class MappingMode(IntEnum):
             return cls.Type0
         if mode == 1:
             return cls.MS
-        if mode == 2:  # noqa: PLR2004
+        if mode == 2:
             return cls.SM
 
         msg = f"Invalid mode: {mode}"
@@ -124,7 +128,7 @@ class Interval:
         self.start = start
         self.end = end
 
-    def __eq__(self, other: Interval):
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Interval):
             return self.start == other.start and self.end == other.end
         return False
@@ -284,7 +288,11 @@ class Intervals:
 
     # fmt: off
     def __hash__(self) -> int: return hash(tuple(self.exon_list))
-    def __getitem__(self, index: int) -> Interval: return self.exon_list[index]
+    @overload
+    def __getitem__(self, index: int) -> Interval: ...
+    @overload
+    def __getitem__(self, index: slice) -> list[Interval]: ...
+    def __getitem__(self, index: int | slice) -> Interval | list[Interval]: return self.exon_list[index]
     def __setitem__(self, index: int, value: Interval) -> None: self.exon_list[index] = value
     def __len__(self): return len(self.exon_list)
     def __contains__(self, item: Interval): return any(item == exon for exon in self.exon_list)
@@ -334,7 +342,7 @@ class Intervals:
         message = f"{other} is not int or Intervals"
         raise TypeError(message)
 
-    def __eq__(self, other: Intervals) -> bool:
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, Intervals):
             return self.exon_list == other.exon_list
         return False
@@ -362,7 +370,7 @@ class Intervals:
         self.exon_list.sort(key=lambda x: x.start, reverse=reverse)
 
     @classmethod
-    def from_list(cls, item: list[list[int] | tuple[int, int]]):
+    def from_list(cls, item: Sequence[list[int] | tuple[int, int]]):
         """Create Exons from list."""
         return cls(exon_list=[Interval.from_list(exon) for exon in item])
 

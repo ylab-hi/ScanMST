@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Hashable, Iterable
 from enum import Enum, auto
-from typing import TYPE_CHECKING
-import pyfaidx
+from typing import TYPE_CHECKING, TypeVar
+
+_HashableT = TypeVar("_HashableT", bound=Hashable)
 
 if TYPE_CHECKING:
+    import pyfaidx
+
     from .basic_graph import Node
 
 
@@ -292,7 +296,7 @@ def __intron_lists_containment_checker(
     return full_list[-sub_length:] == sub_list[:] and full_exons[-(sub_length + 1)].start <= sub_exons.first.start
 
 
-def find_shared_interval_indices(a: list[tuple[int, int]], b: list[tuple[int, int]]) -> tuple[list[int], list[int]]:
+def find_shared_interval_indices(a: Iterable[_HashableT], b: Iterable[_HashableT]) -> tuple[list[int], list[int]]:
     """
     Finds the indices of shared intervals between two lists of intervals using set operations.
 

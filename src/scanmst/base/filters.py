@@ -242,7 +242,7 @@ class CircRNAFilter:
     def is_circrna(self, nlpath) -> bool:
         nodes = nlpath.nodes
         # one-hop event
-        if len(nodes) == 2:  # noqa: PLR2004
+        if len(nodes) == 2:
             longest_node = CircRNAFilter.obtain_longest_mega_exon(nodes)
             current_node, next_node = nodes
             current_edge = nlpath.next_edge(current_node, 0)
@@ -406,7 +406,7 @@ class CircRNAFilter:
             elif str(strand_first) == "-":
                 mono_exon_condition = first_node.ref_end < second_node.ref_start
 
-        return common_intron_condition or mono_exon_condition
+        return bool(common_intron_condition or mono_exon_condition)
 
     def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
         self,

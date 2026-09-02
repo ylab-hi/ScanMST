@@ -861,7 +861,6 @@ class NLPath:
         for node in self.nodes:
             node.set_up_breakpoints()
 
-
     @staticmethod
     def merge_exons(prev_exons: Exons, next_exons: Exons) -> Exons:
         """Merge two lists of exons, combining adjacent/overlapping ones."""
@@ -889,7 +888,6 @@ class NLPath:
                     merged_exons.append(_exon)
 
         return Exons(merged_exons)
-
 
     def squeeze(self) -> None:
         """Squeeze nodes whose edge is del in the path."""
@@ -928,7 +926,7 @@ class NLPath:
                     next_node._introns = None
                     new_nodes[-1] = next_node
 
-                # WARN: cigartuples_without_soft is not updated
+                # WARN: cigartuples_without_soft is not updated  # noqa: ERA001
             else:
                 new_edges.append(edge)
                 new_nodes.append(next_node)
@@ -1168,7 +1166,7 @@ class NLPath:
         max_shift_length_in_events = 0
         # pyfaidx.Fasta cannot be deepcopied, so we use filename instead
 
-        for index, event in enumerate(events):
+        for event in events:
             shift_length = len(event.insertion_seq1) if event.has_microhomology() else 0
             max_shift_length_in_events = max(shift_length, max_shift_length_in_events)
 

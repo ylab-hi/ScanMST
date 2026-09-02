@@ -1,14 +1,15 @@
-"""Blat executable module.
-"""
+"""Blat executable module."""
 
-import platform
-import sys
-import stat
 import os
+import platform
+import stat
+import sys
 from pathlib import Path
+
 import requests
 
 from scanmst import __PACKAGE_NAME__
+from scanmst.exception import ToolNotFoundError
 
 
 def get_platform_base_url() -> tuple[str, str]:
@@ -26,16 +27,15 @@ def get_platform_base_url() -> tuple[str, str]:
         # Base URL for Linux x86_64 binaries. Using an older release because the latest BLAT requires GLIBC 2.33 or higher.
         return "linux", "https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v479/"
 
-    elif system == "Darwin":
+    if system == "Darwin":
         if machine == "arm64":
             # Base URL for macOS Apple Silicon
             return "darwin", "https://hgdownload.soe.ucsc.edu/admin/exe/macOSX.arm64/"
-        else:
-            # Base URL for macOS Intel
-            return "darwin", "https://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/"
+        # Base URL for macOS Intel
+        return "darwin", "https://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/"
 
-    else:
-        raise NotImplementedError(f"Operating system {system} ({machine}) is not supported for blat.")
+    msg = f"Operating system {system} ({machine}) is not supported for blat."
+    raise NotImplementedError(msg)
 
 
 def load_blat() -> Path:
@@ -43,7 +43,11 @@ def load_blat() -> Path:
 
     @return: Path object.
     """
-    blat_path = Path(sys.modules[__PACKAGE_NAME__].__file__).parent / "blat"
+    package_file = sys.modules[__PACKAGE_NAME__].__file__
+    if package_file is None:
+        msg = f"Cannot locate {__PACKAGE_NAME__} on disk"
+        raise ToolNotFoundError(msg)
+    blat_path = Path(package_file).parent / "blat"
     system_name, _ = get_platform_base_url()
     return blat_path / system_name
 
@@ -66,12 +70,7 @@ def download_blat_tools(logger) -> None:
     # Map tool filenames to their relative path on the UCSC server
     # 'blat', 'gfServer', 'gfClient' are inside the 'blat/' subdirectory
     # 'faToTwoBit' is in the root of the architecture directory
-    tools_map = {
-        "blat": "blat/blat",
-        "gfServer": "blat/gfServer",
-        "gfClient": "blat/gfClient",
-        "faToTwoBit": "faToTwoBit"
-    }
+    tools_map = {"blat": "blat/blat", "gfServer": "blat/gfServer", "gfClient": "blat/gfClient", "faToTwoBit": "faToTwoBit"}
 
     for tool_name, relative_path in tools_map.items():
         tool_path = target_dir / tool_name
@@ -80,7 +79,7 @@ def download_blat_tools(logger) -> None:
         if tool_path.exists():
             # Ensure it is executable
             st = os.stat(tool_path)
-            os.chmod(tool_path, st.st_mode | stat.S_IEXEC)
+            Path(tool_path).chmod(st.st_mode | stat.S_IEXEC)
             continue
 
         # 2. Construct specific URL
@@ -90,13 +89,13 @@ def download_blat_tools(logger) -> None:
         try:
             with requests.get(url, stream=True, timeout=60) as r:
                 r.raise_for_status()
-                with open(tool_path, 'wb') as f:
+                with open(tool_path, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
 
             # 3. Make executable
             st = os.stat(tool_path)
-            os.chmod(tool_path, st.st_mode | stat.S_IEXEC)
+            Path(tool_path).chmod(st.st_mode | stat.S_IEXEC)
             logger.info(f"Successfully downloaded: {tool_name}")
 
         except Exception as e:

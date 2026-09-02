@@ -117,7 +117,8 @@ def get_nodes_gtf_features_from_nlpath(
 
     :return: List of GTF features for node and insertions in the series.
     """
-    nlpath_gtf_features = [None]
+    # index 0 is a placeholder, replaced by the transcript feature at the end.
+    nlpath_gtf_features: list[Any] = [None]
 
     min_nlpath_sr = float("inf")
     min_nlpath_originla_sr = float("inf")
@@ -287,7 +288,9 @@ def get_gtf_features_from_node(
                 ".",
                 f"{node.strand}",
                 ".",
-                f'exon_id "{index:0>3}"; segment_id "{node.id}"; ptc "{node.ptc}"; ptf "{node.ptf}"; transcript_id "{nlpath_id}"; gene_id "{cluster_id}";',
+                f'exon_id "{index:0>3}"; segment_id "{node.id}"; '
+                f'ptc "{node.ptc}"; ptf "{node.ptf}"; '
+                f'transcript_id "{nlpath_id}"; gene_id "{cluster_id}";',
             ],
         )
 

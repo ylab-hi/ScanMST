@@ -14,7 +14,7 @@ from scanmst.base import MicroHomology, NovelInsertion, reverse_complement
 from scanmst.exception import (
     BreakpointNotFoundError,
 )
-from scanmst.graph import NLPath, Node, Edge
+from scanmst.graph import NLPath, Node
 from scanmst.utils import determine_mst_link_type
 
 from .writer import Writer
@@ -205,9 +205,7 @@ class VCFWriter(Writer):
                 f"{self.__class__.__name__}: No nodes to write to VCF file in Clique {cluster_id} Series.",
             )
         # hop_vcf_feature is a dict, key: sv_type, chrom1|pos1, chrom2|pos2
-        for _hop_vcf_feature in get_vcf_features_from_nlpath(
-            data_object, self.rescue_sr, cluster_id=cluster_id
-        ):
+        for _hop_vcf_feature in get_vcf_features_from_nlpath(data_object, self.rescue_sr, cluster_id=cluster_id):
             self.hops_feature_in_series_list.append(_hop_vcf_feature)
 
     def write_data_helper(self) -> None:
@@ -219,31 +217,15 @@ class VCFWriter(Writer):
                 out_vcf_dict[type_position_key] = hop_feature[type_position_key]
             else:
                 # multiple transcripts go through the same one hop
-                out_vcf_dict[type_position_key][
-                    "TRANSCRIPT_ID"
-                ] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
-                out_vcf_dict[type_position_key][
-                    "SEGMENT1"
-                ] += f",{hop_feature[type_position_key]['SEGMENT1']}"
-                out_vcf_dict[type_position_key][
-                    "SEGMENT2"
-                ] += f",{hop_feature[type_position_key]['SEGMENT2']}"
-                out_vcf_dict[type_position_key][
-                    "SR_ID"
-                ] += f",{hop_feature[type_position_key]['SR_ID']}"
+                out_vcf_dict[type_position_key]["TRANSCRIPT_ID"] += f",{hop_feature[type_position_key]['TRANSCRIPT_ID']}"
+                out_vcf_dict[type_position_key]["SEGMENT1"] += f",{hop_feature[type_position_key]['SEGMENT1']}"
+                out_vcf_dict[type_position_key]["SEGMENT2"] += f",{hop_feature[type_position_key]['SEGMENT2']}"
+                out_vcf_dict[type_position_key]["SR_ID"] += f",{hop_feature[type_position_key]['SR_ID']}"
                 # deal with 'Y' shape TSG
-                if not out_vcf_dict[type_position_key]["READS"].issuperset(
-                    hop_feature[type_position_key]["READS"]
-                ):
-                    out_vcf_dict[type_position_key]["READS"].update(
-                        hop_feature[type_position_key]["READS"]
-                    )
-                    out_vcf_dict[type_position_key]["SR"] += hop_feature[
-                        type_position_key
-                    ]["SR"]
-                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[
-                        type_position_key
-                    ]["OSR"]
+                if not out_vcf_dict[type_position_key]["READS"].issuperset(hop_feature[type_position_key]["READS"]):
+                    out_vcf_dict[type_position_key]["READS"].update(hop_feature[type_position_key]["READS"])
+                    out_vcf_dict[type_position_key]["SR"] += hop_feature[type_position_key]["SR"]
+                    out_vcf_dict[type_position_key]["OSR"] += hop_feature[type_position_key]["OSR"]
 
         for _idx, _out_vcf_hop in enumerate(out_vcf_dict, 1):
             hop_vcf_feature = vcf_feature_transformer(out_vcf_dict[_out_vcf_hop], _idx)
@@ -290,10 +272,7 @@ class VCFWriter(Writer):
 
     def get_contigs(self) -> list[str]:
         """Get contigs from BAM file header."""
-        return [
-            f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>"
-            for contig_dict in self.bam_header["SQ"]
-        ]
+        return [f"##contig=<ID={contig_dict['SN']},length={contig_dict['LN']}>" for contig_dict in self.bam_header["SQ"]]
 
 
 def obtain_reference_from_bam_header(bam_header: dict[str, Any]) -> str:
@@ -338,6 +317,9 @@ def get_vcf_features_from_nlpath(
     can_field_dict = {0: "NONCANONICAL", 1: "CANONICAL"}
     for event_id, current_node in enumerate(nlpath.nodes[:-1], 1):
         current_edge = nlpath.next_edge(current_node, event_id - 1)
+        if current_edge is None:
+            msg = f"No edge between {current_node!r} and the next node in {nlpath!r}"
+            raise ValueError(msg)
         next_node = nlpath[event_id]
 
         can_field = can_field_dict[current_edge.splicing_code]
@@ -369,24 +351,10 @@ def get_vcf_features_from_nlpath(
                     current_node,
                 )
 
-        sv_distance = (
-            abs(pos1 - pos2) if not current_edge.variation_type.is_tra() else 0
-        )
-        dp1 = (
-            0
-            if current_edge.break_point1.depth is None
-            else current_edge.break_point1.depth
-        )
-        dp2 = (
-            0
-            if current_edge.break_point2.depth is None
-            else current_edge.break_point2.depth
-        )
-        pso = (
-            0
-            if dp1 == 0 or dp2 == 0
-            else current_edge.sr / (current_edge.sr + (dp1 + dp2) / 2)
-        )
+        sv_distance = abs(pos1 - pos2) if not current_edge.variation_type.is_tra() else 0
+        dp1 = 0 if current_edge.break_point1.depth is None else current_edge.break_point1.depth
+        dp2 = 0 if current_edge.break_point2.depth is None else current_edge.break_point2.depth
+        (0 if dp1 == 0 or dp2 == 0 else current_edge.sr / (current_edge.sr + (dp1 + dp2) / 2))
 
         if rescue_sr:
             sr = current_edge.sr
@@ -395,9 +363,7 @@ def get_vcf_features_from_nlpath(
             sr = current_edge.sr
             osr = current_edge.sr
 
-        mst_link_type = determine_mst_link_type(
-            current_edge
-        )
+        mst_link_type = determine_mst_link_type(current_edge)
         path_hops_features.append(
             {
                 f"{current_edge.variation_type}_{chrom1}|{pos1 + 1}_{chrom2}|{pos2 + 1}": {
@@ -429,9 +395,7 @@ def get_vcf_features_from_nlpath(
                     "READS": set(current_edge.read_ids),
                     "SVMETHOD": "ScanMST",
                     "HOMSEQ": microhomology_sequence if microhomology_sequence else ".",
-                    "INSSEQ": (
-                        microinsertion_sequence if microinsertion_sequence else "."
-                    ),
+                    "INSSEQ": (microinsertion_sequence if microinsertion_sequence else "."),
                     "ID": current_edge.id,
                 },
             },
@@ -486,8 +450,4 @@ def obtain_sequence_from_insertion(
     if not novel_insertion_sequence:
         return ""
 
-    return (
-        novel_insertion_sequence
-        if node.strand.is_forward()
-        else reverse_complement(novel_insertion_sequence)
-    )
+    return novel_insertion_sequence if node.strand.is_forward() else reverse_complement(novel_insertion_sequence)

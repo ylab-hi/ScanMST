@@ -38,6 +38,10 @@ class DefaultOptions:
     max_allowed_nm: int = 100
     max_allowed_micro_insertion: int = 50
     min_required_insertion_length: int = 100
+    # argparse dest aliases, so cli.cli() works with a DefaultOptions as well
+    # as with a parsed Namespace.
+    max_allowed_ins: int = max_allowed_micro_insertion
+    min_required_ins: int = min_required_insertion_length
     ident_cutoff: float = 0.90
     prune_threshold: int = 10  # for merging conditions
     soft_len: int = 5

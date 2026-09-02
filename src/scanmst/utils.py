@@ -283,7 +283,7 @@ def cigar_validity(cigar_str: str) -> str:
     """
     pattern = re.compile(r"((?P<length>\d+)(?P<op>\D))")
     items_list = pattern.findall(cigar_str)
-    stack = []
+    stack: list[tuple[str, str, str]] = []
     for item in items_list:
         # Skip zero-length operations
         if int(item[1]) == 0:
@@ -329,8 +329,5 @@ def determine_mst_link_type(edge) -> str:
     elif var_type.is_inv():
         link_type = "ICTL"
     elif var_type.is_tra():
-        if mode1 == mode2:
-            link_type = "ITTL"
-        else:
-            link_type = "ITPL"
+        link_type = "ITTL" if mode1 == mode2 else "ITPL"
     return link_type

@@ -782,7 +782,7 @@ class NLGraph:
                 try:
                     edge.break_point1.pos = node.ref_end if node.strand.is_forward() else node.ref_start
                     edge.break_point2.pos = successor.ref_start if successor.strand.is_forward() else successor.ref_end
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     logger.error(f"Error updating breakpoints for edge {edge} between {node} and {successor}: {e}")
 
 

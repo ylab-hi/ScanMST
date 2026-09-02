@@ -369,7 +369,7 @@ class Blat:
                 mapq=mapq,
                 nm=num_of_mismatch,
                 query_sequence=insert_seq,
-                query_qualities=dummy_qualities,
+                query_qualities=list(dummy_qualities),
             )
         return flag, NovelInsertion(hit_num=hit, query_sequence=insert_seq)
 

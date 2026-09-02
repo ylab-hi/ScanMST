@@ -120,7 +120,7 @@ def get_tsg_from_nlgraph(nlgraph, gid=None, min_support_reads=1) -> str:
         if "insertion_info" in edge[2]:
             insertion_info = edge[2]["insertion_info"]
 
-            if insertion_info != "":
+            if insertion_info:
                 insertion_type, insertion_seq = insertion_info.split("(")
                 if insertion_type == "NovelInsertion":
                     seq = insertion_seq.strip(")").split(":")[0]

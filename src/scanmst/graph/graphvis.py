@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from scanmst.utils import determine_mst_link_type
-
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -12,6 +10,8 @@ from typing import TYPE_CHECKING, ClassVar
 import networkx as nx
 from loguru import logger
 from matplotlib import pyplot as plt  # type: ignore
+
+from scanmst.utils import determine_mst_link_type
 
 if TYPE_CHECKING:
     from . import Edge, NLGraph, Node
@@ -83,9 +83,7 @@ def add_edge_to_nxgraph(
     if graph.has_edge(node1_label, node2_label):
         current_edge_label = [i["id"] for i in graph[node1_label][node2_label].values()]
         if edge_label not in current_edge_label:
-            logger.warning(
-                f"vis: multiple edges between {node1_label} and {node2_label}"
-            )
+            logger.warning(f"vis: multiple edges between {node1_label} and {node2_label}")
             graph.add_edge(
                 node1_label,
                 node2_label,
@@ -116,19 +114,13 @@ def create_nxgraph(
 ) -> nx.DiGraph:
     # https://networkx.org/documentation/stable/reference/classes/multidigraph.html
 
-    g = (
-        nx.MultiDiGraph()
-        if possible_paths is None
-        else nx.MultiDiGraph(possible_paths=possible_paths)
-    )
+    g = nx.MultiDiGraph() if possible_paths is None else nx.MultiDiGraph(possible_paths=possible_paths)
 
     try:
         for start_node in nlgraph.get_start_nodes():
             _create_nxgraph(start_node, [start_node], g, nlgraph, min_support_reads)  # type: ignore
     except RecursionError:
-        logger.error(
-            "RecursionError: maximum recursion depth exceeded when export graph"
-        )
+        logger.error("RecursionError: maximum recursion depth exceeded when export graph")
     return g
 
 
@@ -157,9 +149,7 @@ def _create_nxgraph(
                 )
             ):
                 if idx > 0:
-                    logger.warning(
-                        "Vis: multiple edges between {} and {}", start_node, successor
-                    )
+                    logger.warning("Vis: multiple edges between {} and {}", start_node, successor)
 
                 add_node_to_nxgraph(successor, nx_graph)
                 add_edge_to_nxgraph(start_node, successor, edge, nx_graph)
@@ -336,15 +326,11 @@ class TSGraphExporter(GraphVisitor):
 
             # write nodes
             for node in graph.nodes(data=True):
-                f.write(
-                    f"N\t{node[0]}\t{node[1]['chrom']}:{node[1]['strand']!s}:{node[1]['exons'][1:-1]!s}\t{node[1]['reads']}\n"
-                )
+                f.write(f"N\t{node[0]}\t{node[1]['chrom']}:{node[1]['strand']!s}:{node[1]['exons'][1:-1]!s}\t{node[1]['reads']}\n")
 
             # write edges
             for edge in graph.edges(data=True):
-                f.write(
-                    f"E\t{edge[2]['id']}\t{edge[0]}\t{edge[1]}\t{edge[2]['breakpoints']}\n"
-                )
+                f.write(f"E\t{edge[2]['id']}\t{edge[0]}\t{edge[1]}\t{edge[2]['breakpoints']}\n")
 
             # write node attributes sr
             for node in graph.nodes(data=True):
@@ -359,7 +345,7 @@ class TSGraphExporter(GraphVisitor):
                 if "insertion_info" in edge[2]:
                     insertion_info = edge[2]["insertion_info"]
 
-                    if insertion_info != "":
+                    if insertion_info:
                         insertion_type, insertion_seq = insertion_info.split("(")
                         if insertion_type == "NovelInsertion":
                             seq = insertion_seq.strip(")").split(":")[0]
@@ -408,10 +394,7 @@ def visualize_graph_via_matplot(
         "node_size": 1500,
         "node_color": ["red" if "H" in n else "white" for n in graph],
         "edgecolors": "black",
-        "edge_color": [
-            "green" if weight >= support_reads else "black"
-            for weight in edge_weight.values()
-        ],
+        "edge_color": ["green" if weight >= support_reads else "black" for weight in edge_weight.values()],
         "linewidths": 2,
         "width": 3,
         "connectionstyle": "arc3, rad = 0.1",
