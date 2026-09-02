@@ -82,6 +82,15 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      # `uv run --group dev` builds the project, and the _cppext extension links
+      # against htslib, so this job needs it just as the test matrix does. The
+      # job only ever ran as "skipped" before, which kept this hidden.
+      - name: Install htslib (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libhts-dev zlib1g-dev
+          echo "HTSLIB_ROOT=/usr" >> "$GITHUB_ENV"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
