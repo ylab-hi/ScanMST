@@ -78,7 +78,11 @@ lint = [
     "pre-commit-hooks>=5.0.0",
 ]
 typing = ["mypy>=1.10"]
-security = ["safety>=3.2.10"]
+# NOTE: `safety` is deliberately NOT declared here. noxfile.py's `safety`
+# session installs it into its own venv (session.install("safety")), so a
+# declared group would only pull safety's own transitive tree -- including
+# nltk, which has no patched release for Python 3.9 (nltk >= 3.10 requires
+# >= 3.10, while this project supports 3.9). See CVE-2026-79675.
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
