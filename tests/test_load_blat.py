@@ -5,7 +5,13 @@
 """
 import subprocess
 
+import pytest
 from scanmst import blat
+
+pytestmark = pytest.mark.skipif(
+    not blat.load_blat().exists(),
+    reason="BLAT executables are downloaded from UCSC on demand and are not installed",
+)
 
 
 def test_load_blat():

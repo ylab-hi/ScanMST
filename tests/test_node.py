@@ -78,13 +78,13 @@ class TestNode:
         """Adding from a list honours the same in-graph rule."""
         node1, node2 = nodes
         node2.is_in_graph = True
-        node1.add_successor_from_list([node2])
+        node1.add_successor_from_list([node2], None, None)
         assert node1.successors == [node2]
 
     def test_add_predecessor_from_list(self, nodes):
         """A predecessor not yet in the graph is not linked."""
         node1, node2 = nodes
-        node2.add_predecessor_from_list([node1])
+        node2.add_predecessor_from_list([node1], None, None)
         assert node2.predecessors == []
 
     def test_update_next_and_previous_node_in_nlpath(self, nodes, nlpath):

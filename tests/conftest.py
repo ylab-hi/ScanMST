@@ -43,6 +43,7 @@ def insertion():
         mapq=60,
         nm=0,
         query_sequence="AGCT",
+        query_qualities=[10, 20, 10, 9],
     )
 
 

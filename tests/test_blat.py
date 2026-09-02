@@ -8,6 +8,12 @@ from pathlib import Path
 
 import pytest
 from scanmst import Blat
+from scanmst import blat as blat_module
+
+pytestmark = pytest.mark.skipif(
+    not blat_module.load_blat().exists(),
+    reason="BLAT executables are downloaded from UCSC on demand and are not installed",
+)
 
 
 @pytest.fixture(scope="module")

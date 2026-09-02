@@ -25,7 +25,7 @@ def test_cli(tmpdir, data_name, parallel):
         output=f"{out_dir}/{data_name}",
         ref=f"{data_dir}/dummy.fasta",
         gtf=f"{data_dir}/dummy.gtf",
-        two_bit=f"{data_dir}/dummy.2bit",
+        blat_two_bit=f"{data_dir}/dummy.2bit",
         noncanonical=True,
         log="WARNING",
         parallel=parallel,

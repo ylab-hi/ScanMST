@@ -82,8 +82,8 @@ def test_get_softclip_length(read, mode, expected_result):
 def test_external_tool_checking(monkeypatch, fake_logger):
     """Test external_tool_checking func."""
     monkeypatch.setattr(shutil, "which", lambda x: "TEST")
-    assert external_tool_checking(fake_logger) is None
+    assert external_tool_checking(["gfServer"], fake_logger) is None
 
     monkeypatch.setattr(shutil, "which", lambda x: None)
     with pytest.raises(ToolNotFoundError):
-        external_tool_checking(fake_logger)
+        external_tool_checking(["gfServer"], fake_logger)

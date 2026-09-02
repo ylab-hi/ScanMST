@@ -55,10 +55,10 @@ class TestEvent:
 
     def test_get_read(self, event, reads):
         """Test get read."""
-        assert event.read1(reads) == reads[0]
-        assert event.read2(reads) == reads[1]
+        assert event.read1(reads, 0) == reads[0]
+        assert event.read2(reads, 0) == reads[1]
         with pytest.raises(ReadNotFoundError):
-            event.read1([])
+            event.read1([], 0)
 
     def test_update_specific_info_within_event(self, event):
         """Selected event attributes are copied onto the target by name.

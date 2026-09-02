@@ -20,6 +20,7 @@ def param_dict():
         "mapq": 10,
         "nm": 0,
         "query_seq": "A",
+        "query_qualities": None,
     }
 
 
@@ -143,7 +144,7 @@ class TestReadsConnector:
             reads_connector.check_if_ms_match(
                 query_seq,
                 target_seq,
-                same_strand,
+                same_strand=same_strand,
                 minimum_s_length=4,
             )
             == expected_result
@@ -153,7 +154,7 @@ class TestReadsConnector:
         """Test determine microhomology length."""
         read1, read2 = reads_connector.aln_list
         assert reads_connector._determine_microhomology_len(
-            read1.read_match_size,
+            read1.query_sequence[read1.lt_soft_len :],
             read1.query_length,
             read1.sms,
             read2.sms,
@@ -182,16 +183,16 @@ class TestReadsConnector:
         assert reads_connector._check_if_strand_mode_for_compare_ms(
             read1,
             read2,
-            True,
-            True,
-            False,
+            same_strand=True,
+            first_is_matched=True,
+            second_is_matched=False,
         )
         assert not reads_connector._check_if_strand_mode_for_compare_ms(
             read1,
             read2,
-            False,
-            False,
-            True,
+            same_strand=False,
+            first_is_matched=False,
+            second_is_matched=True,
         )
 
     def test_test_2case(self, reads_connector):
@@ -201,8 +202,8 @@ class TestReadsConnector:
         read2.adhocsms = read2.sms
         read1.adhocseq = read1.query_sequence
         read2.adhocseq = read2.query_sequence
-        assert reads_connector.test_2case(read1, read2, False)
-        assert reads_connector.test_2case(read2, read1, False)
+        assert reads_connector.test_2case(read1, read2, is_compare_for_ms=False)
+        assert reads_connector.test_2case(read2, read1, is_compare_for_ms=False)
 
     def test__double_check_for_start_end_read_determine_new_read_mode(
         self,
@@ -233,6 +234,7 @@ class TestReadsConnector:
             fake_hsp,
             "ATCGC",
             read1,
+            60,
         )
 
         assert read1.mode == 1

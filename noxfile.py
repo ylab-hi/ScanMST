@@ -15,13 +15,13 @@ python_versions = ["3.9", "3.10"]
 nox.needs_version = ">= 2024.3.2"
 # uv provides the virtualenvs; fall back to virtualenv where uv is unavailable.
 nox.options.default_venv_backend = "uv|virtualenv"
-nox.options.sessions = (
+nox.options.sessions = [
     "pre-commit",
     "safety",
     "mypy",
     "tests",
     "typeguard",
-)
+]
 
 
 def activate_virtualenv_in_precommit_hooks(session: Session) -> None:

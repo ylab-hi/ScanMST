@@ -43,6 +43,14 @@ def cigar_data():
     return "1S2S5M3S2S"
 
 
+# NOTE ON THE EXPECTED COORDINATES
+# The breakpoints and the exon bounds adjacent to them sit 1-3 bases away from
+# the values this file carried before. That is the "and correction" half of
+# splicing_confirmation_and_correction (formerly splicing_confirmation): it now
+# shifts breakpoints onto the splice site it confirms and reports the corrected
+# span, instead of only returning a verdict. The values below were taken from
+# the current implementation; they encode present behaviour and have not been
+# re-derived from the reference data independently.
 def assert_event(
     result,
     *,
@@ -184,12 +192,12 @@ def test_same_chrom_same_strand_mode21_handler(
         sv_type="TDUP",
         anno=3,
         can=1,
-        bp1="chr17:1364856",
-        bp2="chr17:1423648",
+        bp1="chr17:1364858",
+        bp2="chr17:1423650",
         mode1=MappingMode.SM,
         mode2=MappingMode.MS,
-        read1=(1364856, 1400222, [(1364856, 1365058), (1400046, 1400222)]),
-        read2=(1423349, 1423651, [(1423349, 1423651)]),
+        read1=(1364858, 1400222, [(1364858, 1365058), (1400046, 1400222)]),
+        read2=(1423349, 1423650, [(1423349, 1423650)]),
         insertions=("-ACC", "-ACC"),
         strands=("-", "-"),
         genes=["YWHAE", "CRK"],
@@ -224,15 +232,15 @@ def test_diff_chrom_same_strand_mode21_handler(
         sv_type="TRA",
         anno=3,
         can=1,
-        bp1="chr20:391283",
-        bp2="chr17:1745408",
+        bp1="chr20:391286",
+        bp2="chr17:1745405",
         mode1=MappingMode.SM,
         mode2=MappingMode.MS,
-        read1=(391283, 397559, [(391283, 391579), (396197, 397559)]),
+        read1=(391286, 397559, [(391286, 391579), (396197, 397559)]),
         read2=(
             1744991,
-            1745408,
-            [(1744991, 1745058), (1745174, 1745213), (1745332, 1745408)],
+            1745405,
+            [(1744991, 1745058), (1745174, 1745213), (1745332, 1745405)],
         ),
         insertions=("-CAGGTG", "-CAGGTG"),
         strands=("+", "+"),
@@ -269,7 +277,7 @@ def test_diff_chrom_diff_strand_handler(
         anno=3,
         can=1,
         bp1="chr17:1745405",
-        bp2="chr20:439298",
+        bp2="chr20:439295",
         mode1=MappingMode.MS,
         mode2=MappingMode.MS,
         read1=(
@@ -277,7 +285,7 @@ def test_diff_chrom_diff_strand_handler(
             1745405,
             [(1744991, 1745058), (1745174, 1745213), (1745332, 1745405)],
         ),
-        read2=(435479, 439298, [(435479, 438841), (439107, 439298)]),
+        read2=(435479, 439295, [(435479, 438841), (439107, 439295)]),
         insertions=("-CAG", "-CTG"),
         strands=("+", "-"),
         genes=["SERPINF2", "TBC1D20"],
@@ -308,19 +316,19 @@ def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads, fake_l
         sv_type="INV",
         anno=3,
         can=1,
-        bp1="chr17:1651554",
-        bp2="chr17:1730946",
+        bp1="chr17:1651553",
+        bp2="chr17:1730945",
         mode1=MappingMode.MS,
         mode2=MappingMode.MS,
         read1=(
             1650628,
-            1651554,
-            [(1650628, 1650956), (1651107, 1651310), (1651413, 1651554)],
+            1651553,
+            [(1650628, 1650956), (1651107, 1651310), (1651413, 1651553)],
         ),
         read2=(
             1727989,
-            1730946,
-            [(1727989, 1728626), (1730379, 1730487), (1730754, 1730946)],
+            1730945,
+            [(1727989, 1728626), (1730379, 1730487), (1730754, 1730945)],
         ),
         insertions=("-CC", "-GG"),
         strands=("-", "+"),
