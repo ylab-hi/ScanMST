@@ -104,3 +104,5 @@ class FakeHsp:
     query_start: int
     query_end: int
     query_seq: str
+    # (start, end) of the hit on the reference; only [1] is read.
+    hit_range: tuple[int, int] = (1, 2)

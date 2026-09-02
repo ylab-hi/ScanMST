@@ -5,10 +5,21 @@ import os
 from pathlib import Path
 
 import pytest
-from scanmst import ToolNotFoundError
 from scanmst.cli import DefaultOptions, cli
 
 
+@pytest.mark.xfail(
+    reason=(
+        "cli/main.py iter_bam() exits on the bundled data. Its -Y check lives "
+        "inside the read loop and compares a running count of supplementary "
+        "alignments lacking soft clips against the running total, so a single "
+        "bad first supplementary alignment gives 1 >= 1 and raises SystemExit. "
+        "Either the check belongs after the loop or these BAMs need "
+        "regenerating with -Y; both are calls for a maintainer."
+    ),
+    raises=SystemExit,
+    strict=True,
+)
 @pytest.mark.parametrize(
     ("data_name", "parallel"),
     [("INV_TDUP", 1), ("TDUP_TRA", 1), ("TDUP_TRA", 2), ("INV_TDUP", 2)],
@@ -30,13 +41,13 @@ def test_cli(tmpdir, data_name, parallel):
         log="WARNING",
         thread=parallel,
     )
-    # The bundled test data never reaches blat, so the run is expected to stop
-    # with ToolNotFoundError. The comparisons below used to sit *inside* this
-    # block after the raising call, which made them unreachable -- the test
-    # asserted nothing. They now run against the output the CLI produced
-    # before it bailed out.
-    with pytest.raises(ToolNotFoundError):
-        cli.cli(op)
+    # Run the pipeline and compare the outputs against the checked-in expected
+    # files. These comparisons used to sit inside a pytest.raises block whose
+    # call raised first, and the block ended with a hand-written
+    # `raise ToolNotFoundError("This is a test")` to satisfy it -- so the suite
+    # could not tell a passing run from a failing one. See the xfail above for
+    # why the run currently stops early.
+    cli.cli(op)
 
     with open(f"{out_dir}/{data_name}.fasta") as of, open(
         f"{out_dir}/{data_name}.gtf",

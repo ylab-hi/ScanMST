@@ -204,7 +204,7 @@ class Insertion(Read):
 
     def reverse_strand(self) -> None:
         """Reverse strand of Insertion object."""
-        self.strand.reverse()
+        self.strand = self.strand.reversed()
 
 
 @dataclass(unsafe_hash=True)
