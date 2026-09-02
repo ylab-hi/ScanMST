@@ -3,6 +3,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from scanmst.base import Blat
 from scanmst.graph import Node
 
 __all__ = [
@@ -59,8 +60,13 @@ class FakeLogger:
         """Fake complete."""
 
 
-class FakeBlat:
-    """Fake Blat class."""
+class FakeBlat(Blat):
+    """Fake Blat class.
+
+    Subclasses Blat without calling its __init__: ReadsConnector gates the
+    realignment path on `isinstance(self.aligner, Blat)`, and the real
+    constructor needs the gfServer executable, which is downloaded on demand.
+    """
 
     def __init__(
         self,
@@ -75,15 +81,18 @@ class FakeBlat:
         self.query_insertion_return = query_insertion_return
         self.psl2sam_return = psl2sam_return
 
-    def query(self, _: str) -> str:
+    # These deliberately diverge from Blat's signatures -- the real
+    # _query_insertion and psl2sam are staticmethods -- because the double just
+    # hands back canned values.
+    def query(self, *_, **__) -> str:  # type: ignore[override]
         """Query."""
         return self.query_return
 
-    def _query_insertion(self, _: str) -> str:
+    def _query_insertion(self, *_, **__) -> str:  # type: ignore[override]
         """Query insertion."""
         return self.query_insertion_return
 
-    def psl2sam(self, *_) -> tuple[Any, ...]:
+    def psl2sam(self, *_, **__) -> tuple[Any, ...]:  # type: ignore[override]
         """PSL2SAM."""
         return self.psl2sam_return
 

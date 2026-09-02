@@ -332,5 +332,5 @@ def test_same_chrom_diff_strand_handler(prepare_fasta_and_gtf, inv_reads, fake_l
         ),
         insertions=("-CC", "-GG"),
         strands=("-", "+"),
-        genes=["PRPF8", "WDR81"],
+        genes=["PRPF8", "RP11-961A15.1&WDR81"],
     )

@@ -70,10 +70,11 @@ class TestRead:
     def test_get_exons_and_introns(self, param_dict):
         """Test the get_exons_and_introns function."""
         read = Read.new(**param_dict)
-        assert read.get_exons() == ([[1, 51]], [])
+        assert [(e.start, e.end) for e in read.get_exons()] == [(1, 51)]
         param_dict["cigar_str"] = "15S2M2N3I50M2S"
         read = Read.new(**param_dict)
-        assert read.get_exons() == ([[1, 3], [5, 55]], [[3, 5]])
+        assert [(e.start, e.end) for e in read.get_exons()] == [(1, 3), (5, 55)]
+        assert [(i.start, i.end) for i in read.get_exons().introns()] == [(3, 5)]
 
 
 @pytest.fixture()

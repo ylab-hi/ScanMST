@@ -2,6 +2,7 @@
 """Test Insertion.
 """
 import pytest
+from scanmst.base import Strand
 
 
 class TestInsertion:
@@ -12,7 +13,7 @@ class TestInsertion:
         insertion,
         sms=(5, 10, 2),
         source_s="left",
-        source_strand="+",
+        source_strand=Strand.Forward,
     ):
         """Test update cirgarstring sms."""
         insertion.update_cigarstring_sms(
@@ -30,9 +31,9 @@ class TestInsertion:
 
     def test_reverse_strand(self, insertion):
         """Test reverse strand."""
-        assert insertion.strand == "+"
+        assert insertion.strand is Strand.Forward
         insertion.reverse_strand()
-        assert insertion.strand == "-"
+        assert insertion.strand is Strand.Reverse
 
 
 class TestNovelInsertion:

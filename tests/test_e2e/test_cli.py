@@ -28,7 +28,7 @@ def test_cli(tmpdir, data_name, parallel):
         blat_two_bit=f"{data_dir}/dummy.2bit",
         noncanonical=True,
         log="WARNING",
-        parallel=parallel,
+        thread=parallel,
     )
     # The bundled test data never reaches blat, so the run is expected to stop
     # with ToolNotFoundError. The comparisons below used to sit *inside* this
