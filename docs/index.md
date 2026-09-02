@@ -11,7 +11,7 @@ A powerful tool for detecting Multi-segment transcripts (MSTs) with long reads a
 
 </div>
 
-______________________________________________________________________
+---
 
 ## :material-star: Key Features
 
@@ -34,7 +34,7 @@ Produce structured JSON files optimized for transcript segment graph visualizati
 
 </div>
 
-______________________________________________________________________
+---
 
 ## Quick Start
 
@@ -50,7 +50,7 @@ scanmst --input input_data.bam --ref ref.fasta --gtf annotation.gtf --output out
 
 Ready to dive in? Check out our [Quick Start Guide](getting-started/quick-start.md).
 
-______________________________________________________________________
+---
 
 ## What is ScanMST?
 
@@ -74,7 +74,7 @@ If you use ScanMST in your research, please cite:
 }
 ```
 
-______________________________________________________________________
+---
 
 ## License
 

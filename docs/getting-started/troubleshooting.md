@@ -8,36 +8,38 @@ Common issues and solutions for ScanMST users.
 
 ??? question "ModuleNotFoundError or ImportError after installation"
 
-   **Symptom**: `ModuleNotFoundError: No module named 'scanmst'`
+**Symptom**: `ModuleNotFoundError: No module named 'scanmst'`
 
-   **Cause**: Wrong Python environment or installation failed
+**Cause**: Wrong Python environment or installation failed
 
-   **Solution**:
-   ```bash
-   # Check Python version (must be 3.9 or higher )
-   python --version
+**Solution**:
 
-   # Verify pip is using correct Python
-   which pip
-   python -m pip --version
+```bash
+# Check Python version (must be 3.9 or higher )
+python --version
 
-   # Reinstall in current environment
-   python -m pip install --force-reinstall scanmst
-   ```
+# Verify pip is using correct Python
+which pip
+python -m pip --version
+
+# Reinstall in current environment
+python -m pip install --force-reinstall scanmst
+```
 
 ### Dependency Conflicts
 
 ??? question "ERROR: pip's dependency resolver does not currently take into account all the packages"
 
-   **Symptom**: Pip reports dependency conflicts during installation
+**Symptom**: Pip reports dependency conflicts during installation
 
-   **Solution**:
-   ```bash
-   # Install in a clean environment
-   python -m venv scanmst_env
-   source scanmst_env/bin/activate
-   pip install scanmst
-   ```
+**Solution**:
+
+```bash
+# Install in a clean environment
+python -m venv scanmst_env
+source scanmst_env/bin/activate
+pip install scanmst
+```
 
 ## Runtime Issues
 

@@ -3,7 +3,7 @@
 Learn how to perform read alignment and prepare BAM files for use with ScanMST.
 
 !!! info "Learning Objectives"
-    By the end of this tutorial, you will be able to:
+By the end of this tutorial, you will be able to:
 
     - Necesary files preparation
     - Alignment file (BAM) files generation
@@ -15,7 +15,6 @@ Learn how to perform read alignment and prepare BAM files for use with ScanMST.
     - Basic command-line experience
 
     **Time**: Approximately 30 minutes to several hours, depending on the size of the FASTQ file.
-
 
 ## Necessary files preparation
 
@@ -34,7 +33,6 @@ paftools.js gff2bed gencode.v48.annotation.gtf > annotation.bed12
 
 ## PacBio Iso-Seq Data
 
-
 ```bash
 minimap2 -t 16 -R "@RG\tID:sample\tSM:hs\tLB:ga\tPL:PACBIO" -Y --cs -ax splice:hq -uf --secondary=no --junc-bed annotation.bed12 hg38.fa FLNC_reads.fastq | samtools sort -@ 8 -O BAM -o sample.bam - && samtools index sample.bam sample.bai
 ```
@@ -46,6 +44,7 @@ minimap2 -t 16 -R "@RG\tID:sample\tSM:hs\tLB:ga\tPL:NANOPORE" -Y --cs -ax splice
 ```
 
 ## ONT direct cDNA Data
+
 The raw FASTQ file from Nanopore caller should not used, you have to prepossess with [Pychopper](https://github.com/epi2me-labs/pychopper)
 
 ```bash
@@ -77,4 +76,4 @@ You've learned how to:
 - ✅ Long read RNA-seq alignment for ScanMST.
 
 !!! success "Long read alignment files are Ready!"
-    The alignment files (BAM format) are now ready for MST calling with ScanMST!
+The alignment files (BAM format) are now ready for MST calling with ScanMST!

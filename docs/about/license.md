@@ -23,7 +23,6 @@ The GNU GPLv3 is a strong copyleft license. It grants you the following rights:
 
 With the following conditions:
 
-
 - **Copyleft**: If you distribute modified versions of this software, they must also be released under the GPLv3. You cannot close the source code of derived works.
 - **Disclose Source**: When distributing the software (or modified versions), you must provide access to the source code.
 - **License and copyright notice**: Include the license and copyright notice with the software

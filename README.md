@@ -15,8 +15,8 @@ It is able to detect and classify the multi-segment transcripts with the followi
 <img src="https://raw.githubusercontent.com/ylab-hi/ScanMST/main/images/segment_links.png" alt="Modeling segment connectivity" width="60%">
 </div>
 
-
 ## 🧬 BLAT Aligner (Automatic Setup)
+
 ScanMST utilizes BLAT (BLAST-like alignment tool) for auxiliary alignments.
 
 **You do not need to install BLAT manually.** When you run ScanMST with the `--aligner blat` option, the tool will automatically detect your operating system (Linux or macOS/Darwin) and chip architecture (Intel or Apple Silicon). It will then download the appropriate executables (gfServer, gfClient, and faToTwoBit) from the UCSC Genome Browser servers into the installation directory.
@@ -115,6 +115,7 @@ Contributions are very welcome. To learn more, see the [Contributor Guide].
 ScanMST is free software available under the GNU General Public License v3.0 (GPLv3). You are free to modify and redistribute this software under the terms of this license.
 
 ### ⚠️ External Dependency Licensing (BLAT)
+
 While ScanMST itself is GPL-licensed, it utilizes the **BLAT** aligner for specific functionality. BLAT is **not** distributed with ScanMST; it is downloaded automatically from the University of California, Santa Cruz (UCSC) servers upon first use.
 
 ### BLAT License Terms:
@@ -130,7 +131,6 @@ By using this software with the `--aligner blat` option, you acknowledge that yo
 If you experience any problems or have suggestions, please create an issue or a pull request.
 
 ## Credits
-
 
 [hypermodern python cookiecutter]: https://github.com/cjolowicz/cookiecutter-hypermodern-python
 [file an issue]: https://github.com/ylab-hi/ScanMST/issues

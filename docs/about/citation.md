@@ -17,7 +17,7 @@ If you use ScanMST in your research, please cite:
 
 ## MLA Style
 
-Wang, Ting-You, and Rendong Yang. *Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts*, 2026, https://github.com/ylab-hi/ScanMST.
+Wang, Ting-You, and Rendong Yang. _Structural variation reshapes the transcriptome by generating pervasive multi-segment transcripts_, 2026, https://github.com/ylab-hi/ScanMST.
 
 ## Chicago Style
 
@@ -45,7 +45,6 @@ To cite a specific version of ScanMST:
   doi={XX.XXXX/zenodo.XXXXXXX}  # Replace with actual DOI when available
 }
 ```
-
 
 ## Acknowledgments
 

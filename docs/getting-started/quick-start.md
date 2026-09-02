@@ -2,10 +2,7 @@
 
 Get started with ScanMST in 5 minutes! This tutorial will guide you through your first multi-segment transcript detection.
 
-!!! info "What you'll learn"
-    - How to run ScanMST on BAM files
-    - Understanding ScanMST output format
-    - Verifying your results
+!!! info "What you'll learn" - How to run ScanMST on BAM files - Understanding ScanMST output format - Verifying your results
 
     **Time**: ~5 minutes
 
@@ -45,12 +42,11 @@ ls -lh data_test.bam*
 ```
 
 !!! tip "About the Sample Data"
-    The sample file `data_test.bam` contains 10 chimeric reads sequenced using PacBio Iso-seq protocol.
+The sample file `data_test.bam` contains 10 chimeric reads sequenced using PacBio Iso-seq protocol.
 
 ## Step 2: Your First Run
 
 Run ScanMST on the sample data:
-
 
 ```bash
 scanmst --input data_test.bam --ref hg38.fa --gtf anno_test.gtf --output data_test
@@ -61,13 +57,11 @@ scanmst --input data_test.bam --ref hg38.fa --gtf anno_test.gtf --output data_te
 1. **GTF file (data_test.gtf)**: Store transcript segments (detailed exons) and segment links.
 2. **VCF file (data_test.vcf)**: Aggregated segment links by positions
 3. **FASTA file (data_test.fasta)**: Consensus transcript sequences
-4. **JSON file (data_test_TSG0000000001_cy.json)**:  Transcript segment graph
-
+4. **JSON file (data_test_TSG0000000001_cy.json)**: Transcript segment graph
 
 ## Step 3: Understand the Output
 
 ScanMST creates a bunch of files (including VCF, GTF, FASTA files) per sample:
-
 
 === "GTF file"
 
@@ -133,7 +127,6 @@ ScanMST creates a bunch of files (including VCF, GTF, FASTA files) per sample:
     ...
     ```
 
-
 ## Checkpoint: Verify Your Identifications Worked
 
 ✅ **Success indicators**:
@@ -142,12 +135,10 @@ ScanMST creates a bunch of files (including VCF, GTF, FASTA files) per sample:
 - [ ] Files are not empty
 
 !!! success "Congratulations!"
-    You've successfully run your first ScanMST identification! :tada:
+You've successfully run your first ScanMST identification! :tada:
 
 ## Troubleshooting
 
 Encountered an issue? Check our [Troubleshooting Guide](troubleshooting.md) for common problems and solutions.
 
-!!! question "Need Help?"
-    - :material-github: [Open an issue](https://github.com/ylab-hi/ScanMST/issues)
-    - :material-chat: [GitHub Discussions](https://github.com/ylab-hi/ScanMST/discussions)
+!!! question "Need Help?" - :material-github: [Open an issue](https://github.com/ylab-hi/ScanMST/issues) - :material-chat: [GitHub Discussions](https://github.com/ylab-hi/ScanMST/discussions)

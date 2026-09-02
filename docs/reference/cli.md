@@ -4,7 +4,7 @@ Complete reference for all ScanMLST command-line interface parameters.
 
 ## Overview
 
-______________________________________________________________________
+---
 
 ```console
 ❯ scanmst -h
@@ -116,9 +116,9 @@ Output sequence type
 
 **Default:** `consensus`
 
- -  `consensus`: consensus sequences derived from reads
- -  `reference`: sequences based on the reference genome
- -  `both`: consensus and reference sequences
+- `consensus`: consensus sequences derived from reads
+- `reference`: sequences based on the reference genome
+- `both`: consensus and reference sequences
 
 ### `--sr`
 
@@ -152,16 +152,15 @@ The reference genome in 2BIT format is required only when the `--aligner` option
 
 Port for BLAT server.
 
-
 ### `--circular-rna-filter`
 
 **Default:** `remove`
 
 The way of dealing with putative circular RNAs.
 
- -  `remove`: remove putative circular RNAs.
- -  `keep`: keep putative circular RNAs.
- -  `extract`: extract putative circular RNAs only.
+- `remove`: remove putative circular RNAs.
+- `keep`: keep putative circular RNAs.
+- `extract`: extract putative circular RNAs only.
 
 ### `--off-exon-filter`
 
@@ -186,7 +185,6 @@ When enabled, segment links involving non-canonical splice sites are included.
 **Default:** `False`
 
 Whether to output the graph. When enabled, transcript segment graphs are exported in JSON format.
-
 
 ### `--refine`
 
@@ -223,7 +221,6 @@ Minimum required insertion length in read to infer chimeric alignment.
 **Default:** `200`
 
 Minimum length of soft-clipped portion required to trigger BLAT alignment to infer chimeric alignment.
-
 
 ### `--long-indel-length`
 
@@ -286,7 +283,7 @@ Minimum fraction of the sequence that must align in Smith-Waterman local alignme
 
 Whether to add maximum increment limit using average reads depth when rescuing SR. Enabled by default.
 
-______________________________________________________________________
+---
 
 ## See Also
 

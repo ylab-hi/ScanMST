@@ -3,7 +3,7 @@
 Learn how to perform multi-segment transcript identificaiton with ScanMST.
 
 !!! info "Learning Objectives"
-    By the end of this tutorial, you will be able to:
+By the end of this tutorial, you will be able to:
 
     - Necesary files preparation
     - Run ScanMST generation
@@ -42,8 +42,7 @@ scanmst --thread 1 --input sample.bam --output sample --ref hg38.fa --gtf gencod
 1. **GTF**: Store transcript segments (detailed exons) and segment links.
 2. **VCF**: Aggregated segment links by positions
 3. **FASTA**: Consensus transcript sequences
-4. **JSON**:  Transcript segment graph
-
+4. **JSON**: Transcript segment graph
 
 ## Summary
 
@@ -53,4 +52,4 @@ You've learned how to:
 - ✅ Run ScanMST to identify MSTs.
 
 !!! success "Identified MSTs Data Ready!"
-    The MSTs identified are now ready for high-quality downstream analysis!
+The MSTs identified are now ready for high-quality downstream analysis!
