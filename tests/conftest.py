@@ -219,7 +219,12 @@ def reads(read_param_dict):
 
     read_instances = []
     for read_param in read_param_dict:
-        temp = Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None)  # type: ignore
+        # Read.new requires query_qualities, and the realignment path in
+        # ReadsConnector rejects None, so give every base a flat Phred 30.
+        temp = Read.new(
+            **{param: read_param[param] for param in read_init_params},  # type: ignore
+            query_qualities=[30] * len(read_param["query_seq"]),
+        )
         read_instances.append(temp)
     return read_instances
 
@@ -394,7 +399,7 @@ def inv_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=[30] * len(read_param["query_seq"])),  # type: ignore
         )
     return read_instances
 
@@ -537,7 +542,7 @@ def trans_same_strand_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=[30] * len(read_param["query_seq"])),  # type: ignore
         )
     return read_instances
 
@@ -756,7 +761,7 @@ def trans_diff_strand_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=[30] * len(read_param["query_seq"])),  # type: ignore
         )
     return read_instances
 
@@ -853,6 +858,6 @@ def tdup_reads():
     read_instances = []
     for read_param in param_dict:
         read_instances.append(
-            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=None),  # type: ignore
+            Read.new(**{param: read_param[param] for param in read_init_params}, query_qualities=[30] * len(read_param["query_seq"])),  # type: ignore
         )
     return read_instances
