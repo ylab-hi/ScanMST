@@ -78,11 +78,12 @@ lint = [
     "pre-commit-hooks>=5.0.0",
 ]
 typing = ["mypy>=1.10"]
-# NOTE: `safety` is deliberately NOT declared here. noxfile.py's `safety`
-# session installs it into its own venv (session.install("safety")), so a
-# declared group would only pull safety's own transitive tree -- including
-# nltk, which has no patched release for Python 3.9 (nltk >= 3.10 requires
-# >= 3.10, while this project supports 3.9). See CVE-2026-79675.
+# NOTE: no `security` group here, and do not add one. The audit runs from
+# noxfile.py's `safety` session, which installs pip-audit into its own venv, so
+# a declared group would only pull an auditing tool's transitive tree -- nltk
+# among them. nltk has an open cluster of advisories and no fix reachable from
+# here: the patched line needs Python >= 3.10, this project supports 3.9, and
+# GHSA-8mgp-746c-j5xp / CVE-2026-81726 has no patched release at all.
 docs = [
     "mkdocs>=1.6",
     "mkdocs-material>=9.5",
