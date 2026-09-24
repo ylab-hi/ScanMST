@@ -1,2 +1,2 @@
 nox==2025.5.1
-virtualenv==20.32.0
+virtualenv==21.7.7
