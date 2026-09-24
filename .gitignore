@@ -58,3 +58,10 @@ site/
 .serena/
 CLAUDE.md
 conda/
+
+# rebuilt locally by example/make_reference.py, ~288MB
+example/example_ref.fasta
+# fasta indexes are generated on first use by pyfaidx
+*.fai
+# output directory used by the quick-start example
+out/

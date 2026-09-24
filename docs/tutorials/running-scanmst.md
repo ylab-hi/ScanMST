@@ -3,10 +3,11 @@
 Learn how to perform multi-segment transcript identificaiton with ScanMST.
 
 !!! info "Learning Objectives"
-By the end of this tutorial, you will be able to:
 
-    - Necesary files preparation
-    - Run ScanMST generation
+    By the end of this tutorial, you will be able to:
+
+    - Prepare the necessary reference files
+    - Run ScanMST on your own data
 
     **Prerequisites**:
 
@@ -15,6 +16,10 @@ By the end of this tutorial, you will be able to:
     - Basic command-line experience
 
     **Time**: Approximately 30 minutes to several hours, depending on the size of the BAM file
+
+!!! tip "New to ScanMST?"
+
+    Try the [Quick Start](../getting-started/quick-start.md) first — it runs a complete analysis on bundled example data in about a minute, with no genome download, and walks through how to read each output file.
 
 ## Necessary files preparation
 

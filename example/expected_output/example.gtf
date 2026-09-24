@@ -1,0 +1,18 @@
+.	scanmst	transcript	.	.	.	.	.	sr "5"; osr "5"; transcript_id "TSP1011239472"; gene_id "TSG0000000001"; extend "False";
+chr16	scanmst	exon	85011286	85011535	.	-	.	exon_id "001"; segment_id "TSN7236494217"; ptc "1"; ptf "1.0"; transcript_id "TSP1011239472"; gene_id "TSG0000000001";
+chr16	scanmst	exon	84995922	84996007	.	-	.	exon_id "002"; segment_id "TSN7236494217"; ptc "1"; ptf "1.0"; transcript_id "TSP1011239472"; gene_id "TSG0000000001";
+chr17	scanmst	exon	75783107	75786454	.	-	.	exon_id "001"; segment_id "TSN4224182903"; ptc "1"; ptf "1.0"; transcript_id "TSP1011239472"; gene_id "TSG0000000001";
+.	scanmst	transcript	.	.	.	.	.	sr "5"; osr "5"; transcript_id "TSP1451884094"; gene_id "TSG0000000002"; extend "False";
+chr16	scanmst	exon	84700000	84700111	.	+	.	exon_id "001"; segment_id "TSN3923335809"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr16	scanmst	exon	84990304	84990635	.	-	.	exon_id "001"; segment_id "TSN9277681475"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122959635	122960322	.	-	.	exon_id "001"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122950451	122950565	.	-	.	exon_id "002"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122949788	122949918	.	-	.	exon_id "003"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122948624	122948829	.	-	.	exon_id "004"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122946025	122946222	.	-	.	exon_id "005"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122944391	122944519	.	-	.	exon_id "006"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122940807	122940995	.	-	.	exon_id "007"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122940111	122940284	.	-	.	exon_id "008"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122935272	122935431	.	-	.	exon_id "009"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122932192	122932328	.	-	.	exon_id "010"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";
+chr12	scanmst	exon	122928993	122930171	.	-	.	exon_id "011"; segment_id "TSN1137286303"; ptc "1"; ptf "1.0"; transcript_id "TSP1451884094"; gene_id "TSG0000000002";

@@ -1,8 +1,12 @@
 # Quick Start
 
-Get started with ScanMST in 5 minutes! This tutorial will guide you through your first multi-segment transcript detection.
+Run ScanMST end to end on the bundled example data, and learn to read its output.
 
-!!! info "What you'll learn" - How to run ScanMST on BAM files - Understanding ScanMST output format - Verifying your results
+!!! info "What you'll learn"
+
+    - How to run ScanMST on a real BAM file
+    - What the GTF, VCF, FASTA and graph JSON outputs contain
+    - How to confirm your run produced the expected result
 
     **Time**: ~5 minutes
 
@@ -10,135 +14,220 @@ Get started with ScanMST in 5 minutes! This tutorial will guide you through your
 
 - ScanMST installed ([Installation Guide](installation.md))
 - Basic command-line experience
-- A BAM file to analyze (we'll provide sample data)
-- A reference genome FASTA file
-- A gene annotation GTF file
 
-!!! tip "ScanMST needs specific tags in the BAM file"
-For comprehensive guide of reads alignment, see the [Reads Alignment Tutorial](../tutorials/reads-alignment.md).
+Nothing else is needed. The reads, the reference sequence and the gene annotation for this example all ship with the repository, so you do not have to download a genome to try it.
 
-## Step 1: Get Sample Data
+## Step 1: Get the example data
 
-ScanMST includes test data in the repository. If you installed from source:
+=== "From a clone"
 
-```bash
-# Sample data is already available
-ls tests/data/data_test.bam
-```
+    ```bash
+    git clone https://github.com/ylab-hi/ScanMST.git
+    cd ScanMST
+    ls example/
+    ```
 
-If you installed via pip, download the sample data:
+=== "Download individually"
 
-```bash
-# Download sample BAM file with index
-wget https://github.com/ylab-hi/ScanMST/raw/main/tests/data/data_test.bam
-wget https://github.com/ylab-hi/ScanMST/raw/main/tests/data/data_test.bam.bai
+    ```bash
+    BASE=https://github.com/ylab-hi/ScanMST/raw/main/example
+    mkdir -p example && cd example
 
-# Or using curl
-curl -L -o data_test.bam https://github.com/ylab-hi/ScanMST/raw/main/tests/data/data_test.bam
-curl -L -o data_test.bam.bai https://github.com/ylab-hi/ScanMST/raw/main/tests/data/data_test.bam.bai
+    wget $BASE/example.bam
+    wget $BASE/example.bam.bai
+    wget $BASE/example_ref.windows.fasta
+    wget $BASE/example_ref.gtf
+    wget $BASE/make_reference.py
+    ```
 
-# Verify files downloaded correctly
-ls -lh data_test.bam*
-```
+!!! tip "About the example data"
 
-!!! tip "About the Sample Data"
-The sample file `data_test.bam` contains 10 chimeric reads sequenced using PacBio Iso-seq protocol.
+    `example.bam` contains 10 chimeric PacBio Iso-Seq CCS reads from the VCaP prostate cancer cell line (25 alignment records, 15 of them supplementary), aligned to hg38 across chr12, chr16 and chr17.
 
-## Step 2: Your First Run
+    Those reads encode two multi-segment transcripts: one joining **ZDHHC7** on chr16 to chr17, and one joining **USP10** and **ZDHHC7** on chr16 to **ABCB9** on chr12. Five reads support each.
 
-Run ScanMST on the sample data:
+## Step 2: Build the example reference
 
 ```bash
-scanmst --input data_test.bam --ref hg38.fa --gtf anno_test.gtf --output data_test
+python example/make_reference.py
 ```
 
-**Expected output**:
+```text
+chr12: 122,961,323 bp (33,331 bp of real sequence from 122,927,993)
+chr16: 85,012,535 bp (313,536 bp of real sequence from 84,699,000)
+chr17: 75,787,455 bp (5,349 bp of real sequence from 75,782,107)
 
-1. **GTF file (data_test.gtf)**: Store transcript segments (detailed exons) and segment links.
-2. **VCF file (data_test.vcf)**: Aggregated segment links by positions
-3. **FASTA file (data_test.fasta)**: Consensus transcript sequences
-4. **JSON file (data_test_TSG0000000001_cy.json)**: Transcript segment graph
+Wrote example/example_ref.fasta (288 MB)
+```
 
-## Step 3: Understand the Output
+!!! note "Why this step exists"
 
-ScanMST creates a bunch of files (including VCF, GTF, FASTA files) per sample:
+    ScanMST looks up reference sequence by absolute genomic coordinate, so each contig in the FASTA has to start at position 1 — even though this example only touches a few small windows of hg38. Padding those windows out produces a 288 MB file, too large to keep in git, so the repository ships only the 359 KB of real sequence (`example_ref.windows.fasta`) and this script regenerates the padding locally.
+
+    `example/example_ref.fasta` is disposable — delete it when you are done and rerun the script whenever you need it back.
+
+## Step 3: Run ScanMST
+
+```bash
+mkdir -p out
+scanmst --input example/example.bam --output out/example \
+        --ref example/example_ref.fasta --gtf example/example_ref.gtf \
+        --ncan --graph --refine --prune-threshold 20
+```
+
+The output directory must already exist, which is what `mkdir -p out` is for. The run takes about a second and writes four things:
+
+- `out/example.gtf` — transcript segments and their exons
+- `out/example.vcf` — segment links, aggregated by position
+- `out/example.fasta` — the reconstructed transcript sequences
+- `out/graph_example/` — one transcript segment graph per gene, as JSON
+
+!!! tip "Where the graph JSON goes"
+
+    `--graph` writes to `graph_<input BAM name>/` next to your output prefix, so `--input example/example.bam --output out/example` produces `out/graph_example/`.
+
+## Step 4: Understand the output
+
+ScanMST uses four kinds of identifier throughout its output:
+
+- **TSP** — a multi-segment transcript (MST)
+- **TSN** — a single transcript segment, a node in the graph
+- **TSE** — a link between two segments, an edge in the graph
+- **TSG** — a gene, grouping MSTs that share segments
 
 === "GTF file"
 
     ```bash
-    # View first 8 lines in GTF file.
-    head -n 8 data_test.gtf
+    head -n 5 out/example.gtf
     ```
-
-    **Output format** (GTF file):
 
     ```text
-    .	scanmst	transcript	.	.	.	.	.	sr "4"; osr "4"; transcript_id "TSP2127603018"; gene_id "TSG0000000001"; extend "False";
-    chr6	scanmst	exon	157823215	157823446	.	+	.	exon_id "001"; segment_id "TSN5024142628"; ptc "3"; ptf "1.0"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
-    chr6	scanmst	exon	157867547	157867633	.	+	.	exon_id "002"; segment_id "TSN5024142628"; ptc "3"; ptf "1.0"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
-    chr6	scanmst	exon	157873102	157873176	.	+	.	exon_id "003"; segment_id "TSN5024142628"; ptc "3"; ptf "1.0"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
-    chr6	scanmst	exon	157875051	157875176	.	+	.	exon_id "004"; segment_id "TSN5024142628"; ptc "3"; ptf "1.0"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
-    chr10	scanmst	exon	94820496	94820637	.	+	.	exon_id "001"; segment_id "TSN2095345182"; ptc "2"; ptf "0.6666666666666666"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
-    chr10	scanmst	exon	93636995	93637062	.	+	.	exon_id "001"; segment_id "TSN7383915218"; ptc "2"; ptf "0.6666666666666666"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
-    chr10	scanmst	exon	89136383	89139408	.	-	.	exon_id "001"; segment_id "TSN1003188885"; ptc "1"; ptf "0.3333333333333333"; transcript_id "TSP2127603018"; gene_id "TSG0000000001";
+    .	scanmst	transcript	.	.	.	.	.	sr "5"; osr "5"; transcript_id "TSP1011239472"; gene_id "TSG0000000001"; extend "False";
+    chr16	scanmst	exon	85011286	85011535	.	-	.	exon_id "001"; segment_id "TSN7236494217"; ptc "1"; ptf "1.0"; transcript_id "TSP1011239472"; gene_id "TSG0000000001";
+    chr16	scanmst	exon	84995922	84996007	.	-	.	exon_id "002"; segment_id "TSN7236494217"; ptc "1"; ptf "1.0"; transcript_id "TSP1011239472"; gene_id "TSG0000000001";
+    chr17	scanmst	exon	75783107	75786454	.	-	.	exon_id "001"; segment_id "TSN4224182903"; ptc "1"; ptf "1.0"; transcript_id "TSP1011239472"; gene_id "TSG0000000001";
+    .	scanmst	transcript	.	.	.	.	.	sr "5"; osr "5"; transcript_id "TSP1451884094"; gene_id "TSG0000000002"; extend "False";
     ```
+
+    Each MST begins with a `transcript` line. Because an MST spans multiple loci, it has no single chromosome or coordinate, so those columns are `.` and the line carries only counts and identifiers. The `exon` lines that follow give the real coordinates, grouped by `segment_id`.
+
+    The first transcript above has two segments: `TSN7236494217` (two exons on chr16) joined to `TSN4224182903` (one exon on chr17).
 
     **Attributes**:
 
-    - **segment_id**: Identifier of an individual transcript segment
-    - **transcript_id**: Identifier of a multi-segment transcript (MST)
-    - **gene_id**: Identifier grouping MSTs that share transcript segments
+    - **sr** — reads supporting this transcript, and **osr** the count before any rescue step
+    - **segment_id** — which transcript segment the exon belongs to
+    - **ptc** / **ptf** — how many paths through the graph use this segment, as a count and a fraction
 
 === "VCF file"
 
-    ```bash
-    # View the first transcript segment link.
-    sed -n '492,493p' isoseq_data.vcf
-    ```
+    Every segment link is one VCF record:
 
-    **Output format** (GTF file):
+    ```bash
+    grep -v '^##' out/example.vcf | cut -f1,2,3,5
+    ```
 
     ```text
-    #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	isoseq_data
-    chr6	157875177	1	.	<ITPL>	.	.	CANONICAL;LINKTYPE=ITPL;SR=7;OSR=7;CHR2=chr10;SVEND=94820496;DP1=10;DP2=7;PSI=0.452;SVLEN=0;GENE1=SNX9;GENE2=CYP2C19;SVTYPE=TRA;SEGMENT1=TSN5024142628,TSN5024142628;SEGMENT2=TSN2095345182,TSN2095345182;STRAND1=+;STRAND2=+;MODE1=MS;MODE2=SM;HOMSEQ=AGG;INSSEQ=.;TRANSCRIPT_ID=TSP2127603018,TSP1746195317;GENE_ID=TSG0000000001;SR_ID=m64135_220622_211525/166592832/ccs|m64135_220622_211525/81921303/ccs|m64135_220622_211525/2623225/ccs|m64135_220622_211525/157876553/ccs|m64135_220622_211525/6686285/ccs|m64135_220622_211525/26215277/ccs|m64135_220622_211525/114754580/ccs,m64135_220622_211525/166592832/ccs|m64135_220622_211525/81921303/ccs|m64135_220622_211525/2623225/ccs|m64135_220622_211525/157876553/ccs|m64135_220622_211525/6686285/ccs|m64135_220622_211525/26215277/ccs|m64135_220622_211525/114754580/ccs;SVMETHOD=ScanMST	GT	0/1
-    ...
+    #CHROM	POS	ID	ALT
+    chr16	84995922	1	<ITPL>
+    chr16	84700112	1	<ICTL>
+    chr16	84990304	2	<ITPL>
     ```
+
+    The ALT allele names the kind of link, and the file defines all four in its own header:
+
+    - **ICRL** — Intra-Chromosomal Reverse Link
+    - **ICTL** — Intra-Chromosomal Trans-strand Link
+    - **ITPL** — InTer-chromosomal Parallel Link
+    - **ITTL** — InTer-chromosomal Trans-strand Link
+
+    The detail lives in the INFO column. Here is the first record — one long line in the file, wrapped here for readability, with the `SR_ID` read list shortened:
+
+    ```text
+    CANONICAL;LINKTYPE=ITPL;SR=5;OSR=5;CHR2=chr17;SVEND=75786455;DP1=5;DP2=5;SVLEN=0;
+    GENE1=ZDHHC7;GENE2=UNK;SVTYPE=TRA;SEGMENT1=TSN7236494217;SEGMENT2=TSN4224182903;
+    STRAND1=-;STRAND2=-;MODE1=SM;MODE2=MS;HOMSEQ=CT;INSSEQ=.;
+    TRANSCRIPT_ID=TSP1011239472;GENE_ID=TSG0000000001;SR_ID=...;SVMETHOD=ScanMST
+    ```
+
+    So this link joins `TSN7236494217` to `TSN4224182903`, from chr16:84995922 to chr17:75786455, across a `ZDHHC7`–`UNK` gene pair, supported by 5 reads, at a canonical splice site with a 2 bp `CT` microhomology.
 
     **Fields**:
 
-    - **LINKTYPE**: The type of link, ICRL, ICTL, ITPL, ITTL
-    - **SR**: Supporting reads number
-    - **SEGMENT1**: ID for source transcript segment
-    - **SEGMENT2**: ID for target transcript segment
+    - **LINKTYPE** — one of the four link types above; **SVTYPE** is the matching structural variant class (`TDUP`, `INV` or `TRA`)
+    - **SR** / **OSR** — supporting reads, after and before rescue processing
+    - **SEGMENT1** / **SEGMENT2** — source and target transcript segment
+    - **CHR2** / **SVEND** — the other end of the link
+    - **HOMSEQ** / **INSSEQ** — microhomology or microinsertion at the breakpoint
+    - **SR_ID** — the names of the supporting reads
+
+    Every INFO and ALT field is described in the VCF's own `##INFO` and `##ALT` header lines, so `grep '^##' out/example.vcf` is a complete reference.
 
 === "FASTA file"
 
     ```bash
-    # View predictions from first batch
-    head -n 2 data_test.fasta
+    grep '>' out/example.fasta
     ```
-
-    **Output format** (FASTA file):
 
     ```text
-    >TSP2127603018 520|142|68|3026
-    GAGTAGCCGAGCGCCCAGCGGCTGGGCCTGAGCGTCGAGACTCGGGGCCGAGGCGGAGGAGCGGCCGCCGCGCCGGGGCCCAGCCGGAGCCGCCGCCCTCGCCC
-    ...
-    ...
+    >TSP1011239472 336|3348
+    >TSP1451884094 112|332|3306
     ```
 
-## Checkpoint: Verify Your Identifications Worked
+    The sequence is the full reconstructed transcript. The pipe-separated numbers after the ID are the lengths of each segment in order, so they sum to the sequence length and tell you where one segment ends and the next begins — 336 + 3348 = 3684 bases for the first transcript, and three segments totalling 3750 for the second.
+
+=== "Graph JSON"
+
+    ```bash
+    ls out/graph_example/
+    ```
+
+    ```text
+    example_TSG0000000001_cy.json  example_TSG0000000002_cy.json
+    ```
+
+    One file per gene (`TSG`), in [Cytoscape.js](https://js.cytoscape.org/) format, so it can be loaded straight into a graph viewer. Nodes are transcript segments (`TSN`) carrying their coordinates, strand, exons and supporting reads; edges are segment links (`TSE`) carrying the breakpoints, supporting read count and any microhomology. The `data` block at the top lists the paths through the graph, which is where the `TSP` transcripts come from.
+
+## Step 5: Verify your run
+
+The repository ships the expected output, so you can check your run exactly:
+
+```bash
+diff out/example.gtf example/expected_output/example.gtf
+diff out/example.fasta example/expected_output/example.fasta
+```
+
+Both should print nothing. The VCF matches too, except for its `##fileDate` header, which is regenerated on every run:
+
+```bash
+diff <(grep -v '^##fileDate' out/example.vcf) \
+     <(grep -v '^##fileDate' example/expected_output/example.vcf)
+```
 
 ✅ **Success indicators**:
 
-- [ ] VCF, GTF and FASTA files created
-- [ ] Files are not empty
+- [ ] `out/` contains `example.gtf`, `example.vcf` and `example.fasta`
+- [ ] `out/graph_example/` contains two JSON files
+- [ ] The GTF reports two transcripts, and the VCF three segment links
+- [ ] All three diffs above are clean
 
 !!! success "Congratulations!"
-You've successfully run your first ScanMST identification! :tada:
+
+    You've run your first multi-segment transcript identification. :tada:
+
+## Next steps
+
+Ready to use your own data? Two things change: you need a full reference genome and annotation instead of the windowed example ones, and your BAM has to carry the `SA` and `cs` tags ScanMST relies on.
+
+- [Reads Alignment](../tutorials/reads-alignment.md) — how to align reads so the BAM is compatible. The example BAM here was produced with `minimap2 -Y --cs -ax splice:hq -uf --secondary=no --junc-bed`, recorded in the `##reference` header of its VCF.
+- [Running ScanMST](../tutorials/running-scanmst.md) — a full run against hg38 and GENCODE
+- [CLI Reference](../reference/cli.md) — every option, including the `--ncan`, `--graph`, `--refine` and `--prune-threshold` flags used above
 
 ## Troubleshooting
 
 Encountered an issue? Check our [Troubleshooting Guide](troubleshooting.md) for common problems and solutions.
 
-!!! question "Need Help?" - :material-github: [Open an issue](https://github.com/ylab-hi/ScanMST/issues) - :material-chat: [GitHub Discussions](https://github.com/ylab-hi/ScanMST/discussions)
+!!! question "Need Help?"
+
+    - :material-github: [Open an issue](https://github.com/ylab-hi/ScanMST/issues)
+    - :material-chat: [GitHub Discussions](https://github.com/ylab-hi/ScanMST/discussions)

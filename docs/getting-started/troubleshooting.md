@@ -108,6 +108,6 @@ If your issue isn't covered here:
 !!! tip "Before Opening an Issue"
 
     - Update to the latest version
-    - Try with sample data (`tests/data/isoseq_test.bam`)
+    - Try with the example data (see the [Quick Start](quick-start.md))
     - Include full error traceback
     - Describe what you expected vs. what happened

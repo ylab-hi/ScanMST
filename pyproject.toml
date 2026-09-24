@@ -292,6 +292,7 @@ line-ending = "auto"
 "src/scanmst/utils.py" = ["S603"]
 # Build/CI helper scripts are console tools; printing is their output.
 "scripts/*.py" = ["T201"]
+"example/*.py" = ["T201"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"

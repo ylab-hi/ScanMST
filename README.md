@@ -104,6 +104,22 @@ options:
   --ignore-circle                         Whether to export result when the transcript segment graph contains a circle (default: False)
 ```
 
+### 🧪 **Example run**
+
+The repository ships a small example you can run end to end in about a minute, without downloading a genome:
+
+```bash
+python example/make_reference.py    # rebuild the windowed reference (~288 MB, disposable)
+
+mkdir -p out
+scanmst --input example/example.bam --output out/example \
+        --ref example/example_ref.fasta --gtf example/example_ref.gtf \
+        --ncan --graph --refine --prune-threshold 20
+```
+
+This writes `out/example.gtf`, `out/example.vcf`, `out/example.fasta` and `out/graph_example/`, which you can compare against `example/expected_output/`.
+The [Quick Start](https://ylab-hi.github.io/ScanMST/getting-started/quick-start/) walks through what each output file contains.
+
 Please refer to the [document](https://ylab-hi.github.io/ScanMST/) for details and more examples.
 
 ## Contributing
