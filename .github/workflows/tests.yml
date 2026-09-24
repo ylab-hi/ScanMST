@@ -37,7 +37,7 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # The _cppext extension links against htslib and zlib. Nothing installed
       # them before, so the compiled build had never actually run in CI.
@@ -80,7 +80,7 @@ jobs:
     needs: tests
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # `uv run --group dev` builds the project, and the _cppext extension links
       # against htslib, so this job needs it just as the test matrix does. The
