@@ -38,7 +38,7 @@ dependencies = [
     "alignparse>=0.7.1,<0.8",
     "matplotlib>=3.9,<4",
     "intervaltree>=3.1.0,<4",
-    "numpy==1.26.4",
+    "numpy==2.2.6",
     "joblib>=1.5.0,<2",
     # Both were previously undeclared and arrived only transitively:
     #   src/scanmst/base/helper.py imports yaml
