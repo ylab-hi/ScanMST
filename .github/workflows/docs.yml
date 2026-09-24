@@ -1,0 +1,63 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "noxfile.py"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+# Pushing to gh-pages needs write access to the repository contents.
+permissions:
+  contents: write
+
+# Never let two deploys race each other onto gh-pages.
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to gh-pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          # mkdocs-git-revision-date-localized reads each page's last commit
+          # date, so it needs the full history rather than a shallow clone.
+          fetch-depth: 0
+
+      # The docs-build session installs the project, and the _cppext extension
+      # links against htslib, so this job needs it just as the test matrix does.
+      - name: Install htslib (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libhts-dev zlib1g-dev
+          echo "HTSLIB_ROOT=/usr" >> "$GITHUB_ENV"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.10
+
+      - name: Configure git for the deploy commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # docs-build passes posargs straight through to mkdocs, so this reuses the
+      # same pinned dependency set rather than repeating it here. gh-deploy
+      # builds the site and pushes the result to the gh-pages branch; --strict
+      # turns broken nav entries and dead relative links into a failed build,
+      # which aborts the run before anything is pushed.
+      - name: Build and deploy to gh-pages
+        run: uv run --group dev nox --force-color --session=docs-build --python=3.10 -- gh-deploy --force --strict
