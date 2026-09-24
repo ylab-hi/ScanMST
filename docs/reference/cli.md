@@ -10,13 +10,13 @@ Complete reference for all ScanMLST command-line interface parameters.
 ❯ scanmst -h
 
 usage: scanmst [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
-               [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--parallel PARALLEL] [--aligner {blat,}]
+               [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--thread THREAD] [--aligner {blat,}]
                [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
-               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine] [--refine-threshold REFINE_THRESHOLD]
-               [--nbound] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS] [--min-required-ins MIN_REQUIRED_INS] [--long-indel-length LONG_INDEL_LENGTH]
-               [--indel-fraction INDEL_FRACTION] [--prune-threshold PRUNE_THRESHOLD] [--soft-len SOFT_LEN]
-               [--mismatch MISMATCH] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--alignment-fraction ALIGNMENT_FRACTION]
-               [--substitution-fraction SUBSTITUTIONS_FRACTION] [--ignore-circle] [--rescue-sr]
+               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine]
+               [--refine-threshold REFINE_THRESHOLD] [--prune-threshold PRUNE_THRESHOLD] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS]
+               [--min-required-ins MIN_REQUIRED_INS] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--long-indel-length LONG_INDEL_LENGTH]
+               [--indel-fraction INDEL_FRACTION] [--substitution-fraction SUBSTITUTIONS_FRACTION] [--rescue-sr] [--soft-len SOFT_LEN] [--mismatch MISMATCH]
+               [--alignment-fraction ALIGNMENT_FRACTION] [--nbound] [--ignore-circle]
 
 scanmst 🚀 Multi-segment transcript (MST) identification using transcriptomic long reads data
 
@@ -267,7 +267,7 @@ Minimum length of soft-clipped portion to be rescued.
 
 ### `--mismatch`
 
-**Default:** `5`
+**Default:** `3`
 
 Maximum number of mismatched bases allowed in a rescued segment
 
