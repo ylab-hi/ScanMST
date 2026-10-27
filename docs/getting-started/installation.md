@@ -4,7 +4,7 @@ Get ScanMST installed on your system in just a few minutes.
 
 ## Prerequisites
 
-!!! info "Requirements" - **Python**: 3.9 or higher - **Operating System**: Linux, macOS
+!!! info "Requirements" - **Python**: 3.9-3.10 for v0.1.9 (the current release); 3.11-3.13 for the development version on `main` - **Operating System**: Linux
 
 ## Installation Methods
 

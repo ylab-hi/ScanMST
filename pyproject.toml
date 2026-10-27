@@ -9,26 +9,29 @@ authors = [
     { name = "Ting-You Wang", email = "tywang@northwestern.edu" },
     { name = "Yangyang Li", email = "yangyang.li@northwestern.edu" },
 ]
-# Upper bound is set by pysam==0.19.0, which ships no wheels above cp310.
-# Raising it requires bumping the pysam pin -- see the dependency note below.
-requires-python = ">=3.9,<3.11"
+# Upper bound is set by HTSeq, whose newest release ships no wheels above cp313.
+# Python 3.9/3.10 users can install v0.1.9, the release the published results
+# were produced with.
+requires-python = ">=3.11,<3.14"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     # No "License ::" classifier: PEP 639 SPDX expression is used instead,
     # and the two are mutually exclusive.
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "biopython>=1.81,<2",
-    # pysam and HTSeq are pinned exactly: these are the versions the published
-    # v0.1.9 results were produced with. pysam==0.19.0 also caps requires-python
-    # at <3.11 (no cp311/cp312 wheels).
-    "pysam==0.19.0",
-    # In recent versions of HTSeq, a bug affecting the GenomicArrayOfSets
-    "HTSeq==2.0.5",
+    # v0.1.9 pinned pysam==0.19.0, HTSeq==2.0.5 and numpy==1.26.4 exactly (the
+    # versions the published results were produced with); none of them has
+    # wheels for the whole 3.11-3.13 range. GenomicArrayOfSets behaviour under
+    # the newer HTSeq is guarded by tests/test_base and tests/test_e2e.
+    # alignparse excludes pysam 0.22.1.
+    "pysam>=0.23,<0.25",
+    "HTSeq>=2.1.2,<3",
     "pyfaidx>=0.8.1,<0.9",
     "psutil>=7.0.0,<8",
     "loguru>=0.7.0,<0.8",
@@ -38,7 +41,7 @@ dependencies = [
     "alignparse>=0.7.1,<0.8",
     "matplotlib>=3.9,<4",
     "intervaltree>=3.1.0,<4",
-    "numpy==1.26.4",
+    "numpy>=2,<3",
     "joblib>=1.5.0,<2",
     # Both were previously undeclared and arrived only transitively:
     #   src/scanmst/base/helper.py imports yaml
@@ -81,8 +84,7 @@ typing = ["mypy>=1.10"]
 # NOTE: no `security` group here, and do not add one. The audit runs from
 # noxfile.py's `safety` session, which installs pip-audit into its own venv, so
 # a declared group would only pull an auditing tool's transitive tree -- nltk
-# among them. nltk has an open cluster of advisories and no fix reachable from
-# here: the patched line needs Python >= 3.10, this project supports 3.9, and
+# among them. nltk has an open cluster of advisories, and
 # GHSA-8mgp-746c-j5xp / CVE-2026-81726 has no patched release at all.
 docs = [
     "mkdocs>=1.6",
@@ -158,7 +160,7 @@ profile = "black"
 [tool.ruff]
 line-length = 150
 exclude = ["tests", "cppext", "blat.py"]
-target-version = "py39"
+target-version = "py311"
 
 
 [tool.ruff.lint]
@@ -364,10 +366,9 @@ HTSLIB_ROOT = { env = "HTSLIB_ROOT", default = "" }
 SCANMST_EMBED_RPATH = { env = "SCANMST_EMBED_RPATH", default = "ON" }
 
 [tool.cibuildwheel]
-# Linux x86_64 only. macOS is excluded because pysam==0.19.0 ships no arm64
-# wheel, so Apple Silicon could never resolve the dependency chain, and
-# macos-latest runners are arm64.
-build = ["cp39-manylinux_x86_64", "cp310-manylinux_x86_64"]
+# Linux x86_64 only. macOS is not built or tested: the package declares
+# Linux-only classifiers and before-all builds htslib with a Linux script.
+build = ["cp311-manylinux_x86_64", "cp312-manylinux_x86_64", "cp313-manylinux_x86_64"]
 # glibc 2.28 (RHEL 8 / Ubuntu 20.04+). manylinux2014 would reach further back
 # but its CentOS 7 base is EOL and its package repos are unreliable.
 manylinux-x86_64-image = "manylinux_2_28"

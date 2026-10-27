@@ -64,7 +64,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install 3.10
+        run: uv python install 3.13
 
       # `uv build` (not `--sdist`) also builds a wheel *from* the sdist, so a
       # green run here proves the sdist is self-contained -- i.e. that

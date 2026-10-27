@@ -6,7 +6,7 @@ import copy
 import inspect
 import math
 import re
-from itertools import chain
+from itertools import chain, pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -294,7 +294,7 @@ def update_position_event_list(event_list: list[Event]) -> list[Event]:
         return event_list
     pre_read_info = None
     updated_event_list = []
-    for idx, (pre_evt, next_evt) in enumerate(zip(event_list[:], event_list[1:]), 1):
+    for idx, (pre_evt, next_evt) in enumerate(pairwise(event_list), 1):
         # if is_read_reversed is True, pre_read will be read2, intersected read will be read1
         # otherwise pre_read will be read1, intersected read will be read2
         if pre_evt.is_read_reversed:
@@ -436,7 +436,7 @@ def detect_sv_from_cigar(
         event_list: list[Event] = []
         # every chain is a group of connected reads
         # every chain may have a list of events
-        for lt, rt in zip(read_chains[:], read_chains[1:]):
+        for lt, rt in pairwise(read_chains):
             if (lt, rt) in reads_pair_mode_dict:
                 lt_mode, rt_mode = reads_pair_mode_dict[lt, rt]
             elif (rt, lt) in reads_pair_mode_dict:

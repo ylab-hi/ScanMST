@@ -17,20 +17,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Capped at 3.10 by the pysam==0.19.0 pin (no cp311/cp312 wheels),
-        # matching requires-python in pyproject.toml. The previous matrix also
-        # ran 3.8, which was already below the declared floor.
+        # The two ends of requires-python in pyproject.toml (>=3.11,<3.14).
         include:
-          - { python-version: "3.10", os: ubuntu-latest, session: "pre-commit" }
-          - { python-version: "3.10", os: ubuntu-latest, session: "safety" }
-          - { python-version: "3.10", os: ubuntu-latest, session: "mypy" }
-          - { python-version: "3.9", os: ubuntu-latest, session: "mypy" }
-          - { python-version: "3.10", os: ubuntu-latest, session: "tests" }
-          - { python-version: "3.9", os: ubuntu-latest, session: "tests" }
-          - { python-version: "3.10", os: ubuntu-latest, session: "typeguard" }
-          # No macOS entry: macos-latest runners are arm64 and pysam==0.19.0
-          # ships no arm64 wheel, so the job could only fail. The package
-          # declares Linux-only classifiers for the same reason.
+          - { python-version: "3.13", os: ubuntu-latest, session: "pre-commit" }
+          - { python-version: "3.13", os: ubuntu-latest, session: "safety" }
+          - { python-version: "3.13", os: ubuntu-latest, session: "mypy" }
+          - { python-version: "3.11", os: ubuntu-latest, session: "mypy" }
+          - { python-version: "3.13", os: ubuntu-latest, session: "tests" }
+          - { python-version: "3.11", os: ubuntu-latest, session: "tests" }
+          - { python-version: "3.13", os: ubuntu-latest, session: "typeguard" }
+          # No macOS entry: the package declares Linux-only classifiers.
 
     env:
       NOXSESSION: ${{ matrix.session }}
@@ -97,7 +93,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install 3.10
+        run: uv python install 3.13
 
       - name: Download coverage data
         uses: actions/download-artifact@v5

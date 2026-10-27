@@ -313,7 +313,7 @@ class Intervals:
 
         if isinstance(other, Intervals):
             return Intervals(
-                [exon + other_exon for exon, other_exon in zip(self.exon_list, other.exon_list)],
+                [exon + other_exon for exon, other_exon in zip(self.exon_list, other.exon_list, strict=False)],
             )
 
         message = f"{other} is not int or Intervals"
@@ -336,7 +336,7 @@ class Intervals:
 
         if isinstance(other, Intervals):
             return Intervals(
-                [exon - other_exon for exon, other_exon in zip(self.exon_list, other.exon_list)],
+                [exon - other_exon for exon, other_exon in zip(self.exon_list, other.exon_list, strict=False)],
             )
 
         message = f"{other} is not int or Intervals"
@@ -380,7 +380,7 @@ class Intervals:
         if len(self) < Interval._index:
             return introns
 
-        for exon_group in zip(self.exon_list, self.exon_list[1:]):
+        for exon_group in zip(self.exon_list, self.exon_list[1:], strict=False):
             introns.append(Interval(exon_group[0].end, exon_group[1].start))
 
         return introns
