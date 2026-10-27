@@ -117,7 +117,7 @@ def _extract_annotated_exons(
             tmp_list.pop(0)
             tmp_list.pop(-1)
             if len(tmp_list) >= 2:
-                for intron_start, intron_end in zip(tmp_list[0::2], tmp_list[1::2]):
+                for intron_start, intron_end in zip(tmp_list[0::2], tmp_list[1::2], strict=False):
                     trx_to_intron[trx_id].append(
                         HTSeq.GenomicInterval(chrom, intron_start, intron_end, strand),
                     )

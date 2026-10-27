@@ -47,7 +47,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install 3.10
+        run: uv python install 3.13
 
       - name: Configure git for the deploy commit
         run: |
@@ -60,4 +60,4 @@ jobs:
       # turns broken nav entries and dead relative links into a failed build,
       # which aborts the run before anything is pushed.
       - name: Build and deploy to gh-pages
-        run: uv run --group dev nox --force-color --session=docs-build --python=3.10 -- gh-deploy --force --strict
+        run: uv run --group dev nox --force-color --session=docs-build --python=3.13 -- gh-deploy --force --strict

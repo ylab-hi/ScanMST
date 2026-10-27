@@ -9,9 +9,8 @@ import nox
 from nox import Session
 
 package = "scanmst"
-# Capped at 3.10 by the pysam==0.19.0 pin (no cp311/cp312 wheels), matching
-# requires-python in pyproject.toml.
-python_versions = ["3.9", "3.10"]
+# Matches requires-python in pyproject.toml (>=3.11,<3.14).
+python_versions = ["3.11", "3.12", "3.13"]
 nox.needs_version = ">= 2024.3.2"
 # uv provides the virtualenvs; fall back to virtualenv where uv is unavailable.
 nox.options.default_venv_backend = "uv|virtualenv"
@@ -165,7 +164,7 @@ def typeguard(session: Session) -> None:
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 
 
-@nox.session(python="3.10")
+@nox.session(python="3.13")
 def refurb(session: Session) -> None:
     """Refactoring suggestions using refurb."""
     # Previously this passed `args` to session.install instead of session.run,
