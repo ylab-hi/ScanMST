@@ -130,19 +130,18 @@ Contributions are very welcome. To learn more, see the [Contributor Guide].
 
 ## 🪪 **License**
 
-ScanMST is free software available under the GNU General Public License v3.0 (GPLv3). You are free to modify and redistribute this software under the terms of this license.
+ScanMST is free software released under the [GNU General Public License v3.0 or later](LICENSE) (GPL-3.0-or-later). You may use it for any purpose, **including commercial use**, and modify and redistribute it under the terms of that license.
 
-### ⚠️ External Dependency Licensing (BLAT)
+### ⚠️ Optional BLAT aligner has separate terms
 
-While ScanMST itself is GPL-licensed, it utilizes the **BLAT** aligner for specific functionality. BLAT is **not** distributed with ScanMST; it is downloaded automatically from the University of California, Santa Cruz (UCSC) servers upon first use.
+The restriction below applies **only to BLAT, not to ScanMST**, and only if you choose `--aligner blat`. ScanMST does not use BLAT unless you pass that option.
 
-### BLAT License Terms:
+BLAT is a third-party program from the University of California, Santa Cruz (UCSC). It is **not** distributed with ScanMST; ScanMST downloads it from UCSC the first time you select `--aligner blat`, and runs it as a separate program. BLAT's own license terms are:
 
-- Academic/Non-Profit: Free for use.
+- **Academic / non-profit use:** free.
+- **Commercial use:** requires a license from [Kent Informatics](https://kentinformatics.com/).
 
-- Commercial: A license is required from [Kent Informatics](https://kentinformatics.com/).
-
-By using this software with the `--aligner blat` option, you acknowledge that you are responsible for adhering to the [UCSC](https://genome.ucsc.edu/license/) and [Kent Informatics](https://kentinformatics.com/) license terms regarding the use of BLAT executables.
+If you use `--aligner blat`, you are responsible for complying with the [UCSC](https://genome.ucsc.edu/license/) and [Kent Informatics](https://kentinformatics.com/) terms for BLAT.
 
 ## 🤝 **Contact**
 
