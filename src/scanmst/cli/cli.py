@@ -147,11 +147,20 @@ def cli(options: argparse.Namespace | DefaultOptions):
         msg = f"Error: The directory {output_dir} does not exist."
         raise SystemExit(msg)
 
+    blacklist = getattr(options, "blacklist", None)
+    if blacklist is not None:
+        blacklist_path = Path(blacklist).resolve()
+        if not blacklist_path.is_file():
+            msg = f"Error: The blacklist file {blacklist} does not exist."
+            raise SystemExit(msg)
+        blacklist = blacklist_path.as_posix()
+
     logger.info(f"scanmst starts running in {running_mode} mode PID-{os.getpid()}")
     logger.info(f"{options.input=} {options.blat_closed=}")
     logger.info(f"{output_file_path=}")
     logger.info(f"{options.bound=}")
     logger.info(f"{options.min_blat_aligned_len=}")
+    logger.info(f"{blacklist=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
     if options.aligner == "blat":
@@ -214,6 +223,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             prune_threshold=options.prune_threshold,
             max_allowed_ins=options.max_allowed_ins,
             read_insertion_len_threshold=options.min_required_ins,
+            blacklist=blacklist,
         )
 
         avg_cov = None if not options.bound else avg_cov

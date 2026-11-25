@@ -21,7 +21,7 @@ from .basic_class import (
 )
 from .basic_read import Read
 from .blat import Blat
-from .filters import CircRNAFilter, ExonFilter, RTSwitchingFilter
+from .filters import BlacklistFilter, CircRNAFilter, ExonFilter, RTSwitchingFilter
 from .mst_inference import infer_mst_from_connected_reads
 from .my_logger import MyLogger
 from .parallel import ParallelWorker
@@ -32,6 +32,7 @@ from .read_connector import (
 
 __all__ = [
     "AnnotationCode",
+    "BlacklistFilter",
     "Blat",
     "BreakPoint",
     "CigarCode",

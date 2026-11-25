@@ -16,6 +16,7 @@ from Bio import SearchIO
 from pyfaidx import Fasta, FastaNotFoundError
 
 from scanmst.base import (
+    BlacklistFilter,
     CircRNAFilter,
     Event,
     ExonFilter,
@@ -507,6 +508,7 @@ def _scan_bam_helper(
     prune_threshold,
     max_allowed_ins,
     read_insertion_len_threshold,
+    blacklist,
 ):
     """Scan BAM file and write output to file."""
     from loguru import logger
@@ -517,6 +519,8 @@ def _scan_bam_helper(
     cvg, gene_iv = _get_cvg_gene_iv(gtf, splice_bin)
     exon_filter = ExonFilter(gtf, boundary_size)
     rt_switching_filter = RTSwitchingFilter(rt_switching_filter_len)
+    blacklist_filter = BlacklistFilter(blacklist) if blacklist else None
+    num_blacklisted_events = 0
     in_bam_io_object = pysam.AlignmentFile(in_bam_path, "rb")
 
     if running_mode == "parallel":
@@ -762,6 +766,12 @@ def _scan_bam_helper(
                             "DEL",
                             "IDUP",
                         }:
+                            if blacklist_filter is not None and blacklist_filter.is_in_blacklist(event):
+                                num_blacklisted_events += 1
+                                logger.trace(
+                                    f"{event} is filtered out owing to BlacklistFilter",
+                                )
+                                continue
                             if exon_filter:
                                 if not exon_filter.is_breakpoints_in_same_exon(
                                     event,
@@ -835,6 +845,8 @@ def _scan_bam_helper(
                     logger.trace(
                         f"{read.query_name=} does not pass the num of mismatches(edit distance) cutoff.{nm=}",
                     )
+    if blacklist_filter is not None:
+        logger.info(f"{identified_key=}: {num_blacklisted_events} junctions filtered out owing to BlacklistFilter")
     logger.debug(f"Total nlpaths: {nls_src_forms_list}")
     logger.complete()
     in_bam_io_object.close()
@@ -869,6 +881,7 @@ def scanbam_run(
     prune_threshold,
     max_allowed_ins,
     read_insertion_len_threshold,
+    blacklist=None,
 ):
     """Main function to run scanbam."""
     bam_scanner = BamScanner(
@@ -905,6 +918,12 @@ def scanbam_run(
     contigs = [contig for contig in sorted(bam_scanner.bam_chrom_info) if "_" not in contig and "M" not in contig]
 
     logger.info(f" Processing {contigs=}")
+    if blacklist:
+        blacklist_chroms = BlacklistFilter(blacklist).chroms
+        if not blacklist_chroms & set(contigs):
+            logger.warning(
+                f"No chromosome in blacklist {blacklist} matches a processed BAM contig (e.g. 'chr1' vs '1'); the blacklist will filter nothing.",
+            )
     running_mode = "normal" if parallel == 1 else "parallel"
     # get current local namespace
     self_local_namespace = copy.copy(locals())
