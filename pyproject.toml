@@ -1,6 +1,6 @@
 [project]
 name = "scanmst"
-version = "0.1.9"
+version = "0.2.0"
 description = "A multi-segment transcript caller for long-read transcriptome sequencing data"
 readme = "README.md"
 license = "GPL-3.0-or-later"

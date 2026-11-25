@@ -1,6 +1,6 @@
 # License
 
-ScanMST released under the GNU General Public License Version 3.
+ScanMST is released under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
 
 ## GNU General Public License v3
 
@@ -47,6 +47,17 @@ ScanMST uses several third-party libraries, each with their own licenses:
 - **Pysam**: MIT License
 
 All dependencies are compatible with the GNU GPLv3.
+
+### BLAT (optional aligner)
+
+The terms below apply **only to BLAT, not to ScanMST**, and only if you run ScanMST with `--aligner blat`. ScanMST does not use BLAT unless you pass that option.
+
+BLAT is a third-party program from the University of California, Santa Cruz (UCSC). It is **not** distributed with ScanMST: ScanMST downloads it from UCSC the first time you select `--aligner blat`, and runs it as a separate program. BLAT's own license terms are:
+
+- **Academic / non-profit use:** free.
+- **Commercial use:** requires a license from [Kent Informatics](https://kentinformatics.com/).
+
+If you use `--aligner blat`, you are responsible for complying with the [UCSC](https://genome.ucsc.edu/license/) and [Kent Informatics](https://kentinformatics.com/) terms for BLAT.
 
 ## Contributing
 

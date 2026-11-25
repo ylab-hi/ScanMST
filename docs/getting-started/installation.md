@@ -4,7 +4,7 @@ Get ScanMST installed on your system in just a few minutes.
 
 ## Prerequisites
 
-!!! info "Requirements" - **Python**: 3.9-3.10 for v0.1.9 (the current release); 3.11-3.13 for the development version on `main` - **Operating System**: Linux
+!!! info "Requirements" - **Python**: 3.11-3.13 for v0.2.0 (the current release); use v0.1.9 for Python 3.9-3.10 (the version used for the published results) - **Operating System**: Linux
 
 ## Installation Methods
 
@@ -29,13 +29,13 @@ Choose your preferred installation method:
     Install using conda:
 
     ```bash
-    conda install -c conda-forge scanmst
+    conda install -c bioconda -c conda-forge scanmst
     ```
 
     Or create a new environment:
 
     ```bash
-    conda create -n scanmst python=3.10
+    conda create -n scanmst python=3.12
     conda activate scanmst
     pip install scanmst
     ```

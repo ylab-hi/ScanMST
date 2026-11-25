@@ -15,7 +15,7 @@ Common issues and solutions for ScanMST users.
 **Solution**:
 
 ```bash
-# Check Python version (must be 3.9 or higher )
+# Check Python version (must be 3.11-3.13)
 python --version
 
 # Verify pip is using correct Python
