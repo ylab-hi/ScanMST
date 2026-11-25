@@ -89,3 +89,56 @@ def test_cli_example(tmp_path, padded_ref, thread):
         out_json = json.loads((out_graph_dir / name).read_text())
         expect_json = json.loads((expect_graph_dir / name).read_text())
         assert out_json == expect_json
+
+
+def _run_example(out_dir, padded_ref, **overrides):
+    op = DefaultOptions(
+        input=str(DATA_DIR / "example.bam"),
+        output=str(out_dir / "example"),
+        ref=str(padded_ref),
+        gtf=str(DATA_DIR / "example_ref.gtf"),
+        blat_two_bit=str(DATA_DIR / "dummy.2bit"),
+        noncanonical=True,
+        substitutions_fraction=0.05,
+        indel_fraction=0.001,
+        prune_threshold=20,
+        circular_rna="remove",
+        refine=True,
+        **overrides,
+    )
+    cli.cli(op)
+    return [line for line in (out_dir / "example.vcf").read_text().splitlines() if not line.startswith("#")]
+
+
+def test_cli_blacklist_without_overlap_keeps_output(tmp_path, padded_ref):
+    """A blacklist that overlaps no junction must not change the result."""
+    bed = tmp_path / "blacklist.bed"
+    bed.write_text("chr16\t1\t100\nchrUn\t1\t1000000\n")
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    records = _run_example(out_dir, padded_ref, blacklist=str(bed))
+    expected = [line for line in (DATA_DIR / "example.vcf").read_text().splitlines() if not line.startswith("#")]
+    assert records == expected
+
+
+@pytest.mark.parametrize("thread", [1, 8])
+def test_cli_blacklist_removes_overlapping_junction(tmp_path, padded_ref, thread):
+    """A junction with a breakpoint in a blacklisted region is excluded from the output."""
+    # chr16:84995922 (VCF, 1-based) is breakpoint 1 of a chr16-chr17 ITPL in example.vcf
+    bed = tmp_path / "blacklist.bed"
+    bed.write_text("chr16\t84995900\t84995950\n")
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    records = _run_example(out_dir, padded_ref, blacklist=str(bed), thread=thread)
+    expected = [line for line in (DATA_DIR / "example.vcf").read_text().splitlines() if not line.startswith("#")]
+    assert any(line.split("\t")[:2] == ["chr16", "84995922"] for line in expected)
+    assert not any(line.split("\t")[:2] == ["chr16", "84995922"] for line in records)
+    assert "CHR2=chr17" not in "\n".join(records)
+    assert 0 < len(records) < len(expected)
+
+
+def test_cli_missing_blacklist_file_exits(tmp_path, padded_ref):
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    with pytest.raises(SystemExit, match="blacklist file"):
+        _run_example(out_dir, padded_ref, blacklist=str(tmp_path / "missing.bed"))

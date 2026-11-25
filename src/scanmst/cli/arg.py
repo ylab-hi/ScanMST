@@ -56,6 +56,8 @@ class DefaultOptions:
     # junctions within one annotated exon filter
     exon_filter: bool = True
     rt_switching_filter_len: int = 10
+    # BED file of regions whose junctions are discarded (None: no blacklist)
+    blacklist: str | None = None
     ignore_circle: bool = False
     rescue_sr: bool = False
     refine: bool = False
@@ -287,6 +289,15 @@ def parse_args() -> argparse.ArgumentParser:
         type=int,
         default=DefaultOptions.rt_switching_filter_len,
         help="Set the length threshold for RT switching filter. (default length: %(default)s)",
+    )
+    parser.add_argument(
+        "--blacklist",
+        action="store",
+        dest="blacklist",
+        metavar="BED",
+        default=DefaultOptions.blacklist,
+        help="BED file (optionally gzipped) of regions to exclude, e.g. hg38-blacklist.v2.bed; "
+        "junctions with a breakpoint inside any region are discarded. (default: no blacklist)",
     )
     parser.add_argument(
         "--ncan",

@@ -48,7 +48,7 @@ If you have some issues, please check the [document](https://ylab-hi.github.io/S
 usage: scanmst [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
                [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--thread THREAD] [--aligner {blat,}]
                [--blat-identity IDENT_CUTOFF] [--min-blat-aligned-len MIN_BLAT_ALIGNED_LEN] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
-               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph]
+               [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--blacklist BED] [--ncan] [--graph]
                [--refine] [--refine-threshold REFINE_THRESHOLD] [--prune-threshold PRUNE_THRESHOLD] [--max-allowed-nm MAX_ALLOWED_NM]
                [--max-allowed-ins MAX_ALLOWED_INS] [--min-required-ins MIN_REQUIRED_INS] [--min-soft-seg-len MIN_SOFT_SEG_LEN]
                [--long-indel-length LONG_INDEL_LENGTH] [--indel-fraction INDEL_FRACTION] [--substitution-fraction SUBSTITUTIONS_FRACTION] [--rescue-sr]
@@ -84,6 +84,7 @@ options:
   --off-exon-filter                       Turn on exon filter (default: True)
   --rt-switching-filter RT_SWITCHING_FILTER_LEN
                                           Set the length threshold for RT switching filter. (default length: 10)
+  --blacklist BED                         BED file (optionally gzipped) of regions to exclude, e.g. hg38-blacklist.v2.bed; junctions with a breakpoint inside any region are discarded. (default: no blacklist)
   --ncan                                  Considering non-canonical splice sites (default: False)
   --graph                                 Whether to output transcript segment graph. (default: False)
   --refine                                Whether to refine the transcript segment graph after construction. (default: False)

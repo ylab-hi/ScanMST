@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import gzip
 import itertools
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import HTSeq
+import intervaltree
 
 from .basic import Interval, Strand
 
@@ -532,3 +535,60 @@ class RTSwitchingFilter:
     def is_from_rt_switching(self, event: Event) -> bool:
         """The event is from RT switching."""
         return event.has_microhomology() and event.insertion_microhomology_len > self.filter_size
+
+
+class BlacklistFilter:
+    """BlacklistFilter drops junctions with a breakpoint inside a blacklisted region.
+
+    Regions come from a BED file (optionally gzipped). BED is 0-based half-open and
+    junction positions are 0-based, so a breakpoint at ``pos`` is blacklisted when
+    ``start <= pos < end``. Chromosome names are compared verbatim.
+    """
+
+    _HEADER_PREFIXES = ("#", "track", "browser")
+
+    def __init__(self, bed_file: str | Path) -> None:
+        """Load blacklisted regions from a BED file."""
+        self.bed_file = Path(bed_file)
+        self.trees: dict[str, intervaltree.IntervalTree] = defaultdict(intervaltree.IntervalTree)
+        self.num_regions = 0
+
+        with self.bed_file.open("rb") as raw:
+            is_gzip = raw.read(2) == b"\x1f\x8b"
+        opener = gzip.open if is_gzip else open
+        with opener(self.bed_file, "rt") as handle:
+            for line_no, raw_line in enumerate(handle, 1):
+                line = raw_line.strip()
+                if not line or line.startswith(self._HEADER_PREFIXES):
+                    continue
+                fields = line.split("\t") if "\t" in line else line.split()
+                if len(fields) < 3:
+                    msg = f"{self.bed_file}:{line_no}: expected at least 3 BED columns, got {len(fields)}"
+                    raise ValueError(msg)
+                chrom = fields[0]
+                try:
+                    start, end = int(fields[1]), int(fields[2])
+                except ValueError as e:
+                    msg = f"{self.bed_file}:{line_no}: start/end must be integers: {line!r}"
+                    raise ValueError(msg) from e
+                if start < 0 or end < start:
+                    msg = f"{self.bed_file}:{line_no}: invalid interval {start}-{end}"
+                    raise ValueError(msg)
+                if end == start:
+                    continue  # zero-length intervals cover no base
+                self.trees[chrom].addi(start, end)
+                self.num_regions += 1
+
+    @property
+    def chroms(self) -> set[str]:
+        """Chromosomes that have at least one blacklisted region."""
+        return {chrom for chrom, tree in self.trees.items() if tree}
+
+    def contains(self, chrom: str, pos: int) -> bool:
+        """Whether 0-based position ``pos`` on ``chrom`` is blacklisted."""
+        tree = self.trees.get(chrom)
+        return tree is not None and tree.overlaps_point(pos)
+
+    def is_in_blacklist(self, event: Event) -> bool:
+        """Whether either breakpoint of the junction is blacklisted."""
+        return self.contains(event.chrom1, event.junction_pos1) or self.contains(event.chrom2, event.junction_pos2)
