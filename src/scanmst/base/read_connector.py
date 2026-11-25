@@ -710,7 +710,8 @@ class ReadsConnector:
     ):
         """Double check blat query."""
 
-        if len(query_sequence) < align_len_threshold:
+        # a query shorter than the aligner's min_aligned_len can never yield an acceptable hit: skip BLAT
+        if len(query_sequence) < max(align_len_threshold, getattr(self.aligner, "min_aligned_len", 0)):
             return None
 
         if isinstance(self.aligner, Blat):
@@ -725,6 +726,7 @@ class ReadsConnector:
                 query_sequence,
                 threshold_identity,
                 top=top,
+                min_aligned_len=self.aligner.min_aligned_len,
             )
 
             return hit, top_hsp, mapq

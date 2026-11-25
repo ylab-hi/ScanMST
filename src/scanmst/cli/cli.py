@@ -151,6 +151,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
     logger.info(f"{options.input=} {options.blat_closed=}")
     logger.info(f"{output_file_path=}")
     logger.info(f"{options.bound=}")
+    logger.info(f"{options.min_blat_aligned_len=}")
 
     tmp_dir = tempfile.TemporaryDirectory()
     if options.aligner == "blat":
@@ -159,7 +160,12 @@ def cli(options: argparse.Namespace | DefaultOptions):
         # find 2bit file
         if options.blat_two_bit is None:
             options.two_bit = find_2bit_file(options.ref)
-        aligner = Blat(options.blat_two_bit, options.blat_port, tmp_dir.name)
+        aligner = Blat(
+            options.blat_two_bit,
+            options.blat_port,
+            tmp_dir.name,
+            min_aligned_len=options.min_blat_aligned_len,
+        )
         # delay random seconds to preventing from starting multiple servers simultaneously
         if options.blat_sleep:
             sleep(options.input)
@@ -197,6 +203,7 @@ def cli(options: argparse.Namespace | DefaultOptions):
             max_allowed_nm=options.max_allowed_nm,
             min_soft_seg_len=options.min_soft_seg_len,
             blat_ident_pct_cutoff=options.ident_cutoff,
+            min_blat_aligned_len=options.min_blat_aligned_len,
             long_indel_length=options.long_indel_length,
             substitutions_fraction=options.substitutions_fraction,
             indels_fraction=options.indel_fraction,
