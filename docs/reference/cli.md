@@ -11,7 +11,7 @@ Complete reference for all ScanMLST command-line interface parameters.
 
 usage: scanmst [-h] [--version] --input INPUT --ref REF --gtf GTF --output OUTPUT [--output-seq {consensus,reference,both}] [--sr SUPPORT_READS]
                [--splice-bin SPLICE_BIN] [--mapq MAPQ] [--log-level {info,debug,trace,warning}] [--thread THREAD] [--aligner {blat,}]
-               [--blat-identity IDENT_CUTOFF] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
+               [--blat-identity IDENT_CUTOFF] [--min-blat-aligned-len MIN_BLAT_ALIGNED_LEN] [--blat-2bit BLAT_TWO_BIT] [--blat-nclosed] [--blat-nsleep] [--blat-port BLAT_PORT] [--species {human,mouse}]
                [--circular-rna-filter {remove,keep,extract}] [--off-exon-filter] [--rt-switching-filter RT_SWITCHING_FILTER_LEN] [--ncan] [--graph] [--refine]
                [--refine-threshold REFINE_THRESHOLD] [--prune-threshold PRUNE_THRESHOLD] [--max-allowed-nm MAX_ALLOWED_NM] [--max-allowed-ins MAX_ALLOWED_INS]
                [--min-required-ins MIN_REQUIRED_INS] [--min-soft-seg-len MIN_SOFT_SEG_LEN] [--long-indel-length LONG_INDEL_LENGTH]
@@ -36,6 +36,8 @@ options:
   --thread THREAD                         Set the thread number (default: 1)
   --aligner {blat,}                       Aligner used for additional realignment to recover missing chimeric alignments. (default: None)
   --blat-identity IDENT_CUTOFF            BLAT identity cutoff (default: 0.9)
+  --min-blat-aligned-len MIN_BLAT_ALIGNED_LEN
+                                          Minimum aligned length (bp) of a BLAT hit; shorter hits are treated as unaligned (default: 30)
   --blat-2bit BLAT_TWO_BIT                Reference genome in 2bit format for BLAT aligner
   --blat-nclosed                          Close BLAT server when the job is complete (default: True)
   --blat-nsleep                           Whether to sleep randomly before starting BLAT server (default: True)

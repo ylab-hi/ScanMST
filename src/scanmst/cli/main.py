@@ -180,6 +180,7 @@ class BamScanner:
                             read_matched_seq,
                             threshold_identity=0.9,
                             top=1,
+                            min_aligned_len=self.aligner.min_aligned_len,
                         )
                         if hit == 1:
                             (
@@ -494,6 +495,7 @@ def _scan_bam_helper(
     max_allowed_nm,
     min_soft_seg_len,
     blat_ident_pct_cutoff,
+    min_blat_aligned_len,
     splice_bin,
     motif_required,
     long_indel_length,
@@ -538,6 +540,7 @@ def _scan_bam_helper(
             fix_log_file=blat_log_file,
             is_start_server=blat_is_start_server,
             lock=lock,
+            min_aligned_len=min_blat_aligned_len,
         )
 
     nls_src_forms_list = []
@@ -855,6 +858,7 @@ def scanbam_run(
     max_allowed_nm,
     min_soft_seg_len,
     blat_ident_pct_cutoff,
+    min_blat_aligned_len,
     long_indel_length,
     substitutions_fraction,
     indels_fraction,

@@ -43,6 +43,7 @@ class DefaultOptions:
     max_allowed_ins: int = max_allowed_micro_insertion
     min_required_ins: int = min_required_insertion_length
     ident_cutoff: float = 0.90
+    min_blat_aligned_len: int = 30
     prune_threshold: int = 10  # for merging conditions
     soft_len: int = 5
     mismatch: int = 3
@@ -216,6 +217,14 @@ def parse_args() -> argparse.ArgumentParser:
         type=float,
         help="BLAT identity cutoff (default: %(default)s)",
         default=DefaultOptions.ident_cutoff,
+    )
+    parser.add_argument(
+        "--min-blat-aligned-len",
+        action="store",
+        dest="min_blat_aligned_len",
+        type=int,
+        help="Minimum aligned length (bp) of a BLAT hit; shorter hits are treated as unaligned (default: %(default)s)",
+        default=DefaultOptions.min_blat_aligned_len,
     )
     parser.add_argument(
         "--blat-2bit",

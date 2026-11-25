@@ -28,6 +28,7 @@ class Blat:
     :param logger: the logger for logging
     :param port: the port of server service for blat alignment
     :param output_dir: the path for storing alignment result
+    :param min_aligned_len: minimum aligned query length (bp) of a hit; shorter hits count as unaligned
 
     :Example:
 
@@ -51,6 +52,9 @@ class Blat:
     False, NovelInsertion(ATCG:10)
     """
 
+    # class-level default so instances created without __init__ (e.g. test doubles) still have it
+    min_aligned_len: int = 30
+
     def __init__(
         self,
         ref_2bit: str,
@@ -60,9 +64,15 @@ class Blat:
         fix_log_file=None,
         is_start_server=False,
         lock=None,
+        min_aligned_len: int = 30,
     ) -> None:
-        """Initialize the blat class."""
+        """Initialize the blat class.
+
+        :param min_aligned_len: minimum aligned query length (bp) of a BLAT hit;
+            shorter hits are treated as unaligned
+        """
         self.port, self.ref_2bit = port, ref_2bit
+        self.min_aligned_len = min_aligned_len
         self.output_dir = output_dir
         self.ran_id = secrets.randbits(42)
         self.is_start_server = is_start_server
@@ -276,6 +286,11 @@ class Blat:
         return self.query(in_seq, mini_identity)
 
     @staticmethod
+    def hsp_aligned_query_len(hsp: Any) -> int:
+        """Number of query bases placed on the genome by an HSP (sum of its aligned query blocks)."""
+        return sum(hsp.query_span_all)
+
+    @staticmethod
     def hsp_matched_len(hsp: Any) -> int:
         """Helper function for HSP matched length calculation."""
         gap_num = hsp.hit_gap_num
@@ -293,8 +308,14 @@ class Blat:
         insert_seq: str,
         threshold_identity: float,
         top: int,
+        min_aligned_len: int = 0,
     ) -> Any:
-        """Helper function for querying insertion sequence."""
+        """Helper function for querying insertion sequence.
+
+        An HSP is kept when its matched length covers more than ``threshold_identity`` of the query,
+        it lies on a primary contig, and it aligns at least ``min_aligned_len`` query bases.
+        Shorter alignments are treated as unaligned.
+        """
         hsps = blat_result.hsps
         hsps.sort(key=lambda x: x.score, reverse=True)
         hsps = hsps[:top]
@@ -303,6 +324,7 @@ class Blat:
             if (
                 Blat.hsp_matched_len(hsp) / len(insert_seq) > threshold_identity
                 and "_" not in hsp.hit_id
+                and Blat.hsp_aligned_query_len(hsp) >= min_aligned_len
             ):
                 keep_hsps.append(hsp)
         hit = len(keep_hsps)
@@ -348,6 +370,7 @@ class Blat:
             insert_seq,
             threshold_identity,
             top,
+            min_aligned_len=self.min_aligned_len,
         )
 
         # keep the top one hit

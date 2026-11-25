@@ -725,6 +725,7 @@ class ReadsConnector:
                 query_sequence,
                 threshold_identity,
                 top=top,
+                min_aligned_len=self.aligner.min_aligned_len,
             )
 
             return hit, top_hsp, mapq
