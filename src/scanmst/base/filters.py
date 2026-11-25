@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -108,7 +109,7 @@ def _extract_annotated_exons(
         strand = first_exon.strand
 
         # introns = gaps between consecutive (start-sorted) exons of one transcript
-        for prev_exon, next_exon in zip(exon_list, exon_list[1:], strict=False):
+        for prev_exon, next_exon in itertools.pairwise(exon_list):
             intron_start, intron_end = prev_exon.end, next_exon.start
             if intron_end <= intron_start:  # touching/overlapping exons: no intron
                 continue
