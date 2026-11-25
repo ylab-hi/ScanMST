@@ -395,18 +395,12 @@ class CircRNAFilter:
             intron_set2 = self.introns_gas[anchor2]
             common_introns = intron_set1.intersection(intron_set2)
 
-        # no overlapping annotated transcript
-        common_intron_condition = len(common_introns) > 0
-
-        mono_exon_condition = None
-        # mono-exon even not within an intronic region, could be indicative of circular RNA
-        if len(exons_of_first_node) == len(exons_of_second_node) == 1:
-            if str(strand_first) == "+":
-                mono_exon_condition = first_node.ref_start > second_node.ref_end
-            elif str(strand_first) == "-":
-                mono_exon_condition = first_node.ref_end < second_node.ref_start
-
-        return bool(common_intron_condition or mono_exon_condition)
+        # Both mega-exons lie inside one annotated intron (the anchors are the circle's outer ends).
+        # A "mono-exon" shortcut (any back-jump between two unspliced segments, added in 67cf6eb)
+        # was removed: it ignored annotation and discarded genuine tandem duplications.
+        # NOTE: introns_gas is currently always empty because of a long-standing bug in the intron
+        # loop of _extract_annotated_exons, so this check does not fire (same as ScanNLS).
+        return len(common_introns) > 0
 
     def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
         self,
