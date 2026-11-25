@@ -353,7 +353,8 @@ class Blat:
         """
         flag = False  # flag for checking the insertion  if its hit is only one
 
-        if len(insert_seq) < align_len_threshold:
+        # a query shorter than min_aligned_len can never yield an acceptable hit: skip BLAT
+        if len(insert_seq) < max(align_len_threshold, self.min_aligned_len):
             return flag, NovelInsertion(hit_num=0, query_sequence=insert_seq)
 
         out_blat = self.query(in_seq=insert_seq)

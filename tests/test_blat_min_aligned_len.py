@@ -79,3 +79,47 @@ def test_cli_option(argv, expected):
     options = parse_args().parse_args(required + argv)
     assert options.min_blat_aligned_len == expected
     assert DefaultOptions.min_blat_aligned_len == 30
+
+
+class _QueryReached(Exception):
+    """Raised by the recording double when BLAT would actually be queried."""
+
+
+class RecordingBlat(FakeBlat):
+    """FakeBlat whose query() records the call and stops there."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.queried: list[str] = []
+
+    def query(self, in_seq="", *_, **__) -> str:  # type: ignore[override]
+        self.queried.append(in_seq)
+        raise _QueryReached
+
+
+def test_query_insertion_skips_blat_for_queries_shorter_than_cutoff():
+    blat = RecordingBlat()
+    flag, insertion = blat.query_insertion("A" * 29)
+    assert flag is False
+    assert insertion.hit_num == 0
+    assert blat.queried == []
+
+
+def test_query_insertion_queries_blat_from_cutoff():
+    blat = RecordingBlat()
+    with pytest.raises(_QueryReached):
+        blat.query_insertion("A" * 30)
+    assert blat.queried == ["A" * 30]
+
+
+def test_read_connector_skips_blat_for_queries_shorter_than_cutoff():
+    from scanmst.base.read_connector import ReadsConnector
+
+    connector = object.__new__(ReadsConnector)  # only .aligner is used by this helper
+    connector.aligner = RecordingBlat()
+    check = connector._ReadsConnector__double_check_blat_query  # type: ignore[attr-defined]
+
+    assert check("A" * 29, 20, 0.9, 5) is None
+    assert connector.aligner.queried == []
+    with pytest.raises(_QueryReached):
+        check("A" * 30, 20, 0.9, 5)
