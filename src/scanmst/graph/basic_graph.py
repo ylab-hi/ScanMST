@@ -608,7 +608,7 @@ class Edge:
     def merge(self, other: Edge, pnode_strand: Strand, nnode_strand: Strand, *, merge_insertion_info=True):
         # WARN: update breakpoint in cmparing way
 
-        self.beak_point1 = (
+        self.break_point1 = (
             min(
                 [self.break_point1, other.break_point1],
                 key=lambda x: x.pos,
