@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -107,42 +108,33 @@ def _extract_annotated_exons(
         first_exon = exon_list[0]
         strand = first_exon.strand
 
-        tmp_list = []
+        # introns = gaps between consecutive (start-sorted) exons of one transcript
+        for prev_exon, next_exon in itertools.pairwise(exon_list):
+            intron_start, intron_end = prev_exon.end, next_exon.start
+            if intron_end <= intron_start:  # touching/overlapping exons: no intron
+                continue
+            chrom = prev_exon.chrom
+            trx_to_intron[trx_id].append(
+                HTSeq.GenomicInterval(chrom, intron_start, intron_end, strand),
+            )
+            intron_id = ExonInfo(
+                chrom,
+                Interval(intron_start, intron_end),
+                strand,
+                trx_id,
+            )
+            iv_ = HTSeq.GenomicInterval(
+                chrom,
+                intron_start - boundary_size,
+                intron_end + boundary_size,
+                strand if consider_strand else ".",
+            )
+            introns_gas[iv_] += intron_id
+
         for _exon in exon_list:
             chrom = _exon.chrom
             start = _exon.start
             end = _exon.end
-            tmp_list.append(start)
-            tmp_list.append(end)
-            tmp_list.pop(0)
-            tmp_list.pop(-1)
-            if len(tmp_list) >= 2:
-                for intron_start, intron_end in zip(tmp_list[0::2], tmp_list[1::2], strict=False):
-                    trx_to_intron[trx_id].append(
-                        HTSeq.GenomicInterval(chrom, intron_start, intron_end, strand),
-                    )
-                    intron_id = ExonInfo(
-                        chrom,
-                        Interval(intron_start, intron_end),
-                        strand,
-                        trx_id,
-                    )
-                    if consider_strand:
-                        iv_ = HTSeq.GenomicInterval(
-                            chrom,
-                            intron_start - boundary_size,
-                            intron_end + boundary_size,
-                            strand,
-                        )
-                    else:
-                        iv_ = HTSeq.GenomicInterval(
-                            chrom,
-                            intron_start - boundary_size,
-                            intron_end + boundary_size,
-                            ".",
-                        )
-                    introns_gas[iv_] += intron_id
-
             if end - start >= minimum_exon_size:
                 exon_id = ExonInfo(chrom, Interval(start, end), strand, trx_id)
                 if shrink:
@@ -366,7 +358,11 @@ class CircRNAFilter:
         first_node,
         second_node,
     ) -> bool:
-        """Check if two DUP megaexons form a loop within an annotated intron."""
+        """Check if two DUP megaexons form a loop within an annotated intron.
+
+        True when the outer ends of the back-jump circle fall inside one annotated intron
+        (strand-agnostic, padded by ``boundary_size``), i.e. both megaexons lie in that intron.
+        """
         strand_first = first_node.strand
         strand_second = second_node.strand
         exons_of_first_node = set(first_node.exons)
@@ -395,18 +391,11 @@ class CircRNAFilter:
             intron_set2 = self.introns_gas[anchor2]
             common_introns = intron_set1.intersection(intron_set2)
 
-        # no overlapping annotated transcript
-        common_intron_condition = len(common_introns) > 0
-
-        mono_exon_condition = None
-        # mono-exon even not within an intronic region, could be indicative of circular RNA
-        if len(exons_of_first_node) == len(exons_of_second_node) == 1:
-            if str(strand_first) == "+":
-                mono_exon_condition = first_node.ref_start > second_node.ref_end
-            elif str(strand_first) == "-":
-                mono_exon_condition = first_node.ref_end < second_node.ref_start
-
-        return bool(common_intron_condition or mono_exon_condition)
+        # Both mega-exons lie inside one annotated intron, of either strand (the anchors are the
+        # circle's outer ends). A "mono-exon" shortcut (any back-jump between two unspliced
+        # segments, added in 67cf6eb) was removed: it ignored annotation and discarded genuine
+        # tandem duplications.
+        return len(common_introns) > 0
 
     def is_two_megaexon_form_a_partial_loop_within_annotated_transcript(
         self,
