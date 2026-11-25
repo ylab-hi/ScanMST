@@ -20,6 +20,13 @@ concurrency:
   group: docs-deploy
   cancel-in-progress: false
 
+# pyabpoa ships only an sdist, and its setup.py compiles with -march=native by
+# default. A wheel built that way lands in the shared uv cache, and a later job on
+# a runner with an older CPU then crashes with SIGILL (pytest exit code -4).
+# SSE4 makes the build portable across x86-64 runners.
+env:
+  SSE4: "1"
+
 jobs:
   deploy:
     name: Build and deploy to gh-pages
@@ -45,6 +52,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          # Changing the key drops wheels built before SSE4 was set: uv keys a built
+          # wheel on the sdist hash, not on env vars, so it would never rebuild them.
+          cache-suffix: pyabpoa-sse4
 
       - name: Set up Python
         run: uv python install 3.13
