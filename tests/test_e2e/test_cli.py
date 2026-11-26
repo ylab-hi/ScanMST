@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import pytest
+
 from scanmst.cli import DefaultOptions, cli
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -142,3 +143,32 @@ def test_cli_missing_blacklist_file_exits(tmp_path, padded_ref):
     out_dir.mkdir()
     with pytest.raises(SystemExit, match="blacklist file"):
         _run_example(out_dir, padded_ref, blacklist=str(tmp_path / "missing.bed"))
+
+
+def test_cli_output_seq_both_and_rescue_sr(tmp_path, padded_ref):
+    """Verify --output-seq both and --rescue-sr produce both FASTA variants and populated SR/OSR records."""
+    out_dir = tmp_path / "out_both"
+    out_dir.mkdir()
+    op = DefaultOptions(
+        input=str(DATA_DIR / "example.bam"),
+        output=str(out_dir / "example"),
+        ref=str(padded_ref),
+        gtf=str(DATA_DIR / "example_ref.gtf"),
+        blat_two_bit=str(DATA_DIR / "dummy.2bit"),
+        output_sequence_choice="both",
+        noncanonical=True,
+        substitutions_fraction=0.05,
+        indel_fraction=0.001,
+        prune_threshold=20,
+        circular_rna="remove",
+        refine=True,
+        rescue_sr=True,
+    )
+    cli.cli(op)
+
+    assert (out_dir / "example.consensus.fasta").read_text() == (DATA_DIR / "example.fasta").read_text()
+    assert (out_dir / "example.reference.fasta").read_text().startswith(">TSP")
+    vcf_records = [line for line in (out_dir / "example.vcf").read_text().splitlines() if not line.startswith("#")]
+    assert len(vcf_records) > 0
+    assert all("SR=" in line and "OSR=" in line for line in vcf_records)
+
