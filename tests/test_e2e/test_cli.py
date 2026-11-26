@@ -171,4 +171,3 @@ def test_cli_output_seq_both_and_rescue_sr(tmp_path, padded_ref):
     vcf_records = [line for line in (out_dir / "example.vcf").read_text().splitlines() if not line.startswith("#")]
     assert len(vcf_records) > 0
     assert all("SR=" in line and "OSR=" in line for line in vcf_records)
-
