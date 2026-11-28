@@ -4,9 +4,9 @@ import array
 import contextlib
 import os
 import secrets
+import signal
 import subprocess
 import time
-from multiprocessing import Process
 from pathlib import Path
 from typing import Any
 
@@ -65,20 +65,27 @@ class Blat:
         is_start_server=False,
         lock=None,
         min_aligned_len: int = 30,
+        max_wait: int = 30 * 60,
+        retry_interval: int = 30,
     ) -> None:
         """Initialize the blat class.
 
         :param min_aligned_len: minimum aligned query length (bp) of a BLAT hit;
             shorter hits are treated as unaligned
+        :param max_wait: seconds to wait for a usable server on ``port`` before giving up
+        :param retry_interval: seconds between retries while the server is not answering
         """
         self.port, self.ref_2bit = port, ref_2bit
         self.min_aligned_len = min_aligned_len
+        self.max_wait = max_wait
+        self.retry_interval = retry_interval
+        self._confirmed_ready = False
         self.output_dir = output_dir
         self.ran_id = secrets.randbits(42)
         self.is_start_server = is_start_server
         self.is_stop_server = False
         self.fix_log_file = fix_log_file
-        self.handle_process = None
+        self.handle_process: subprocess.Popen[bytes] | None = None
         self.gfserver = load_gfserver()
         self.gfclient = load_gfclient()
         self.lock = lock
@@ -118,94 +125,181 @@ class Blat:
             return any("Server ready" in line for line in f)
 
     def is_running(self) -> bool:
-        """Function for checking whether the blat server is running or not.
+        """Function for checking whether a blat server for ``self.port`` is running or not.
+
+        A server counts when a gfServer process started on our port is alive (it may still be
+        building its index) or when ``gfServer status`` answers on our port (covers servers
+        started by other users that psutil cannot inspect).
 
         :return: the boolean value of whether the server is running or not
         """
+        return self._port_process_alive() or self._server_alive()
+
+    def _port_process_alive(self) -> bool:
+        """Whether a gfServer process serving ``self.port`` exists; kill stopped ones on our port."""
         flag = False
         for proc in self._search_processing():
-            if proc.status() in ("running", "sleeping"):
-                flag = True
-            elif proc.status() == "stopped":
-                proc.kill()
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                status = proc.status()
+                if status in ("running", "sleeping", "disk-sleep"):
+                    flag = True
+                elif status == "stopped":
+                    proc.kill()
         return flag
 
-    def _search_processing(self) -> list[psutil.Process]:
-        """Function for searching the process of blat server.
+    def _serves_our_port(self, cmdline: list[str]) -> bool:
+        """Whether a gfServer argv is ``... start <host> <port> ...`` with ``self.port``."""
+        if "start" not in cmdline:
+            return False
+        i = cmdline.index("start")
+        return len(cmdline) > i + 2 and cmdline[i + 2] == str(self.port)
 
-        in current system
+    def _search_processing(self) -> list[psutil.Process]:
+        """Function for searching the gfServer processes that serve ``self.port``.
+
+        Servers on other ports belong to other jobs and are ignored, so they are never reused or killed.
 
         :return: the list of process of blat server
         """
         result = []
         logger.debug("searching server service")
         for proc in psutil.process_iter(["pid", "name"]):
-            with contextlib.suppress(psutil.NoSuchProcess):
-                if "gfServer".lower() == proc.name().lower() and proc.cmdline():
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                if proc.name().lower() == "gfserver" and self._serves_our_port(proc.cmdline()):
                     result.append(proc)
         return result
 
-    def _run_cmd(self, cmd: str) -> None:
-        """Function is used to run the command in the system.
-
-        :param cmd: the command to be run
-        """
+    def _gfserver_cmd(self, action: str) -> subprocess.CompletedProcess | None:
+        """Run ``gfServer <action> localhost <port>``; return None if it cannot run or times out."""
         try:
-            subprocess.check_call(cmd, shell=True)
-        except (KeyboardInterrupt, subprocess.CalledProcessError) as e:
-            if isinstance(e, KeyboardInterrupt) and not self.is_stop_server:
-                self.stop_server()
+            return subprocess.run(  # noqa: S603
+                [str(self.gfserver), action, "localhost", str(self.port)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+
+    def _server_alive(self) -> bool:
+        """Whether a gfServer answers on ``localhost:self.port`` (``gfServer status`` exits 0)."""
+        res = self._gfserver_cmd("status")
+        return res is not None and res.returncode == 0
+
+    def _served_files(self) -> list[str]:
+        """Basenames of the files served on ``self.port`` (``gfServer files``); empty if unknown."""
+        res = self._gfserver_cmd("files")
+        if res is None or res.returncode != 0:
+            return []
+        return [Path(line.strip()).name for line in res.stdout.splitlines() if line.strip()]
+
+    def _starting_server_files(self) -> list[str]:
+        """Basenames of the files given to gfServer processes on our port (``start <host> <port> <files>``)."""
+        files = []
+        for proc in self._search_processing():
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                cmdline = proc.cmdline()
+                files += [Path(f).name for f in cmdline[cmdline.index("start") + 3 :]]
+        return files
+
+    def _check_served_reference(self, served: list[str] | None = None) -> None:
+        """Refuse to reuse a server on our port that serves a different reference."""
+        expected = Path(self.ref_2bit).name
+        served = self._served_files() if served is None else served
+        if served and expected not in served:
+            msg = f"BLAT server on localhost:{self.port} serves {served}, expected {expected}; use a different --blat-port"
+            raise RuntimeError(msg)
 
     def _start_server(self) -> None:
-        """The GfServer should run at the directory.
+        """Start gfServer on ``self.port`` from the directory holding the 2bit file.
 
-        where gfServer gfClient and hg38.2bit located.
+        The server runs in its own session through ``subprocess.Popen``, not as a non-daemon
+        ``multiprocessing.Process`` child: a pool worker that restarts the server would otherwise
+        wait for that child at exit forever and hang the whole ProcessPoolExecutor.
         """
         self.is_start_server = True
         logger.debug(f"start server service{self.is_start_server=}")
-        cwd = Path.cwd().absolute()
-        logger.debug(Path.cwd().as_posix())
-
-        # change to use_blat directory
-        os.chdir(self.ref_dir)
-        logger.trace(f"{self.ref_dir=}")
-        logger.trace(f"{Path().cwd()}")
-
-        cmd = (
-            f"{self.gfserver} -canStop -log={self.log_file_path} -stepSize=5 start "
-            f"localhost {self.port} {os.path.basename(self.ref_2bit)}"
+        cmd = [
+            str(self.gfserver),
+            "-canStop",
+            f"-log={self.log_file_path}",
+            "-stepSize=5",
+            "start",
+            "localhost",
+            str(self.port),
+            Path(self.ref_2bit).name,
+        ]
+        logger.trace(f"{cmd=} {self.ref_dir=}")
+        # drop a stale "Server ready" line left by a previous server using the same log file
+        with contextlib.suppress(OSError):
+            Path(self.log_file_path).write_text("")
+        self.handle_process = subprocess.Popen(  # noqa: S603
+            cmd,
+            cwd=self.ref_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
         )
-        logger.trace(f"{cmd=}")
-        self.handle_process = Process(target=self._run_cmd, args=[cmd])  # type: ignore
-        if self.handle_process is None:
-            raise ValueError("handle process is None")
-        self.handle_process.start()
         logger.debug("starting server service")
-        os.chdir(cwd)
-        logger.trace(f"{Path().cwd()}")
 
     def start_server(self) -> None:
-        """Function for starting the server service, if the server is not running.
+        """Reuse a server already on ``self.port``, otherwise start our own.
 
-        we will start the server service
+        :raise RuntimeError: when the server on our port serves a different reference
         """
-        running_flag = self.is_running()
-        if not running_flag:
-            self._start_server()
-        else:
+        if self._server_alive():
+            self._check_served_reference()
             self.is_start_server = False
+            logger.info(f"reusing BLAT server on localhost:{self.port}")
+        elif self._port_process_alive():
+            # a server on our port is still building its index
+            self._check_served_reference(self._starting_server_files())
+            self.is_start_server = False
+            logger.info(f"waiting for BLAT server on localhost:{self.port} that is starting up")
+        else:
+            self._start_server()
+
+    def _own_server_gone(self) -> bool:
+        """Whether the server this instance started has exited."""
+        if self.handle_process is not None:
+            return self.handle_process.poll() is not None
+        # worker copies have no process handle: look for any process on our port
+        return not self._search_processing()
 
     def stop_server(self) -> None:
-        """Function for stopping the server service, if the server is running."""
+        """Stop the server this job started on ``self.port``; servers of other jobs are left alone."""
         # self open then self close
         logger.trace(f"{self.is_start_server=}")
-        if self.is_start_server:
-            logger.info("Stopping  server service")
-
-            for proc in self._search_processing():
-                proc.kill()
-
+        if not self.is_start_server:
+            return
+        if self.handle_process is not None and self.handle_process.poll() is not None:
+            # ours exited early (e.g. lost a bind race); whatever serves the port now is not ours
+            logger.info("own BLAT server already exited; leaving the server on this port alone")
             self.is_stop_server = True
+            return
+        logger.info("Stopping  server service")
+        if self.handle_process is not None:
+            # signal only our own process group: whatever else is on the port may belong to another job
+            self._stop_own_process()
+        else:
+            # instance created with is_start_server=True but without a handle: stop by port
+            self._gfserver_cmd("stop")
+            for proc in self._search_processing():
+                with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
+                    proc.kill()
+        self.is_stop_server = True
+
+    def _stop_own_process(self) -> None:
+        """Terminate the gfServer we started (its own session/process group), then kill if it lingers."""
+        if self.handle_process is None:
+            return
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(self.handle_process.pid, sig)
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                self.handle_process.wait(timeout=10)
+                return
 
     def _query(self, in_seq: str, mini_identity: int = 90) -> str:
         """Function is help function in order to using gfClient.
@@ -225,65 +319,82 @@ class Blat:
 
         out_pslx = os.path.join(self.output_dir, f"{ran_id}.pslx")
 
-        cwd = Path.cwd().absolute()
-        logger.trace(f"{Path().cwd()}")
-
-        os.chdir(self.ref_dir)
         logger.trace(f"{self.ref_dir=}")
-        logger.trace(f"{Path().cwd()}")
         cmd = (
             f"{self.gfclient} -minScore=20 -out=pslx -minIdentity={mini_identity} localhost {self.port} . "
             f"{in_fasta} {out_pslx}"
         )
         logger.trace(f"{cmd=}")
-        subprocess.check_call(
-            cmd,
-            stderr=subprocess.STDOUT,
-            shell=True,
-            stdout=subprocess.DEVNULL,
-        )
-        os.chdir(cwd)
-        logger.trace(f"{Path().cwd()}")
-        self._remove(in_fasta)
+        # cwd= instead of os.chdir so a failed query cannot leave the process in ref_dir
+        try:
+            subprocess.check_call(
+                cmd,
+                stderr=subprocess.STDOUT,
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                cwd=self.ref_dir,
+            )
+        finally:
+            self._remove(in_fasta)
 
         return out_pslx
 
+    def _is_server_ready(self) -> bool:
+        """Ready when our log says so or the server answers on our port."""
+        if os.path.exists(self.log_file_path) and self.is_ready():
+            return True
+        return self._server_alive()
+
     def _check_if_self_ready(self, interval: int = 60 * 2) -> None:
-        """Function for waiting the server service to be ready.
+        """Wait until the server this job started is ready.
+
+        Gives up waiting (and drops ownership) when our server exited before becoming ready,
+        so that ``query`` can reuse or restart a server instead of looping forever.
 
         :param interval: the interval time for checking the server service
+        :raise RuntimeError: when the server is not ready within ``self.max_wait`` seconds
         """
-        # check self start server and sever is running
-        if self.is_start_server:
-            # check log file
-            # it will take some time from start the server to create the log file
-            if os.path.exists(self.log_file_path) and self.is_ready():
+        if not self.is_start_server or self._confirmed_ready:
+            return
+        deadline = time.monotonic() + self.max_wait
+        while not self._is_server_ready():
+            if self._own_server_gone():
+                logger.warning(f"BLAT server on localhost:{self.port} exited before it was ready")
+                self.is_start_server = False
                 return
-            #  not ready yet, wait for a while
+            if time.monotonic() > deadline:
+                msg = f"BLAT server on localhost:{self.port} not ready after {self.max_wait} s"
+                raise RuntimeError(msg)
             time.sleep(interval)
-            self._check_if_self_ready()
+        self._confirmed_ready = True
 
     def query(self, in_seq: str, mini_identity: int = 90) -> str:
         """Function for querying the sequence to the server service.
 
+        Retries while the server on ``self.port`` is starting; starts our own server when nothing
+        serves the port any more (e.g. the job that owned it finished).
+
         :param in_seq: the sequence of input sequence
         :param mini_identity: the threshold of the identity for aligning
         :return: the path for PSLX file
+        :raise RuntimeError: when no server answers on ``self.port`` within ``self.max_wait`` seconds
         """
-        while (
-            self.is_start_server or self.is_running()
-        ):  # self or other is running service
+        deadline = time.monotonic() + self.max_wait
+        while True:
             try:
-                self._check_if_self_ready()  # if self start blocking, then wait for the server service to be ready
-                out_pslx = self._query(in_seq, mini_identity)
+                self._check_if_self_ready(self.retry_interval)
+                return self._query(in_seq, mini_identity)
             except subprocess.CalledProcessError:
-                time.sleep(60 * 2)  # wait for other's service to be ready
-            else:
-                return out_pslx
-
-        # other kill service and self start
-        self.start_server()
-        return self.query(in_seq, mini_identity)
+                self._confirmed_ready = False
+                if time.monotonic() > deadline:
+                    msg = f"BLAT server on localhost:{self.port} did not answer within {self.max_wait} s; check --blat-port"
+                    raise RuntimeError(msg) from None
+                if not self.is_running():
+                    logger.warning(f"no BLAT server on localhost:{self.port}; starting one")
+                    this_lock = self.lock if self.lock is not None else contextlib.nullcontext()
+                    with this_lock:  # one worker starts it, the others then find it on the port
+                        self.start_server()
+                time.sleep(self.retry_interval)
 
     @staticmethod
     def hsp_aligned_query_len(hsp: Any) -> int:
