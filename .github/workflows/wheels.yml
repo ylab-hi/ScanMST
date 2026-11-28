@@ -33,7 +33,7 @@ jobs:
       # scripts/build-htslib.sh via cibuildwheel's before-all; the runner
       # itself needs nothing. See [tool.cibuildwheel] in pyproject.toml.
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.2.0
+        uses: pypa/cibuildwheel@v4.2.0
 
       - name: Check wheel shape and bundled libraries
         run: python scripts/check_wheel.py wheelhouse/*.whl
