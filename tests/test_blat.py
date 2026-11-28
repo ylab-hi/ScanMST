@@ -9,6 +9,7 @@ import signal
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import psutil
 import pytest
@@ -357,6 +358,11 @@ class _FakePopen:
         return self.returncode
 
 
+def _as_popen(fake: _FakePopen) -> subprocess.Popen[bytes]:
+    """Type the Popen fake as the real handle type stored in ``Blat.handle_process``."""
+    return cast("subprocess.Popen[bytes]", fake)
+
+
 class TestBlatPortScopedServer:
     """Server reuse, start, stop and retry are scoped to ``Blat.port`` (no binaries needed)."""
 
@@ -495,7 +501,12 @@ class TestBlatPortScopedServer:
         ours, other = _FakeGfProc(self.PORT), _FakeGfProc(55752)
         monkeypatch.setattr("psutil.process_iter", lambda *_a, **_kw: [ours, other])
         run_calls: list[list[str]] = []
-        monkeypatch.setattr(subprocess, "run", lambda cmd, **_kw: run_calls.append(cmd) or subprocess.CompletedProcess(cmd, 0))
+
+        def _record_run(cmd: list[str], **_kw: object) -> subprocess.CompletedProcess:
+            run_calls.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0)
+
+        monkeypatch.setattr(subprocess, "run", _record_run)
 
         # reused server (not ours) -> untouched
         blat_inst.is_start_server = False
@@ -504,7 +515,7 @@ class TestBlatPortScopedServer:
         assert not ours.killed
 
         # our server exited early (lost a bind race) -> whatever is on the port is not ours
-        blat_inst.is_start_server, blat_inst.handle_process = True, _FakePopen(returncode=1)
+        blat_inst.is_start_server, blat_inst.handle_process = True, _as_popen(_FakePopen(returncode=1))
         blat_inst.stop_server()
         assert run_calls == []
         assert not ours.killed
@@ -514,7 +525,7 @@ class TestBlatPortScopedServer:
         # because a concurrent starter may own the process that actually listens there
         signals: list[tuple[int, int]] = []
         monkeypatch.setattr(os, "killpg", lambda pid, sig: signals.append((pid, sig)))
-        blat_inst.is_start_server, blat_inst.handle_process = True, _FakePopen()
+        blat_inst.is_start_server, blat_inst.handle_process = True, _as_popen(_FakePopen())
         blat_inst.stop_server()
         assert signals == [(4242, signal.SIGTERM)]
         assert run_calls == []
@@ -533,12 +544,12 @@ class TestBlatPortScopedServer:
         monkeypatch.setattr(blat_inst, "_is_server_ready", lambda: False)
 
         # our server died before it was ready -> stop waiting and drop ownership (no recursion, no hang)
-        blat_inst.handle_process = _FakePopen(returncode=1)
+        blat_inst.handle_process = _as_popen(_FakePopen(returncode=1))
         blat_inst._check_if_self_ready(interval=0)
         assert blat_inst.is_start_server is False
 
         # still alive but never ready -> bounded wait
-        blat_inst.is_start_server, blat_inst.handle_process, blat_inst.max_wait = True, _FakePopen(), -1
+        blat_inst.is_start_server, blat_inst.handle_process, blat_inst.max_wait = True, _as_popen(_FakePopen()), -1
         with pytest.raises(RuntimeError, match="not ready"):
             blat_inst._check_if_self_ready(interval=0)
 

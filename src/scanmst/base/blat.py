@@ -85,7 +85,7 @@ class Blat:
         self.is_start_server = is_start_server
         self.is_stop_server = False
         self.fix_log_file = fix_log_file
-        self.handle_process = None
+        self.handle_process: subprocess.Popen[bytes] | None = None
         self.gfserver = load_gfserver()
         self.gfclient = load_gfclient()
         self.lock = lock
